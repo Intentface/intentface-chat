@@ -1,65 +1,114 @@
-import Image from "next/image";
+"use client";
+
+import { useChat } from "@ai-sdk/react";
+import { useForm } from "@tanstack/react-form";
+import { motion } from "motion/react";
+import { z } from "zod";
+import {
+  Conversation,
+  ConversationContent,
+} from "@/components/ai/conversation";
+import { Messages } from "@/components/ai/messages";
+import { PromptInput } from "@/components/ai/prompt-input";
+import { Header } from "@/components/header";
+import Button from "@/components/ui/button";
+import { ProgressiveBlur } from "@/components/ui/progressive-blur";
+
+const messageSchema = z.string().min(1, "Message cannot be empty").trim();
 
 export default function Home() {
+  const { messages, sendMessage } = useChat();
+  const isEmpty = messages.length === 0;
+
+  const form = useForm({
+    defaultValues: {
+      message: "",
+    },
+    onSubmit: async ({ value }) => {
+      const validated = messageSchema.safeParse(value.message);
+      if (!validated.success) return;
+
+      // Clear input immediately for better UX
+      form.reset();
+
+      await sendMessage({
+        text: validated.data,
+      });
+    },
+  });
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="relative h-dvh w-full">
+      <Header />
+
+      <Conversation>
+        <ConversationContent>
+          <Messages messages={messages} />
+        </ConversationContent>
+      </Conversation>
+
+      <div className="fixed bottom-0 inset-x-0 z-10 w-(--conversation-width) mx-auto">
+        <ProgressiveBlur
+          direction="bottom"
+          className="absolute inset-x-0 bottom-0 h-16 -z-10 bg-linear-to-t from-background to-transparent pointer-events-none"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="flex justify-center px-4 pb-4 ">
+          <motion.form
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              form.handleSubmit();
+            }}
+            className="w-full"
+            initial={{ y: "calc(-50vh + 50%)" }}
+            animate={{
+              y: isEmpty ? "calc(-50vh + 50%)" : 0,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <form.Field name="message">
+              {(field) => (
+                <PromptInput>
+                  <PromptInput.Textarea
+                    value={field.state.value}
+                    onValueChange={(value) => field.handleChange(value)}
+                  >
+                    <PromptInput.Placeholder
+                      placeholder={[
+                        "Ask me anything...",
+                        "Recall past conversations...",
+                        "Search the web...",
+                        "Generate a report...",
+                        "Explain a concept...",
+                        "Help with a project...",
+                        "Give a tutorial...",
+                        "Provide a recommendation...",
+                        "Translate text...",
+                        "Summarize a document...",
+                        "Write a story...",
+                        "Create a presentation...",
+                      ]}
+                    />
+                  </PromptInput.Textarea>
+                  <PromptInput.Footer>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={!field.state.value.trim()}
+                    >
+                      Send
+                    </Button>
+                  </PromptInput.Footer>
+                </PromptInput>
+              )}
+            </form.Field>
+          </motion.form>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

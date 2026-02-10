@@ -17,7 +17,7 @@ import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 const messageSchema = z.string().min(1, "Message cannot be empty").trim();
 
 export default function Home() {
-  const { messages, sendMessage } = useChat();
+  const { messages, sendMessage, status } = useChat();
   const isEmpty = messages.length === 0;
 
   const form = useForm({
@@ -43,7 +43,7 @@ export default function Home() {
 
       <Conversation>
         <ConversationContent>
-          <Messages messages={messages} />
+          <Messages messages={messages} status={status} />
         </ConversationContent>
       </Conversation>
 

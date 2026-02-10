@@ -5,31 +5,28 @@ import { motion } from "motion/react";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
 import { cn } from "@/lib/utils";
-
+import "streamdown/styles.css";
 // Message wrapper with entrance animation
 const MessageRoot = ({
   messageId,
   role,
   hasError,
-  isLoading,
   className,
   ...props
 }: ComponentProps<typeof motion.div> & {
   messageId: string;
   role: UIMessage["role"];
   hasError?: boolean;
-  isLoading?: boolean;
 }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.15 }}
       data-slot="message"
       data-role={role}
       data-message-id={messageId}
       data-error={hasError}
-      data-loading={isLoading}
       className={cn(
         "group flex w-full gap-2 data-[role=assistant]:justify-start data-[role=user]:justify-end",
         className,
@@ -82,17 +79,15 @@ const MessageActions = ({
 const MessageText = memo(
   ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
     <Streamdown
+      animated={{
+        animation: "fadeIn",
+        duration: 0.3,
+        easing: "ease-out",
+      }}
       className={cn(
-        "size-full text-sm [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "size-full text-sm [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
-      components={{
-        p: ({ children, ...props }) => (
-          <p className="whitespace-pre-wrap" {...props}>
-            {children}
-          </p>
-        ),
-      }}
       {...props}
     />
   ),

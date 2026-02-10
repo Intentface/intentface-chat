@@ -1,9 +1,14 @@
 "use client";
 
-import type { UIMessage } from "ai";
+import type { ChatStatus, UIMessage } from "ai";
 import { Message } from "./message";
 
-export const Messages = ({ messages }: { messages: UIMessage[] }) => {
+type Props = {
+  messages: UIMessage[];
+  status: ChatStatus;
+};
+
+export const Messages = ({ messages, status }: Props) => {
   return messages.map((message) => {
     return (
       <Message key={message.id} role={message.role} messageId={message.id}>
@@ -11,7 +16,14 @@ export const Messages = ({ messages }: { messages: UIMessage[] }) => {
           {message.parts?.map((part, index) => {
             switch (part.type) {
               case "text":
-                return <Message.Text key={index}>{part.text}</Message.Text>;
+                return (
+                  <Message.Text
+                    key={index}
+                    isAnimating={status === "streaming"}
+                  >
+                    {part.text}
+                  </Message.Text>
+                );
               default:
                 return null;
             }

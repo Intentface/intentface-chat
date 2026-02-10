@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const { messages } = await req.json();
 
   const result = streamText({
-    model: google("gemini-3-flash-preview"),
+    model: google("gemini-2.5-flash-lite"),
     messages: await convertToModelMessages(messages),
     experimental_transform: smoothStream({ chunking: "word", delayInMs: 20 }),
   });

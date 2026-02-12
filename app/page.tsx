@@ -11,13 +11,16 @@ import {
 import { Messages } from "@/components/ai/messages";
 import { PromptInput } from "@/components/ai/prompt-input";
 import { Header } from "@/components/header";
+import { ArrowUpIcon } from "@/components/icons/arrow-up";
+import { PaperClipIcon } from "@/components/icons/paperclip";
 import Button from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 
 const messageSchema = z.string().min(1, "Message cannot be empty").trim();
 
 export default function Home() {
-  const { messages, sendMessage, status } = useChat();
+  const { messages, sendMessage, status, regenerate } = useChat();
   const isEmpty = messages.length === 0;
 
   const form = useForm({
@@ -43,7 +46,11 @@ export default function Home() {
 
       <Conversation>
         <ConversationContent>
-          <Messages messages={messages} status={status} />
+          <Messages
+            messages={messages}
+            status={status}
+            regenerate={regenerate}
+          />
         </ConversationContent>
       </Conversation>
 
@@ -94,14 +101,16 @@ export default function Home() {
                       ]}
                     />
                   </PromptInput.Textarea>
-                  <PromptInput.Footer>
-                    <Button
-                      type="submit"
+                  <PromptInput.Footer className="flex justify-between">
+                    <IconButton variant="ghost">
+                      <PaperClipIcon />
+                    </IconButton>
+                    <IconButton
                       variant="outline"
                       disabled={!field.state.value.trim()}
                     >
-                      Send
-                    </Button>
+                      <ArrowUpIcon />
+                    </IconButton>
                   </PromptInput.Footer>
                 </PromptInput>
               )}

@@ -1,23 +1,33 @@
 "use client";
 
-import type { UIMessage } from "ai";
+import type { ChatStatus, UIMessage } from "ai";
+import { CheckIcon, ClipboardIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
+import { IconButton } from "@/components/ui/icon-button";
+import Tooltip from "@/components/ui/tooltip";
+import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
-import "streamdown/styles.css";
+
+type MessageRootProps = {
+  messageId: string;
+  role: UIMessage["role"];
+  status: ChatStatus;
+  isLast: boolean;
+} & ComponentProps<typeof motion.div>;
 // Message wrapper with entrance animation
 const MessageRoot = ({
   messageId,
   role,
-  hasError,
+  status,
+  isLast,
   className,
+  children,
   ...props
-}: ComponentProps<typeof motion.div> & {
-  messageId: string;
-  role: UIMessage["role"];
-  hasError?: boolean;
-}) => {
+}: MessageRootProps) => {
+  const isError = status === "error";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -26,13 +36,17 @@ const MessageRoot = ({
       data-slot="message"
       data-role={role}
       data-message-id={messageId}
-      data-error={hasError}
+      data-status={status}
+      data-error={isError ? "" : undefined}
+      data-last={isLast ? "" : undefined}
       className={cn(
-        "group flex w-full gap-2 data-[role=assistant]:justify-start data-[role=user]:justify-end",
+        "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+    </motion.div>
   );
 };
 
@@ -66,14 +80,53 @@ const MessageActions = ({
   className,
   ...props
 }: ComponentProps<"div">) => (
-  <div
-    data-slot="message-actions"
-    className={cn("flex items-center justify-start gap-2", className)}
-    {...props}
-  >
-    {children}
-  </div>
+  <Tooltip.Provider>
+    <div
+      data-slot="message-actions"
+      className={cn(
+        "inline-flex items-center justify-start gap-2",
+        // Hidden by default
+        "pointer-events-none opacity-0",
+        // Show on hover for all messages
+        "group-hover:pointer-events-auto group-hover:opacity-100",
+        // Hide when streaming (only for assistant messages)
+        "group-data-[role=assistant]:group-data-[status=streaming]:pointer-events-none! group-data-[role=assistant]:group-data-[status=streaming]:opacity-0!",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  </Tooltip.Provider>
 );
+
+// Action button with tooltip
+const MessageAction = ({
+  tooltip,
+  children,
+  ...props
+}: ComponentProps<typeof IconButton> & { tooltip?: string }) => {
+  if (!tooltip) {
+    return (
+      <IconButton variant="ghost" size="sm" {...props}>
+        {children}
+      </IconButton>
+    );
+  }
+
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <IconButton variant="ghost" size="sm" {...props}>
+            {children}
+          </IconButton>
+        }
+      />
+      <Tooltip.Content>{tooltip}</Tooltip.Content>
+    </Tooltip>
+  );
+};
 
 // Memoized markdown text renderer using Streamdown
 const MessageText = memo(
@@ -138,11 +191,66 @@ const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
   </div>
 );
 
+// Timestamp display
+const MessageTimestamp = ({
+  timestamp,
+  className,
+  ...props
+}: ComponentProps<"span"> & { timestamp: Date | string | number }) => {
+  const date = new Date(timestamp);
+  const formattedTime = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  return (
+    <span
+      data-slot="message-timestamp"
+      className={cn("text-xs text-muted-foreground", className)}
+      {...props}
+    >
+      {formattedTime}
+    </span>
+  );
+};
+
+// Copy button with individual state
+const MessageCopy = ({
+  value,
+  className,
+  ...props
+}: Omit<ComponentProps<typeof IconButton>, "children"> & { value: string }) => {
+  const { copy, isCopied } = useCopy();
+
+  return (
+    <Tooltip>
+      <Tooltip.Trigger
+        render={
+          <IconButton
+            variant="ghost"
+            size="sm"
+            onClick={() => copy(value)}
+            className={className}
+            {...props}
+          >
+            {isCopied ? <CheckIcon /> : <ClipboardIcon />}
+          </IconButton>
+        }
+      />
+      <Tooltip.Content>{isCopied ? "Copied!" : "Copy"}</Tooltip.Content>
+    </Tooltip>
+  );
+};
+
 // Composed Message component
 export const Message = Object.assign(MessageRoot, {
   Content: MessageContent,
   Actions: MessageActions,
+  Action: MessageAction,
+  Copy: MessageCopy,
   Text: MessageText,
   Error: MessageError,
   Loading: MessageLoading,
+  Timestamp: MessageTimestamp,
 });

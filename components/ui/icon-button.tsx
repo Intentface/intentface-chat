@@ -22,11 +22,11 @@ const iconButtonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        xs: "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        sm: "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        md: "size-8",
-        lg: "size-9",
-        xl: "size-10",
+        xs: "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-2.5",
+        sm: "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+        md: "size-8 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "size-9 [&_svg:not([class*='size-'])]:size-4",
+        xl: "size-10 [&_svg:not([class*='size-'])]:size-5",
       },
     },
     defaultVariants: {

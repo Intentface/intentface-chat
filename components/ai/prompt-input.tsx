@@ -183,11 +183,9 @@ const PromptInputTextarea = ({
     },
 
     onCreate: ({ editor }) => {
-      console.log("onCreate", editor);
       editorRef.current = editor;
     },
     onDestroy: () => {
-      console.log("onDestroy");
       editorRef.current = null;
     },
     onUpdate: ({ editor }) => {

@@ -208,33 +208,29 @@ const PromptInputTextarea = ({
     );
   }, [children]);
 
-  if (!editor) {
-    return null;
-  }
-
-  const isEmpty = editor.isEmpty;
-
   return (
     <div
       data-slot="prompt-input-textarea"
       className={cn(
-        "max-h-32 min-h-lh overflow-y-auto px-3 py-2 text-sm",
+        "max-h-32 min-h-8 overflow-y-auto px-3 py-2 text-md",
         "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
         disabled && "opacity-50 cursor-not-allowed",
         className,
       )}
     >
-      <EditorContent editor={editor} className="relative">
-        {isEmpty && placeholder && (
-          <div
-            data-slot="prompt-input-placeholder"
-            className="absolute inset-0 min-h-lh pointer-events-none"
-            aria-hidden="true"
-          >
-            {placeholder}
-          </div>
-        )}
-      </EditorContent>
+      {editor !== null ? (
+        <EditorContent editor={editor} className="relative">
+          {editor.isEmpty && placeholder && (
+            <div
+              data-slot="prompt-input-placeholder"
+              className="absolute inset-0 min-h-lh pointer-events-none"
+              aria-hidden="true"
+            >
+              {placeholder}
+            </div>
+          )}
+        </EditorContent>
+      ) : null}
     </div>
   );
 };

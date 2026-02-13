@@ -1,16 +1,18 @@
 "use client";
 
-import { ArrowDownIcon, DownloadIcon } from "lucide-react";
+import { DownloadIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import type Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
+import { ArrowDownIcon } from "../icons/arrow-down";
 
-export type ConversationProps = ComponentProps<typeof StickToBottom>;
+export type ConversationRootProps = ComponentProps<typeof StickToBottom>;
 
-export const Conversation = ({ className, ...props }: ConversationProps) => (
+const ConversationRoot = ({ className, ...props }: ConversationRootProps) => (
   <StickToBottom
     className={cn("h-full w-full overflow-hidden", className)}
     initial="smooth"
@@ -24,7 +26,7 @@ export type ConversationContentProps = ComponentProps<
   typeof StickToBottom.Content
 >;
 
-export const ConversationContent = ({
+const ConversationContent = ({
   className,
   ...props
 }: ConversationContentProps) => (
@@ -43,7 +45,7 @@ export type ConversationEmptyStateProps = ComponentProps<"div"> & {
   icon?: React.ReactNode;
 };
 
-export const ConversationEmptyState = ({
+const ConversationEmptyState = ({
   className,
   title = "No messages yet",
   description = "Start a conversation to see messages here",
@@ -72,9 +74,11 @@ export const ConversationEmptyState = ({
   </div>
 );
 
-export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
+export type ConversationScrollButtonProps = ComponentProps<
+  typeof motion.button
+>;
 
-export const ConversationScrollButton = ({
+const ConversationScrollButton = ({
   className,
   ...props
 }: ConversationScrollButtonProps) => {
@@ -85,21 +89,27 @@ export const ConversationScrollButton = ({
   }, [scrollToBottom]);
 
   return (
-    !isAtBottom && (
-      <IconButton
-        className={cn(
-          "absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full dark:bg-background dark:hover:bg-muted",
-          className,
-        )}
-        onClick={handleScrollToBottom}
-        size="xs"
-        type="button"
-        variant="outline"
-        {...props}
-      >
-        <ArrowDownIcon className="size-4" />
-      </IconButton>
-    )
+    <div className="relative h-0 w-full">
+      <div className="absolute right-6 bottom-3">
+        <AnimatePresence>
+          {!isAtBottom && (
+            <motion.button
+              type="button"
+              aria-label="Scroll to bottom"
+              initial={{ opacity: 0, y: 8, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.9 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="flex size-8 items-center justify-center rounded-full border border-gray-4 bg-gray-9 shadow-md hover:bg-gray-10 [&>svg]:size-3.5 [&>svg]:fill-gray-11 hover:[&>svg]:fill-gray-12"
+              onClick={handleScrollToBottom}
+              {...props}
+            >
+              <ArrowDownIcon />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 };
 
@@ -131,7 +141,7 @@ export const messagesToMarkdown = (
   ) => string = defaultFormatMessage,
 ): string => messages.map((msg, i) => formatMessage(msg, i)).join("\n\n");
 
-export const ConversationDownload = ({
+const ConversationDownload = ({
   messages,
   filename = "conversation.md",
   formatMessage = defaultFormatMessage,
@@ -168,3 +178,10 @@ export const ConversationDownload = ({
     </IconButton>
   );
 };
+
+export const Conversation = Object.assign(ConversationRoot, {
+  Content: ConversationContent,
+  EmptyState: ConversationEmptyState,
+  ScrollButton: ConversationScrollButton,
+  Download: ConversationDownload,
+});

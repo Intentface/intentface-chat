@@ -2,6 +2,7 @@
 
 import type { ChatRequestOptions, ChatStatus, UIMessage } from "ai";
 import { RefreshCcwIcon } from "lucide-react";
+import { RefreshIcon } from "../icons/refresh";
 import { Message } from "./message";
 
 type Props = {
@@ -57,7 +58,7 @@ export const Messages = ({ messages, status, regenerate }: Props) => {
                   onClick={() => handleRegenerate(message.id)}
                   tooltip="Regenerate"
                 >
-                  <RefreshCcwIcon />
+                  <RefreshIcon />
                 </Message.Action>
               )}
               <Message.Copy value={messageText} />

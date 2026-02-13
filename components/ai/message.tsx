@@ -9,6 +9,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
+import { CopyIcon } from "../icons/copy";
 
 type MessageRootProps = {
   messageId: string;
@@ -89,6 +90,8 @@ const MessageActions = ({
         "pointer-events-none opacity-0",
         // Show on hover for all messages
         "group-hover:pointer-events-auto group-hover:opacity-100",
+        // Show when focus is within the message
+        "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
         // Hide when streaming (only for assistant messages)
         "group-data-[role=assistant]:group-data-[status=streaming]:pointer-events-none! group-data-[role=assistant]:group-data-[status=streaming]:opacity-0!",
         className,
@@ -138,7 +141,7 @@ const MessageText = memo(
         easing: "ease-out",
       }}
       className={cn(
-        "size-full text-sm [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        "size-full text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,
       )}
       {...props}
@@ -234,7 +237,7 @@ const MessageCopy = ({
             className={className}
             {...props}
           >
-            {isCopied ? <CheckIcon /> : <ClipboardIcon />}
+            {isCopied ? <CheckIcon /> : <CopyIcon />}
           </IconButton>
         }
       />

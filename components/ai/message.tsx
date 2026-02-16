@@ -135,11 +135,6 @@ const MessageAction = ({
 const MessageText = memo(
   ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
     <Streamdown
-      animated={{
-        animation: "fadeIn",
-        duration: 0.3,
-        easing: "ease-out",
-      }}
       className={cn(
         "size-full text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,

@@ -51,13 +51,12 @@
   --text-md: 14px;
   --text-lg: 15px;
   --text-xl: 16px;
-
 }
 
 :root {
   --radius: 0.625rem;
-  --header-height: 4rem;
-  --conversation-width: 42rem;
+
+  --thread-width: 42rem;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);

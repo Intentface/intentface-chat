@@ -1,7 +1,6 @@
 "use client";
 
 import type { ChatRequestOptions, ChatStatus, UIMessage } from "ai";
-import { RefreshCcwIcon } from "lucide-react";
 import { RefreshIcon } from "../icons/refresh";
 import { Message } from "./message";
 
@@ -14,7 +13,7 @@ type Props = {
 export const Messages = ({ messages, status, regenerate }: Props) => {
   const isError = status === "error";
   const isLoading = status === "submitted";
-  const isStreaming = status === "streaming";
+  // const isStreaming = status === "streaming";
 
   const handleRegenerate = (messageId: string) => {
     regenerate({ messageId });
@@ -42,11 +41,7 @@ export const Messages = ({ messages, status, regenerate }: Props) => {
               {message.parts?.map((part, index) => {
                 switch (part.type) {
                   case "text":
-                    return (
-                      <Message.Text key={index} isAnimating={isStreaming}>
-                        {part.text}
-                      </Message.Text>
-                    );
+                    return <Message.Text key={index}>{part.text}</Message.Text>;
                   default:
                     return null;
                 }

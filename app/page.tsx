@@ -1,12 +1,14 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type FileUIPart } from "ai";
 import { useMemo } from "react";
-import { Conversation } from "@/components/ai/conversation";
 import { Messages } from "@/components/ai/messages";
+import { Thread } from "@/components/ai/thread";
+import { AppSidebar } from "@/components/app-sidebar";
 import { ChatInput } from "@/components/chat-input";
 import { Header } from "@/components/header";
+import { Sidebar } from "@/components/ui/sidebar";
 import { useModelStore } from "@/lib/store";
 
 export default function Home() {
@@ -20,26 +22,44 @@ export default function Home() {
     [model],
   );
 
-  const { messages, sendMessage, status, regenerate } = useChat({ transport });
-  const isEmpty = messages.length === 0;
+  const { messages, sendMessage, status, regenerate } = useChat({
+    transport,
+  });
 
-  const handleSendMessage = async (text: string) => {
-    await sendMessage({ text });
+  const handleSendMessage = async ({
+    text,
+    files,
+  }: {
+    text: string;
+    files: FileUIPart[];
+  }) => {
+    await sendMessage({
+      files,
+      text,
+    });
   };
 
   return (
-    <div className="relative h-dvh w-full">
-      <Header />
-      <Conversation>
-        <Conversation.Content>
-          <Messages
-            messages={messages}
-            status={status}
-            regenerate={regenerate}
-          />
-        </Conversation.Content>
-        <ChatInput onSendMessage={handleSendMessage} isEmpty={isEmpty} />
-      </Conversation>
-    </div>
+    <Sidebar.Provider>
+      <AppSidebar />
+      <Sidebar.Inset>
+        <Thread>
+          <Header />
+          <Thread.Overlay direction="top" />
+          <Thread.Viewport>
+            <Messages
+              messages={messages}
+              status={status}
+              regenerate={regenerate}
+            />
+          </Thread.Viewport>
+          <Thread.Composer>
+            <Thread.ScrollButton />
+            <ChatInput onSendMessage={handleSendMessage} />
+          </Thread.Composer>
+          <Thread.Overlay direction="bottom" />
+        </Thread>
+      </Sidebar.Inset>
+    </Sidebar.Provider>
   );
 }

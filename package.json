@@ -12,7 +12,7 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.21",
     "@ai-sdk/react": "^3.0.75",
-    "@base-ui/react": "^1.1.0",
+    "@base-ui/react": "^1.2.0",
     "@tanstack/react-form": "^1.28.0",
     "@tiptap/extension-document": "^3.19.0",
     "@tiptap/extension-paragraph": "^3.19.0",

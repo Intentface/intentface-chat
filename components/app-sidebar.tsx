@@ -5,7 +5,7 @@ import { Sidebar } from "@/components/ui/sidebar";
 
 export const AppSidebar = () => {
   return (
-    <Sidebar variant="inset">
+    <Sidebar>
       <Sidebar.Header>
         <span className="px-2 text-sm font-semibold">Intentface</span>
       </Sidebar.Header>
@@ -25,7 +25,6 @@ export const AppSidebar = () => {
         </Sidebar.Group>
       </Sidebar.Content>
       <Sidebar.Footer />
-      <Sidebar.Rail />
     </Sidebar>
   );
 };

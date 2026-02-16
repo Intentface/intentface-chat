@@ -298,7 +298,7 @@ const SidebarInset = ({
       data-expanded={state === "expanded" ? "" : undefined}
       className={cn(
         "group/sidebar-inset bg-accent background relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
-        "data-expanded:p-2 transition-padding duration-200 ease-out",
+        "data-expanded:pr-2 data-expanded:py-2 transition-padding duration-200 ease-out",
         className,
       )}
       {...props}

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChatStatus, UIMessage } from "ai";
-import { CheckIcon, ClipboardIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";

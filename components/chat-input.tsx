@@ -1,7 +1,6 @@
 "use client";
 
 import type { FileUIPart } from "ai";
-import { motion } from "motion/react";
 import { useCallback, useRef, useState } from "react";
 import {
   PromptInput,
@@ -97,6 +96,7 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
 
         promptInputRef.current?.clearAttachments();
         setMessage("");
+        setHasSubmitted(true);
 
         await onSendMessage({
           files,
@@ -104,7 +104,6 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
         });
       } finally {
         setIsSending(false);
-        setHasSubmitted(true);
       }
     },
     [isSending, message, onSendMessage],

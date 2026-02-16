@@ -15,73 +15,11 @@ export type ThreadRootProps = ComponentProps<typeof StickToBottom> & {
   children?: ReactNode;
 };
 
-export type ThreadOverlayProps = ComponentProps<typeof ProgressiveBlur> & {
-  direction: "top" | "bottom";
-};
-
-const ThreadOverlay = memo(
-  ({ className, direction, ...props }: ThreadOverlayProps) => (
-    <div
-      data-slot="thread-overlay-top"
-      data-thread-overlay={direction}
-      style={
-        {
-          "--thread-overlay-top-height": "4rem",
-          "--thread-overlay-bottom-height": "8rem",
-        } as React.CSSProperties
-      }
-      className={cn(
-        "absolute right-0 left-0 z-1 mx-auto w-full max-w-(--thread-width)",
-        'data-[thread-overlay="top"]:h-(--thread-overlay-top-height) data-[thread-overlay="top"]:top-0',
-        'data-[thread-overlay="bottom"]:h-(--thread-overlay-bottom-height) data-[thread-overlay="bottom"]:bottom-0',
-        className,
-      )}
-    >
-      <ProgressiveBlur
-        direction={direction}
-        className={cn(
-          "h-full w-full bg-linear-to-b from-background to-transparent",
-          direction === "top" ? "bg-linear-to-b" : "bg-linear-to-t",
-        )}
-        {...props}
-      />
-    </div>
-  ),
-);
-
-ThreadOverlay.displayName = "ThreadOverlay";
-
-// export type ThreadOverlayBottomProps = Omit<
-//   ComponentProps<typeof ProgressiveBlur>,
-//   "direction"
-// >;
-
-// const ThreadOverlayBottom = memo(
-//   ({ className, ...props }: ThreadOverlayBottomProps) => (
-//     <div
-//       data-slot="thread-overlay-bottom"
-//       data-thread-overlay="bottom"
-//       className={cn(
-//         "absolute right-0 bottom-0 left-0 z-1 mx-auto h-32 w-full max-w-(--thread-width)",
-//         className,
-//       )}
-//     >
-//       <ProgressiveBlur
-//         direction="bottom"
-//         className="h-full w-full bg-linear-to-t from-background to-transparent"
-//         {...props}
-//       />
-//     </div>
-//   ),
-// );
-
-// ThreadOverlayBottom.displayName = "ThreadOverlayBottom";
-
 const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => (
   <StickToBottom
     data-slot="thread-root"
     className={cn(
-      "relative flex h-full w-full overflow-hidden bg-background border border-transparent",
+      "relative flex h-full w-full overflow-hidden bg-background border border-transparent [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
       "group-data-expanded/sidebar-inset:border-border group-data-expanded/sidebar-inset:rounded-md",
       className,
     )}
@@ -101,6 +39,37 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => (
     {children}
   </StickToBottom>
 );
+
+export type ThreadOverlayProps = ComponentProps<typeof ProgressiveBlur> & {
+  direction: "top" | "bottom";
+};
+
+const ThreadOverlay = memo(
+  ({ className, direction, ...props }: ThreadOverlayProps) => (
+    <div
+      data-slot="thread-overlay-top"
+      data-thread-overlay={direction}
+      className={cn(
+        "group/thread-overlay absolute right-0 left-0 z-1 mx-auto w-full max-w-(--thread-width)",
+        'data-[thread-overlay="top"]:h-(--thread-overlay-top-height) data-[thread-overlay="top"]:top-0',
+        'data-[thread-overlay="bottom"]:h-(--thread-overlay-bottom-height) data-[thread-overlay="bottom"]:bottom-0',
+        className,
+      )}
+    >
+      <ProgressiveBlur
+        direction={direction}
+        className={cn(
+          "h-full w-full bg-linear-to-b from-background to-transparent",
+          "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
+          "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
+        )}
+        {...props}
+      />
+    </div>
+  ),
+);
+
+ThreadOverlay.displayName = "ThreadOverlay";
 
 export type ThreadViewportProps = ComponentProps<
   typeof StickToBottom.Content

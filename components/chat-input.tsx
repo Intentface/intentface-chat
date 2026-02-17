@@ -10,7 +10,6 @@ import {
 import { PaperClipIcon } from "@/components/icons/paperclip";
 import { ModelSelector } from "@/components/model-selector";
 import { IconButton } from "@/components/ui/icon-button";
-import type { GeminiModelId } from "@/lib/models";
 import { useModelStore } from "@/lib/store";
 import { SendIcon } from "./icons/send";
 
@@ -21,52 +20,13 @@ type ChatInputProps = {
   }) => Promise<void>;
 };
 
-type PromptInputFooterToolsProps = {
-  isSending: boolean;
-  message: string;
-  model: GeminiModelId;
-  setModel: (value: GeminiModelId) => void;
-};
-
-const PromptInputFooterTools = ({
-  isSending,
-  message,
-  model,
-  setModel,
-}: PromptInputFooterToolsProps) => {
-  const attachments = usePromptInputAttachments();
-
-  return (
-    <PromptInput.Footer className="flex items-center justify-between">
-      <div className="flex items-center gap-1">
-        <IconButton
-          onClick={attachments.openFileDialog}
-          type="button"
-          variant="ghost"
-        >
-          <PaperClipIcon />
-        </IconButton>
-
-        <ModelSelector value={model} onValueChange={setModel} />
-      </div>
-      <IconButton
-        disabled={
-          (!message.trim() && attachments.files.length === 0) || isSending
-        }
-        variant="outline"
-      >
-        <SendIcon />
-      </IconButton>
-    </PromptInput.Footer>
-  );
-};
-
 export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
   const { model, setModel } = useModelStore();
   const promptInputRef = useRef<PromptInputHandle>(null);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const attachments = usePromptInputAttachments();
 
   const handleSubmit = useCallback(
     async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -150,12 +110,28 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
           </PromptInput.Textarea>
         </PromptInput.Body>
         <PromptInput.AttachmentsError />
-        <PromptInputFooterTools
-          isSending={isSending}
-          message={message}
-          model={model}
-          setModel={setModel}
-        />
+        <PromptInput.Footer className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <IconButton
+              onClick={attachments.openFileDialog}
+              type="button"
+              variant="ghost"
+            >
+              <PaperClipIcon />
+            </IconButton>
+
+            <ModelSelector value={model} onValueChange={setModel} />
+          </div>
+          <IconButton
+            type="submit"
+            disabled={
+              (!message.trim() && attachments.files.length === 0) || isSending
+            }
+            variant="outline"
+          >
+            <SendIcon />
+          </IconButton>
+        </PromptInput.Footer>
       </PromptInput>
     </form>
   );

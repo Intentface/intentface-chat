@@ -12,14 +12,12 @@ import { cn } from "@/lib/utils";
 import { CopyIcon } from "../icons/copy";
 
 type MessageRootProps = {
-  messageId: string;
   role: UIMessage["role"];
   status: ChatStatus;
   isLast: boolean;
 } & ComponentProps<typeof motion.div>;
 // Message wrapper with entrance animation
 const MessageRoot = ({
-  messageId,
   role,
   status,
   isLast,
@@ -36,7 +34,6 @@ const MessageRoot = ({
       transition={{ duration: 0.15 }}
       data-slot="message"
       data-role={role}
-      data-message-id={messageId}
       data-status={status}
       data-error={isError ? "" : undefined}
       data-last={isLast ? "" : undefined}

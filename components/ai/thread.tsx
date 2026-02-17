@@ -28,14 +28,6 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => (
     role="log"
     {...props}
   >
-    {/* <ProgressiveBlur
-      direction="top"
-      className="absolute top-0 left-0 right-0 z-1 mx-auto w-full  max-w-(--thread-width) h-(--header-height) bg-linear-to-b from-background to-transparent"
-    />
-    <ProgressiveBlur
-      direction="bottom"
-      className="absolute bottom-0 left-0 right-0 z-1 mx-auto w-full max-w-(--thread-width) h-32 bg-linear-to-t from-background to-transparent"
-    /> */}
     {children}
   </StickToBottom>
 );
@@ -118,10 +110,6 @@ const ThreadComposer = ({
     )}
     {...props}
   >
-    {/* <ProgressiveBlur
-      className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-background to-transparent pointer-events-none"
-      direction="bottom"
-    /> */}
     <div className="relative flex w-full flex-col items-center px-4 pb-2 sm:px-0 sm:pb-4">
       {children}
     </div>

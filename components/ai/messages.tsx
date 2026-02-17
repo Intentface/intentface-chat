@@ -3,6 +3,7 @@
 import type { ChatRequestOptions, ChatStatus, UIMessage } from "ai";
 import { RefreshIcon } from "../icons/refresh";
 import { Message } from "./message";
+import { Reasoning } from "./reasoning";
 
 type Props = {
   messages: UIMessage[];
@@ -13,7 +14,7 @@ type Props = {
 export const Messages = ({ messages, status, regenerate }: Props) => {
   const isError = status === "error";
   const isLoading = status === "submitted";
-  // const isStreaming = status === "streaming";
+  const isStreaming = status === "streaming";
 
   const handleRegenerate = (messageId: string) => {
     regenerate({ messageId });
@@ -29,15 +30,33 @@ export const Messages = ({ messages, status, regenerate }: Props) => {
           ?.map((part) => (part.type === "text" ? part.text : ""))
           .join("");
 
+        // Consolidate all reasoning parts into one block
+        const reasoningParts = message.parts.filter(
+          (part) => part.type === "reasoning",
+        );
+        const reasoningText = reasoningParts
+          .map((part) => part.text)
+          .join("\n\n");
+        const hasReasoning = reasoningParts.length > 0;
+        // Check if reasoning is still streaming (last part is reasoning on last message)
+        const lastPart = message.parts.at(-1);
+        const isReasoningStreaming =
+          isLastMessage && isStreaming && lastPart?.type === "reasoning";
+
         return (
           <Message
             key={message.id}
-            messageId={message.id}
             role={message.role}
             status={status}
             isLast={isLastMessage}
           >
             <Message.Content>
+              {hasReasoning && (
+                <Reasoning isStreaming={isReasoningStreaming}>
+                  <Reasoning.Trigger />
+                  <Reasoning.Content>{reasoningText}</Reasoning.Content>
+                </Reasoning>
+              )}
               {message.parts?.map((part, index) => {
                 switch (part.type) {
                   case "text":

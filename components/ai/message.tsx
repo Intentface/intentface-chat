@@ -13,20 +13,18 @@ import { CopyIcon } from "../icons/copy";
 
 type MessageRootProps = {
   role: UIMessage["role"];
-  status: ChatStatus;
   isLast: boolean;
+  isError: boolean;
 } & ComponentProps<typeof motion.div>;
 // Message wrapper with entrance animation
 const MessageRoot = ({
   role,
-  status,
   isLast,
+  isError,
   className,
   children,
   ...props
 }: MessageRootProps) => {
-  const isError = status === "error";
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -34,7 +32,6 @@ const MessageRoot = ({
       transition={{ duration: 0.15 }}
       data-slot="message"
       data-role={role}
-      data-status={status}
       data-error={isError ? "" : undefined}
       data-last={isLast ? "" : undefined}
       className={cn(
@@ -82,7 +79,7 @@ const MessageActions = ({
     <div
       data-slot="message-actions"
       className={cn(
-        "inline-flex items-center justify-start gap-2",
+        "inline-flex items-center justify-start gap-1",
         // Hidden by default
         "pointer-events-none opacity-0",
         // Show on hover for all messages
@@ -132,6 +129,7 @@ const MessageAction = ({
 const MessageText = memo(
   ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
     <Streamdown
+      controls={{ table: false }}
       className={cn(
         "size-full text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className,

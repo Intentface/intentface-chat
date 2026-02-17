@@ -47,7 +47,7 @@ export const Messages = ({ messages, status, regenerate }: Props) => {
           <Message
             key={message.id}
             role={message.role}
-            status={status}
+            isError={isError}
             isLast={isLastMessage}
           >
             <Message.Content>

@@ -135,7 +135,7 @@ const ThreadScrollButton = ({
   }, [scrollToBottom]);
 
   return (
-    <div className="absolute -top-3 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
+    <div className="absolute -top-3 right-3 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
       <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-end">
         <AnimatePresence>
           {!isAtBottom && (

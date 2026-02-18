@@ -3,11 +3,12 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type FileUIPart } from "ai";
 import { useMemo } from "react";
-import { Messages } from "@/components/ai/messages";
 import { Thread } from "@/components/ai/thread";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ArtifactsPanel } from "@/components/artifacts-panel";
 import { ChatInput } from "@/components/chat-input";
 import { Header } from "@/components/header";
+import { Messages } from "@/components/messages";
 import { Sidebar } from "@/components/ui/sidebar";
 import { useModelStore } from "@/lib/store";
 
@@ -43,22 +44,25 @@ export default function Home() {
     <Sidebar.Provider>
       <AppSidebar />
       <Sidebar.Inset>
-        <Thread>
-          <Header />
-          <Thread.Overlay direction="top" />
-          <Thread.Viewport>
-            <Messages
-              messages={messages}
-              status={status}
-              regenerate={regenerate}
-            />
-          </Thread.Viewport>
-          <Thread.Composer>
-            <Thread.ScrollButton />
-            <ChatInput onSendMessage={handleSendMessage} />
-          </Thread.Composer>
-          <Thread.Overlay direction="bottom" />
-        </Thread>
+        <Sidebar.Viewport>
+          <Thread>
+            <Header />
+            <Thread.Overlay direction="top" />
+            <Thread.Viewport>
+              <Messages
+                messages={messages}
+                status={status}
+                regenerate={regenerate}
+              />
+            </Thread.Viewport>
+            <Thread.Composer>
+              <Thread.ScrollButton />
+              <ChatInput onSendMessage={handleSendMessage} />
+            </Thread.Composer>
+            <Thread.Overlay direction="bottom" />
+          </Thread>
+          <ArtifactsPanel />
+        </Sidebar.Viewport>
       </Sidebar.Inset>
     </Sidebar.Provider>
   );

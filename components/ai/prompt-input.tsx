@@ -21,8 +21,10 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { IconButton } from "@/components/ui/icon-button";
 import { useLoop } from "@/hooks/use-loop";
 import { cn } from "@/lib/utils";
+import { SendIcon } from "../icons/send";
 import { AttachmentsInline } from "./attachments-inline";
 import {
   type AttachmentError,
@@ -354,7 +356,7 @@ const PromptInputRoot = React.forwardRef<
           onMouseDown={handleMouseDown}
           ref={rootRef}
           className={cn(
-            "border-input bg-background rounded-lg border w-full cursor-text",
+            "border-input bg-background rounded-4xl [corner-shape:squircle] border w-full cursor-text",
             "has-[[data-slot=prompt-input-textarea]:focus-within]:border-ring",
             "has-[[data-slot=prompt-input-textarea]:focus-within]:ring-3",
             "has-[[data-slot=prompt-input-textarea]:focus-within]:ring-ring/50",
@@ -617,6 +619,23 @@ const PromptInputAttachmentsError = ({
   );
 };
 
+type PromptInputSubmitProps = ComponentProps<typeof IconButton>;
+
+const PromptInputSubmit = ({
+  children,
+  className,
+  ...props
+}: PromptInputSubmitProps) => (
+  <IconButton
+    type="submit"
+    variant="outline"
+    className={cn("rounded-full", className)}
+    {...props}
+  >
+    {children ?? <SendIcon />}
+  </IconButton>
+);
+
 export const PromptInput = Object.assign(PromptInputRoot, {
   Attachments: PromptInputAttachments,
   AttachmentsError: PromptInputAttachmentsError,
@@ -624,4 +643,5 @@ export const PromptInput = Object.assign(PromptInputRoot, {
   Textarea: PromptInputTextarea,
   Placeholder: PromptInputPlaceholder,
   Footer: PromptInputFooter,
+  Submit: PromptInputSubmit,
 });

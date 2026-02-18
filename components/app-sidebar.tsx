@@ -1,9 +1,19 @@
 "use client";
 
-import { MessageSquarePlusIcon } from "lucide-react";
+import {
+  MessageSquarePlusIcon,
+  MonitorIcon,
+  MoonIcon,
+  SunIcon,
+} from "lucide-react";
+import { useTheme } from "next-themes";
+import { SettingsIcon } from "@/components/icons/settings";
+import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
 
 export const AppSidebar = () => {
+  const { theme, setTheme } = useTheme();
+
   return (
     <Sidebar>
       <Sidebar.Header>
@@ -24,7 +34,49 @@ export const AppSidebar = () => {
           </Sidebar.GroupContent>
         </Sidebar.Group>
       </Sidebar.Content>
-      <Sidebar.Footer />
+      <Sidebar.Footer>
+        <Sidebar.Menu>
+          <Sidebar.MenuItem>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Sidebar.MenuButton>
+                    <SettingsIcon />
+                    <span>Settings</span>
+                  </Sidebar.MenuButton>
+                }
+              />
+              <DropdownMenu.Content side="top" align="start">
+                <DropdownMenu.Sub>
+                  <DropdownMenu.SubTrigger>
+                    <SunIcon />
+                    Theme
+                  </DropdownMenu.SubTrigger>
+                  <DropdownMenu.SubContent>
+                    <DropdownMenu.RadioGroup
+                      value={theme}
+                      onValueChange={setTheme}
+                    >
+                      <DropdownMenu.RadioItem value="system">
+                        <MonitorIcon />
+                        System
+                      </DropdownMenu.RadioItem>
+                      <DropdownMenu.RadioItem value="light">
+                        <SunIcon />
+                        Light
+                      </DropdownMenu.RadioItem>
+                      <DropdownMenu.RadioItem value="dark">
+                        <MoonIcon />
+                        Dark
+                      </DropdownMenu.RadioItem>
+                    </DropdownMenu.RadioGroup>
+                  </DropdownMenu.SubContent>
+                </DropdownMenu.Sub>
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </Sidebar.MenuItem>
+        </Sidebar.Menu>
+      </Sidebar.Footer>
     </Sidebar>
   );
 };

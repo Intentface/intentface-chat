@@ -11,7 +11,6 @@ import { PaperClipIcon } from "@/components/icons/paperclip";
 import { ModelSelector } from "@/components/model-selector";
 import { IconButton } from "@/components/ui/icon-button";
 import { useModelStore } from "@/lib/store";
-import { SendIcon } from "./icons/send";
 
 type ChatInputProps = {
   onSendMessage: (payload: {
@@ -70,19 +69,7 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
   );
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="w-full"
-      // initial={{ y: "calc(-50vh + 50%)" }}
-      // animate={{
-      //   y: !hasSubmitted ? "calc(-50vh + 50%)" : 0,
-      // }}
-      // transition={{
-      //   type: "spring",
-      //   stiffness: 300,
-      //   damping: 30,
-      // }}
-    >
+    <form onSubmit={handleSubmit} className="w-full">
       <PromptInput ref={promptInputRef}>
         <PromptInput.Attachments />
         <PromptInput.Body>
@@ -122,15 +109,11 @@ export const ChatInput = ({ onSendMessage }: ChatInputProps) => {
 
             <ModelSelector value={model} onValueChange={setModel} />
           </div>
-          <IconButton
-            type="submit"
+          <PromptInput.Submit
             disabled={
               (!message.trim() && attachments.files.length === 0) || isSending
             }
-            variant="outline"
-          >
-            <SendIcon />
-          </IconButton>
+          />
         </PromptInput.Footer>
       </PromptInput>
     </form>

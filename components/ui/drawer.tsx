@@ -1,6 +1,6 @@
 "use client";
 
-import { DrawerPreview as Drawer } from "@base-ui/react/drawer";
+import { DrawerPreview as DrawerPrimitive } from "@base-ui/react/drawer";
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -14,25 +14,27 @@ const swipeDirectionMap: Record<Side, "up" | "right" | "down" | "left"> = {
   left: "left",
 };
 
-const Sheet = ({
+const DrawerRoot = ({
   side = "right",
   ...props
-}: Drawer.Root.Props & { side?: Side }) => {
-  return <Drawer.Root swipeDirection={swipeDirectionMap[side]} {...props} />;
+}: DrawerPrimitive.Root.Props & { side?: Side }) => {
+  return (
+    <DrawerPrimitive.Root swipeDirection={swipeDirectionMap[side]} {...props} />
+  );
 };
 
-const SheetContent = ({
+const DrawerContent = ({
   className,
   children,
   side = "right",
   ...props
-}: React.ComponentProps<typeof Drawer.Popup> & {
+}: React.ComponentProps<typeof DrawerPrimitive.Popup> & {
   side?: Side;
 }) => {
   return (
-    <Drawer.Portal>
-      <Drawer.Backdrop className="data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 z-50 bg-black/50" />
-      <Drawer.Popup
+    <DrawerPrimitive.Portal>
+      <DrawerPrimitive.Backdrop className="data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 z-50 bg-black/50" />
+      <DrawerPrimitive.Popup
         className={cn(
           "bg-background fixed z-50 flex flex-col gap-4 shadow-lg transition-transform duration-200 ease-in-out",
           side === "right" &&
@@ -48,12 +50,12 @@ const SheetContent = ({
         {...props}
       >
         {children}
-      </Drawer.Popup>
-    </Drawer.Portal>
+      </DrawerPrimitive.Popup>
+    </DrawerPrimitive.Portal>
   );
 };
 
-const SheetHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
+const DrawerHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
   <div
     data-slot="sheet-header"
     className={cn("flex flex-col gap-1.5 p-4", className)}
@@ -61,26 +63,33 @@ const SheetHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
   />
 );
 
-const SheetTitle = ({
+const DrawerTitle = ({
   className,
   ...props
-}: React.ComponentProps<typeof Drawer.Title>) => (
-  <Drawer.Title
+}: React.ComponentProps<typeof DrawerPrimitive.Title>) => (
+  <DrawerPrimitive.Title
     data-slot="sheet-title"
     className={cn("text-foreground font-semibold text-base", className)}
     {...props}
   />
 );
 
-const SheetDescription = ({
+const DrawerDescription = ({
   className,
   ...props
-}: React.ComponentProps<typeof Drawer.Description>) => (
-  <Drawer.Description
+}: React.ComponentProps<typeof DrawerPrimitive.Description>) => (
+  <DrawerPrimitive.Description
     data-slot="sheet-description"
     className={cn("text-muted-foreground text-sm", className)}
     {...props}
   />
 );
 
-export { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription };
+const Drawer = Object.assign(DrawerRoot, {
+  Content: DrawerContent,
+  Header: DrawerHeader,
+  Title: DrawerTitle,
+  Description: DrawerDescription,
+});
+
+export default Drawer;

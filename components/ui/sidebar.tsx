@@ -13,9 +13,9 @@ import {
   useMemo,
   useState,
 } from "react";
+import Drawer from "@/components/ui/drawer";
 import Input from "@/components/ui/input";
 import Separator from "@/components/ui/separator";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import Tooltip from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -117,12 +117,6 @@ const SidebarProvider = ({
     <SidebarContext.Provider value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
-        style={
-          {
-            "--sidebar-width": SIDEBAR_WIDTH,
-            ...style,
-          } as CSSProperties
-        }
         className={cn(
           "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
           className,
@@ -167,8 +161,8 @@ const SidebarRoot = ({
 
   if (isMobile) {
     return (
-      <Sheet side={side} open={openMobile} onOpenChange={setOpenMobile}>
-        <SheetContent
+      <Drawer side={side} open={openMobile} onOpenChange={setOpenMobile}>
+        <Drawer.Content
           data-sidebar="sidebar"
           data-mobile="true"
           className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
@@ -180,8 +174,8 @@ const SidebarRoot = ({
           }
         >
           <div className="flex h-full w-full flex-col">{children}</div>
-        </SheetContent>
-      </Sheet>
+        </Drawer.Content>
+      </Drawer>
     );
   }
 
@@ -307,6 +301,24 @@ const SidebarInset = ({
     </main>
   );
 };
+
+const SidebarViewport = ({
+  className,
+  children,
+  ...props
+}: ComponentProps<"div">) => (
+  <div
+    data-slot="sidebar-viewport"
+    className={cn(
+      "flex h-full min-h-0 flex-1 overflow-hidden border border-transparent",
+      "group-data-expanded/sidebar-inset:border-border group-data-expanded/sidebar-inset:rounded-md",
+      className,
+    )}
+    {...props}
+  >
+    {children}
+  </div>
+);
 
 const SidebarInput = ({
   className,
@@ -679,6 +691,7 @@ const Sidebar = Object.assign(SidebarRoot, {
   GroupLabel: SidebarGroupLabel,
   Header: SidebarHeader,
   Inset: SidebarInset,
+  Viewport: SidebarViewport,
   Input: SidebarInput,
   Menu: SidebarMenu,
   MenuAction: SidebarMenuAction,

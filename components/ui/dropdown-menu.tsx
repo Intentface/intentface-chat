@@ -3,6 +3,7 @@
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps } from "react";
+import { CircleIcon } from "@/components/icons/circle";
 import { cn } from "@/lib/utils";
 
 function DropdownMenuRoot({ ...props }: MenuPrimitive.Root.Props) {
@@ -211,11 +212,11 @@ function DropdownMenuRadioItem({
       {...props}
     >
       <span
-        className="absolute right-2 flex items-center justify-center pointer-events-none"
+        className="flex size-6 items-center justify-center pointer-events-none"
         data-slot="dropdown-menu-radio-item-indicator"
       >
         <MenuPrimitive.RadioItemIndicator>
-          <CheckIcon />
+          <CircleIcon className="size-2" />
         </MenuPrimitive.RadioItemIndicator>
       </span>
       {children}

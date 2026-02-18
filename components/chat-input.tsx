@@ -10,7 +10,7 @@ import {
 import { PaperClipIcon } from "@/components/icons/paperclip";
 import { ModelSelector } from "@/components/model-selector";
 import { IconButton } from "@/components/ui/icon-button";
-import { useModelStore } from "@/lib/store";
+import { useModelStore } from "@/lib/store/model";
 
 type ChatInputProps = {
   onSendMessage: (payload: {

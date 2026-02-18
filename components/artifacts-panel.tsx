@@ -9,7 +9,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useArtifactStore } from "@/lib/store";
+import { useArtifactStore } from "@/lib/store/artifact";
 import { cn } from "@/lib/utils";
 import { CopyIcon } from "./icons/copy";
 

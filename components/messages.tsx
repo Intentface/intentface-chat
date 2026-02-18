@@ -1,7 +1,7 @@
 "use client";
 
 import type { ChatRequestOptions, ChatStatus, UIMessage } from "ai";
-import { useArtifactStore } from "@/lib/store";
+import { useArtifactStore } from "@/lib/store/artifact";
 import { ArtifactCard } from "./ai/artifact-card";
 import { Message } from "./ai/message";
 import { Reasoning } from "./ai/reasoning";

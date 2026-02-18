@@ -4,10 +4,9 @@ import {
   smoothStream,
   stepCountIs,
   streamText,
-  tool,
 } from "ai";
-import { z } from "zod";
 import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
+import { createArtifact } from "@/tools/create-artifact";
 
 export async function POST(req: Request) {
   // Extract messages and model from the request body
@@ -21,15 +20,7 @@ export async function POST(req: Request) {
     model: google(modelId),
     messages: await convertToModelMessages(messages),
     tools: {
-      createArtifact: tool({
-        description:
-          "Create a document artifact displayed in a side panel. Use for long-form content, guides, structured documents, or any content that benefits from a dedicated view.",
-        inputSchema: z.object({
-          title: z.string().describe("Title of the artifact"),
-          content: z.string().describe("Markdown content of the artifact"),
-        }),
-        execute: async ({ title, content }) => ({ title, content }),
-      }),
+      createArtifact,
     },
     stopWhen: stepCountIs(3),
     providerOptions: {

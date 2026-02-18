@@ -5,7 +5,6 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
 import {
   type ComponentProps,
-  type CSSProperties,
   createContext,
   useCallback,
   useContext,
@@ -16,15 +15,12 @@ import {
 import Drawer from "@/components/ui/drawer";
 import Input from "@/components/ui/input";
 import Separator from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import Tooltip from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContextType = {
@@ -167,11 +163,6 @@ const SidebarRoot = ({
           data-mobile="true"
           className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 [&>button]:hidden"
           side={side}
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as CSSProperties
-          }
         >
           <div className="flex h-full w-full flex-col">{children}</div>
         </Drawer.Content>
@@ -379,7 +370,7 @@ const SidebarContent = ({ className, ...props }: ComponentProps<"div">) => {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-2 p-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
       {...props}
@@ -392,7 +383,7 @@ const SidebarGroup = ({ className, ...props }: ComponentProps<"div">) => {
     <div
       data-slot="sidebar-group"
       data-sidebar="group"
-      className={cn("relative flex w-full min-w-0 flex-col p-2", className)}
+      className={cn("relative flex w-full min-w-0 flex-col", className)}
       {...props}
     />
   );
@@ -596,43 +587,6 @@ const SidebarMenuBadge = ({ className, ...props }: ComponentProps<"div">) => (
   />
 );
 
-const SidebarMenuSkeleton = ({
-  className,
-  showIcon = false,
-  ...props
-}: ComponentProps<"div"> & {
-  showIcon?: boolean;
-}) => {
-  const width = useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
-  }, []);
-
-  return (
-    <div
-      data-slot="sidebar-menu-skeleton"
-      data-sidebar="menu-skeleton"
-      className={cn("flex h-8 items-center gap-2 rounded-md px-2", className)}
-      {...props}
-    >
-      {showIcon && (
-        <Skeleton
-          className="size-4 rounded-md"
-          data-sidebar="menu-skeleton-icon"
-        />
-      )}
-      <Skeleton
-        className="h-4 max-w-(--skeleton-width) flex-1"
-        data-sidebar="menu-skeleton-text"
-        style={
-          {
-            "--skeleton-width": width,
-          } as CSSProperties
-        }
-      />
-    </div>
-  );
-};
-
 const SidebarMenuSub = ({ className, ...props }: ComponentProps<"ul">) => (
   <ul
     data-slot="sidebar-menu-sub"
@@ -698,7 +652,6 @@ const Sidebar = Object.assign(SidebarRoot, {
   MenuBadge: SidebarMenuBadge,
   MenuButton: SidebarMenuButton,
   MenuItem: SidebarMenuItem,
-  MenuSkeleton: SidebarMenuSkeleton,
   MenuSub: SidebarMenuSub,
   MenuSubButton: SidebarMenuSubButton,
   MenuSubItem: SidebarMenuSubItem,

@@ -78,13 +78,13 @@ const ThreadViewport = ({
       data-slot="thread-viewport"
       scrollClassName="h-full w-full overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
       className={cn(
-        "relative flex w-full min-w-[340px] flex-col items-center px-4",
+        "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
         className,
       )}
       {...props}
     >
       <div className="relative flex h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
-        <div className="mx-auto flex h-full w-full max-w-(--thread-width) flex-col gap-8">
+        <div className="mx-auto px-4 flex h-full w-full max-w-(--thread-width) flex-col gap-8">
           {children}
         </div>
       </div>
@@ -109,7 +109,7 @@ const ThreadComposer = ({
     )}
     {...props}
   >
-    <div className="relative flex w-full flex-col items-center px-4 pb-2 sm:px-0 sm:pb-4">
+    <div className="relative flex w-full flex-col items-center px-4 pb-4 @lg/thread-viewport:px-0">
       {children}
     </div>
   </div>

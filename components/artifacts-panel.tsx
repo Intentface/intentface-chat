@@ -4,12 +4,12 @@ import { CheckIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ComponentProps, memo } from "react";
 import { Streamdown } from "streamdown";
+import { useChatContext } from "@/components/chat";
 import Drawer from "@/components/ui/drawer";
 import { IconButton } from "@/components/ui/icon-button";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useArtifactStore } from "@/lib/store/artifact";
 import { cn } from "@/lib/utils";
 import { CopyIcon } from "./icons/copy";
 
@@ -96,7 +96,11 @@ const ArtifactsPanelFooter = ({
 
 // Desktop panel — animated side panel inside Sidebar.Inset
 const DesktopPanel = () => {
-  const { activeArtifact, isOpen, closePanel } = useArtifactStore();
+  const {
+    activeArtifact,
+    isArtifactOpen: isOpen,
+    closeArtifact: closePanel,
+  } = useChatContext();
 
   return (
     <AnimatePresence>
@@ -129,7 +133,11 @@ const DesktopPanel = () => {
 
 // Mobile panel — Drawer overlay
 const MobilePanel = () => {
-  const { activeArtifact, isOpen, closePanel } = useArtifactStore();
+  const {
+    activeArtifact,
+    isArtifactOpen: isOpen,
+    closeArtifact: closePanel,
+  } = useChatContext();
 
   return (
     <Drawer side="right" open={isOpen} onOpenChange={closePanel}>

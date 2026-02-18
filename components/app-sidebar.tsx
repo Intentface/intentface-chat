@@ -39,12 +39,14 @@ export const AppSidebar = () => {
         <span className="px-2 text-sm font-semibold">Intentface</span>
       </Sidebar.Header>
       <Sidebar.Content>
-        <Sidebar.Group>
-          <Sidebar.GroupLabel>Conversations</Sidebar.GroupLabel>
-          <Sidebar.GroupAction render={<Link href="/" />}>
+        <Sidebar.Menu>
+          <Sidebar.MenuButton render={<Link href="/" />}>
             <MessageSquarePlusIcon />
-            <span className="sr-only">New Chat</span>
-          </Sidebar.GroupAction>
+            <span>New Chat</span>
+          </Sidebar.MenuButton>
+        </Sidebar.Menu>
+        <Sidebar.Group>
+          <Sidebar.GroupLabel>Threads</Sidebar.GroupLabel>
           <Sidebar.GroupContent>
             <Sidebar.Menu>
               {chats.length === 0 && (
@@ -61,7 +63,6 @@ export const AppSidebar = () => {
                     isActive={pathname === `/chat/${chat.id}`}
                     render={<Link href={`/chat/${chat.id}`} />}
                   >
-                    <MessageSquareIcon />
                     <span>{chat.title}</span>
                   </Sidebar.MenuButton>
                   <Sidebar.MenuAction

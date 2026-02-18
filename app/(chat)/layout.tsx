@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
-import { ArtifactsPanel } from "@/components/artifacts-panel";
 import { Sidebar } from "@/components/ui/sidebar";
 
 export default function ChatLayout({ children }: { children: ReactNode }) {
@@ -10,10 +9,7 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
     <Sidebar.Provider>
       <AppSidebar />
       <Sidebar.Inset>
-        <Sidebar.Viewport>
-          {children}
-          <ArtifactsPanel />
-        </Sidebar.Viewport>
+        <Sidebar.Viewport>{children}</Sidebar.Viewport>
       </Sidebar.Inset>
     </Sidebar.Provider>
   );

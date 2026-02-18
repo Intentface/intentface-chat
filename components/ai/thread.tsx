@@ -19,8 +19,7 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => (
   <StickToBottom
     data-slot="thread-root"
     className={cn(
-      "relative flex h-full w-full overflow-hidden bg-background border border-transparent [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
-      "group-data-expanded/sidebar-inset:border-border group-data-expanded/sidebar-inset:rounded-md",
+      "relative flex h-full w-full overflow-hidden bg-background [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
       className,
     )}
     initial="smooth"

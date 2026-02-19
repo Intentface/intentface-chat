@@ -10,11 +10,105 @@ export const SettingsIcon = (props: ComponentProps<"svg">) => (
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M10.6279 2.6744C11.4773 2.18536 12.5227 2.18536 13.3721 2.6744L19.6222 6.27285C20.4746 6.76365 21 7.67241 21 8.65606V15.3435C21 16.3271 20.4746 17.2359 19.6221 17.7267L13.3721 21.3251C12.5227 21.8141 11.4773 21.8142 10.6279 21.3252L4.37793 17.727C3.52542 17.2362 3 16.3274 3 15.3437V8.65604C3 7.67238 3.5254 6.76363 4.37786 6.27282L10.6279 2.6744ZM8.37503 12C8.37503 9.99797 9.998 8.375 12 8.375C14.0021 8.375 15.625 9.99797 15.625 12C15.625 14.002 14.0021 15.625 12 15.625C9.998 15.625 8.37503 14.002 8.37503 12Z"
-      fill="currentColor"
-    />
+    <g>
+      <path
+        d="M20.25 11.9998C20.25 13.5027 19.8481 14.9118 19.146 16.1254C18.4216 17.3774 17.3777 18.4213 16.1257 19.1457C14.9121 19.8479 13.503 20.2498 12 20.2498C10.497 20.2498 9.08794 19.8479 7.87432 19.1457C6.62238 18.4214 5.57847 17.3774 4.8541 16.1255C4.1519 14.9119 3.75 13.5028 3.75 11.9998C3.75 10.4968 4.15194 9.08764 4.85418 7.87399C5.57854 6.62212 6.62243 5.57825 7.87431 4.85392C9.08793 4.15172 10.497 3.74982 12 3.74982C13.503 3.74982 14.9121 4.15172 16.1257 4.85392C17.3776 5.57828 18.4215 6.6222 19.1459 7.87413C19.8481 9.08775 20.25 10.4968 20.25 11.9998Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M14.25 11.9998C14.25 13.2425 13.2426 14.2498 12 14.2498C11.5901 14.2498 11.2058 14.1402 10.8748 13.9487C10.2024 13.5596 9.75 12.8326 9.75 11.9998C9.75 11.1671 10.2024 10.44 10.8748 10.0509C11.2058 9.85943 11.5901 9.74982 12 9.74982C13.2426 9.74982 14.25 10.7572 14.25 11.9998Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M12 20.2498L12 22.25"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M3.75001 11.9998H1.75"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M12 3.74981L12 1.75"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M14.25 11.9998H20.25L22.25 12"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M6.875 3.12305L7.87431 4.85391L10.8748 10.0509"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M16.125 19.1457L17.1243 20.8766"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M3.12305 6.87463L4.85399 7.87399"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M19.1465 16.1254L20.8773 17.1246"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M3.12305 17.1248L4.85391 16.1255"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M19.1465 7.87413L20.8773 6.87482"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M6.875 20.8765L7.87431 19.1457L10.8748 13.9487"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+      <path
+        d="M16.125 4.85391L17.1243 3.12305"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      ></path>
+    </g>
   </svg>
 );

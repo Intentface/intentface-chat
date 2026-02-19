@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "motion/react";
 import {
   type ComponentProps,
   createContext,
@@ -16,6 +17,8 @@ import { Streamdown } from "streamdown";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { TextLoop } from "../ui/text-loop";
+import { TextShimmer } from "../ui/text-shimmer";
 
 const AUTO_CLOSE_DELAY = 1000;
 const MS_IN_S = 1000;
@@ -127,7 +130,7 @@ const ReasoningRoot = memo(
           onOpenChange={(open) => setIsOpen(open)}
           data-slot="reasoning"
           data-streaming={isStreaming ? "" : undefined}
-          className={cn("not-prose mb-4 w-full", className)}
+          className={cn("not-prose w-full", className)}
           {...props}
         >
           {children}
@@ -142,20 +145,27 @@ ReasoningRoot.displayName = "Reasoning";
 export type ReasoningTriggerProps = ComponentProps<
   typeof Collapsible.Trigger
 > & {
-  getThinkingMessage?: (isStreaming: boolean, duration?: number) => ReactNode;
+  getThinkingMessage?: (
+    isStreaming: boolean,
+    duration?: number,
+  ) => { key: string; component: ReactNode };
 };
 
 const defaultGetThinkingMessage = (
   isStreaming: boolean,
   duration?: number,
-): ReactNode => {
+): { key: string; component: ReactNode } => {
   if (isStreaming || duration === 0) {
-    return <span className="animate-pulse">Thinking...</span>;
+    return {
+      key: "thinking",
+      component: <TextShimmer>Thinking...</TextShimmer>,
+    };
   }
-  if (duration === undefined) {
-    return <span>Thought for a few seconds</span>;
-  }
-  return <span>Thought for {duration} seconds</span>;
+
+  return {
+    key: "thought",
+    component: <span>Thought for {duration ?? "a few"} seconds</span>,
+  };
 };
 
 const ReasoningTrigger = memo(
@@ -167,17 +177,29 @@ const ReasoningTrigger = memo(
   }: ReasoningTriggerProps) => {
     const { isStreaming, isOpen, duration } = useReasoning();
 
+    const { key, component } = getThinkingMessage(isStreaming, duration);
     return (
       <Collapsible.Trigger
         className={cn(
-          "flex w-full cursor-pointer items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground",
+          "flex w-full cursor-pointer h-8 text-sm items-center gap-2 text-muted-foreground transition-colors hover:text-foreground",
           className,
         )}
         {...props}
       >
         {children ?? (
           <>
-            {getThinkingMessage(isStreaming, duration)}
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={key}
+                initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="whitespace-nowrap text-gray-11/60"
+              >
+                {component}
+              </motion.span>
+            </AnimatePresence>
             <ChevronDownIcon
               className={cn(
                 "size-4 transition-transform",
@@ -205,7 +227,7 @@ const ReasoningContent = memo(
     <Collapsible.Panel className={cn("mt-2 text-sm", className)} {...props}>
       <Streamdown
         className={cn(
-          "text-muted-foreground text-sm",
+          "text-muted-foreground space-y-2 text-sm",
           "[&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         )}
       >

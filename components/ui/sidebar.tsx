@@ -199,7 +199,7 @@ const SidebarRoot = ({
         <div
           data-sidebar="sidebar"
           className={cn(
-            "bg-sidebar flex h-full w-full flex-col p-2",
+            "bg-sidebar flex h-full w-full flex-col p-2 gap-2",
             "group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm",
           )}
         >
@@ -296,7 +296,7 @@ const SidebarViewport = ({
     data-slot="sidebar-viewport"
     className={cn(
       "flex h-full min-h-0 flex-1 overflow-hidden border border-transparent",
-      "group-data-expanded/sidebar-inset:border-border group-data-expanded/sidebar-inset:rounded-md",
+      "group-data-expanded/sidebar-inset:border-border group-data-expanded/sidebar-inset:rounded-xl",
       className,
     )}
     {...props}
@@ -469,7 +469,7 @@ const sidebarMenuButtonVariants = cva(
     "data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground",
     "data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground",
     "group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2!",
-    "[&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+    "[&>span:last-child]:truncate [&>svg]:size-4.5 [&>svg]:shrink-0",
   ],
   {
     variants: {

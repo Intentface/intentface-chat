@@ -22,13 +22,12 @@ const MessageRoot = ({
   isLast,
   isError,
   className,
-  children,
   ...props
 }: MessageRootProps) => {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ height: 0 }}
+      animate={{ height: "auto" }}
       transition={{ duration: 0.15 }}
       data-slot="message"
       data-role={role}
@@ -36,22 +35,24 @@ const MessageRoot = ({
       data-last={isLast ? "" : undefined}
       className={cn(
         "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
+        // Add min-height on message to prevent layout jump
+        // "data-last:min-h-[50vh]",
         className,
       )}
       {...props}
-    >
-      {children}
-    </motion.div>
+    />
   );
 };
 
 // Message content container with role-based styling
 const MessageContent = ({
-  children,
   className,
   ...props
-}: ComponentProps<"div">) => (
-  <div
+}: ComponentProps<typeof motion.div>) => (
+  <motion.div
+    initial={{ opacity: 0, y: 48 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.15 }}
     data-slot="message-content"
     className={cn(
       "flex flex-col gap-4 overflow-hidden border",
@@ -64,9 +65,7 @@ const MessageContent = ({
       className,
     )}
     {...props}
-  >
-    {children}
-  </div>
+  />
 );
 
 // Actions container (for copy, regenerate, etc.)
@@ -175,7 +174,7 @@ const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-loading"
     className={cn(
-      "flex items-center gap-1 text-sm text-muted-foreground",
+      "flex items-start gap-1 text-sm text-muted-foreground",
       className,
     )}
     {...props}

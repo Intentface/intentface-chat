@@ -17,6 +17,7 @@ import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useSettingsStore } from "@/lib/store/settings";
+import { EditIcon } from "./icons/edit";
 
 export const AppSidebar = () => {
   const { theme, setTheme } = useTheme();
@@ -47,7 +48,7 @@ export const AppSidebar = () => {
               <Sidebar.MenuButton
                 render={
                   <Link href="/">
-                    <MessageSquarePlusIcon />
+                    <EditIcon />
                     <span>New Chat</span>
                   </Link>
                 }

@@ -84,7 +84,13 @@ const ThreadViewport = ({
       {...props}
     >
       <div className="relative flex h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
-        <div className="mx-auto px-4 flex h-full w-full max-w-(--thread-width) flex-col gap-8">
+        <div
+          className={cn(
+            "mx-auto px-4 flex h-full w-full max-w-(--thread-width) flex-col gap-4",
+            // Add min-height on last child to prevent layout jump
+            "[&>*:last-child]:min-h-[50vh]",
+          )}
+        >
           {children}
         </div>
       </div>

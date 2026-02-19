@@ -30,7 +30,7 @@ export const ArtifactCard = ({
       onClick={onToggle}
       disabled={isStreaming}
       className={cn(
-        "flex w-full max-w-xs cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/50 px-4 py-3 text-left transition-colors",
+        "flex w-full  cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/50 px-4 py-3 text-left transition-colors",
         "hover:bg-muted disabled:cursor-default disabled:opacity-70",
         className,
       )}

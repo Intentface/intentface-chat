@@ -5,15 +5,11 @@ import type { ComponentProps } from "react";
 import { useLoop } from "@/hooks/use-loop";
 import { cn } from "@/lib/utils";
 
-const items = [
-  "What's the current price of Tesla?",
-  "Show me Apple's stock history for the past year",
-  "How did Nvidia's last quarter earnings compare to estimates?",
-  "What do analysts think about Amazon?",
-  "Tell me about Microsoft as a company",
-];
-
-const TextLoop = ({ className, ...props }: ComponentProps<"div">) => {
+const TextLoop = ({
+  className,
+  items = [],
+  ...props
+}: ComponentProps<"div"> & { items?: string[] }) => {
   const { currentItem, key } = useLoop(items);
 
   return (

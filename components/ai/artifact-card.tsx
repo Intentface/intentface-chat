@@ -2,34 +2,23 @@
 
 import { FileTextIcon, LoaderIcon } from "lucide-react";
 import { motion } from "motion/react";
-import { type ComponentProps, useEffect, useRef } from "react";
+import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 type ArtifactCardProps = ComponentProps<typeof motion.button> & {
   title: string;
   state: string;
-  onOpen: () => void;
   onToggle: () => void;
 };
 
 export const ArtifactCard = ({
   title,
   state,
-  onOpen,
   onToggle,
   className,
   ...props
 }: ArtifactCardProps) => {
   const isStreaming = state === "input-streaming";
-  const hasAutoOpened = useRef(false);
-
-  // Auto-open once input is available (not just streaming)
-  useEffect(() => {
-    if (!isStreaming && !hasAutoOpened.current && title) {
-      hasAutoOpened.current = true;
-      onOpen();
-    }
-  }, [isStreaming, onOpen, title]);
 
   return (
     <motion.button

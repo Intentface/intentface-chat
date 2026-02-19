@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { DEFAULT_MODEL, type GeminiModelId } from "../models";
+import { DEFAULT_MODEL, type ModelId } from "../models";
 
 type ModelStore = {
-  model: GeminiModelId;
-  setModel: (model: GeminiModelId) => void;
+  model: ModelId;
+  setModel: (model: ModelId) => void;
 };
 
 export const useModelStore = create<ModelStore>((set) => ({

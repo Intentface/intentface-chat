@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  MessageSquareIcon,
+  FlaskConicalIcon,
   MessageSquarePlusIcon,
   MonitorIcon,
   MoonIcon,
@@ -16,6 +16,7 @@ import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
+import { useSettingsStore } from "@/lib/store/settings";
 
 export const AppSidebar = () => {
   const { theme, setTheme } = useTheme();
@@ -23,6 +24,7 @@ export const AppSidebar = () => {
   const router = useRouter();
   const chats = useChatStore((state) => state.chats);
   const deleteChat = useChatStore((state) => state.deleteChat);
+  const { showBalsam, setShowBalsam } = useSettingsStore();
 
   const handleDelete = (chatId: string) => {
     const isActive = pathname === `/chat/${chatId}`;
@@ -39,32 +41,34 @@ export const AppSidebar = () => {
         <span className="px-2 text-sm font-semibold">Intentface</span>
       </Sidebar.Header>
       <Sidebar.Content>
-        <Sidebar.Menu>
-          <Sidebar.MenuButton render={<Link href="/" />}>
-            <MessageSquarePlusIcon />
-            <span>New Chat</span>
-          </Sidebar.MenuButton>
-        </Sidebar.Menu>
+        <Sidebar.Group>
+          <Sidebar.Menu>
+            <Sidebar.MenuItem>
+              <Sidebar.MenuButton
+                render={
+                  <Link href="/">
+                    <MessageSquarePlusIcon />
+                    <span>New Chat</span>
+                  </Link>
+                }
+              />
+            </Sidebar.MenuItem>
+          </Sidebar.Menu>
+        </Sidebar.Group>
         <Sidebar.Group>
           <Sidebar.GroupLabel>Threads</Sidebar.GroupLabel>
           <Sidebar.GroupContent>
             <Sidebar.Menu>
-              {chats.length === 0 && (
-                <Sidebar.MenuItem>
-                  <Sidebar.MenuButton render={<Link href="/" />}>
-                    <MessageSquarePlusIcon />
-                    <span>New Chat</span>
-                  </Sidebar.MenuButton>
-                </Sidebar.MenuItem>
-              )}
               {chats.map((chat) => (
                 <Sidebar.MenuItem key={chat.id}>
                   <Sidebar.MenuButton
                     isActive={pathname === `/chat/${chat.id}`}
-                    render={<Link href={`/chat/${chat.id}`} />}
-                  >
-                    <span>{chat.title}</span>
-                  </Sidebar.MenuButton>
+                    render={
+                      <Link href={`/chat/${chat.id}`}>
+                        <span>{chat.title}</span>
+                      </Link>
+                    }
+                  />
                   <Sidebar.MenuAction
                     showOnHover
                     onClick={() => handleDelete(chat.id)}
@@ -116,6 +120,14 @@ export const AppSidebar = () => {
                     </DropdownMenu.RadioGroup>
                   </DropdownMenu.SubContent>
                 </DropdownMenu.Sub>
+                <DropdownMenu.Separator />
+                <DropdownMenu.CheckboxItem
+                  checked={showBalsam}
+                  onCheckedChange={setShowBalsam}
+                >
+                  <FlaskConicalIcon />
+                  Balsam Mock API
+                </DropdownMenu.CheckboxItem>
               </DropdownMenu.Content>
             </DropdownMenu>
           </Sidebar.MenuItem>

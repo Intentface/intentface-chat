@@ -10,5 +10,5 @@ export default function ChatPage({
 }) {
   const { chatId } = use(params);
 
-  return <Chat key={chatId} chatId={chatId} />;
+  return <Chat chatId={chatId} />;
 }

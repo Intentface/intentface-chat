@@ -1,25 +1,28 @@
 "use client";
 
 import Select from "@/components/ui/select";
-import type { GeminiModelId } from "@/lib/models";
-import { GEMINI_MODELS } from "@/lib/models";
+import { ALL_MODELS, GEMINI_MODELS, type ModelId } from "@/lib/models";
+import { useSettingsStore } from "@/lib/store/settings";
 
 type ModelSelectorProps = {
-  value: GeminiModelId;
-  onValueChange: (value: GeminiModelId) => void;
+  value: ModelId;
+  onValueChange: (value: ModelId) => void;
 };
 
 export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
+  const showBalsam = useSettingsStore((state) => state.showBalsam);
+  const models = showBalsam ? ALL_MODELS : GEMINI_MODELS;
+
   return (
     <Select
       value={value}
       onValueChange={(newValue) => {
-        if (newValue) onValueChange(newValue as GeminiModelId);
+        if (newValue) onValueChange(newValue as ModelId);
       }}
     >
       <Select.Trigger variant="ghost" size="sm">
         <Select.Value placeholder="Select model">
-          {GEMINI_MODELS.find((model) => model.id === value)?.label}
+          {ALL_MODELS.find((model) => model.id === value)?.label}
         </Select.Value>
       </Select.Trigger>
       <Select.Content
@@ -28,7 +31,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
         align="start"
         alignItemWithTrigger={false}
       >
-        {GEMINI_MODELS.map((model) => (
+        {models.map((model) => (
           <Select.Item key={model.id} value={model.id}>
             {model.label}
           </Select.Item>

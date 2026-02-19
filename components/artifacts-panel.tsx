@@ -1,100 +1,10 @@
 "use client";
 
-import { CheckIcon, XIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { type ComponentProps, memo } from "react";
-import { Streamdown } from "streamdown";
+import { ArtifactsPanel } from "@/components/ai/artifacts-panel";
 import { useChatContext } from "@/components/chat";
 import Drawer from "@/components/ui/drawer";
-import { IconButton } from "@/components/ui/icon-button";
-import Tooltip from "@/components/ui/tooltip";
-import { useCopy } from "@/hooks/use-copy";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
-import { CopyIcon } from "./icons/copy";
 
-// Memoized markdown renderer
-const ArtifactsPanelContent = memo(
-  ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
-    <Streamdown
-      controls={{ table: false }}
-      className={cn(
-        "size-full text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
-);
-
-ArtifactsPanelContent.displayName = "ArtifactsPanelContent";
-
-// Header with title and close button
-const ArtifactsPanelHeader = ({
-  title,
-  onClose,
-  className,
-  ...props
-}: ComponentProps<"div"> & {
-  title: string;
-  onClose: () => void;
-}) => (
-  <div
-    data-slot="artifacts-panel-header"
-    className={cn(
-      "flex items-center justify-between border-b border-border px-4 py-3",
-      className,
-    )}
-    {...props}
-  >
-    <h2 className="truncate text-sm font-semibold">{title}</h2>
-    <IconButton variant="ghost" size="sm" onClick={onClose}>
-      <XIcon />
-    </IconButton>
-  </div>
-);
-
-// Footer with copy button
-const ArtifactsPanelFooter = ({
-  content,
-  className,
-  ...props
-}: ComponentProps<"div"> & { content: string }) => {
-  const { copy, isCopied } = useCopy();
-
-  return (
-    <div
-      data-slot="artifacts-panel-footer"
-      className={cn(
-        "flex items-center justify-end border-t border-border px-4 py-2",
-        className,
-      )}
-      {...props}
-    >
-      <Tooltip.Provider>
-        <Tooltip>
-          <Tooltip.Trigger
-            render={
-              <IconButton
-                variant="ghost"
-                size="sm"
-                onClick={() => copy(content)}
-              >
-                {isCopied ? <CheckIcon /> : <CopyIcon />}
-              </IconButton>
-            }
-          />
-          <Tooltip.Content>
-            {isCopied ? "Copied!" : "Copy markdown"}
-          </Tooltip.Content>
-        </Tooltip>
-      </Tooltip.Provider>
-    </div>
-  );
-};
-
-// Desktop panel — animated side panel inside Sidebar.Inset
 const DesktopPanel = () => {
   const {
     activeArtifact,
@@ -102,36 +12,24 @@ const DesktopPanel = () => {
     closeArtifact: closePanel,
   } = useChatContext();
 
+  if (!activeArtifact) return null;
+
   return (
-    <AnimatePresence>
-      {isOpen && activeArtifact && (
-        <motion.aside
-          data-slot="artifacts-panel"
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: "var(--artifacts-panel-width)", opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="relative h-full shrink-0 overflow-hidden border-l border-border bg-background"
-        >
-          <div className="flex h-full w-(--artifacts-panel-width) flex-col">
-            <ArtifactsPanelHeader
-              title={activeArtifact.title}
-              onClose={closePanel}
-            />
-            <div className="flex-1 overflow-y-auto p-4">
-              <ArtifactsPanelContent>
-                {activeArtifact.content}
-              </ArtifactsPanelContent>
-            </div>
-            <ArtifactsPanelFooter content={activeArtifact.content} />
-          </div>
-        </motion.aside>
-      )}
-    </AnimatePresence>
+    <ArtifactsPanel open={isOpen}>
+      <ArtifactsPanel.Header
+        title={activeArtifact.title}
+        onClose={closePanel}
+      />
+      <ArtifactsPanel.Viewport>
+        <ArtifactsPanel.Content>
+          {activeArtifact.content}
+        </ArtifactsPanel.Content>
+      </ArtifactsPanel.Viewport>
+      <ArtifactsPanel.Footer content={activeArtifact.content} />
+    </ArtifactsPanel>
   );
 };
 
-// Mobile panel — Drawer overlay
 const MobilePanel = () => {
   const {
     activeArtifact,
@@ -145,21 +43,20 @@ const MobilePanel = () => {
         <Drawer.Header>
           <Drawer.Title>{activeArtifact?.title}</Drawer.Title>
         </Drawer.Header>
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <ArtifactsPanelContent>
+        <ArtifactsPanel.Viewport className="px-4 pb-4">
+          <ArtifactsPanel.Content>
             {activeArtifact?.content ?? ""}
-          </ArtifactsPanelContent>
-        </div>
+          </ArtifactsPanel.Content>
+        </ArtifactsPanel.Viewport>
         {activeArtifact && (
-          <ArtifactsPanelFooter content={activeArtifact.content} />
+          <ArtifactsPanel.Footer content={activeArtifact.content} />
         )}
       </Drawer.Content>
     </Drawer>
   );
 };
 
-// Root component — responsive switch
-const ArtifactsPanelRoot = () => {
+export const ChatArtifactsPanel = () => {
   const isMobile = useIsMobile();
 
   if (isMobile) {
@@ -168,9 +65,3 @@ const ArtifactsPanelRoot = () => {
 
   return <DesktopPanel />;
 };
-
-export const ArtifactsPanel = Object.assign(ArtifactsPanelRoot, {
-  Header: ArtifactsPanelHeader,
-  Content: ArtifactsPanelContent,
-  Footer: ArtifactsPanelFooter,
-});

@@ -13,7 +13,7 @@ import {
 } from "@/components/ai/prompt-input";
 import { Reasoning } from "@/components/ai/reasoning";
 import { Thread } from "@/components/ai/thread";
-import { ArtifactsPanel } from "@/components/artifacts-panel";
+import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { Header } from "@/components/header";
 import { PaperClipIcon } from "@/components/icons/paperclip";
 import { RefreshIcon } from "@/components/icons/refresh";
@@ -23,15 +23,11 @@ import { useChatInstance } from "@/hooks/use-chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
 
-// ─── Artifact types ─────────────────────────────────────────────────
-
 export type Artifact = {
   id: string;
   title: string;
   content: string;
 };
-
-// ─── Context ────────────────────────────────────────────────────────
 
 type ChatContextValue = {
   chatId: string;
@@ -58,11 +54,8 @@ export const useChatContext = (): ChatContextValue => {
   return ctx;
 };
 
-// ─── Chat.Messages ──────────────────────────────────────────────────
-
 const ChatMessages = () => {
-  const { messages, status, regenerate, openArtifact, toggleArtifact } =
-    useChatContext();
+  const { messages, status, regenerate, toggleArtifact } = useChatContext();
   const isError = status === "error";
   const isLoading = status === "submitted";
   const isStreaming = status === "streaming";
@@ -131,7 +124,6 @@ const ChatMessages = () => {
                           key={index}
                           title={artifact.title}
                           state={part.state}
-                          onOpen={() => openArtifact(artifact)}
                           onToggle={() => toggleArtifact(artifact)}
                         />
                       );
@@ -161,8 +153,6 @@ const ChatMessages = () => {
     </>
   );
 };
-
-// ─── Chat.Input ─────────────────────────────────────────────────────
 
 const ChatInput = () => {
   const { chatId, messages, sendMessage } = useChatContext();
@@ -273,8 +263,6 @@ const ChatInput = () => {
   );
 };
 
-// ─── Default layout ─────────────────────────────────────────────────
-
 const ChatDefaultLayout = () => (
   <>
     <Thread>
@@ -289,11 +277,9 @@ const ChatDefaultLayout = () => (
       </Thread.Composer>
       <Thread.Overlay direction="bottom" />
     </Thread>
-    <ArtifactsPanel />
+    <ChatArtifactsPanel />
   </>
 );
-
-// ─── Chat (root) ────────────────────────────────────────────────────
 
 type ChatProps = {
   chatId: string;
@@ -349,10 +335,8 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
   );
 };
 
-// ─── Compound export ────────────────────────────────────────────────
-
 export const Chat = Object.assign(ChatRoot, {
   Messages: ChatMessages,
   Input: ChatInput,
-  Artifacts: ArtifactsPanel,
+  Artifacts: ChatArtifactsPanel,
 });

@@ -1,0 +1,141 @@
+"use client";
+
+import { CheckIcon, XIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { type ComponentProps, memo, type ReactNode } from "react";
+import { Streamdown } from "streamdown";
+import { CopyIcon } from "@/components/icons/copy";
+import { IconButton } from "@/components/ui/icon-button";
+import Tooltip from "@/components/ui/tooltip";
+import { useCopy } from "@/hooks/use-copy";
+import { cn } from "@/lib/utils";
+
+type ArtifactsPanelRootProps = {
+  open: boolean;
+  children?: ReactNode;
+  className?: string;
+};
+
+const ArtifactsPanelRoot = ({
+  open,
+  children,
+  className,
+  ...props
+}: ArtifactsPanelRootProps) => (
+  <AnimatePresence>
+    {open && (
+      <motion.aside
+        data-slot="artifacts-panel"
+        initial={{ width: 0, opacity: 0 }}
+        animate={{ width: "var(--artifacts-panel-width)", opacity: 1 }}
+        exit={{ width: 0, opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        className={cn(
+          "relative h-full shrink-0 overflow-hidden border-l border-border bg-background",
+          className,
+        )}
+        {...props}
+      >
+        <div className="flex h-full w-(--artifacts-panel-width) flex-col">
+          {children}
+        </div>
+      </motion.aside>
+    )}
+  </AnimatePresence>
+);
+
+const ArtifactsPanelContent = memo(
+  ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
+    <Streamdown
+      controls={{ table: false }}
+      className={cn(
+        "size-full text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        className,
+      )}
+      {...props}
+    />
+  ),
+  (prevProps, nextProps) => prevProps.children === nextProps.children,
+);
+
+ArtifactsPanelContent.displayName = "ArtifactsPanelContent";
+
+const ArtifactsPanelHeader = ({
+  title,
+  onClose,
+  className,
+  ...props
+}: ComponentProps<"div"> & {
+  title: string;
+  onClose: () => void;
+}) => (
+  <div
+    data-slot="artifacts-panel-header"
+    className={cn(
+      "flex items-center justify-between border-b border-border px-4 py-3",
+      className,
+    )}
+    {...props}
+  >
+    <h2 className="truncate text-sm font-semibold">{title}</h2>
+    <IconButton variant="ghost" size="sm" onClick={onClose}>
+      <XIcon />
+    </IconButton>
+  </div>
+);
+
+const ArtifactsPanelFooter = ({
+  content,
+  className,
+  ...props
+}: ComponentProps<"div"> & { content: string }) => {
+  const { copy, isCopied } = useCopy();
+
+  return (
+    <div
+      data-slot="artifacts-panel-footer"
+      className={cn(
+        "flex items-center justify-end border-t border-border px-4 py-2",
+        className,
+      )}
+      {...props}
+    >
+      <Tooltip.Provider>
+        <Tooltip>
+          <Tooltip.Trigger
+            render={
+              <IconButton
+                variant="ghost"
+                size="sm"
+                onClick={() => copy(content)}
+              >
+                {isCopied ? <CheckIcon /> : <CopyIcon />}
+              </IconButton>
+            }
+          />
+          <Tooltip.Content>
+            {isCopied ? "Copied!" : "Copy markdown"}
+          </Tooltip.Content>
+        </Tooltip>
+      </Tooltip.Provider>
+    </div>
+  );
+};
+
+const ArtifactsPanelViewport = ({
+  className,
+  ...props
+}: ComponentProps<"div">) => (
+  <div
+    data-slot="artifacts-panel-viewport"
+    className={cn("flex-1 overflow-y-auto p-4", className)}
+    {...props}
+  />
+);
+
+export const ArtifactsPanel = Object.assign(ArtifactsPanelRoot, {
+  Header: ArtifactsPanelHeader,
+  Viewport: ArtifactsPanelViewport,
+  Content: ArtifactsPanelContent,
+  Footer: ArtifactsPanelFooter,
+});

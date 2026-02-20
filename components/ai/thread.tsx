@@ -19,7 +19,7 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => (
   <StickToBottom
     data-slot="thread-root"
     className={cn(
-      "relative flex h-full w-full overflow-hidden bg-background [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
+      "relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
       className,
     )}
     initial="smooth"
@@ -50,7 +50,7 @@ const ThreadOverlay = memo(
       <ProgressiveBlur
         direction={direction}
         className={cn(
-          "h-full w-full bg-linear-to-b from-background to-transparent",
+          "h-full w-full bg-linear-to-b from-slate-2 to-transparent",
           "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
           "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
         )}
@@ -127,7 +127,7 @@ export type ThreadEmptyStateProps = ComponentProps<"div"> & {
   icon?: React.ReactNode;
 };
 
-export type ThreadScrollButtonProps = ComponentProps<typeof motion.button>;
+export type ThreadScrollButtonProps = ComponentProps<typeof motion.div>;
 
 const ThreadScrollButton = ({
   className,
@@ -144,23 +144,21 @@ const ThreadScrollButton = ({
       <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-end">
         <AnimatePresence>
           {!isAtBottom && (
-            <motion.button
-              type="button"
+            <motion.div
               aria-label="Scroll to bottom"
               initial={{ opacity: 0, y: 8, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.9 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className={cn(
-                "inline-flex size-8 items-center justify-center cursor-pointer rounded-full border border-border bg-muted text-muted-foreground shadow-sm transition-colors",
-                "hover:bg-accent hover:text-foreground [&>svg]:size-4",
-                className,
-              )}
-              onClick={handleScrollToBottom}
               {...props}
             >
-              <ArrowDownIcon />
-            </motion.button>
+              <IconButton
+                onClick={handleScrollToBottom}
+                className="rounded-full"
+              >
+                <ArrowDownIcon />
+              </IconButton>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -219,10 +217,6 @@ const ThreadDownload = ({
 
   return (
     <IconButton
-      className={cn(
-        "absolute top-4 right-4 rounded-full dark:bg-background dark:hover:bg-muted",
-        className,
-      )}
       onClick={handleDownload}
       size="xs"
       type="button"

@@ -18,6 +18,7 @@ import Separator from "@/components/ui/separator";
 import Tooltip from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { IconButton } from "./icon-button";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -114,7 +115,7 @@ const SidebarProvider = ({
       <div
         data-slot="sidebar-wrapper"
         className={cn(
-          "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+          "group/sidebar-wrapper flex min-h-svh w-full bg-slate-3",
           className,
         )}
         data-state={state}
@@ -144,10 +145,7 @@ const SidebarRoot = ({
     return (
       <div
         data-slot="sidebar"
-        className={cn(
-          "bg-sidebar text-sidebar-foreground flex h-full w-(--sidebar-width) flex-col",
-          className,
-        )}
+        className={cn("flex h-full w-(--sidebar-width) flex-col", className)}
         {...props}
       >
         {children}
@@ -161,7 +159,7 @@ const SidebarRoot = ({
         <Drawer.Content
           data-sidebar="sidebar"
           data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-(--sidebar-width) [&>button]:hidden"
+          className="w-(--sidebar-width) [&>button]:hidden"
           side={side}
         >
           <div className="flex h-full w-full flex-col">{children}</div>
@@ -217,24 +215,21 @@ const SidebarTrigger = ({
 }: ComponentProps<"button">) => {
   const { toggleSidebar } = useSidebar();
 
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    onClick?.(event);
+    toggleSidebar();
+  };
   return (
-    <button
-      type="button"
+    <IconButton
       data-slot="sidebar-trigger"
       data-sidebar="trigger"
-      className={cn(
-        "inline-flex size-7 items-center justify-center cursor-pointer rounded-md text-sm hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring",
-        className,
-      )}
-      onClick={(event) => {
-        onClick?.(event);
-        toggleSidebar();
-      }}
+      onClick={handleClick}
+      variant="ghost"
       {...props}
     >
       <PanelLeftIcon className="size-4" />
       <span className="sr-only">Toggle Sidebar</span>
-    </button>
+    </IconButton>
   );
 };
 
@@ -276,7 +271,7 @@ const SidebarInset = ({
       data-slot="sidebar-inset"
       data-expanded={state === "expanded" ? "" : undefined}
       className={cn(
-        "group/sidebar-inset bg-accent background relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
+        "group/sidebar-inset bg-slate-3 relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
         "data-expanded:pr-2 data-expanded:py-2 transition-padding duration-200 ease-out",
         className,
       )}
@@ -295,8 +290,8 @@ const SidebarViewport = ({
   <div
     data-slot="sidebar-viewport"
     className={cn(
-      "flex h-full min-h-0 flex-1 overflow-hidden border border-transparent",
-      "group-data-expanded/sidebar-inset:border-border group-data-expanded/sidebar-inset:rounded-xl",
+      "flex h-full min-h-0 flex-1 bg-slate-2 overflow-hidden border border-transparent",
+      "group-data-expanded/sidebar-inset:border-slate-6 group-data-expanded/sidebar-inset:rounded-xl",
       className,
     )}
     {...props}
@@ -396,7 +391,7 @@ const SidebarGroupLabel = ({
       "data-sidebar": "group-label",
       ...props,
       className: cn(
-        "text-sidebar-foreground/70 ring-sidebar-ring flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-slate-11 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       ),
@@ -459,33 +454,26 @@ const SidebarMenuItem = ({ className, ...props }: ComponentProps<"li">) => (
 
 const sidebarMenuButtonVariants = cva(
   [
-    "peer/menu-button flex w-full items-center gap-2",
-    "overflow-hidden rounded-md p-2 text-left text-sm outline-hidden",
-    "ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2",
-    "active:bg-sidebar-accent active:text-sidebar-accent-foreground",
+    "peer/menu-button cursor-pointer flex w-full items-center gap-2",
+    "overflow-hidden rounded-md px-2 font-[450] text-left text-sm outline-hidden",
+    "transition-[width,height,padding] focus-visible:ring-1",
+    "hover:bg-slate-5 data-active:bg-slate-6",
     "disabled:pointer-events-none disabled:opacity-50",
-    "group-has-data-[sidebar=menu-action]/menu-item:pr-8",
+    "group-has-data-[sidebar=menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",
-    "data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground",
     "data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground",
-    "group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2!",
-    "[&>span:last-child]:truncate [&>svg]:size-4.5 [&>svg]:shrink-0",
+    "group-data-[collapsible=icon]:size-8!",
+    "[&>span:last-child]:truncate [&_svg]:text-slate-11 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-slate-12",
   ],
   {
     variants: {
-      variant: {
-        default: "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        outline:
-          "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
-      },
       size: {
         sm: "h-7 text-xs",
         md: "h-8 text-sm",
-        lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
+        lg: "h-12 text-sm",
       },
     },
     defaultVariants: {
-      variant: "default",
       size: "md",
     },
   },
@@ -493,7 +481,6 @@ const sidebarMenuButtonVariants = cva(
 
 const SidebarMenuButton = ({
   isActive = false,
-  variant = "default",
   size = "md",
   tooltip,
   className,
@@ -512,11 +499,10 @@ const SidebarMenuButton = ({
       "data-slot": "sidebar-menu-button",
       "data-sidebar": "menu-button",
       "data-size": size,
-      "data-active": isActive,
+      "data-active": isActive ? "" : undefined,
       ...props,
-      className: cn(sidebarMenuButtonVariants({ variant, size }), className),
+      className: cn(sidebarMenuButtonVariants({ size }), className),
     },
-    state: {},
   });
 
   if (!tooltip) {
@@ -543,27 +529,33 @@ const SidebarMenuAction = ({
   className,
   showOnHover = false,
   render,
+  onClick,
   ...props
 }: useRender.ComponentProps<"button"> & {
   showOnHover?: boolean;
 }) => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick?.(e);
+  };
+
   return useRender({
     render,
     defaultTagName: "button",
     props: {
       "data-slot": "sidebar-menu-action",
       "data-sidebar": "menu-action",
+      onClick: handleClick,
       ...props,
       className: cn(
-        "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground peer-hover/menu-button:text-sidebar-accent-foreground absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 outline-hidden transition-transform focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        "after:absolute after:-inset-2 after:md:hidden",
+        "text-slate-11 cursor-pointer hover:text-slate-12 flex aspect-square size-6 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
+          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
         className,
       ),
     },
-    state: {},
   });
 };
 

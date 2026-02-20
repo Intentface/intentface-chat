@@ -66,17 +66,17 @@ export const AppSidebar = () => {
                     isActive={pathname === `/chat/${chat.id}`}
                     render={
                       <Link href={`/chat/${chat.id}`}>
-                        <span>{chat.title}</span>
+                        <span className="flex-1 truncate">{chat.title}</span>
+                        <Sidebar.MenuAction
+                          showOnHover
+                          onClick={() => handleDelete(chat.id)}
+                        >
+                          <Trash2Icon />
+                          <span className="sr-only">Delete</span>
+                        </Sidebar.MenuAction>
                       </Link>
                     }
                   />
-                  <Sidebar.MenuAction
-                    showOnHover
-                    onClick={() => handleDelete(chat.id)}
-                  >
-                    <Trash2Icon />
-                    <span className="sr-only">Delete</span>
-                  </Sidebar.MenuAction>
                 </Sidebar.MenuItem>
               ))}
             </Sidebar.Menu>
@@ -96,6 +96,15 @@ export const AppSidebar = () => {
                 }
               />
               <DropdownMenu.Content side="top" align="start">
+                <DropdownMenu.Item inset>
+                  Test Dropdown Menu Item
+                </DropdownMenu.Item>
+                <DropdownMenu.Item inset>
+                  Test Dropdown Menu Item
+                </DropdownMenu.Item>
+                <DropdownMenu.Item inset>
+                  Test Dropdown Menu Item
+                </DropdownMenu.Item>
                 <DropdownMenu.Sub>
                   <DropdownMenu.SubTrigger>
                     <SunIcon />

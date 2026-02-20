@@ -227,7 +227,7 @@ const ReasoningContent = memo(
     <Collapsible.Panel className={cn("mt-2 text-sm", className)} {...props}>
       <Streamdown
         className={cn(
-          "text-muted-foreground space-y-2 text-sm",
+          "text-slate-11 space-y-2 text-sm",
           "[&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         )}
       >

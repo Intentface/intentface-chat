@@ -356,10 +356,10 @@ const PromptInputRoot = React.forwardRef<
           onMouseDown={handleMouseDown}
           ref={rootRef}
           className={cn(
-            "border-input bg-background rounded-4xl [corner-shape:squircle] border w-full cursor-text",
-            "has-[[data-slot=prompt-input-textarea]:focus-within]:border-ring",
-            "has-[[data-slot=prompt-input-textarea]:focus-within]:ring-3",
-            "has-[[data-slot=prompt-input-textarea]:focus-within]:ring-ring/50",
+            "border border-slate-6 bg-slate-1 rounded-4xl [corner-shape:squircle] w-full cursor-text",
+            // "has-[[data-slot=prompt-input-textarea]:focus-within]:border-ring",
+            // "has-[[data-slot=prompt-input-textarea]:focus-within]:ring-3",
+            // "has-[[data-slot=prompt-input-textarea]:focus-within]:ring-ring/50",
             "transition-colors",
             className,
           )}

@@ -35,10 +35,9 @@ const selectTriggerVariants = cva(
   {
     variants: {
       variant: {
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground",
-        ghost:
-          "border-transparent hover:bg-muted hover:text-foreground dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground",
+        primary:
+          "border-border bg-slate-1 hover:bg-slate-4 hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground",
+        ghost: "border-transparent hover:bg-slate-4 aria-expanded:bg-slate-4",
       },
       size: {
         sm: "h-8 pr-2 pl-2.5 text-sm *:data-[slot=select-value]:text-sm *:data-[slot=select-icon]:size-3.5",
@@ -47,7 +46,7 @@ const selectTriggerVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "outline",
+      variant: "primary",
       size: "md",
     },
   },
@@ -67,7 +66,7 @@ const SelectValue = ({ className, ...props }: SelectPrimitive.Value.Props) => {
 
 function SelectTrigger({
   className,
-  variant = "outline",
+  variant = "primary",
   size = "md",
   children,
   ...props
@@ -121,8 +120,7 @@ function SelectContent({
               // "w-(--anchor-width)",
               // Styling
               "rounded-lg p-1 shadow-md",
-              "bg-popover text-popover-foreground",
-              "ring-1 ring-foreground/10",
+              "bg-slate-1 text-slate-12 border border-slate-7",
               // Overflow
               "overflow-x-hidden overflow-y-auto",
               // Animation base
@@ -185,30 +183,23 @@ const SelectItem = ({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        [
-          // Layout
-          "relative flex w-full items-center gap-1.5",
-          "h-8 px-1.5",
-          // Base styles
-          "rounded-md text-sm",
-          "cursor-default select-none outline-hidden",
-          // Focus states
-          "focus:bg-accent focus:text-accent-foreground",
-          "not-data-[variant=destructive]:focus:**:text-accent-foreground",
-          // Disabled states
-          "data-disabled:pointer-events-none data-disabled:opacity-50",
-          // SVG styling
-          "[&_svg:not([class*='size-'])]:size-3",
-          "[&_svg]:pointer-events-none [&_svg]:shrink-0",
-          // Span (child) styling
-          "*:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        ],
+        "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-md text-sm flex w-full items-center gap-2",
+        // Focus states
+        "data-highlighted:bg-slate-4",
+        "not-data-[variant=destructive]:focus:**:text-accent-foreground",
+        // Disabled states
+        "data-disabled:pointer-events-none data-disabled:opacity-50",
+        // SVG styling
+        "[&_svg:not([class*='size-'])]:size-3",
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+        // Span (child) styling
+        "*:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className,
       )}
       {...props}
     >
       <SelectPrimitive.ItemText
-        className={cn(["flex flex-1 shrink-0 gap-2 whitespace-nowrap"])}
+        className={cn(["flex flex-1 shrink-0 gap-1.5 whitespace-nowrap"])}
       >
         {children}
       </SelectPrimitive.ItemText>
@@ -255,7 +246,7 @@ const SelectScrollUpButton = ({
           "top-0 z-10 flex w-full items-center justify-center",
           "py-1",
           // Styling
-          "cursor-default bg-popover",
+          "cursor-default hover:bg-slate-4",
           // SVG sizing
           "[&_svg:not([class*='size-'])]:size-4",
         ],
@@ -276,15 +267,14 @@ const SelectScrollDownButton = ({
     <SelectPrimitive.ScrollDownArrow
       data-slot="select-scroll-down-button"
       className={cn(
-        [
-          // Layout & positioning
-          "bottom-0 z-10 flex w-full items-center justify-center",
-          "py-1",
-          // Styling
-          "cursor-default bg-popover",
-          // SVG sizing
-          "[&_svg:not([class*='size-'])]:size-4",
-        ],
+        // Layout & positioning
+        "bottom-0 z-10 flex w-full items-center justify-center",
+        "py-1",
+        // Styling
+        "cursor-default hover:bg-slate-4",
+        // SVG sizing
+        "[&_svg:not([class*='size-'])]:size-4",
+
         className,
       )}
       {...props}

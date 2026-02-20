@@ -57,9 +57,9 @@ const MessageContent = ({
     className={cn(
       "flex flex-col gap-4 overflow-hidden border",
       // User message styling
-      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-xl group-data-[role=user]:border-border group-data-[role=user]:bg-muted group-data-[role=user]:px-3 group-data-[role=user]:py-2",
+      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-xl group-data-[role=user]:border-slate-6 group-data-[role=user]:bg-slate-1 group-data-[role=user]:px-3 group-data-[role=user]:py-2 group-data-[role=user]:shadow-xs",
       // Assistant message styling
-      "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-transparent",
+      "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-none",
       // Error styling
       "group-data-[error=true]:border-destructive group-data-[error=true]:bg-destructive/10",
       className,

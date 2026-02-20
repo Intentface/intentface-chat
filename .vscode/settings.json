@@ -2,29 +2,25 @@
   "[javascript]": {
     "editor.defaultFormatter": "biomejs.biome",
     "editor.codeActionsOnSave": {
-      "quickfix.biome": "explicit",
-      "source.organizeImports.biome": "explicit"
+      "source.fixAll.biome": "explicit"
     }
   },
   "[javascriptreact]": {
     "editor.defaultFormatter": "biomejs.biome",
     "editor.codeActionsOnSave": {
-      "quickfix.biome": "explicit",
-      "source.organizeImports.biome": "explicit"
+      "source.fixAll.biome": "explicit"
     }
   },
   "[typescript]": {
     "editor.defaultFormatter": "biomejs.biome",
     "editor.codeActionsOnSave": {
-      "quickfix.biome": "explicit",
-      "source.organizeImports.biome": "explicit"
+      "source.fixAll.biome": "explicit"
     }
   },
   "[typescriptreact]": {
     "editor.defaultFormatter": "biomejs.biome",
     "editor.codeActionsOnSave": {
-      "quickfix.biome": "explicit",
-      "source.organizeImports.biome": "explicit"
+      "source.fixAll.biome": "explicit"
     }
   },
   "[json]": {
@@ -34,6 +30,8 @@
     "editor.defaultFormatter": "biomejs.biome"
   },
   "editor.formatOnSave": true,
+  "editor.wordWrap": "wordWrapColumn",
+  "editor.wordWrapColumn": 120,
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit",
     "source.organizeImports.biome": "explicit"

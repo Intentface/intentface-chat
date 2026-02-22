@@ -139,15 +139,15 @@ const PromptInputRoot = ({
   const editorRef = useRef<Editor | null>(null);
   const attachmentsApi = useRef<AttachmentsApi | null>(null);
   const rootRef = useRef<HTMLFormElement | null>(null);
+  const globalDropRef = useRef(false);
+  const dragCounter = useRef(0);
 
   const [isDragging, setIsDragging] = useState(false);
   const [hasContent, setHasContent] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const attachmentRef = useRef<AttachmentItem[]>(attachments);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   attachmentRef.current = attachments;
-  const globalDropRef = useRef(false);
-  const dragCounter = useRef(0);
 
   const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();

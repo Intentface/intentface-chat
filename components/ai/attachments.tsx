@@ -180,7 +180,7 @@ const AttachmentsItem = ({
       {isImage(mediaType) ? (
         <img
           alt={filename}
-          className="size-8 shrink-0 rounded-xs object-cover"
+          className="size-8 shrink-0 rounded-xs object-cover ring-1 ring-inset ring-slate-7/10"
           src={item.url}
         />
       ) : (

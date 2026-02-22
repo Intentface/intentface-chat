@@ -2,10 +2,10 @@
 
 import { CheckIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type ComponentProps, memo, type ReactNode } from "react";
-import { Streamdown } from "streamdown";
+import type { ComponentProps, ReactNode } from "react";
 import { CopyIcon } from "@/components/icons/copy";
 import { IconButton } from "@/components/ui/icon-button";
+import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
@@ -44,21 +44,12 @@ const ArtifactsPanelRoot = ({
   </AnimatePresence>
 );
 
-const ArtifactsPanelContent = memo(
-  ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
-    <Streamdown
-      controls={{ table: false }}
-      className={cn(
-        "size-full text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
+const ArtifactsPanelContent = ({
+  className,
+  ...props
+}: ComponentProps<typeof Markdown>) => (
+  <Markdown className={cn("size-full", className)} {...props} />
 );
-
-ArtifactsPanelContent.displayName = "ArtifactsPanelContent";
 
 const ArtifactsPanelHeader = ({
   title,

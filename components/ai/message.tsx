@@ -1,11 +1,11 @@
 "use client";
 
-import type { ChatStatus, UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import { CheckIcon } from "lucide-react";
 import { motion } from "motion/react";
-import { type ComponentProps, memo } from "react";
-import { Streamdown } from "streamdown";
+import type { ComponentProps } from "react";
 import { IconButton } from "@/components/ui/icon-button";
+import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
@@ -124,22 +124,12 @@ const MessageAction = ({
   );
 };
 
-// Memoized markdown text renderer using Streamdown
-const MessageText = memo(
-  ({ className, ...props }: ComponentProps<typeof Streamdown>) => (
-    <Streamdown
-      controls={{ table: false }}
-      className={cn(
-        "size-full text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
+const MessageText = ({
+  className,
+  ...props
+}: ComponentProps<typeof Markdown>) => (
+  <Markdown className={cn("size-full", className)} {...props} />
 );
-
-MessageText.displayName = "MessageText";
 
 // Error message display
 const MessageError = ({

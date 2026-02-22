@@ -13,9 +13,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { Streamdown } from "streamdown";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
+import { Markdown } from "@/components/ui/markdown";
 import { cn } from "@/lib/utils";
 import { TextLoop } from "../ui/text-loop";
 import { TextShimmer } from "../ui/text-shimmer";
@@ -222,23 +222,15 @@ export type ReasoningContentProps = Omit<
   children: string;
 };
 
-const ReasoningContent = memo(
-  ({ children, className, ...props }: ReasoningContentProps) => (
-    <Collapsible.Panel className={cn("mt-2 text-sm", className)} {...props}>
-      <Streamdown
-        className={cn(
-          "text-slate-11 space-y-2 text-sm",
-          "[&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        )}
-      >
-        {children}
-      </Streamdown>
-    </Collapsible.Panel>
-  ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
+const ReasoningContent = ({
+  children,
+  className,
+  ...props
+}: ReasoningContentProps) => (
+  <Collapsible.Panel className={cn("mt-2 text-sm", className)} {...props}>
+    <Markdown className="text-slate-11 space-y-2 text-sm">{children}</Markdown>
+  </Collapsible.Panel>
 );
-
-ReasoningContent.displayName = "ReasoningContent";
 
 export const Reasoning = Object.assign(ReasoningRoot, {
   Trigger: ReasoningTrigger,

@@ -129,29 +129,15 @@ const SidebarProvider = ({
 
 const SidebarRoot = ({
   side = "left",
-  // variant = "sidebar",
   collapsible = "offcanvas",
   className,
   children,
   ...props
 }: ComponentProps<"div"> & {
   side?: "left" | "right";
-  // variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) => {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
-
-  if (collapsible === "none") {
-    return (
-      <div
-        data-slot="sidebar"
-        className={cn("flex h-full w-(--sidebar-width) flex-col", className)}
-        {...props}
-      >
-        {children}
-      </div>
-    );
-  }
 
   if (isMobile) {
     return (
@@ -173,13 +159,12 @@ const SidebarRoot = ({
       className="group peer text-sidebar-foreground hidden md:block"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
-      // data-variant={variant}
       data-side={side}
     >
       <div
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
+          "group-data-[state=collapsed]:w-0",
           "group-data-[side=right]:rotate-180",
         )}
       />
@@ -188,8 +173,8 @@ const SidebarRoot = ({
         className={cn(
           "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
           side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            ? "left-0 group-data-[state=collapsed]:left-[calc(var(--sidebar-width)*-1)]"
+            : "right-0 group-data-[state=collapsed]:right-[calc(var(--sidebar-width)*-1)]",
           className,
         )}
         {...props}
@@ -198,7 +183,7 @@ const SidebarRoot = ({
           data-sidebar="sidebar"
           className={cn(
             "bg-sidebar flex h-full w-full flex-col p-2 gap-2",
-            "group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm",
+            "group-data-[state=collapsed]:border-sidebar-border group-data-[state=collapsed]:rounded-lg group-data-[state=collapsed]:border group-data-[state=collapsed]:shadow-sm",
           )}
         >
           {children}
@@ -249,9 +234,8 @@ const SidebarRail = ({ className, ...props }: ComponentProps<"button">) => {
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        "group-data-[collapsible=offcanvas]:hover:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
-        "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-        "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        "hover:bg-sidebar translate-x-0 after:left-full",
+        "[[data-side=left]:-right-2 [[data-side=right]:-left-2",
         className,
       )}
       {...props}
@@ -359,7 +343,7 @@ const SidebarContent = ({ className, ...props }: ComponentProps<"div">) => {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto",
         className,
       )}
       {...props}
@@ -392,7 +376,6 @@ const SidebarGroupLabel = ({
       ...props,
       className: cn(
         "text-slate-11 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       ),
     },
@@ -414,7 +397,6 @@ const SidebarGroupAction = ({
       className: cn(
         "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 outline-hidden transition-transform focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "after:absolute after:-inset-2 after:md:hidden",
-        "group-data-[collapsible=icon]:hidden",
         className,
       ),
     },
@@ -462,7 +444,6 @@ const sidebarMenuButtonVariants = cva(
     "group-has-data-[sidebar=menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",
     "data-[state=open]:bg-slate-5",
-    "group-data-[collapsible=icon]:size-8!",
     "[&>span:last-child]:truncate [&_svg]:text-slate-11 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-slate-12",
   ],
   {
@@ -550,7 +531,6 @@ const SidebarMenuAction = ({
       ...props,
       className: cn(
         "text-slate-11 cursor-pointer hover:text-slate-12 flex aspect-square size-6 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
-        "group-data-[collapsible=icon]:hidden",
         showOnHover &&
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
         className,
@@ -566,7 +546,6 @@ const SidebarMenuBadge = ({ className, ...props }: ComponentProps<"div">) => (
     className={cn(
       "text-sidebar-foreground pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-md px-1 text-xs font-medium tabular-nums",
       "peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground",
-      "group-data-[collapsible=icon]:hidden",
       className,
     )}
     {...props}

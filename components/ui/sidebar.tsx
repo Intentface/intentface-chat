@@ -461,7 +461,7 @@ const sidebarMenuButtonVariants = cva(
     "disabled:pointer-events-none disabled:opacity-50",
     "group-has-data-[sidebar=menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",
-    "data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground",
+    "data-[state=open]:bg-slate-5",
     "group-data-[collapsible=icon]:size-8!",
     "[&>span:last-child]:truncate [&_svg]:text-slate-11 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-slate-12",
   ],
@@ -470,7 +470,7 @@ const sidebarMenuButtonVariants = cva(
       size: {
         sm: "h-7 text-xs",
         md: "h-8 text-sm",
-        lg: "h-12 text-sm",
+        lg: "h-9 text-md",
       },
     },
     defaultVariants: {

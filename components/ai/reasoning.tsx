@@ -181,7 +181,7 @@ const ReasoningTrigger = memo(
     return (
       <Collapsible.Trigger
         className={cn(
-          "flex w-full cursor-pointer h-8 text-sm items-center gap-2 text-muted-foreground transition-colors hover:text-foreground",
+          "inline-flex cursor-pointer h-8 text-sm items-center gap-2 text-muted-foreground transition-colors hover:text-foreground",
           className,
         )}
         {...props}

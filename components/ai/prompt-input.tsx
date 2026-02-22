@@ -53,11 +53,12 @@ type PromptInputContextValue = {
   isSubmitting: boolean;
   hasContent: boolean;
   setHasContent: (has: boolean) => void;
-  items: AttachmentItem[];
-  itemsRef: RefObject<AttachmentItem[]>;
-  setItems: React.Dispatch<React.SetStateAction<AttachmentItem[]>>;
+  attachments: AttachmentItem[];
+  setAttachments: React.Dispatch<React.SetStateAction<AttachmentItem[]>>;
+  attachmentRef: RefObject<AttachmentItem[]>;
   attachmentError: string | null;
   setAttachmentError: (error: string | null) => void;
+  globalDropRef: RefObject<boolean>;
 };
 
 const PromptInputContext = createContext<PromptInputContextValue>({
@@ -67,40 +68,49 @@ const PromptInputContext = createContext<PromptInputContextValue>({
   isSubmitting: false,
   hasContent: false,
   setHasContent: () => {},
-  items: [],
-  itemsRef: { current: [] },
-  setItems: () => {},
+  attachments: [],
+  setAttachments: () => {},
+  attachmentRef: { current: [] },
   attachmentError: null,
   setAttachmentError: () => {},
+  globalDropRef: { current: false },
 });
 
-// Drag handler factory — shared between element and document scoping
+export const usePromptInputContext = () => useContext(PromptInputContext);
+
+// Drag handler factory — always on document, scope-checked at event time
 const createDragHandlers = (
   api: RefObject<AttachmentsApi | null>,
   counter: { current: number },
   setDragging: (v: boolean) => void,
+  isInScope: (e: DragEvent) => boolean,
 ) => ({
   onDragOver: (e: Event) => {
     if (!api.current) return;
     const event = e as DragEvent;
+    if (!isInScope(event)) return;
     if (event.dataTransfer?.types?.includes("Files")) event.preventDefault();
   },
   onDragEnter: (e: Event) => {
     if (!api.current) return;
     const event = e as DragEvent;
+    if (!isInScope(event)) return;
     if (event.dataTransfer?.types?.includes("Files")) {
       counter.current++;
       setDragging(true);
     }
   },
-  onDragLeave: () => {
+  onDragLeave: (e: Event) => {
     if (!api.current) return;
+    const event = e as DragEvent;
+    if (!isInScope(event)) return;
     counter.current--;
     if (counter.current === 0) setDragging(false);
   },
   onDrop: (e: Event) => {
     if (!api.current) return;
     const event = e as DragEvent;
+    if (!isInScope(event)) return;
     if (event.dataTransfer?.types?.includes("Files")) event.preventDefault();
     counter.current = 0;
     setDragging(false);
@@ -117,7 +127,6 @@ type PromptInputRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
     files: FileUIPart[];
   }) => void | Promise<void>;
   isSubmitting?: boolean;
-  globalDrop?: boolean;
 };
 
 const PromptInputRoot = ({
@@ -125,7 +134,6 @@ const PromptInputRoot = ({
   className,
   onSubmit,
   isSubmitting = false,
-  globalDrop = false,
   ...formProps
 }: PromptInputRootProps) => {
   const editorRef = useRef<Editor | null>(null);
@@ -134,25 +142,28 @@ const PromptInputRoot = ({
 
   const [isDragging, setIsDragging] = useState(false);
   const [hasContent, setHasContent] = useState(false);
-  const [items, setItems] = useState<AttachmentItem[]>([]);
-  const itemsRef = useRef<AttachmentItem[]>(items);
-  itemsRef.current = items;
+  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const attachmentRef = useRef<AttachmentItem[]>(attachments);
+  attachmentRef.current = attachments;
+  const globalDropRef = useRef(false);
   const dragCounter = useRef(0);
 
-  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSubmitting) return;
 
     const text = editorRef.current?.getText()?.trim() ?? "";
-    if (!text && !items.length) return;
+    if (!text && !attachments.length) return;
 
     const submitText = text || "Sent with attachments";
     const files =
-      items.length > 0 ? await prepareAttachmentsForSend(items) : [];
+      attachments.length > 0
+        ? await prepareAttachmentsForSend(attachments)
+        : [];
 
-    revokeAllAttachmentUrls(items);
-    setItems([]);
+    revokeAllAttachmentUrls(attachments);
+    setAttachments([]);
     editorRef.current?.commands.setContent("");
     setHasContent(false);
 
@@ -175,28 +186,30 @@ const PromptInputRoot = ({
     }
   };
 
-  // Drag handlers — gated by attachmentsApi registration
+  // Drag handlers — always on document, scope-checked at event time via refs
   useEffect(() => {
-    const target = globalDrop ? document : rootRef.current;
-    if (!target) return;
+    const isInScope = (e: DragEvent) =>
+      globalDropRef.current ||
+      (rootRef.current?.contains(e.target as Node) ?? false);
 
     const { onDragOver, onDragEnter, onDragLeave, onDrop } = createDragHandlers(
       attachmentsApi,
       dragCounter,
       setIsDragging,
+      isInScope,
     );
 
-    target.addEventListener("dragover", onDragOver);
-    target.addEventListener("dragenter", onDragEnter);
-    target.addEventListener("dragleave", onDragLeave);
-    target.addEventListener("drop", onDrop);
+    document.addEventListener("dragover", onDragOver);
+    document.addEventListener("dragenter", onDragEnter);
+    document.addEventListener("dragleave", onDragLeave);
+    document.addEventListener("drop", onDrop);
     return () => {
-      target.removeEventListener("dragover", onDragOver);
-      target.removeEventListener("dragenter", onDragEnter);
-      target.removeEventListener("dragleave", onDragLeave);
-      target.removeEventListener("drop", onDrop);
+      document.removeEventListener("dragover", onDragOver);
+      document.removeEventListener("dragenter", onDragEnter);
+      document.removeEventListener("dragleave", onDragLeave);
+      document.removeEventListener("drop", onDrop);
     };
-  }, [globalDrop]);
+  }, []);
 
   const contextValue = useMemo(
     () => ({
@@ -206,13 +219,14 @@ const PromptInputRoot = ({
       isSubmitting,
       hasContent,
       setHasContent,
-      items,
-      itemsRef,
-      setItems,
+      attachments,
+      attachmentRef,
+      setAttachments,
       attachmentError,
       setAttachmentError,
+      globalDropRef,
     }),
-    [isDragging, isSubmitting, hasContent, items, attachmentError],
+    [isDragging, isSubmitting, hasContent, attachments, attachmentError],
   );
 
   return (
@@ -241,6 +255,7 @@ type PromptInputAttachmentsProps = {
   maxFiles?: number;
   maxFileSize?: number;
   multiple?: boolean;
+  globalDrop?: boolean;
 };
 
 const PromptInputAttachments = ({
@@ -249,18 +264,22 @@ const PromptInputAttachments = ({
   maxFiles = DEFAULT_ATTACHMENT_MAX_FILES,
   maxFileSize = DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
   multiple = true,
+  globalDrop = false,
 }: PromptInputAttachmentsProps) => {
   const {
     attachmentsApi,
     isDragging,
-    items,
-    itemsRef,
-    setItems,
+    attachments,
+    attachmentRef,
+    setAttachments,
     setAttachmentError,
+    globalDropRef,
   } = useContext(PromptInputContext);
 
-  // Callbacks — stable deps (functional setItems + primitive config).
-  // itemsRef.current is intentionally read at call time, not a reactive dep.
+  globalDropRef.current = globalDrop;
+
+  // Callbacks — stable deps (functional setAttachments + primitive config).
+  // attachmentRef.current is intentionally read at call time, not a reactive dep.
   // biome-ignore lint/correctness/useExhaustiveDependencies: itemsRef is a stable ref read at call time
   const add = useCallback(
     (fileList: File[] | FileList) => {
@@ -279,7 +298,7 @@ const PromptInputAttachments = ({
         return;
       }
 
-      const capacity = Math.max(0, maxFiles - itemsRef.current.length);
+      const capacity = Math.max(0, maxFiles - attachmentRef.current.length);
       const capped = sized.slice(0, capacity);
 
       if (sized.length > capacity) {
@@ -289,20 +308,20 @@ const PromptInputAttachments = ({
       if (!capped.length) return;
 
       setAttachmentError(null);
-      setItems((prev) => [...prev, ...capped.map(toAttachmentItem)]);
+      setAttachments((prev) => [...prev, ...capped.map(toAttachmentItem)]);
     },
-    [accept, maxFiles, maxFileSize, setAttachmentError, setItems],
+    [accept, maxFiles, maxFileSize, setAttachmentError, setAttachments],
   );
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: itemsRef is a stable ref read at call time
   const remove = useCallback(
     (id: string) => {
-      const found = itemsRef.current.find((item) => item.id === id);
+      const found = attachmentRef.current.find((item) => item.id === id);
       if (found) revokeAttachmentUrl(found);
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      setAttachments((prev) => prev.filter((item) => item.id !== id));
       setAttachmentError(null);
     },
-    [setAttachmentError, setItems],
+    [setAttachmentError, setAttachments],
   );
 
   // Callback ref: register API when input mounts, cleanup on unmount.
@@ -318,7 +337,7 @@ const PromptInputAttachments = ({
       };
       return () => {
         attachmentsApi.current = null;
-        revokeAllAttachmentUrls(itemsRef.current);
+        revokeAllAttachmentUrls(attachmentRef.current);
       };
     },
     [add, remove],
@@ -342,38 +361,37 @@ const PromptInputAttachments = ({
         type="file"
       />
 
-      {/* Dropzone indicator */}
+      {/* Attachments container with dropzone overlay */}
       <AnimatePresence initial={false}>
-        {isDragging && (
+        {(isDragging || attachments.length > 0) && (
           <motion.div
-            initial={{ height: 0, padding: 0 }}
-            animate={{ height: "auto", padding: "4px" }}
-            exit={{ height: 0, padding: 0 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="overflow-hidden"
           >
-            {/* If there's an attachment already, slide the dropzone up */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15, delay: 0.15 }}
-              className="flex flex-col h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-slate-8 bg-slate-2"
-            >
-              <span className="text-sm font-medium">Drop files here</span>
-            </motion.div>
+            <div className="relative">
+              {attachments.length > 0 ? (
+                <div className={cn("flex flex-wrap gap-2 p-2", className)}>
+                  <AnimatePresence initial={false}>
+                    {attachments.map((attachment) => (
+                      <Attachments.Item key={attachment.id} item={attachment}>
+                        <Attachments.Remove
+                          onRemove={() => remove(attachment.id)}
+                        />
+                      </Attachments.Item>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <div className="h-14" />
+              )}
+              <Attachments.Dropzone visible={isDragging} variant="inline" />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Attachment list */}
-      <Attachments show={items.length > 0} className={className}>
-        {items.map((item, index) => (
-          <Attachments.Item key={item.id} item={item} index={index}>
-            <Attachments.Remove onRemove={() => remove(item.id)} />
-          </Attachments.Item>
-        ))}
-      </Attachments>
       <Attachments.Error />
     </>
   );
@@ -398,7 +416,7 @@ const PromptInputTextarea = ({
   autoFocus = false,
   children,
 }: PromptInputTextareaProps) => {
-  const { editorRef, attachmentsApi, itemsRef, setHasContent } =
+  const { editorRef, attachmentsApi, attachmentRef, setHasContent } =
     useContext(PromptInputContext);
 
   const isControlled = value !== undefined;
@@ -432,7 +450,7 @@ const PromptInputTextarea = ({
       },
       handleKeyDown: (view, event) => {
         if (event.key === "Backspace" && view.state.doc.textContent === "") {
-          const lastItem = itemsRef.current.at(-1);
+          const lastItem = attachmentRef.current.at(-1);
           if (lastItem) {
             event.preventDefault();
             attachmentsApi.current?.remove(lastItem.id);
@@ -457,10 +475,10 @@ const PromptInputTextarea = ({
         return false;
       },
     },
-    onCreate: ({ editor }) => {
+    onMount: ({ editor }) => {
       editorRef.current = editor;
     },
-    onDestroy: () => {
+    onUnmount: () => {
       editorRef.current = null;
     },
     onUpdate: ({ editor }) => {
@@ -605,10 +623,11 @@ const PromptInputSubmit = ({
   disabled,
   ...props
 }: PromptInputSubmitProps) => {
-  const { hasContent, items, isSubmitting } = useContext(PromptInputContext);
+  const { hasContent, attachments, isSubmitting } =
+    useContext(PromptInputContext);
 
   const autoDisabled =
-    disabled ?? ((!hasContent && items.length === 0) || isSubmitting);
+    disabled ?? ((!hasContent && attachments.length === 0) || isSubmitting);
 
   return (
     <IconButton

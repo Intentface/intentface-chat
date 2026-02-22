@@ -5,12 +5,14 @@ import { FileIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { nanoid } from "nanoid";
 import type { ComponentProps, ReactNode } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import { PaperClipIcon } from "../icons/paperclip";
 
 // Types
-export type AttachmentItem = FileUIPart & { id: string };
+export type AttachmentItem = FileUIPart & { id: string; fileSize?: number };
 
 export type AttachmentErrorCode = "accept" | "max_file_size" | "max_files";
 
@@ -47,6 +49,7 @@ export const matchesAccept = (file: File, accept: string): boolean => {
 
 export const toAttachmentItem = (file: File): AttachmentItem => ({
   filename: file.name,
+  fileSize: file.size,
   id: nanoid(),
   mediaType: file.type,
   type: "file",
@@ -105,6 +108,12 @@ const isImage = (mediaType: string) => mediaType.startsWith("image/");
 
 const isPdf = (mediaType: string) => mediaType === "application/pdf";
 
+const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 type AttachmentsRootProps = {
   children: ReactNode;
   className?: string;
@@ -147,19 +156,22 @@ const getFileIcon = (mediaType: string) => {
 
 const AttachmentsItem = ({
   item,
-  index = 0,
   children,
   className,
 }: AttachmentsItemProps) => {
   const mediaType = item.mediaType ?? "";
-  const filename = item.filename ?? (isPdf(mediaType) ? "PDF" : "File");
+  const filename = item.filename ?? "Attachment";
   const Icon = getFileIcon(mediaType);
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
-      transition={{ duration: 0.15, delay: index * 0.05 }}
+      transition={{
+        duration: 0.15,
+        layout: { duration: 0.2, ease: "easeOut" },
+      }}
       className={cn(
         "group relative flex h-12 max-w-48 items-center gap-2 overflow-hidden rounded-lg border bg-slate-2 px-2",
         className,
@@ -176,10 +188,17 @@ const AttachmentsItem = ({
           <Icon className="size-4 text-muted-foreground" />
         </div>
       )}
-      <span className="flex min-w-0 text-xs font-medium">
-        <span className="truncate">{filename.slice(0, -7)}</span>
-        <span className="shrink-0">{filename.slice(-7)}</span>
-      </span>
+      <div className="flex min-w-0 flex-col">
+        <span className="flex text-xs font-medium">
+          <span className="truncate">{filename.slice(0, -7)}</span>
+          <span className="shrink-0">{filename.slice(-7)}</span>
+        </span>
+        {item.fileSize != null && (
+          <span className="text-2xs text-muted-foreground">
+            {formatFileSize(item.fileSize)}
+          </span>
+        )}
+      </div>
       {children}
     </motion.div>
   );
@@ -209,6 +228,57 @@ const AttachmentsRemove = ({ onRemove, className }: AttachmentsRemoveProps) => (
   </div>
 );
 
+type AttachmentsDropzoneProps = {
+  visible?: boolean;
+  variant?: "inline" | "global";
+  children?: ReactNode;
+  className?: string;
+};
+
+const dropzoneVariants = {
+  inline:
+    "absolute inset-0 m-1 flex items-center justify-center rounded-xl border border-dashed border-slate-8 bg-slate-2",
+  global:
+    "absolute inset-0 z-50 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-slate-8 bg-slate-2/80 backdrop-blur-xs",
+};
+
+const GLOBAL_DROPZONE_SELECTOR = '[data-slot="sidebar-inset"]';
+
+const AttachmentsDropzone = ({
+  visible: show = false,
+  variant = "inline",
+  children,
+  className,
+}: AttachmentsDropzoneProps) => {
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+
+  useEffect(() => {
+    if (variant !== "global") return;
+    setPortalTarget(document.querySelector(GLOBAL_DROPZONE_SELECTOR));
+  }, [variant]);
+
+  const content = (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className={cn(dropzoneVariants[variant], className)}
+        >
+          {children ?? (
+            <span className="text-sm font-medium">Drop files here</span>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
+  if (portalTarget) return createPortal(content, portalTarget);
+  return content;
+};
+
 type AttachmentsErrorProps = {
   className?: string;
 };
@@ -232,6 +302,7 @@ const AttachmentsTrigger = ({
 };
 
 export const Attachments = Object.assign(AttachmentsRoot, {
+  Dropzone: AttachmentsDropzone,
   Item: AttachmentsItem,
   Remove: AttachmentsRemove,
   Error: AttachmentsError,

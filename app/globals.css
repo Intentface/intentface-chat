@@ -89,6 +89,16 @@
   --text-xl: 16px;
 }
 
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: -200% 50%;
+  }
+}
+
 @layer base {
   * {
     @apply border-slate-4 ring-slate-12;

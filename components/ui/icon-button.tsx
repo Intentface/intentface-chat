@@ -20,6 +20,8 @@ const iconButtonVariants = cva(
         link: "text-slate-12 underline-offset-4 hover:underline",
       },
       size: {
+        "2xs":
+          "size-4 rounded-[min(var(--radius-md),8px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-2.5",
         xs: "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
         sm: "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3.5",
         md: "size-8 [&_svg:not([class*='size-'])]:size-4",

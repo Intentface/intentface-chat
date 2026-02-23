@@ -17,7 +17,6 @@ import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
 import { cn } from "@/lib/utils";
-import { TextLoop } from "../ui/text-loop";
 import { TextShimmer } from "../ui/text-shimmer";
 
 const AUTO_CLOSE_DELAY = 1000;

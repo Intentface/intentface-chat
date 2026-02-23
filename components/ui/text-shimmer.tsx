@@ -1,58 +1,39 @@
 "use client";
 
-import { motion } from "motion/react";
-import React, { type JSX, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 export type TextShimmerProps = {
-  children: string;
-  as?: React.ElementType;
-  className?: string;
+  as?: string;
   duration?: number;
   spread?: number;
-};
+  children: React.ReactNode;
+} & React.HTMLAttributes<HTMLElement>;
 
-function TextShimmerComponent({
-  children,
-  as: Component = "p",
+export function TextShimmer({
+  as = "span",
   className,
-  duration = 2,
-  spread = 2,
+  duration = 4,
+  spread = 20,
+  children,
+  ...props
 }: TextShimmerProps) {
-  const MotionComponent = motion.create(
-    Component as keyof JSX.IntrinsicElements,
-  );
-
-  const dynamicSpread = useMemo(() => {
-    return children.length * spread;
-  }, [children, spread]);
+  const dynamicSpread = Math.min(Math.max(spread, 5), 45);
+  const Component = as as React.ElementType;
 
   return (
-    <MotionComponent
+    <Component
       className={cn(
-        "relative inline-block bg-size-[250%_100%,auto] bg-clip-text",
-        "text-transparent [--base-color:#a1a1aa] [--base-gradient-color:#000]",
-        "[background-repeat:no-repeat,padding-box] [--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--base-gradient-color),#0000_calc(50%+var(--spread)))]",
-        "dark:[--base-color:#71717a] dark:[--base-gradient-color:#ffffff] dark:[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--base-gradient-color),#0000_calc(50%+var(--spread)))]",
+        "bg-size-[200%_auto] bg-clip-text font-medium text-transparent",
+        "animate-[shimmer_4s_infinite_linear]",
         className,
       )}
-      initial={{ backgroundPosition: "100% center" }}
-      animate={{ backgroundPosition: "0% center" }}
-      transition={{
-        repeat: Infinity,
-        duration,
-        ease: "linear",
+      style={{
+        backgroundImage: `linear-gradient(to right, var(--slate-11) ${50 - dynamicSpread}%, var(--slate-12) 50%, var(--slate-11) ${50 + dynamicSpread}%)`,
+        animationDuration: `${duration}s`,
       }}
-      style={
-        {
-          "--spread": `${dynamicSpread}px`,
-          backgroundImage: `var(--bg), linear-gradient(var(--base-color), var(--base-color))`,
-        } as React.CSSProperties
-      }
+      {...props}
     >
       {children}
-    </MotionComponent>
+    </Component>
   );
 }
-
-export const TextShimmer = React.memo(TextShimmerComponent);

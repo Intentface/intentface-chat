@@ -173,7 +173,7 @@ const AttachmentsItem = ({
         layout: { duration: 0.2, ease: "easeOut" },
       }}
       className={cn(
-        "group relative flex h-12 max-w-48 items-center gap-2 overflow-hidden rounded-lg border bg-slate-2 px-2",
+        "group relative flex h-12 max-w-48 items-center gap-2 rounded-lg border bg-slate-2 px-2",
         className,
       )}
     >
@@ -210,22 +210,18 @@ type AttachmentsRemoveProps = {
 };
 
 const AttachmentsRemove = ({ onRemove, className }: AttachmentsRemoveProps) => (
-  <div
+  <IconButton
+    aria-label="Remove attachment"
     className={cn(
-      "absolute top-0 right-0 bottom-0 flex items-center justify-end px-2 w-16 bg-linear-to-r from-transparent to-slate-2 opacity-0 transition-opacity group-hover:opacity-100",
+      "absolute -top-1.5 -right-1.5 rounded-full  opacity-0 transition-opacity group-hover:opacity-100",
       className,
     )}
+    onClick={onRemove}
+    size="2xs"
+    type="button"
   >
-    <IconButton
-      aria-label="Remove attachment"
-      className="relative"
-      onClick={onRemove}
-      size="xs"
-      type="button"
-    >
-      <XIcon className="size-3" />
-    </IconButton>
-  </div>
+    <XIcon className="size-3" />
+  </IconButton>
 );
 
 type AttachmentsDropzoneProps = {

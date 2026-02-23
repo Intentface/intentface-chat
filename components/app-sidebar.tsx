@@ -2,7 +2,6 @@
 
 import {
   FlaskConicalIcon,
-  MessageSquarePlusIcon,
   MonitorIcon,
   MoonIcon,
   SunIcon,
@@ -11,6 +10,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { IntentfaceLogo } from "@/components/icons/intentface-logo";
 import { SettingsIcon } from "@/components/icons/settings";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
@@ -39,7 +39,7 @@ export const AppSidebar = () => {
   return (
     <Sidebar>
       <Sidebar.Header>
-        <span className="px-2 text-sm font-semibold">Intentface</span>
+        <IntentfaceLogo className="size-6" />
       </Sidebar.Header>
       <Sidebar.Content>
         <Sidebar.Group>

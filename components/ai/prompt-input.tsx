@@ -561,9 +561,7 @@ const PromptInputPlaceholder = ({
 
   if (!isLooping && items.length === 1) {
     const content = items[0];
-    return (
-      <div className={cn("text-muted-foreground/60", className)}>{content}</div>
-    );
+    return <div className={cn("text-slate-10", className)}>{content}</div>;
   }
 
   if (!isLooping && items.length === 0) {
@@ -579,7 +577,7 @@ const PromptInputPlaceholder = ({
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className={cn("text-muted-foreground/60", className)}
+          className={cn("text-slate-10", className)}
         >
           {typeof items[0] === "string"
             ? currentItem

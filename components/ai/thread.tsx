@@ -88,7 +88,7 @@ const ThreadViewport = ({
           className={cn(
             "mx-auto px-4 flex h-full w-full max-w-(--thread-width) flex-col gap-4",
             // Add min-height on last child to prevent layout jump
-            "[&>*:last-child]:min-h-[50vh]",
+            "[&>[data-slot=message]:last-child]:min-h-[50vh]",
           )}
         >
           {children}
@@ -166,6 +166,25 @@ const ThreadScrollButton = ({
   );
 };
 
+export type ThreadPlaceholderProps = ComponentProps<"div">;
+
+const ThreadPlaceholder = ({
+  children,
+  className,
+  ...props
+}: ThreadPlaceholderProps) => (
+  <div
+    data-slot="thread-placeholder"
+    className={cn(
+      "flex flex-1 flex-col items-center justify-center gap-4",
+      className,
+    )}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
 export interface ThreadMessage {
   role: "user" | "assistant" | "system" | "data" | "tool";
   content: string;
@@ -232,6 +251,7 @@ export const Thread = Object.assign(ThreadRoot, {
   Overlay: ThreadOverlay,
   Viewport: ThreadViewport,
   Composer: ThreadComposer,
+  Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
   Download: ThreadDownload,
 });

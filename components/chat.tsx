@@ -2,6 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { ChatStatus, FileUIPart, UIMessage } from "ai";
+import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import { createContext, use, useCallback, useRef, useState } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
@@ -16,6 +17,7 @@ import { ModelSelector } from "@/components/model-selector";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
+import { IntentfaceLogo } from "./icons/intentface-logo";
 
 export type Artifact = {
   id: string;
@@ -212,14 +214,60 @@ const ChatInput = () => {
   );
 };
 
-const ChatDefaultLayout = () => (
+const ChatPlaceholder = () => {
+  const variants = {
+    hidden: { opacity: 0, y: 8, filter: "blur(4px)" },
+    visible: { opacity: 1, y: 0, filter: "blur(0px)" },
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        variants={variants}
+        initial="hidden"
+        animate="visible"
+        exit="hidden"
+        transition={{
+          duration: 0.5,
+          ease: "easeOut",
+          delayChildren: stagger(0.1, { from: "first", startDelay: 0.15 }),
+        }}
+        className="flex flex-col items-center justify-center gap-4"
+      >
+        <motion.div variants={variants}>
+          <IntentfaceLogo className="size-12" />
+        </motion.div>
+        <div className="flex flex-col items-center justify-center">
+          <motion.span variants={variants} className="text-lg font-semibold">
+            Intentface Chat
+          </motion.span>
+          <motion.span variants={variants} className="text-sm text-slate-11">
+            Start a conversation
+          </motion.span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+const ChatDefaultLayout = () => {
+  const { messages } = useChatContext();
+  const isEmpty = messages.length === 0;
+
+  return (
   <>
     <Thread>
       <Header />
       <Thread.Overlay direction="top" />
+        {isEmpty ? (
+          <Thread.Placeholder>
+            <ChatPlaceholder />
+          </Thread.Placeholder>
+        ) : (
       <Thread.Viewport>
         <ChatMessages />
       </Thread.Viewport>
+        )}
       <Thread.Composer>
         <Thread.ScrollButton />
         <ChatInput />
@@ -229,6 +277,7 @@ const ChatDefaultLayout = () => (
     <ChatArtifactsPanel />
   </>
 );
+};
 
 type ChatProps = {
   chatId: string;

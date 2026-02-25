@@ -46,7 +46,7 @@ type AttachmentsApi = {
   openFileDialog: () => void;
 };
 
-type PromptInputContextValue = {
+type ComposerContextValue = {
   editorRef: RefObject<Editor | null>;
   attachmentsApi: RefObject<AttachmentsApi | null>;
   isDragging: boolean;
@@ -61,7 +61,7 @@ type PromptInputContextValue = {
   globalDropRef: RefObject<boolean>;
 };
 
-const PromptInputContext = createContext<PromptInputContextValue>({
+const ComposerContext = createContext<ComposerContextValue>({
   editorRef: { current: null },
   attachmentsApi: { current: null },
   isDragging: false,
@@ -76,7 +76,7 @@ const PromptInputContext = createContext<PromptInputContextValue>({
   globalDropRef: { current: false },
 });
 
-export const usePromptInputContext = () => useContext(PromptInputContext);
+export const useComposerContext = () => useContext(ComposerContext);
 
 // Drag handler factory — always on document, scope-checked at event time
 const createDragHandlers = (
@@ -121,7 +121,7 @@ const createDragHandlers = (
 });
 
 // Root — renders <form>, owns submit lifecycle
-type PromptInputRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
+type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   onSubmit?: (data: {
     text: string;
     files: FileUIPart[];
@@ -129,13 +129,13 @@ type PromptInputRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   isSubmitting?: boolean;
 };
 
-const PromptInputRoot = ({
+const ComposerRoot = ({
   children,
   className,
   onSubmit,
   isSubmitting = false,
   ...formProps
-}: PromptInputRootProps) => {
+}: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
   const attachmentsApi = useRef<AttachmentsApi | null>(null);
   const rootRef = useRef<HTMLFormElement | null>(null);
@@ -230,7 +230,7 @@ const PromptInputRoot = ({
   );
 
   return (
-    <PromptInputContext.Provider value={contextValue}>
+    <ComposerContext.Provider value={contextValue}>
       <form
         onSubmit={handleFormSubmit}
         onMouseDown={handleMouseDown}
@@ -244,12 +244,12 @@ const PromptInputRoot = ({
       >
         {children}
       </form>
-    </PromptInputContext.Provider>
+    </ComposerContext.Provider>
   );
 };
 
 // Attachments — self-registering leaf, internal state
-type PromptInputAttachmentsProps = {
+type ComposerAttachmentsProps = {
   className?: string;
   accept?: string;
   maxFiles?: number;
@@ -258,14 +258,14 @@ type PromptInputAttachmentsProps = {
   globalDrop?: boolean;
 };
 
-const PromptInputAttachments = ({
+const ComposerAttachments = ({
   className,
   accept = DEFAULT_ATTACHMENT_ACCEPT,
   maxFiles = DEFAULT_ATTACHMENT_MAX_FILES,
   maxFileSize = DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
   multiple = true,
   globalDrop = false,
-}: PromptInputAttachmentsProps) => {
+}: ComposerAttachmentsProps) => {
   const {
     attachmentsApi,
     isDragging,
@@ -274,7 +274,7 @@ const PromptInputAttachments = ({
     setAttachments,
     setAttachmentError,
     globalDropRef,
-  } = useContext(PromptInputContext);
+  } = useContext(ComposerContext);
 
   globalDropRef.current = globalDrop;
 
@@ -399,7 +399,7 @@ const PromptInputAttachments = ({
 
 // Textarea — TipTap editor, pushes hasContent into context
 
-type PromptInputTextareaProps = {
+type ComposerTextareaProps = {
   value?: string;
   onValueChange?: (content: string) => void;
   className?: string;
@@ -408,16 +408,16 @@ type PromptInputTextareaProps = {
   children?: ReactNode;
 };
 
-const PromptInputTextarea = ({
+const ComposerTextarea = ({
   value,
   onValueChange,
   className,
   disabled = false,
   autoFocus = false,
   children,
-}: PromptInputTextareaProps) => {
+}: ComposerTextareaProps) => {
   const { editorRef, attachmentsApi, attachmentRef, setHasContent } =
-    useContext(PromptInputContext);
+    useContext(ComposerContext);
 
   const isControlled = value !== undefined;
 
@@ -500,13 +500,13 @@ const PromptInputTextarea = ({
 
   const placeholder = useMemo(() => {
     return Children.toArray(children).find(
-      (child) => isValidElement(child) && child.type === PromptInputPlaceholder,
+      (child) => isValidElement(child) && child.type === ComposerPlaceholder,
     );
   }, [children]);
 
   return (
     <div
-      data-slot="prompt-input-textarea"
+      data-slot="composer-textarea"
       className={cn(
         "max-h-32 min-h-8 overflow-y-auto px-3 py-2 text-md",
         "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
@@ -518,7 +518,7 @@ const PromptInputTextarea = ({
         <EditorContent editor={editor} className="relative">
           {editor.isEmpty && placeholder && (
             <div
-              data-slot="prompt-input-placeholder"
+              data-slot="composer-placeholder"
               className="absolute inset-0 min-h-lh pointer-events-none"
               aria-hidden="true"
             >
@@ -532,15 +532,15 @@ const PromptInputTextarea = ({
 };
 
 // Placeholder
-type PromptInputPlaceholderProps =
+type ComposerPlaceholderProps =
   | { placeholder: string | string[]; children?: never; className?: string }
   | { placeholder?: never; children: ReactNode; className?: string };
 
-const PromptInputPlaceholder = ({
+const ComposerPlaceholder = ({
   placeholder,
   children,
   className,
-}: PromptInputPlaceholderProps) => {
+}: ComposerPlaceholderProps) => {
   const items = useMemo(() => {
     if (placeholder !== undefined) {
       return Array.isArray(placeholder) ? placeholder : [placeholder];
@@ -589,19 +589,19 @@ const PromptInputPlaceholder = ({
 };
 
 // Layout sub-components
-type PromptInputFooterProps = ComponentProps<"div">;
+type ComposerFooterProps = ComponentProps<"div">;
 
-const PromptInputFooter = ({ className, ...props }: PromptInputFooterProps) => (
+const ComposerFooter = ({ className, ...props }: ComposerFooterProps) => (
   <div className={cn("flex justify-end p-2", className)} {...props} />
 );
 
 // AttachmentTrigger — reads attachmentsApi from context
-type PromptInputAttachmentTriggerProps = ComponentProps<typeof IconButton>;
+type ComposerAttachmentTriggerProps = ComponentProps<typeof IconButton>;
 
-const PromptInputAttachmentTrigger = (
-  props: PromptInputAttachmentTriggerProps,
+const ComposerAttachmentTrigger = (
+  props: ComposerAttachmentTriggerProps,
 ) => {
-  const { attachmentsApi } = useContext(PromptInputContext);
+  const { attachmentsApi } = useContext(ComposerContext);
 
   const handleClick = useCallback(() => {
     attachmentsApi.current?.openFileDialog();
@@ -613,16 +613,16 @@ const PromptInputAttachmentTrigger = (
 };
 
 // Submit — auto-disables via context
-type PromptInputSubmitProps = ComponentProps<typeof IconButton>;
+type ComposerSubmitProps = ComponentProps<typeof IconButton>;
 
-const PromptInputSubmit = ({
+const ComposerSubmit = ({
   children,
   className,
   disabled,
   ...props
-}: PromptInputSubmitProps) => {
+}: ComposerSubmitProps) => {
   const { hasContent, attachments, isSubmitting } =
-    useContext(PromptInputContext);
+    useContext(ComposerContext);
 
   const autoDisabled =
     disabled ?? ((!hasContent && attachments.length === 0) || isSubmitting);
@@ -641,11 +641,11 @@ const PromptInputSubmit = ({
 };
 
 // Compound export
-export const PromptInput = Object.assign(PromptInputRoot, {
-  Attachments: PromptInputAttachments,
-  AttachmentTrigger: PromptInputAttachmentTrigger,
-  Footer: PromptInputFooter,
-  Placeholder: PromptInputPlaceholder,
-  Submit: PromptInputSubmit,
-  Textarea: PromptInputTextarea,
+export const Composer = Object.assign(ComposerRoot, {
+  Attachments: ComposerAttachments,
+  AttachmentTrigger: ComposerAttachmentTrigger,
+  Footer: ComposerFooter,
+  Placeholder: ComposerPlaceholder,
+  Submit: ComposerSubmit,
+  Textarea: ComposerTextarea,
 });

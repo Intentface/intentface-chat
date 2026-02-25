@@ -6,8 +6,8 @@ import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import { createContext, use, useCallback, useRef, useState } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
+import { Composer } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
-import { PromptInput } from "@/components/ai/prompt-input";
 import { Reasoning } from "@/components/ai/reasoning";
 import { Thread } from "@/components/ai/thread";
 import { ChatArtifactsPanel } from "@/components/artifacts-panel";
@@ -179,10 +179,10 @@ const ChatInput = () => {
     [chatId, createChat, isNewChat, router, sendMessage],
   );
   return (
-    <PromptInput onSubmit={handleSubmit} isSubmitting={isSending}>
-      <PromptInput.Attachments />
-      <PromptInput.Textarea autoFocus>
-        <PromptInput.Placeholder
+    <Composer onSubmit={handleSubmit} isSubmitting={isSending}>
+      <Composer.Attachments />
+      <Composer.Textarea autoFocus>
+        <Composer.Placeholder
           placeholder={
             !hasSubmitted
               ? [
@@ -202,15 +202,15 @@ const ChatInput = () => {
               : "Ask a follow-up question..."
           }
         />
-      </PromptInput.Textarea>
-      <PromptInput.Footer className="flex items-center justify-between">
+      </Composer.Textarea>
+      <Composer.Footer className="flex items-center justify-between">
         <div className="flex items-center gap-1">
-          <PromptInput.AttachmentTrigger />
+          <Composer.AttachmentTrigger />
           <ModelSelector value={model} onValueChange={setModel} />
         </div>
-        <PromptInput.Submit />
-      </PromptInput.Footer>
-    </PromptInput>
+        <Composer.Submit />
+      </Composer.Footer>
+    </Composer>
   );
 };
 
@@ -255,28 +255,28 @@ const ChatDefaultLayout = () => {
   const isEmpty = messages.length === 0;
 
   return (
-  <>
-    <Thread>
-      <Header />
-      <Thread.Overlay direction="top" />
+    <>
+      <Thread>
+        <Header />
+        <Thread.Overlay direction="top" />
         {isEmpty ? (
           <Thread.Placeholder>
             <ChatPlaceholder />
           </Thread.Placeholder>
         ) : (
-      <Thread.Viewport>
-        <ChatMessages />
-      </Thread.Viewport>
+          <Thread.Viewport>
+            <ChatMessages />
+          </Thread.Viewport>
         )}
-      <Thread.Composer>
-        <Thread.ScrollButton />
-        <ChatInput />
-      </Thread.Composer>
-      <Thread.Overlay direction="bottom" />
-    </Thread>
-    <ChatArtifactsPanel />
-  </>
-);
+        <Thread.Composer>
+          <Thread.ScrollButton />
+          <ChatInput />
+        </Thread.Composer>
+        <Thread.Overlay direction="bottom" />
+      </Thread>
+      <ChatArtifactsPanel />
+    </>
+  );
 };
 
 type ChatProps = {

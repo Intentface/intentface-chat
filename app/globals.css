@@ -89,7 +89,6 @@
   --text-xl: 16px;
 }
 
-
 @keyframes shimmer {
   0% {
     background-position: 200% 50%;
@@ -107,7 +106,6 @@
     @apply text-slate-12;
   }
 }
-
 
 /* Streamdown element styles */
 [data-streamdown="heading-1"] {
@@ -188,4 +186,67 @@
 
 [data-streamdown="image"] {
   @apply max-w-full rounded-md;
+}
+
+/* Diffusion character states */
+.diffusion-container {
+}
+.diffusion-char-diffusing {
+  opacity: 0.5;
+  filter: blur(0px);
+  transition:
+    opacity 0.15s ease,
+    filter 0.15s ease;
+}
+.diffusion-char-resolving {
+  opacity: 0.75;
+  filter: blur(0px);
+  transition:
+    opacity 0.15s ease,
+    filter 0.15s ease;
+}
+.diffusion-char-ready {
+  opacity: 1;
+  filter: blur(0);
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* Diffusion → Markdown reveal transition */
+@property --diffusion-reveal {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+.diffusion-reveal-mask {
+  mask-image: linear-gradient(
+    to bottom,
+    black 0%,
+    black var(--diffusion-reveal),
+    transparent calc(var(--diffusion-reveal) + 8%),
+    transparent 100%
+  );
+  animation: diffusion-reveal 0.6s ease-out forwards;
+}
+
+@keyframes diffusion-reveal {
+  from {
+    --diffusion-reveal: 0%;
+  }
+  to {
+    --diffusion-reveal: 100%;
+  }
+}
+
+.diffusion-chars-exit {
+  animation: diffusion-chars-exit 0.6s ease-out forwards;
+}
+
+@keyframes diffusion-chars-exit {
+  to {
+    opacity: 0.3;
+    filter: blur(0px);
+  }
 }

@@ -26,6 +26,24 @@ export const GEMINI_MODELS = [
   },
 ] as const;
 
+export const INCEPTION_MODELS = [
+  {
+    id: "mercury-2",
+    label: "Mercury 2",
+    provider: "inception",
+  },
+  {
+    id: "mercury-2-diffusing",
+    label: "Mercury 2 (Diffusing)",
+    provider: "inception",
+  },
+  {
+    id: "mercury-2-instant",
+    label: "Mercury 2 (Instant)",
+    provider: "inception",
+  },
+] as const;
+
 export const BALSAM_MODELS = [
   {
     id: "mock",
@@ -34,7 +52,11 @@ export const BALSAM_MODELS = [
   },
 ] as const;
 
-export const ALL_MODELS = [...GEMINI_MODELS, ...BALSAM_MODELS] as const;
+export const ALL_MODELS = [
+  ...GEMINI_MODELS,
+  ...INCEPTION_MODELS,
+  ...BALSAM_MODELS,
+] as const;
 
 export type ModelId = (typeof ALL_MODELS)[number]["id"];
 export type Provider = (typeof ALL_MODELS)[number]["provider"];

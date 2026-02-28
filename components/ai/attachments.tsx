@@ -4,13 +4,13 @@ import type { FileUIPart } from "ai";
 import { FileIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { nanoid } from "nanoid";
+import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
 import { PaperClipIcon } from "../icons/paperclip";
-
 // Types
 export type AttachmentItem = FileUIPart & { id: string; fileSize?: number };
 
@@ -178,7 +178,9 @@ const AttachmentsItem = ({
       )}
     >
       {isImage(mediaType) ? (
-        <img
+        <Image
+          width={32}
+          height={32}
           alt={filename}
           className="size-8 shrink-0 rounded-xs object-cover ring-1 ring-inset ring-slate-7/10"
           src={item.url}

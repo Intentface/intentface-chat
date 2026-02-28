@@ -1,9 +1,11 @@
 "use client";
 
-import type { UIMessage } from "ai";
-import { CheckIcon } from "lucide-react";
-import { motion } from "motion/react";
+import type { FileUIPart, UIMessage } from "ai";
+import { CheckIcon, FileIcon, GlobeIcon, PaperclipIcon } from "lucide-react";
+import Image from "next/image";
 import type { ComponentProps } from "react";
+import { useState } from "react";
+import HoverCard from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
@@ -15,7 +17,7 @@ type MessageRootProps = {
   role: UIMessage["role"];
   isLast: boolean;
   isError: boolean;
-} & ComponentProps<typeof motion.div>;
+} & ComponentProps<"div">;
 // Message wrapper with entrance animation
 const MessageRoot = ({
   role,
@@ -25,18 +27,13 @@ const MessageRoot = ({
   ...props
 }: MessageRootProps) => {
   return (
-    <motion.div
-      initial={{ height: 0 }}
-      animate={{ height: "auto" }}
-      transition={{ duration: 0.15 }}
+    <div
       data-slot="message"
       data-role={role}
       data-error={isError ? "" : undefined}
       data-last={isLast ? "" : undefined}
       className={cn(
         "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
-        // Add min-height on message to prevent layout jump
-        // "data-last:min-h-[50vh]",
         className,
       )}
       {...props}
@@ -45,14 +42,8 @@ const MessageRoot = ({
 };
 
 // Message content container with role-based styling
-const MessageContent = ({
-  className,
-  ...props
-}: ComponentProps<typeof motion.div>) => (
-  <motion.div
-    initial={{ opacity: 0, y: 48 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.15 }}
+const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
     data-slot="message-content"
     className={cn(
       "flex flex-col gap-4 overflow-hidden border",
@@ -78,15 +69,13 @@ const MessageActions = ({
     <div
       data-slot="message-actions"
       className={cn(
-        "inline-flex items-center justify-start gap-1",
+        "inline-flex items-center justify-start gap-1 transition-opacity",
         // Hidden by default
         "pointer-events-none opacity-0",
         // Show on hover for all messages
         "group-hover:pointer-events-auto group-hover:opacity-100",
         // Show when focus is within the message
         "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-        // Hide when streaming (only for assistant messages)
-        "group-data-[role=assistant]:group-data-[status=streaming]:pointer-events-none! group-data-[role=assistant]:group-data-[status=streaming]:opacity-0!",
         className,
       )}
       {...props}
@@ -225,9 +214,82 @@ const MessageCopy = ({
   );
 };
 
+// Attachments container for message history (read-only)
+const MessageAttachments = ({
+  children,
+  className,
+  ...props
+}: ComponentProps<"div">) => (
+  <div className={cn("flex flex-wrap gap-2", className)} {...props}>
+    {children}
+  </div>
+);
+
+// Individual attachment display (read-only, no remove button)
+const isImage = (mediaType: string) => mediaType.startsWith("image/");
+
+type MessageAttachmentProps = {
+  attachment: FileUIPart;
+} & ComponentProps<"div">;
+
+const MessageAttachment = ({
+  attachment,
+  className,
+  ...props
+}: MessageAttachmentProps) => {
+  const mediaType = attachment.mediaType ?? "";
+  const filename = attachment.filename ?? "Attachment";
+  const Icon = mediaType === "application/pdf" ? FileIcon : PaperclipIcon;
+
+  return (
+    <div
+      className={cn(
+        "flex h-10 max-w-48 items-center gap-2 rounded-lg border border-slate-6 bg-slate-1 px-2",
+        className,
+      )}
+      {...props}
+    >
+      {isImage(mediaType) ? (
+        <HoverCard>
+          <HoverCard.Trigger className="shrink-0">
+            <Image
+              width={32}
+              height={32}
+              alt={filename}
+              className="size-6 shrink-0 rounded-xs object-cover ring-1 ring-inset ring-slate-7/10"
+              src={attachment.url}
+            />
+          </HoverCard.Trigger>
+          <HoverCard.Content side="top" sideOffset={12} className="w-auto p-1">
+            <Image
+              width={320}
+              height={320}
+              alt={filename}
+              className="max-h-64 w-auto rounded-md object-contain"
+              src={attachment.url}
+            />
+          </HoverCard.Content>
+        </HoverCard>
+      ) : (
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-slate-4">
+          <Icon className="size-4 text-muted-foreground" />
+        </div>
+      )}
+      <div className="flex min-w-0 flex-col">
+        <span className="flex text-xs font-medium">
+          <span className="truncate">{filename.slice(0, -7)}</span>
+          <span className="shrink-0">{filename.slice(-7)}</span>
+        </span>
+      </div>
+    </div>
+  );
+};
+
 // Composed Message component
 export const Message = Object.assign(MessageRoot, {
   Content: MessageContent,
+  Attachments: MessageAttachments,
+  Attachment: MessageAttachment,
   Actions: MessageActions,
   Action: MessageAction,
   Copy: MessageCopy,

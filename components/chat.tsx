@@ -74,6 +74,8 @@ const ChatMessages = () => {
           ?.map((part) => (part.type === "text" ? part.text : ""))
           .join("");
 
+        const fileParts = message.parts.filter((p) => p.type === "file");
+
         const reasoningParts = message.parts.filter(
           (part) => part.type === "reasoning",
         );
@@ -93,13 +95,20 @@ const ChatMessages = () => {
             isLast={isLastMessage}
             {...(skipAnimation && { initial: false })}
           >
+            {message.role === "user" && fileParts.length > 0 && (
+              <Message.Attachments>
+                {fileParts.map((part, i) => (
+                  <Message.Attachment key={i} attachment={part} />
+                ))}
+              </Message.Attachments>
+            )}
+            {hasReasoning && (
+              <Reasoning isStreaming={isReasoningStreaming}>
+                <Reasoning.Trigger />
+                <Reasoning.Content>{reasoningText}</Reasoning.Content>
+              </Reasoning>
+            )}
             <Message.Content>
-              {hasReasoning && (
-                <Reasoning isStreaming={isReasoningStreaming}>
-                  <Reasoning.Trigger />
-                  <Reasoning.Content>{reasoningText}</Reasoning.Content>
-                </Reasoning>
-              )}
               {message.parts?.map((part, index) => {
                 switch (part.type) {
                   case "text":
@@ -125,6 +134,7 @@ const ChatMessages = () => {
                       );
                     }
                   }
+
                   default:
                     return null;
                 }

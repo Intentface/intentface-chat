@@ -2,34 +2,112 @@
 
 import { DownloadIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import type { ComponentProps, ReactNode } from "react";
-import { memo, useCallback } from "react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import type { ComponentProps, ReactNode, RefObject } from "react";
+import {
+  createContext,
+  memo,
+  use,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { DynamicSpacer } from "@/components/ai/dynamic-spacer";
 import type Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon } from "../icons/arrow-down";
 
-export type ThreadRootProps = ComponentProps<typeof StickToBottom> & {
+// ---------------------------------------------------------------------------
+// Scroll context (replaces use-stick-to-bottom)
+// ---------------------------------------------------------------------------
+
+type ThreadScrollContextValue = {
+  isAtBottom: boolean;
+  scrollToBottom: () => void;
+  scrollRef: RefObject<HTMLDivElement | null>;
+};
+
+const ThreadScrollContext = createContext<ThreadScrollContextValue | null>(
+  null,
+);
+
+const useThreadScroll = () => {
+  const ctx = use(ThreadScrollContext);
+  if (!ctx) throw new Error("useThreadScroll must be used within <Thread>");
+  return ctx;
+};
+
+// ---------------------------------------------------------------------------
+// ThreadRoot
+// ---------------------------------------------------------------------------
+
+export type ThreadRootProps = ComponentProps<"div"> & {
   children?: ReactNode;
 };
 
-const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => (
-  <StickToBottom
-    data-slot="thread-root"
-    className={cn(
-      "relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
-      className,
-    )}
-    initial="smooth"
-    resize="smooth"
-    role="log"
-    {...props}
-  >
-    {children}
-  </StickToBottom>
-);
+const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  const scrollToBottom = useCallback(() => {
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const check = () => {
+      const threshold = 50;
+      setIsAtBottom(
+        el.scrollHeight - el.scrollTop - el.clientHeight < threshold,
+      );
+    };
+
+    let rafId: number;
+    const onScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(check);
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+
+    // Also check when content resizes (new messages, spacer height changes)
+    const observer = new ResizeObserver(check);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <ThreadScrollContext value={{ isAtBottom, scrollToBottom, scrollRef }}>
+      <div
+        data-slot="thread-root"
+        className={cn(
+          "relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
+          className,
+        )}
+        role="log"
+        {...props}
+      >
+        {children}
+      </div>
+    </ThreadScrollContext>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ThreadOverlay
+// ---------------------------------------------------------------------------
 
 export type ThreadOverlayProps = ComponentProps<typeof ProgressiveBlur> & {
   direction: "top" | "bottom";
@@ -62,9 +140,11 @@ const ThreadOverlay = memo(
 
 ThreadOverlay.displayName = "ThreadOverlay";
 
-export type ThreadViewportProps = ComponentProps<
-  typeof StickToBottom.Content
-> & {
+// ---------------------------------------------------------------------------
+// ThreadViewport
+// ---------------------------------------------------------------------------
+
+export type ThreadViewportProps = ComponentProps<"div"> & {
   children?: ReactNode;
 };
 
@@ -73,30 +153,39 @@ const ThreadViewport = ({
   className,
   ...props
 }: ThreadViewportProps) => {
+  const { scrollRef } = useThreadScroll();
+
   return (
-    <StickToBottom.Content
-      data-slot="thread-viewport"
-      scrollClassName="h-full w-full overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
-      className={cn(
-        "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
-        className,
-      )}
-      {...props}
+    <div
+      ref={scrollRef}
+      className="h-full w-full overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]"
     >
-      <div className="relative flex h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
-        <div
-          className={cn(
-            "mx-auto px-4 flex h-full w-full max-w-(--thread-width) flex-col gap-4",
-            // Add min-height on last child to prevent layout jump
-            "[&>[data-slot=message]:last-child]:min-h-[50vh]",
-          )}
-        >
-          {children}
+      <div
+        data-slot="thread-viewport"
+        className={cn(
+          "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
+          className,
+        )}
+        {...props}
+      >
+        <div className="relative flex h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
+          <div
+            className={cn(
+              "mx-auto px-4 flex h-full w-full max-w-(--thread-width) flex-col gap-4",
+              "[&>[data-slot=message]:last-child]:min-h-[50vh]",
+            )}
+          >
+            {children}
+          </div>
         </div>
       </div>
-    </StickToBottom.Content>
+    </div>
   );
 };
+
+// ---------------------------------------------------------------------------
+// ThreadComposer
+// ---------------------------------------------------------------------------
 
 export type ThreadComposerProps = ComponentProps<"div"> & {
   children?: ReactNode;
@@ -121,11 +210,9 @@ const ThreadComposer = ({
   </div>
 );
 
-export type ThreadEmptyStateProps = ComponentProps<"div"> & {
-  title?: string;
-  description?: string;
-  icon?: React.ReactNode;
-};
+// ---------------------------------------------------------------------------
+// ThreadScrollButton (arrow to scroll to bottom — no auto-stick)
+// ---------------------------------------------------------------------------
 
 export type ThreadScrollButtonProps = ComponentProps<typeof motion.div>;
 
@@ -133,7 +220,7 @@ const ThreadScrollButton = ({
   className,
   ...props
 }: ThreadScrollButtonProps) => {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
+  const { isAtBottom, scrollToBottom } = useThreadScroll();
 
   const handleScrollToBottom = useCallback(() => {
     scrollToBottom();
@@ -166,6 +253,16 @@ const ThreadScrollButton = ({
   );
 };
 
+// ---------------------------------------------------------------------------
+// ThreadPlaceholder
+// ---------------------------------------------------------------------------
+
+export type ThreadEmptyStateProps = ComponentProps<"div"> & {
+  title?: string;
+  description?: string;
+  icon?: React.ReactNode;
+};
+
 export type ThreadPlaceholderProps = ComponentProps<"div">;
 
 const ThreadPlaceholder = ({
@@ -184,6 +281,10 @@ const ThreadPlaceholder = ({
     {children}
   </div>
 );
+
+// ---------------------------------------------------------------------------
+// ThreadDownload
+// ---------------------------------------------------------------------------
 
 export interface ThreadMessage {
   role: "user" | "assistant" | "system" | "data" | "tool";
@@ -247,6 +348,10 @@ const ThreadDownload = ({
   );
 };
 
+// ---------------------------------------------------------------------------
+// Compound export
+// ---------------------------------------------------------------------------
+
 export const Thread = Object.assign(ThreadRoot, {
   Overlay: ThreadOverlay,
   Viewport: ThreadViewport,
@@ -254,4 +359,5 @@ export const Thread = Object.assign(ThreadRoot, {
   Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
   Download: ThreadDownload,
+  Spacer: DynamicSpacer,
 });

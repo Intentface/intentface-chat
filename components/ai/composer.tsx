@@ -598,9 +598,7 @@ const ComposerFooter = ({ className, ...props }: ComposerFooterProps) => (
 // AttachmentTrigger — reads attachmentsApi from context
 type ComposerAttachmentTriggerProps = ComponentProps<typeof IconButton>;
 
-const ComposerAttachmentTrigger = (
-  props: ComposerAttachmentTriggerProps,
-) => {
+const ComposerAttachmentTrigger = (props: ComposerAttachmentTriggerProps) => {
   const { attachmentsApi } = useContext(ComposerContext);
 
   const handleClick = useCallback(() => {
@@ -621,8 +619,7 @@ const ComposerSubmit = ({
   disabled,
   ...props
 }: ComposerSubmitProps) => {
-  const { hasContent, attachments, isSubmitting } =
-    useContext(ComposerContext);
+  const { hasContent, attachments, isSubmitting } = useContext(ComposerContext);
 
   const autoDisabled =
     disabled ?? ((!hasContent && attachments.length === 0) || isSubmitting);

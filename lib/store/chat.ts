@@ -53,12 +53,11 @@ export const useChatStore = create<ChatStore>()(
     (set, get) => ({
       chats: [],
       createChat: (id, title) => {
+        const existing = get().chats;
+        if (existing.some((c) => c.id === id)) return;
         const now = Date.now();
         set({
-          chats: [
-            { id, title, createdAt: now, updatedAt: now },
-            ...get().chats,
-          ],
+          chats: [{ id, title, createdAt: now, updatedAt: now }, ...existing],
         });
       },
       deleteChat: (id) => {
@@ -74,6 +73,19 @@ export const useChatStore = create<ChatStore>()(
       getMessages: getStoredMessages,
       setMessages: setStoredMessages,
     }),
-    { name: "chat-store" },
+    {
+      name: "chat-store",
+      merge: (persisted, current) => {
+        const state = { ...current, ...(persisted as Partial<ChatStore>) };
+        // Deduplicate chats that were persisted with duplicate IDs
+        const seen = new Set<string>();
+        state.chats = state.chats.filter((c) => {
+          if (seen.has(c.id)) return false;
+          seen.add(c.id);
+          return true;
+        });
+        return state;
+      },
+    },
   ),
 );

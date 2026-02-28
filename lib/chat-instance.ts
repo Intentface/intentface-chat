@@ -9,15 +9,11 @@ export const getChatInstance = (chatId: string): Chat<UIMessage> => {
   const existing = instances.get(chatId);
   if (existing) return existing;
 
-  const messages = useChatStore.getState().getMessages(chatId);
-  const model = useModelStore.getState().model;
-
   const chat = new Chat({
     id: chatId,
     transport: new DefaultChatTransport({
-      body: () => ({ model }),
+      body: () => ({ model: useModelStore.getState().model }),
     }),
-    messages: messages.length > 0 ? messages : undefined,
     onFinish: ({ messages, isAbort, isError }) => {
       if (isAbort || isError) return;
       const store = useChatStore.getState();

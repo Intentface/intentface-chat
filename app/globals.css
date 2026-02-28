@@ -145,7 +145,7 @@
 
 [data-streamdown="ordered-list"],
 [data-streamdown="unordered-list"] {
-  @apply my-2 space-y-1 pl-5 marker:text-slate-10;
+  @apply my-3 list-outside space-y-0.5 pl-5;
 }
 [data-streamdown="ordered-list"] {
   @apply list-decimal;
@@ -154,7 +154,13 @@
   @apply list-disc;
 }
 [data-streamdown="list-item"] {
-  @apply pl-0.5;
+  @apply pl-1;
+}
+[data-streamdown="list-item"]::marker {
+  color: var(--slate-10);
+}
+[data-streamdown="list-item"] > [data-streamdown="paragraph"] {
+  @apply my-0;
 }
 
 [data-streamdown="horizontal-rule"] {
@@ -188,65 +194,127 @@
   @apply max-w-full rounded-md;
 }
 
-/* Diffusion character states */
-.diffusion-container {
-}
-.diffusion-char-diffusing {
-  opacity: 0.5;
-  filter: blur(0px);
-  transition:
-    opacity 0.15s ease,
-    filter 0.15s ease;
-}
-.diffusion-char-resolving {
-  opacity: 0.75;
-  filter: blur(0px);
-  transition:
-    opacity 0.15s ease,
-    filter 0.15s ease;
-}
-.diffusion-char-ready {
-  opacity: 1;
-  filter: blur(0);
-  transition:
-    opacity 0.2s ease,
-    filter 0.2s ease;
+/* Diffusion streaming state — low opacity with subtle pulse while generating */
+.diffusion-streaming {
+  animation: diffusion-pulse 2s ease-in-out infinite;
 }
 
-/* Diffusion → Markdown reveal transition */
-@property --diffusion-reveal {
+@keyframes diffusion-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Container for the sweep line */
+.diffusion-sweep-container {
+  --sweep-duration: 800ms; /* overridden by JS based on height */
+}
+
+/* Decorative sweep line — DEBUG: bright red so we can see it */
+.diffusion-sweep-line {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  pointer-events: none;
+  background: red;
+  box-shadow: 0 0 20px 6px red;
+  opacity: 0;
+  animation: diffusion-sweep var(--sweep-duration, 800ms) ease-in-out forwards;
+}
+
+@keyframes diffusion-sweep {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+/* Diffusion → Markdown scanline reveal transition */
+@property --scanline-pos {
   syntax: "<percentage>";
   inherits: false;
   initial-value: 0%;
 }
 
-.diffusion-reveal-mask {
+.diffusion-scanline-container {
+  isolation: isolate;
+}
+
+/* Bottom layer: diffusion-styled text that fades out behind the scanline */
+.diffusion-bottom-layer {
+  opacity: 0.5;
+  animation: diffusion-bottom-fadeout 0.6s ease-out forwards;
+}
+
+@keyframes diffusion-bottom-fadeout {
+  to {
+    opacity: 0.2;
+  }
+}
+
+/* Top layer: clean markdown revealed by scanline mask */
+.diffusion-scanline-mask {
   mask-image: linear-gradient(
     to bottom,
     black 0%,
-    black var(--diffusion-reveal),
-    transparent calc(var(--diffusion-reveal) + 8%),
+    black var(--scanline-pos),
+    transparent calc(var(--scanline-pos) + 0.5%),
     transparent 100%
   );
-  animation: diffusion-reveal 0.6s ease-out forwards;
+  animation: scanline-sweep 0.6s ease-out forwards;
 }
 
-@keyframes diffusion-reveal {
+@keyframes scanline-sweep {
   from {
-    --diffusion-reveal: 0%;
+    --scanline-pos: 0%;
   }
   to {
-    --diffusion-reveal: 100%;
+    --scanline-pos: 100%;
   }
 }
 
-.diffusion-chars-exit {
-  animation: diffusion-chars-exit 0.6s ease-out forwards;
+/* Scanline glow beam at the reveal edge */
+.diffusion-scanline-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  top: 0%;
+  background: linear-gradient(
+    to right,
+    transparent 5%,
+    var(--foreground) 30%,
+    var(--foreground) 70%,
+    transparent 95%
+  );
+  opacity: 0.12;
+  filter: blur(1.5px);
+  pointer-events: none;
+  animation: scanline-beam-move 0.6s ease-out forwards;
 }
 
-@keyframes diffusion-chars-exit {
+@keyframes scanline-beam-move {
+  from {
+    top: 0%;
+    opacity: 0.12;
+  }
   to {
-    opacity: 0.3;
-    filter: blur(0px);
+    top: 100%;
+    opacity: 0;
   }
 }

@@ -14,6 +14,7 @@ import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { Header } from "@/components/header";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
+import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
@@ -70,9 +71,17 @@ const ChatMessages = () => {
         const isAssistant = message.role === "assistant";
         const skipAnimation = initialMessageIds.current.has(message.id);
 
-        const messageText = message.parts
-          ?.map((part) => (part.type === "text" ? part.text : ""))
-          .join("");
+        // Detect diffusion: multiple consecutive text parts means the model
+        // sent replacement snapshots. Show only the last text part.
+        const textParts = message.parts?.filter((part) => part.type === "text");
+        const isDiffusing = (textParts?.length ?? 0) > 1;
+        const lastTextPart = textParts?.at(-1);
+
+        const messageText = isDiffusing
+          ? (lastTextPart?.text ?? "")
+          : message.parts
+              ?.map((part) => (part.type === "text" ? part.text : ""))
+              .join("");
 
         const fileParts = message.parts.filter((p) => p.type === "file");
 
@@ -109,36 +118,45 @@ const ChatMessages = () => {
               </Reasoning>
             )}
             <Message.Content>
-              {message.parts?.map((part, index) => {
-                switch (part.type) {
-                  case "text":
-                    return <Message.Text key={index}>{part.text}</Message.Text>;
-                  case "tool-createArtifact": {
-                    const input = part.input as {
-                      title?: string;
-                      content?: string;
-                    };
-                    {
-                      const artifact = {
-                        id: part.toolCallId,
-                        title: input?.title ?? "Untitled",
-                        content: input?.content ?? "",
-                      };
+              {isDiffusing && lastTextPart ? (
+                <DiffusionMarkdown
+                  content={lastTextPart.text}
+                  isStreaming={isLastMessage && isStreaming}
+                />
+              ) : (
+                message.parts?.map((part, index) => {
+                  switch (part.type) {
+                    case "text":
                       return (
-                        <ArtifactCard
-                          key={index}
-                          title={artifact.title}
-                          state={part.state}
-                          onToggle={() => toggleArtifact(artifact)}
-                        />
+                        <Message.Text key={index}>{part.text}</Message.Text>
                       );
+                    case "tool-createArtifact": {
+                      const input = part.input as {
+                        title?: string;
+                        content?: string;
+                      };
+                      {
+                        const artifact = {
+                          id: part.toolCallId,
+                          title: input?.title ?? "Untitled",
+                          content: input?.content ?? "",
+                        };
+                        return (
+                          <ArtifactCard
+                            key={index}
+                            title={artifact.title}
+                            state={part.state}
+                            onToggle={() => toggleArtifact(artifact)}
+                          />
+                        );
+                      }
                     }
-                  }
 
-                  default:
-                    return null;
-                }
-              })}
+                    default:
+                      return null;
+                  }
+                })
+              )}
             </Message.Content>
             <Message.Actions>
               {isAssistant && (
@@ -156,6 +174,7 @@ const ChatMessages = () => {
       })}
       {isLoading && <Message.Loading />}
       {isError && <Message.Error />}
+      <Thread.Spacer />
     </>
   );
 };
@@ -269,15 +288,15 @@ const ChatDefaultLayout = () => {
       <Thread>
         <Header />
         <Thread.Overlay direction="top" />
-        {isEmpty ? (
-          <Thread.Placeholder>
-            <ChatPlaceholder />
-          </Thread.Placeholder>
-        ) : (
-          <Thread.Viewport>
+        <Thread.Viewport>
+          {isEmpty ? (
+            <Thread.Placeholder>
+              <ChatPlaceholder />
+            </Thread.Placeholder>
+          ) : (
             <ChatMessages />
-          </Thread.Viewport>
-        )}
+          )}
+        </Thread.Viewport>
         <Thread.Composer>
           <Thread.ScrollButton />
           <ChatInput />

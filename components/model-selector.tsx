@@ -27,7 +27,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
         if (newValue) onValueChange(newValue as ModelId);
       }}
     >
-      <Select.Trigger variant="ghost" size="sm">
+      <Select.Trigger variant="ghost" size="sm" className="rounded-full">
         <Select.Value placeholder="Select model">
           {ALL_MODELS.find((model) => model.id === value)?.label}
         </Select.Value>

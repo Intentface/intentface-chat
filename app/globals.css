@@ -5,6 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  font-feature-settings:
+    "liga" 1,
+    "calt" 1;
+
   --slate-1: oklch(99.7% 0 0);
   --slate-2: oklch(98.8% 0 0);
   --slate-3: oklch(97.2% 0 0);
@@ -168,7 +172,7 @@
 }
 
 [data-streamdown="strong"] {
-  @apply font-semibold;
+  @apply font-medium;
 }
 
 [data-streamdown="table-wrapper"] {

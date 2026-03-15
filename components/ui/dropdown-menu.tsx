@@ -2,7 +2,7 @@
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { CheckIcon, ChevronRightIcon } from "lucide-react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { CircleIcon } from "@/components/icons/circle";
 import { cn } from "@/lib/utils";
 
@@ -91,12 +91,12 @@ function DropdownMenuItem({
       data-inset={inset ? "" : undefined}
       data-destructive={destructive ? "" : undefined}
       className={cn(
-        "flex items-center gap-2 rounded-sm cursor-default px-2 h-8 text-sm outline-none select-none ",
+        "flex items-center gap-2 rounded-sm cursor-pointer px-2 h-8 text-sm outline-none select-none",
         "data-highlighted:text-slate-12 data-highlighted:bg-slate-4",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         "data-destructive:text-destructive-foreground data-destructive:bg-destructive data-destructive:data-highlighted:bg-destructive/90",
         "data-inset:pl-7",
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 data-highlighted:[&_svg]:text-slate-12",
+        "[&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0 data-highlighted:[&_svg]:text-slate-12",
         className,
       )}
       {...props}
@@ -121,7 +121,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "gap-1.5 rounded-md px-1.5 h-8 text-sm [&_svg:not([class*='size-'])]:size-4 flex cursor-default items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "gap-1.5 rounded-md px-1.5 h-8 text-sm [&_svg:not([class*='size-'])]:size-4 flex cursor-pointer items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
         "data-highlighted:bg-slate-4 data-popup-open:bg-slate-4",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         "data-inset:pl-7",
@@ -159,10 +159,16 @@ function DropdownMenuSubContent({
   );
 }
 
-const DropdownMenuIndicator = ({ ...props }: ComponentProps<"span">) => {
+const DropdownMenuIndicator = ({
+  className,
+  ...props
+}: ComponentProps<"span">) => {
   return (
     <span
-      className="flex size-4 items-center justify-center pointer-events-none"
+      className={cn(
+        "flex size-4 items-center justify-center pointer-events-none",
+        className,
+      )}
       data-slot="dropdown-menu-indicator"
       {...props}
     />
@@ -181,7 +187,7 @@ function DropdownMenuCheckboxItem({
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       className={cn(
-        "data-highlighted:bg-slate-4 gap-1.5 rounded-md px-2 h-8 text-sm [&_svg:not([class*='size-'])]:size-4 relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "data-highlighted:bg-slate-4 gap-1.5 rounded-md px-2 h-8 text-sm [&_svg:not([class*='size-'])]:size-4 relative flex  cursor-pointer items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       checked={checked}
@@ -219,7 +225,7 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "data-highlighted:bg-slate-4 gap-1.5 rounded-md h-8 px-2 text-sm data-inset:pl-7 [&_svg:not([class*='size-'])]:size-3.5 relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "data-highlighted:bg-slate-4 gap-1.5 rounded-md h-8 px-2 text-sm data-inset:pl-7 [&_svg:not([class*='size-'])]:size-3.5 relative flex  cursor-pointer items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -231,6 +237,41 @@ function DropdownMenuRadioItem({
       </DropdownMenuIndicator>
       {children}
     </MenuPrimitive.RadioItem>
+  );
+}
+
+function DropdownMenuSwitchItem({
+  className,
+  children,
+  closeOnClick = false,
+  ...props
+}: MenuPrimitive.CheckboxItem.Props & {
+  children?: ReactNode;
+}) {
+  return (
+    <MenuPrimitive.CheckboxItem
+      data-slot="dropdown-menu-switch-item"
+      closeOnClick={closeOnClick}
+      className={cn(
+        "group/dropdown-menu-switch-item flex flex-nowrap items-center gap-2 rounded-sm  cursor-pointer px-2 h-8 text-sm outline-none select-none whitespace-nowrap",
+        "data-highlighted:text-slate-12 data-highlighted:bg-slate-4",
+        "data-disabled:pointer-events-none data-disabled:opacity-50",
+        "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:shrink-0 data-highlighted:[&_svg]:text-slate-12",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <DropdownMenuIndicator
+        data-slot="dropdown-menu-switch-item-indicator"
+        className="px-0.5 flex items-center justify-start h-4 w-7 rounded-full transition-colors bg-slate-6 group-data-checked/dropdown-menu-switch-item:bg-slate-12"
+      >
+        <MenuPrimitive.CheckboxItemIndicator
+          keepMounted
+          className="size-3 rounded-full bg-white transition-transform data-checked:translate-x-3"
+        />
+      </DropdownMenuIndicator>
+    </MenuPrimitive.CheckboxItem>
   );
 }
 
@@ -273,6 +314,7 @@ const DropdownMenu = Object.assign(DropdownMenuRoot, {
   CheckboxItem: DropdownMenuCheckboxItem,
   RadioGroup: DropdownMenuRadioGroup,
   RadioItem: DropdownMenuRadioItem,
+  SwitchItem: DropdownMenuSwitchItem,
   Separator: DropdownMenuSeparator,
   Shortcut: DropdownMenuShortcut,
   Sub: DropdownMenuSub,

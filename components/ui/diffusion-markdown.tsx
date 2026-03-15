@@ -22,7 +22,9 @@ type DiffusionMarkdownProps = {
 
 const DiffusionMarkdown = memo(
   ({ content, isStreaming, className }: DiffusionMarkdownProps) => {
-    const [phase, setPhase] = useState<Phase>(isStreaming ? "streaming" : "final");
+    const [phase, setPhase] = useState<Phase>(
+      isStreaming ? "streaming" : "final",
+    );
     const wasStreamingRef = useRef(isStreaming);
     const firstContentTimeRef = useRef<number | null>(null);
     const sweepContainerRef = useRef<HTMLDivElement>(null);
@@ -30,7 +32,11 @@ const DiffusionMarkdown = memo(
     const [sweepKey, setSweepKey] = useState(0);
 
     // Track when content first appeared during streaming
-    if (isStreaming && content.length > 0 && firstContentTimeRef.current === null) {
+    if (
+      isStreaming &&
+      content.length > 0 &&
+      firstContentTimeRef.current === null
+    ) {
       firstContentTimeRef.current = Date.now();
     }
     if (!isStreaming && phase === "final") {
@@ -87,7 +93,7 @@ const DiffusionMarkdown = memo(
 
       const timer = setTimeout(() => setPhase("final"), duration + 50);
       return () => clearTimeout(timer);
-    }, [phase, sweepKey]);
+    }, [phase]);
 
     // Final state — clean markdown, no wrappers
     if (phase === "final") {
@@ -101,10 +107,17 @@ const DiffusionMarkdown = memo(
       return (
         <div
           ref={sweepContainerRef}
-          className={cn("diffusion-sweep-container relative overflow-hidden", className)}
+          className={cn(
+            "diffusion-sweep-container relative overflow-hidden",
+            className,
+          )}
         >
           <Markdown className="size-full">{content}</Markdown>
-          <div key={sweepKey} className="diffusion-sweep-line" aria-hidden="true" />
+          <div
+            key={sweepKey}
+            className="diffusion-sweep-line"
+            aria-hidden="true"
+          />
         </div>
       );
     }

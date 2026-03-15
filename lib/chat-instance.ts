@@ -1,5 +1,9 @@
 import { Chat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  type UIMessage,
+} from "ai";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
 
@@ -14,6 +18,7 @@ export const getChatInstance = (chatId: string): Chat<UIMessage> => {
     transport: new DefaultChatTransport({
       body: () => ({ model: useModelStore.getState().model }),
     }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onFinish: ({ messages, isAbort, isError }) => {
       if (isAbort || isError) return;
       const store = useChatStore.getState();

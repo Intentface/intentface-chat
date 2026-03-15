@@ -1,10 +1,10 @@
 "use client";
 
 import type { FileUIPart, UIMessage } from "ai";
-import { CheckIcon, FileIcon, GlobeIcon, PaperclipIcon } from "lucide-react";
+import { CheckIcon, FileIcon, PaperclipIcon } from "lucide-react";
+import { motion } from "motion/react";
 import Image from "next/image";
 import type { ComponentProps } from "react";
-import { useState } from "react";
 import HoverCard from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
@@ -17,7 +17,7 @@ type MessageRootProps = {
   role: UIMessage["role"];
   isLast: boolean;
   isError: boolean;
-} & ComponentProps<"div">;
+} & ComponentProps<typeof motion.div>;
 // Message wrapper with entrance animation
 const MessageRoot = ({
   role,
@@ -27,7 +27,11 @@ const MessageRoot = ({
   ...props
 }: MessageRootProps) => {
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       data-slot="message"
       data-role={role}
       data-error={isError ? "" : undefined}
@@ -48,7 +52,7 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
     className={cn(
       "flex flex-col gap-4 overflow-hidden border",
       // User message styling
-      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-xl group-data-[role=user]:border-slate-6 group-data-[role=user]:bg-slate-1 group-data-[role=user]:px-3 group-data-[role=user]:py-2 group-data-[role=user]:shadow-xs",
+      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border-slate-6 group-data-[role=user]:bg-slate-1 group-data-[role=user]:px-3 group-data-[role=user]:py-2 group-data-[role=user]:shadow-xs group-data-[role=user]:min-h-10 group-data-[role=user]:rounded-[20px]",
       // Assistant message styling
       "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-none",
       // Error styling
@@ -285,6 +289,49 @@ const MessageAttachment = ({
   );
 };
 
+// Source pills container
+const MessageSources = ({
+  children,
+  className,
+  ...props
+}: ComponentProps<"div">) => (
+  <div
+    data-slot="message-sources"
+    className={cn("flex flex-wrap gap-1.5", className)}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+// Individual source pill with favicon + domain
+const MessageSource = ({
+  url,
+  domain,
+  className,
+  ...props
+}: { url: string; domain: string } & ComponentProps<"a">) => (
+  <a
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className={cn(
+      "inline-flex items-center gap-1.5 rounded-md border border-slate-6 bg-slate-1 px-2 py-1 text-xs text-slate-11 transition-colors hover:bg-slate-3",
+      className,
+    )}
+    {...props}
+  >
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
+      alt=""
+      width={14}
+      height={14}
+      className="shrink-0"
+    />
+    {domain}
+  </a>
+);
+
 // Composed Message component
 export const Message = Object.assign(MessageRoot, {
   Content: MessageContent,
@@ -297,4 +344,6 @@ export const Message = Object.assign(MessageRoot, {
   Error: MessageError,
   Loading: MessageLoading,
   Timestamp: MessageTimestamp,
+  Sources: MessageSources,
+  Source: MessageSource,
 });

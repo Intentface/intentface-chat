@@ -164,6 +164,8 @@ const ThreadViewport = ({
         data-slot="thread-viewport"
         className={cn(
           "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
+          // might cause issues with the overflow-y-auto
+          "h-full",
           className,
         )}
         {...props}

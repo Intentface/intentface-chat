@@ -595,6 +595,19 @@ const QuestionnaireActions = ({
       </div>
     );
   }
+
+  if (ctx.isReviewStep) {
+    return (
+      <div className={cn("flex justify-end", className)} {...props}>
+        <Button onClick={ctx.handleSubmit} disabled={!ctx.hasAllAnswers}>
+          <SendIcon className="size-3.5" />
+          Submit
+        </Button>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 // ---------------------------------------------------------------------------

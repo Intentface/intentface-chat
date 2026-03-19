@@ -241,7 +241,7 @@ const ComposerRoot = ({
       <form
         onSubmit={handleFormSubmit}
         ref={rootRef}
-        className={cn("relative w-full", className)}
+        className={cn("relative w-full flex flex-col gap-2", className)}
         {...formProps}
       >
         {children}
@@ -253,7 +253,11 @@ const ComposerRoot = ({
 // Container — visual container with border/bg/rounded, click-to-focus
 type ComposerContainerProps = ComponentProps<"div">;
 
-const ComposerContainer = ({ className, children, ...props }: ComposerContainerProps) => {
+const ComposerContainer = ({
+  className,
+  children,
+  ...props
+}: ComposerContainerProps) => {
   const { editorRef } = useContext(ComposerContext);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -694,7 +698,7 @@ const ComposerStates = ({
   const hasChildren = Children.toArray(children).some(isValidElement);
 
   return (
-    <div data-slot="composer-state" className={className} {...props}>
+    <div data-slot="composer-state" className={cn(className)} {...props}>
       <AnimatePresence initial={false}>
         {hasChildren && (
           <motion.div
@@ -702,7 +706,7 @@ const ComposerStates = ({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ type: "spring", stiffness: 500, damping: 35 }}
-            className="overflow-hidden"
+            className="overflow-hidden border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
           >
             <AnimatePresence mode="popLayout" initial={false}>
               {children}

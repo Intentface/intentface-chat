@@ -31,6 +31,7 @@ const stepLabels = [
 const singleQuestion: AskUserQuestion[] = [
   {
     question: "Which database should we use?",
+    header: "Database",
     options: [
       {
         label: "PostgreSQL",
@@ -52,6 +53,7 @@ const singleQuestion: AskUserQuestion[] = [
 const multipleQuestions: AskUserQuestion[] = [
   {
     question: "Which auth method do you prefer?",
+    header: "Auth",
     options: [
       {
         label: "OAuth 2.0",
@@ -69,6 +71,7 @@ const multipleQuestions: AskUserQuestion[] = [
   },
   {
     question: "Which features should we enable?",
+    header: "Features",
     multiSelect: true,
     options: [
       {

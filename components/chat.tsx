@@ -21,13 +21,13 @@ import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
 import { ChatArtifactsPanel } from "@/components/artifacts-panel";
-import { Questionnaire } from "@/components/questionnaire";
 import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
 import { GlobeIcon } from "@/components/icons/globe";
 import { PaperClipIcon } from "@/components/icons/paperclip";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
+import { Questionnaire } from "@/components/questionnaire";
 import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/ui/icon-button";
@@ -467,7 +467,9 @@ const ComposerPanel = () => {
                 <StepQueue.Item key={step.key}>
                   <StepQueue.Icon>
                     {step.kind === "thinking" ? (
-                      <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
+                      <BrainIcon
+                        className={cn("size-3.5", active && "animate-pulse")}
+                      />
                     ) : active ? (
                       <Loader className="size-3.5 animate-spin" />
                     ) : (
@@ -493,7 +495,11 @@ const ComposerPanel = () => {
             </div>
             <Questionnaire.Content>
               {panelState.questions.map((q) => (
-                <Questionnaire.Step key={q.question} value={q.question} multiSelect={q.multiSelect}>
+                <Questionnaire.Step
+                  key={q.question}
+                  value={q.question}
+                  multiSelect={q.multiSelect}
+                >
                   <Questionnaire.Label>{q.question}</Questionnaire.Label>
                   <Questionnaire.Options>
                     {q.options?.map((option) => (

@@ -16,10 +16,11 @@ import {
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
+import { splitReasoningByHeaders } from "@/lib/message-utils";
 import { cn } from "@/lib/utils";
+import { BrainIcon } from "../icons/brain";
 import { TextShimmer } from "../ui/text-shimmer";
 
-const AUTO_CLOSE_DELAY = 1000;
 const MS_IN_S = 1000;
 
 type ReasoningContextValue = {
@@ -59,8 +60,7 @@ const ReasoningRoot = memo(
     children,
     ...props
   }: ReasoningRootProps) => {
-    const resolvedDefaultOpen = defaultOpen ?? isStreaming;
-    const isExplicitlyClosed = defaultOpen === false;
+    const resolvedDefaultOpen = defaultOpen ?? false;
 
     const [internalOpen, setInternalOpen] = useState(resolvedDefaultOpen);
     const isControlled = controlledOpen !== undefined;
@@ -68,7 +68,6 @@ const ReasoningRoot = memo(
 
     const [duration, setDuration] = useState<number | undefined>(durationProp);
     const hasEverStreamedRef = useRef(isStreaming);
-    const [hasAutoClosed, setHasAutoClosed] = useState(false);
     const startTimeRef = useRef<number | null>(null);
 
     const setIsOpen = useCallback(
@@ -93,29 +92,6 @@ const ReasoningRoot = memo(
         startTimeRef.current = null;
       }
     }, [isStreaming]);
-
-    // Auto-open when streaming starts (unless explicitly closed)
-    useEffect(() => {
-      if (isStreaming && !isOpen && !isExplicitlyClosed) {
-        setIsOpen(true);
-      }
-    }, [isStreaming, isOpen, setIsOpen, isExplicitlyClosed]);
-
-    // Auto-close after delay when streaming ends (once only)
-    useEffect(() => {
-      if (
-        hasEverStreamedRef.current &&
-        !isStreaming &&
-        isOpen &&
-        !hasAutoClosed
-      ) {
-        const timer = setTimeout(() => {
-          setIsOpen(false);
-          setHasAutoClosed(true);
-        }, AUTO_CLOSE_DELAY);
-        return () => clearTimeout(timer);
-      }
-    }, [isStreaming, isOpen, setIsOpen, hasAutoClosed]);
 
     const contextValue = useMemo(
       () => ({ duration, isOpen, isStreaming, setIsOpen }),
@@ -144,17 +120,26 @@ ReasoningRoot.displayName = "Reasoning";
 export type ReasoningTriggerProps = ComponentProps<
   typeof Collapsible.Trigger
 > & {
+  label?: string[];
   getThinkingMessage?: (
     isStreaming: boolean,
     duration?: number,
+    label?: string,
   ) => { key: string; component: ReactNode };
 };
 
 const defaultGetThinkingMessage = (
   isStreaming: boolean,
   duration?: number,
+  label?: string,
 ): { key: string; component: ReactNode } => {
   if (isStreaming || duration === 0) {
+    if (isStreaming && label) {
+      return {
+        key: `header-${label}`,
+        component: <TextShimmer>{label}</TextShimmer>,
+      };
+    }
     return {
       key: "thinking",
       component: <TextShimmer>Thinking...</TextShimmer>,
@@ -169,39 +154,48 @@ const defaultGetThinkingMessage = (
 
 const ReasoningTrigger = memo(
   ({
+    label,
     getThinkingMessage = defaultGetThinkingMessage,
     className,
     children,
     ...props
   }: ReasoningTriggerProps) => {
     const { isStreaming, isOpen, duration } = useReasoning();
+    const activeLabel = label?.at(-1);
 
-    const { key, component } = getThinkingMessage(isStreaming, duration);
+    const { key, component } = getThinkingMessage(
+      isStreaming,
+      duration,
+      activeLabel,
+    );
     return (
       <Collapsible.Trigger
         className={cn(
-          "inline-flex cursor-pointer h-8 text-sm items-center gap-2 text-muted-foreground transition-colors hover:text-foreground",
+          "flex cursor-pointer w-full text-sm items-center gap-2 text-slate-11 rounded-md transition-colors hover:text-slate-12",
           className,
         )}
         {...props}
       >
         {children ?? (
           <>
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.span
-                key={key}
-                initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="whitespace-nowrap text-gray-11/60"
-              >
-                {component}
-              </motion.span>
-            </AnimatePresence>
+            <div className="flex items-center gap-1">
+              <BrainIcon className="size-4" />
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={key}
+                  initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="whitespace-nowrap text-gray-11/60"
+                >
+                  {component}
+                </motion.span>
+              </AnimatePresence>
+            </div>
             <ChevronDownIcon
               className={cn(
-                "size-4 transition-transform",
+                "size-5 transition-transform",
                 isOpen ? "rotate-180" : "rotate-0",
               )}
             />
@@ -218,18 +212,38 @@ export type ReasoningContentProps = Omit<
   ComponentProps<typeof Collapsible.Panel>,
   "children"
 > & {
-  children: string;
+  children: string | string[];
 };
 
 const ReasoningContent = ({
   children,
   className,
   ...props
-}: ReasoningContentProps) => (
-  <Collapsible.Panel className={cn("mt-2 text-sm", className)} {...props}>
-    <Markdown className="text-slate-11 space-y-2 text-sm">{children}</Markdown>
-  </Collapsible.Panel>
-);
+}: ReasoningContentProps) => {
+  const texts = Array.isArray(children) ? children : [children];
+  const sections = splitReasoningByHeaders(texts);
+
+  return (
+    <Collapsible.Panel className={cn("text-sm", className)} {...props}>
+      <div className="flex flex-col gap-3 p-2">
+        {sections.map((section, i) => (
+          <div key={i} className="flex flex-col gap-1">
+            {section.header && (
+              <span className="text-sm font-medium text-slate-12">
+                {section.header}
+              </span>
+            )}
+            {section.body && (
+              <Markdown className="text-slate-11 text-sm [&_p]:mb-0">
+                {section.body}
+              </Markdown>
+            )}
+          </div>
+        ))}
+      </div>
+    </Collapsible.Panel>
+  );
+};
 
 export const Reasoning = Object.assign(ReasoningRoot, {
   Trigger: ReasoningTrigger,

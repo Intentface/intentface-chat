@@ -182,7 +182,7 @@ const SidebarRoot = ({
         <div
           data-sidebar="sidebar"
           className={cn(
-            "bg-sidebar flex h-full w-full flex-col p-2 gap-2",
+            "bg-sidebar flex h-full w-full flex-col py-2 pl-2 gap-2",
             "group-data-[state=collapsed]:border-sidebar-border group-data-[state=collapsed]:rounded-lg group-data-[state=collapsed]:border group-data-[state=collapsed]:shadow-sm",
           )}
         >
@@ -256,7 +256,7 @@ const SidebarInset = ({
       data-expanded={state === "expanded" ? "" : undefined}
       className={cn(
         "group/sidebar-inset bg-slate-3 relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
-        "data-expanded:pr-2 data-expanded:py-2 transition-padding duration-200 ease-out",
+        "data-expanded:p-2 transition-padding duration-200 ease-out",
         className,
       )}
       {...props}

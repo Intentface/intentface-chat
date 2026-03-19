@@ -12,7 +12,6 @@ import React, {
   type ComponentProps,
   createContext,
   isValidElement,
-  type MouseEvent,
   type ReactNode,
   type RefObject,
   useCallback,
@@ -59,6 +58,10 @@ type ComposerContextValue = {
   attachmentError: string | null;
   setAttachmentError: (error: string | null) => void;
   globalDropRef: RefObject<boolean>;
+  webSearch: boolean;
+  setWebSearch: (value: boolean) => void;
+  thinking: boolean;
+  setThinking: (value: boolean) => void;
 };
 
 const ComposerContext = createContext<ComposerContextValue>({
@@ -74,9 +77,13 @@ const ComposerContext = createContext<ComposerContextValue>({
   attachmentError: null,
   setAttachmentError: () => {},
   globalDropRef: { current: false },
+  webSearch: false,
+  setWebSearch: () => {},
+  thinking: true,
+  setThinking: () => {},
 });
 
-export const useComposerContext = () => useContext(ComposerContext);
+export const useComposer = () => useContext(ComposerContext);
 
 // Drag handler factory — always on document, scope-checked at event time
 const createDragHandlers = (
@@ -125,6 +132,8 @@ type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   onSubmit?: (data: {
     text: string;
     files: FileUIPart[];
+    webSearch: boolean;
+    thinking: boolean;
   }) => void | Promise<void>;
   isSubmitting?: boolean;
 };
@@ -147,6 +156,8 @@ const ComposerRoot = ({
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   const attachmentRef = useRef<AttachmentItem[]>(attachments);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [webSearch, setWebSearch] = useState(false);
+  const [thinking, setThinking] = useState(true);
   attachmentRef.current = attachments;
 
   const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -167,23 +178,7 @@ const ComposerRoot = ({
     editorRef.current?.commands.setContent("");
     setHasContent(false);
 
-    await onSubmit?.({ text: submitText, files });
-  };
-
-  const handleMouseDown = (e: MouseEvent<HTMLFormElement>) => {
-    const target = e.target as HTMLElement;
-    if (
-      target.tagName === "BUTTON" ||
-      target.tagName === "A" ||
-      target.closest("button, a")
-    )
-      return;
-
-    e.preventDefault();
-    const editor = editorRef.current;
-    if (editor && !editor.isFocused) {
-      editor.commands.focus();
-    }
+    await onSubmit?.({ text: submitText, files, webSearch, thinking });
   };
 
   // Drag handlers — always on document, scope-checked at event time via refs
@@ -225,26 +220,78 @@ const ComposerRoot = ({
       attachmentError,
       setAttachmentError,
       globalDropRef,
+      webSearch,
+      setWebSearch,
+      thinking,
+      setThinking,
     }),
-    [isDragging, isSubmitting, hasContent, attachments, attachmentError],
+    [
+      isDragging,
+      isSubmitting,
+      hasContent,
+      attachments,
+      attachmentError,
+      webSearch,
+      thinking,
+    ],
   );
 
   return (
     <ComposerContext.Provider value={contextValue}>
       <form
         onSubmit={handleFormSubmit}
-        onMouseDown={handleMouseDown}
         ref={rootRef}
-        className={cn(
-          "relative border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle] w-full cursor-text",
-          "transition-colors",
-          className,
-        )}
+        className={cn("relative w-full flex flex-col gap-2", className)}
         {...formProps}
       >
         {children}
       </form>
     </ComposerContext.Provider>
+  );
+};
+
+// Container — visual container with border/bg/rounded, click-to-focus
+type ComposerContainerProps = ComponentProps<"div">;
+
+const ComposerContainer = ({
+  className,
+  children,
+  ...props
+}: ComposerContainerProps) => {
+  const { editorRef } = useContext(ComposerContext);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "BUTTON" ||
+      target.tagName === "A" ||
+      target.tagName === "INPUT" ||
+      target.closest("button, a, input")
+    )
+      return;
+
+    e.preventDefault();
+    const editor = editorRef.current;
+    if (editor && !editor.isFocused) {
+      editor.commands.focus();
+    }
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      data-slot="composer-container"
+      onMouseDown={handleMouseDown}
+      className={cn(
+        "border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle] cursor-text",
+        "transition-colors",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
   );
 };
 
@@ -375,10 +422,13 @@ const ComposerAttachments = ({
               {attachments.length > 0 ? (
                 <div className={cn("flex flex-wrap gap-2 p-2", className)}>
                   <AnimatePresence initial={false}>
-                    {attachments.map((attachment) => (
-                      <Attachments.Item key={attachment.id} item={attachment}>
+                    {attachments.map((attachmentsApi) => (
+                      <Attachments.Item
+                        key={attachmentsApi.id}
+                        item={attachmentsApi}
+                      >
                         <Attachments.Remove
-                          onRemove={() => remove(attachment.id)}
+                          onRemove={() => remove(attachmentsApi.id)}
                         />
                       </Attachments.Item>
                     ))}
@@ -591,7 +641,7 @@ const ComposerPlaceholder = ({
 // Layout sub-components
 type ComposerFooterProps = ComponentProps<"div">;
 
-const ComposerFooter = ({ className, ...props }: ComposerFooterProps) => (
+const ComposerActions = ({ className, ...props }: ComposerFooterProps) => (
   <div className={cn("flex justify-end p-2", className)} {...props} />
 );
 
@@ -637,12 +687,65 @@ const ComposerSubmit = ({
   );
 };
 
+// State — morphing container that collapses when empty
+type ComposerStatesProps = ComponentProps<"div">;
+
+const ComposerStates = ({
+  children,
+  className,
+  ...props
+}: ComposerStatesProps) => {
+  const hasChildren = Children.toArray(children).some(isValidElement);
+
+  return (
+    <div data-slot="composer-state" className={cn(className)} {...props}>
+      <AnimatePresence initial={false}>
+        {hasChildren && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 35 }}
+            className="overflow-hidden border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              {children}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// StateItem — crossfade wrapper for content inside Composer.State
+type ComposerStateProps = {
+  children: ReactNode;
+} & ComponentProps<typeof motion.div>;
+
+const stateItemTransition = { duration: 0.2, ease: "easeOut" as const };
+
+const ComposerState = ({ children, ...props }: ComposerStateProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 4, filter: "blur(4px)" }}
+    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+    exit={{ opacity: 0, y: -4, filter: "blur(4px)" }}
+    transition={stateItemTransition}
+    {...props}
+  >
+    {children}
+  </motion.div>
+);
+
 // Compound export
 export const Composer = Object.assign(ComposerRoot, {
+  Container: ComposerContainer,
   Attachments: ComposerAttachments,
   AttachmentTrigger: ComposerAttachmentTrigger,
-  Footer: ComposerFooter,
+  Actions: ComposerActions,
   Placeholder: ComposerPlaceholder,
   Submit: ComposerSubmit,
+  States: ComposerStates,
+  State: ComposerState,
   Textarea: ComposerTextarea,
 });

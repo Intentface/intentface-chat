@@ -22,6 +22,9 @@
         "useKeyWithClickEvents": "off",
         "useSemanticElements": "off"
       },
+      "performance": {
+        "noImgElement": "off"
+      },
       "suspicious": {
         "noUnknownAtRules": "off",
         "noArrayIndexKey": "off"

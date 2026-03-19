@@ -5,10 +5,10 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-const separatorVariants = cva("bg-border shrink-0", {
+const separatorVariants = cva("bg-slate-7 shrink-0", {
   variants: {
     type: {
-      line: "data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
+      line: "data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch",
       dot: "size-1 rounded-full",
     },
   },
@@ -19,14 +19,12 @@ const separatorVariants = cva("bg-border shrink-0", {
 
 function Separator({
   className,
-  orientation = "horizontal",
   type = "line",
   ...props
 }: SeparatorPrimitive.Props & VariantProps<typeof separatorVariants>) {
   return (
     <SeparatorPrimitive
       data-slot="separator"
-      orientation={orientation}
       className={cn(separatorVariants({ type }), className)}
       {...props}
     />

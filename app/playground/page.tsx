@@ -1,11 +1,13 @@
 "use client";
 
-import { CheckIcon, Loader } from "lucide-react";
+import { CheckIcon, CircleDotIcon, Loader } from "lucide-react";
 import { useState } from "react";
+import { Composer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
 import { Questionnaire } from "@/components/questionnaire";
 import { ThemeButton } from "@/components/theme-button";
+import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
@@ -97,6 +99,14 @@ const multipleQuestions: AskUserQuestion[] = [
 export default function ComponentsPlayground() {
   const [items, setItems] = useState(stepLabels.slice(0, 2));
 
+  // Composer state
+  const [composerState, setComposerState] = useState<
+    "idle" | "active" | "ask-user"
+  >("idle");
+  const [composerSteps, setComposerSteps] = useState(
+    stepLabels.slice(0, 1),
+  );
+
   // AskUser state
   const [singleAnswers, setSingleAnswers] = useState<Record<
     string,
@@ -127,6 +137,124 @@ export default function ComponentsPlayground() {
           Component Playground
         </h1>
         <ThemeButton />
+      </div>
+
+      {/* Composer */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-10">
+            Composer
+          </p>
+          <div className="flex items-center gap-2">
+            {(["idle", "active", "ask-user"] as const).map((state) => (
+              <button
+                key={state}
+                type="button"
+                onClick={() => {
+                  if (state === "active") {
+                    if (composerState === "active") {
+                      const next =
+                        stepLabels[
+                          composerSteps.length % stepLabels.length
+                        ];
+                      setComposerSteps((prev) => [...prev, next]);
+                      return;
+                    }
+                    setComposerSteps(stepLabels.slice(0, 1));
+                  }
+                  setComposerState(state);
+                }}
+                className={cn(
+                  "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                  composerState === state
+                    ? "bg-slate-12 text-slate-1"
+                    : "border border-slate-7 text-slate-11 hover:bg-slate-3",
+                )}
+              >
+                {state === "idle"
+                  ? "Idle"
+                  : state === "active"
+                    ? "Active"
+                    : "Ask User"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex min-h-[448px] items-end rounded-lg border border-slate-6 bg-slate-2 p-4">
+          <Composer onSubmit={() => {}}>
+            <Composer.States>
+              {composerState === "active" && (
+                <Composer.State key="steps">
+                  <StepQueue>
+                    {composerSteps.map((step, i, arr) => (
+                      <StepQueue.Item key={`${step}-${i}`}>
+                        <StepQueue.Icon>
+                          {i === arr.length - 1 ? (
+                            <Loader className="size-3.5 animate-spin" />
+                          ) : (
+                            <CircleDotIcon className="size-3.5" />
+                          )}
+                        </StepQueue.Icon>
+                        <StepQueue.Label active={i === arr.length - 1}>
+                          {step}
+                        </StepQueue.Label>
+                      </StepQueue.Item>
+                    ))}
+                  </StepQueue>
+                </Composer.State>
+              )}
+              {composerState === "ask-user" && (
+                <Composer.State key="ask-user">
+                  <Questionnaire onSubmit={() => setComposerState("idle")}>
+                    <Questionnaire.Content>
+                      {singleQuestion.map((q) => (
+                        <Questionnaire.Step
+                          key={q.question}
+                          value={q.question}
+                          multiSelect={q.multiSelect}
+                        >
+                          <Questionnaire.Label>
+                            {q.question}
+                          </Questionnaire.Label>
+                          <Questionnaire.Options>
+                            {q.options?.map((option) => (
+                              <Questionnaire.Option
+                                key={option.label}
+                                value={option.label}
+                                description={option.description}
+                              />
+                            ))}
+                          </Questionnaire.Options>
+                          <Questionnaire.TextInput
+                            hasOptions={!!q.options?.length}
+                          />
+                        </Questionnaire.Step>
+                      ))}
+                    </Questionnaire.Content>
+                    <Questionnaire.Actions />
+                  </Questionnaire>
+                </Composer.State>
+              )}
+            </Composer.States>
+
+            <Composer.Container>
+              <Composer.Attachments />
+              <Composer.Textarea>
+                <Composer.Placeholder
+                  placeholder={[
+                    "Ask me anything...",
+                    "Search the web...",
+                    "Generate a report...",
+                  ]}
+                />
+              </Composer.Textarea>
+              <Composer.Actions className="flex items-center justify-between">
+                <Composer.AttachmentTrigger />
+                <Composer.Submit />
+              </Composer.Actions>
+            </Composer.Container>
+          </Composer>
+        </div>
       </div>
 
       {/* StepQueue */}

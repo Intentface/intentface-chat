@@ -5,7 +5,7 @@ import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import type { FileUIPart } from "ai";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import React, {
   type ChangeEvent,
   Children,
@@ -36,6 +36,7 @@ import {
 import { SendIcon } from "@/components/icons/send";
 import { IconButton } from "@/components/ui/icon-button";
 import { useLoop } from "@/hooks/use-loop";
+import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
 
 // Types
@@ -695,25 +696,54 @@ const ComposerStates = ({
   className,
   ...props
 }: ComposerStatesProps) => {
+  const [ref, bounds] = useMeasure();
   const hasChildren = Children.toArray(children).some(isValidElement);
 
   return (
-    <div data-slot="composer-state" className={cn(className)} {...props}>
-      <AnimatePresence initial={false}>
-        {hasChildren && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 35 }}
-            className="overflow-hidden border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              {children}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    // <div data-slot="composer-state" className={cn(className)} {...props}>
+    //   <AnimatePresence initial={false}>
+    //     {hasChildren && (
+    //       <motion.div
+    //         initial={{ height: 0, opacity: 0 }}
+    //         animate={{ height: "auto", opacity: 1 }}
+    //         exit={{ height: 0, opacity: 0 }}
+    //         transition={{ duration: 0.3, ease: "easeOut" }}
+    //         className="overflow-hidden relative border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
+    //       >
+    //         <AnimatePresence mode="wait">{children}</AnimatePresence>
+    //       </motion.div>
+    //     )}
+    //   </AnimatePresence>
+    // </div>
+    <div
+      data-slot="composer-state"
+      className={cn("overflow-hidden", className)}
+      {...props}
+    >
+      <MotionConfig
+        transition={{
+          duration: 0.3,
+          type: "spring",
+          bounce: 0,
+        }}
+      >
+        <AnimatePresence initial={false}>
+          {hasChildren && (
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: -8, opacity: 1, height: bounds.height }}
+              exit={{ y: "100%", opacity: 0 }}
+              className="flex flex-col justify-end overflow-hidden border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
+            >
+              <div ref={ref} className="relative">
+                <AnimatePresence mode="wait" initial={false}>
+                  {children}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </MotionConfig>
     </div>
   );
 };
@@ -723,14 +753,11 @@ type ComposerStateProps = {
   children: ReactNode;
 } & ComponentProps<typeof motion.div>;
 
-const stateItemTransition = { duration: 0.2, ease: "easeOut" as const };
-
 const ComposerState = ({ children, ...props }: ComposerStateProps) => (
   <motion.div
-    initial={{ opacity: 0, y: 4, filter: "blur(4px)" }}
-    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-    exit={{ opacity: 0, y: -4, filter: "blur(4px)" }}
-    transition={stateItemTransition}
+    initial={{ opacity: 0, filter: "blur(8px)" }}
+    animate={{ opacity: 1, filter: "blur(0px)" }}
+    exit={{ opacity: 0, filter: "blur(8px)" }}
     {...props}
   >
     {children}

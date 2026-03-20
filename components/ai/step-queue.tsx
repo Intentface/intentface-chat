@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Children,
   type ComponentProps,
-  type CSSProperties,
   useCallback,
   useState,
 } from "react";
@@ -16,7 +15,7 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 
 const ITEM_HEIGHT = 20; // h-5
-const ITEM_GAP = 6; // gap-1.5
+const ITEM_GAP = 8; // gap-2
 const MAX_VISIBLE = 5;
 const MAX_HEIGHT = MAX_VISIBLE * ITEM_HEIGHT + (MAX_VISIBLE - 1) * ITEM_GAP;
 
@@ -68,7 +67,7 @@ const StepQueueRoot = ({
         }
       }}
       className={cn(
-        "not-prose flex w-full cursor-pointer flex-col p-3",
+        "not-prose relative flex w-full cursor-pointer flex-col p-3",
         useMask &&
           "mask-[linear-gradient(to_bottom,transparent,black_24px,black_calc(100%-24px),transparent)]",
         className,
@@ -76,12 +75,14 @@ const StepQueueRoot = ({
       {...props}
     >
       <motion.div
-        className="flex flex-col justify-end gap-1.5 max-h-(--max-height)"
-        style={{ "--max-height": `${MAX_HEIGHT}px` } as CSSProperties}
+        className="flex flex-col justify-end gap-2"
         animate={{ height: isOpen ? "auto" : ITEM_HEIGHT }}
-        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        transition={{ duration: 0.2, type: "spring", bounce: 0 }}
+        style={{ maxHeight: MAX_HEIGHT }}
       >
-        {children}
+        <AnimatePresence mode="popLayout" initial={false}>
+          {children}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
@@ -101,31 +102,28 @@ const StepQueueItem = ({
   ...props
 }: StepQueueItemProps) => {
   return (
-    <AnimatePresence mode="popLayout">
+    <motion.div
+      data-slot="step-queue-item"
+      initial={{ height: 0 }}
+      animate={{ height: ITEM_HEIGHT }}
+      exit={{ height: 0 }}
+      transition={{ duration: 0.2, type: "spring", bounce: 0 }}
+      className={cn(
+        "flex shrink-0 items-center text-sm text-slate-11",
+        className,
+      )}
+      {...props}
+    >
       <motion.div
-        data-slot="step-queue-item"
-        initial={{ height: 0 }}
-        animate={{ height: ITEM_HEIGHT }}
-        exit={{ height: 0 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className={cn(
-          "flex shrink-0 items-center text-sm text-slate-11",
-          className,
-        )}
-        {...props}
+        initial={{ opacity: 0, y: ITEM_HEIGHT, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: -ITEM_HEIGHT, filter: "blur(8px)" }}
+        transition={{ duration: 0.2, type: "spring", bounce: 0 }}
+        className="flex shrink-0 items-center gap-2"
       >
-        <motion.div
-          initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          style={{ "--height": ITEM_HEIGHT } as CSSProperties}
-          className="flex h-(--height) shrink-0 items-center gap-2"
-        >
-          {children}
-        </motion.div>
+        {children}
       </motion.div>
-    </AnimatePresence>
+    </motion.div>
   );
 };
 

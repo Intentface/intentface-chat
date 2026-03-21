@@ -27,11 +27,13 @@ import { GlobeIcon } from "@/components/icons/globe";
 import { PaperClipIcon } from "@/components/icons/paperclip";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
-import { Questionnaire } from "@/components/questionnaire";
 import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/ui/icon-button";
-import { useActiveComposerState } from "@/hooks/use-active-composer-state";
+import {
+  type ComposerPanelState,
+  useActiveComposerState,
+} from "@/hooks/use-active-composer-state";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import {
   getAskUserInfo,
@@ -440,9 +442,57 @@ const ToolsMenu = () => {
   );
 };
 
-const ComposerPanel = () => {
-  const { messages, status, addToolOutput } = useChatContext();
+const ComposerPanel = ({
+  panelState,
+}: { panelState: ComposerPanelState }) => (
+  <Composer.States>
+    {panelState.type === "active" && (
+      <Composer.State key="steps">
+        <StepQueue>
+          {panelState.steps.map((step, i) => {
+            const active = i === panelState.steps.length - 1;
+            return (
+              <StepQueue.Item key={step.key}>
+                <StepQueue.Icon>
+                  {step.kind === "thinking" ? (
+                    <BrainIcon
+                      className={cn("size-3.5", active && "animate-pulse")}
+                    />
+                  ) : active ? (
+                    <Loader className="size-3.5 animate-spin" />
+                  ) : (
+                    <CircleDotIcon className="size-3.5" />
+                  )}
+                </StepQueue.Icon>
+                <StepQueue.Label active={active}>
+                  {step.label}
+                </StepQueue.Label>
+              </StepQueue.Item>
+            );
+          })}
+        </StepQueue>
+      </Composer.State>
+    )}
+    {panelState.type === "ask-user" && (
+      <Composer.State key="ask-user">
+        <Composer.Questionnaire />
+      </Composer.State>
+    )}
+  </Composer.States>
+);
+
+const ChatInput = () => {
+  const { chatId, messages, sendMessage, status, addToolOutput } =
+    useChatContext();
+  const router = useRouter();
+  const createChat = useChatStore((state) => state.createChat);
+  const { model, setModel } = useModelStore();
+  const [isSending, setIsSending] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const isNewChat = !messages.length;
+
   const panelState = useActiveComposerState(messages, status);
+  const isAskUser = panelState.type === "ask-user";
 
   const handleAskUserSubmit = useCallback(
     (answers: Record<string, string>) => {
@@ -455,82 +505,6 @@ const ComposerPanel = () => {
     },
     [panelState, addToolOutput],
   );
-
-  return (
-    <Composer.States>
-      {panelState.type === "active" && (
-        <Composer.State key="steps">
-          <StepQueue>
-            {panelState.steps.map((step, i) => {
-              const active = i === panelState.steps.length - 1;
-              return (
-                <StepQueue.Item key={step.key}>
-                  <StepQueue.Icon>
-                    {step.kind === "thinking" ? (
-                      <BrainIcon
-                        className={cn("size-3.5", active && "animate-pulse")}
-                      />
-                    ) : active ? (
-                      <Loader className="size-3.5 animate-spin" />
-                    ) : (
-                      <CircleDotIcon className="size-3.5" />
-                    )}
-                  </StepQueue.Icon>
-                  <StepQueue.Label active={active}>
-                    {step.label}
-                  </StepQueue.Label>
-                </StepQueue.Item>
-              );
-            })}
-          </StepQueue>
-        </Composer.State>
-      )}
-      {panelState.type === "ask-user" && (
-        <Composer.State key="ask-user">
-          <Questionnaire onSubmit={handleAskUserSubmit}>
-            <div className="flex items-center gap-1 self-end shrink-0">
-              <Questionnaire.Previous />
-              <Questionnaire.StepLabel />
-              <Questionnaire.Next />
-            </div>
-            <Questionnaire.Content>
-              {panelState.questions.map((q) => (
-                <Questionnaire.Step
-                  key={q.question}
-                  value={q.question}
-                  multiSelect={q.multiSelect}
-                >
-                  <Questionnaire.Label>{q.question}</Questionnaire.Label>
-                  <Questionnaire.Options>
-                    {q.options?.map((option) => (
-                      <Questionnaire.Option
-                        key={option.label}
-                        value={option.label}
-                        description={option.description}
-                      />
-                    ))}
-                  </Questionnaire.Options>
-                  <Questionnaire.TextInput hasOptions={!!q.options?.length} />
-                </Questionnaire.Step>
-              ))}
-              <Questionnaire.Review />
-            </Questionnaire.Content>
-            <Questionnaire.Actions />
-          </Questionnaire>
-        </Composer.State>
-      )}
-    </Composer.States>
-  );
-};
-
-const ChatInput = () => {
-  const { chatId, messages, sendMessage } = useChatContext();
-  const router = useRouter();
-  const createChat = useChatStore((state) => state.createChat);
-  const { model, setModel } = useModelStore();
-  const [isSending, setIsSending] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
-  const isNewChat = !messages.length;
 
   const handleSubmit = useCallback(
     async ({
@@ -568,39 +542,50 @@ const ChatInput = () => {
   );
 
   return (
-    <Composer onSubmit={handleSubmit} isSubmitting={isSending}>
-      <ComposerPanel />
+    <Composer
+      onSubmit={handleSubmit}
+      isSubmitting={isSending}
+      questions={isAskUser ? panelState.questions : undefined}
+      onQuestionsDone={handleAskUserSubmit}
+    >
+      <ComposerPanel panelState={panelState} />
       <Composer.Container>
         <Composer.Attachments />
         <Composer.Textarea autoFocus>
           <Composer.Placeholder
             placeholder={
-              !hasSubmitted
-                ? [
-                    "Ask me anything...",
-                    "Recall past conversations...",
-                    "Search the web...",
-                    "Generate a report...",
-                    "Explain a concept...",
-                    "Help with a project...",
-                    "Give a tutorial...",
-                    "Provide a recommendation...",
-                    "Translate text...",
-                    "Summarize a document...",
-                    "Write a story...",
-                    "Create a presentation...",
-                  ]
-                : "Ask a follow-up question..."
+              isAskUser
+                ? "Or type your own answer..."
+                : !hasSubmitted
+                  ? [
+                      "Ask me anything...",
+                      "Recall past conversations...",
+                      "Search the web...",
+                      "Generate a report...",
+                      "Explain a concept...",
+                      "Help with a project...",
+                      "Give a tutorial...",
+                      "Provide a recommendation...",
+                      "Translate text...",
+                      "Summarize a document...",
+                      "Write a story...",
+                      "Create a presentation...",
+                    ]
+                  : "Ask a follow-up question..."
             }
           />
         </Composer.Textarea>
         <Composer.Actions className="flex items-center justify-between">
-          <div className="flex items-center">
-            <ToolsMenu />
-            <ModelSelector value={model} onValueChange={setModel} />
-            <ActiveTools />
-          </div>
-          <Composer.Submit />
+          {isAskUser ? (
+            <Composer.DismissAction />
+          ) : (
+            <div className="flex items-center">
+              <ToolsMenu />
+              <ModelSelector value={model} onValueChange={setModel} />
+              <ActiveTools />
+            </div>
+          )}
+          {isAskUser ? <Composer.ContinueAction /> : <Composer.Submit />}
         </Composer.Actions>
       </Composer.Container>
     </Composer>

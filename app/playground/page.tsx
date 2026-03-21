@@ -181,7 +181,13 @@ export default function ComponentsPlayground() {
           </div>
         </div>
         <div className="flex min-h-[448px] items-end rounded-lg border border-slate-6 bg-slate-2 p-4">
-          <Composer onSubmit={() => {}}>
+          <Composer
+            onSubmit={() => {}}
+            questions={
+              composerState === "ask-user" ? singleQuestion : undefined
+            }
+            onQuestionsDone={() => setComposerState("idle")}
+          >
             <Composer.States>
               {composerState === "active" && (
                 <Composer.State key="steps">
@@ -205,34 +211,7 @@ export default function ComponentsPlayground() {
               )}
               {composerState === "ask-user" && (
                 <Composer.State key="ask-user">
-                  <Questionnaire onSubmit={() => setComposerState("idle")}>
-                    <Questionnaire.Content>
-                      {singleQuestion.map((q) => (
-                        <Questionnaire.Step
-                          key={q.question}
-                          value={q.question}
-                          multiSelect={q.multiSelect}
-                        >
-                          <Questionnaire.Label>
-                            {q.question}
-                          </Questionnaire.Label>
-                          <Questionnaire.Options>
-                            {q.options?.map((option) => (
-                              <Questionnaire.Option
-                                key={option.label}
-                                value={option.label}
-                                description={option.description}
-                              />
-                            ))}
-                          </Questionnaire.Options>
-                          <Questionnaire.TextInput
-                            hasOptions={!!q.options?.length}
-                          />
-                        </Questionnaire.Step>
-                      ))}
-                    </Questionnaire.Content>
-                    <Questionnaire.Actions />
-                  </Questionnaire>
+                  <Composer.Questionnaire />
                 </Composer.State>
               )}
             </Composer.States>
@@ -241,16 +220,29 @@ export default function ComponentsPlayground() {
               <Composer.Attachments />
               <Composer.Textarea>
                 <Composer.Placeholder
-                  placeholder={[
-                    "Ask me anything...",
-                    "Search the web...",
-                    "Generate a report...",
-                  ]}
+                  placeholder={
+                    composerState === "ask-user"
+                      ? "Or type your own answer..."
+                      : [
+                          "Ask me anything...",
+                          "Search the web...",
+                          "Generate a report...",
+                        ]
+                  }
                 />
               </Composer.Textarea>
               <Composer.Actions className="flex items-center justify-between">
-                <Composer.AttachmentTrigger />
-                <Composer.Submit />
+                {composerState === "ask-user" ? (
+                  <>
+                    <Composer.DismissAction />
+                    <Composer.ContinueAction />
+                  </>
+                ) : (
+                  <>
+                    <Composer.AttachmentTrigger />
+                    <Composer.Submit />
+                  </>
+                )}
               </Composer.Actions>
             </Composer.Container>
           </Composer>

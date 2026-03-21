@@ -1,12 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import {
-  Children,
-  type ComponentProps,
-  useCallback,
-  useState,
-} from "react";
+import { Children, type ComponentProps, useCallback, useState } from "react";
 import { TextShimmer } from "@/components/ui/text-shimmer";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +40,7 @@ const StepQueueRoot = ({
   const isControlled = controlledOpen !== undefined;
   const isOpen = isControlled ? controlledOpen : internalOpen;
   const childCount = Children.count(children);
-  const useMask = childCount > 1;
+  const shouldUseMask = childCount > 1;
 
   const toggle = useCallback(() => {
     const next = !isOpen;
@@ -67,23 +62,21 @@ const StepQueueRoot = ({
         }
       }}
       className={cn(
-        "not-prose relative flex w-full cursor-pointer flex-col p-3",
-        useMask &&
+        "not-prose relative w-full cursor-pointer p-3",
+        shouldUseMask &&
           "mask-[linear-gradient(to_bottom,transparent,black_24px,black_calc(100%-24px),transparent)]",
         className,
       )}
       {...props}
     >
-      <motion.div
-        className="flex flex-col justify-end gap-2"
-        animate={{ height: isOpen ? "auto" : ITEM_HEIGHT }}
-        transition={{ duration: 0.2, type: "spring", bounce: 0 }}
-        style={{ maxHeight: MAX_HEIGHT }}
+      <div
+        className="relative flex flex-col justify-end gap-2"
+        style={{ maxHeight: MAX_HEIGHT, height: isOpen ? "auto" : ITEM_HEIGHT }}
       >
         <AnimatePresence mode="popLayout" initial={false}>
           {children}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </div>
   );
 };
@@ -109,7 +102,7 @@ const StepQueueItem = ({
       exit={{ height: 0 }}
       transition={{ duration: 0.2, type: "spring", bounce: 0 }}
       className={cn(
-        "flex shrink-0 items-center text-sm text-slate-11",
+        "flex shrink-0 items-center text-sm font-medium text-slate-11",
         className,
       )}
       {...props}

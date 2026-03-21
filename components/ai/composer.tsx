@@ -5,6 +5,7 @@ import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import type { FileUIPart } from "ai";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import React, {
   type ChangeEvent,
@@ -34,10 +35,12 @@ import {
   toAttachmentItem,
 } from "@/components/ai/attachments";
 import { SendIcon } from "@/components/icons/send";
+import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
+import type { AskUserQuestion } from "@/tools/ask-user";
 
 // Types
 type AttachmentsApi = {
@@ -45,6 +48,8 @@ type AttachmentsApi = {
   remove: (id: string) => void;
   openFileDialog: () => void;
 };
+
+type AnswerEntry = { selected: Set<string>; freeText: string };
 
 type ComposerContextValue = {
   editorRef: RefObject<Editor | null>;
@@ -63,6 +68,20 @@ type ComposerContextValue = {
   setWebSearch: (value: boolean) => void;
   thinking: boolean;
   setThinking: (value: boolean) => void;
+  questions: AskUserQuestion[] | null;
+  questionnaireStep: number;
+  questionnaireAnswers: Map<number, AnswerEntry>;
+  toggleQuestionOption: (
+    step: number,
+    label: string,
+    multiSelect: boolean,
+  ) => void;
+  continueStep: (freeText?: string) => void;
+  dismissStep: () => void;
+  isLastQuestionStep: boolean;
+  isSingleQuestion: boolean;
+  goBack: () => void;
+  goNext: () => void;
 };
 
 const ComposerContext = createContext<ComposerContextValue>({
@@ -82,6 +101,16 @@ const ComposerContext = createContext<ComposerContextValue>({
   setWebSearch: () => {},
   thinking: true,
   setThinking: () => {},
+  questions: null,
+  questionnaireStep: 0,
+  questionnaireAnswers: new Map(),
+  toggleQuestionOption: () => {},
+  continueStep: () => {},
+  dismissStep: () => {},
+  isLastQuestionStep: false,
+  isSingleQuestion: false,
+  goBack: () => {},
+  goNext: () => {},
 });
 
 export const useComposer = () => useContext(ComposerContext);
@@ -137,6 +166,8 @@ type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
     thinking: boolean;
   }) => void | Promise<void>;
   isSubmitting?: boolean;
+  questions?: AskUserQuestion[];
+  onQuestionsDone?: (answers: Record<string, string>) => void;
 };
 
 const ComposerRoot = ({
@@ -144,6 +175,8 @@ const ComposerRoot = ({
   className,
   onSubmit,
   isSubmitting = false,
+  questions,
+  onQuestionsDone,
   ...formProps
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
@@ -161,8 +194,139 @@ const ComposerRoot = ({
   const [thinking, setThinking] = useState(true);
   attachmentRef.current = attachments;
 
+  // Questionnaire state — reset when questions identity changes
+  const prevQuestionsRef = useRef(questions);
+  const [questionnaireStep, setQuestionnaireStep] = useState(0);
+  const [questionnaireAnswers, setQuestionnaireAnswers] = useState<
+    Map<number, AnswerEntry>
+  >(() => new Map());
+  if (prevQuestionsRef.current !== questions) {
+    prevQuestionsRef.current = questions;
+    setQuestionnaireStep(0);
+    setQuestionnaireAnswers(new Map());
+  }
+  const answersRef = useRef(questionnaireAnswers);
+  answersRef.current = questionnaireAnswers;
+
+  const isLastQuestionStep = questions
+    ? questionnaireStep >= questions.length - 1
+    : false;
+  const isSingleQuestion = questions ? questions.length === 1 : false;
+
+  const toggleQuestionOption = useCallback(
+    (step: number, label: string, multiSelect: boolean) => {
+      setQuestionnaireAnswers((prev) => {
+        const next = new Map(prev);
+        const entry = next.get(step) ?? {
+          selected: new Set<string>(),
+          freeText: "",
+        };
+        const newSelected = new Set(entry.selected);
+        if (multiSelect) {
+          if (newSelected.has(label)) newSelected.delete(label);
+          else newSelected.add(label);
+        } else {
+          newSelected.clear();
+          newSelected.add(label);
+        }
+        next.set(step, { selected: newSelected, freeText: "" });
+        return next;
+      });
+      editorRef.current?.commands.setContent("");
+      setHasContent(false);
+    },
+    [],
+  );
+
+  const compileAnswers = useCallback(
+    (answers: Map<number, AnswerEntry>) => {
+      if (!questions) return {};
+      const result: Record<string, string> = {};
+      for (let i = 0; i < questions.length; i++) {
+        const entry = answers.get(i);
+        result[questions[i].question] = !entry
+          ? ""
+          : entry.selected.size > 0
+            ? [...entry.selected].join(", ")
+            : entry.freeText.trim();
+      }
+      return result;
+    },
+    [questions],
+  );
+
+  const continueStep = useCallback(
+    (freeText?: string) => {
+      if (!questions?.length) return;
+      const text = freeText?.trim() ?? "";
+      let updatedAnswers = answersRef.current;
+
+      if (text) {
+        const q = questions[questionnaireStep];
+        const entry = updatedAnswers.get(questionnaireStep) ?? {
+          selected: new Set<string>(),
+          freeText: "",
+        };
+        updatedAnswers = new Map(updatedAnswers);
+        updatedAnswers.set(questionnaireStep, {
+          selected: q?.multiSelect ? entry.selected : new Set(),
+          freeText: text,
+        });
+        setQuestionnaireAnswers(updatedAnswers);
+      }
+
+      if (questionnaireStep < questions.length - 1) {
+        setQuestionnaireStep((s) => s + 1);
+        editorRef.current?.commands.setContent("");
+        setHasContent(false);
+      } else {
+        onQuestionsDone?.(compileAnswers(updatedAnswers));
+      }
+    },
+    [questions, questionnaireStep, onQuestionsDone, compileAnswers],
+  );
+
+  const dismissStep = useCallback(() => {
+    if (!questions?.length) return;
+
+    editorRef.current?.commands.setContent("");
+    setHasContent(false);
+
+    const updatedAnswers = new Map(answersRef.current);
+    updatedAnswers.delete(questionnaireStep);
+    setQuestionnaireAnswers(updatedAnswers);
+
+    if (questionnaireStep < questions.length - 1) {
+      setQuestionnaireStep((s) => s + 1);
+    } else {
+      onQuestionsDone?.(compileAnswers(updatedAnswers));
+    }
+  }, [questions, questionnaireStep, onQuestionsDone, compileAnswers]);
+
+  const goBackStep = useCallback(() => {
+    setQuestionnaireStep((s) => Math.max(0, s - 1));
+    editorRef.current?.commands.setContent("");
+    setHasContent(false);
+  }, []);
+
+  const goNextStep = useCallback(() => {
+    if (!questions) return;
+    setQuestionnaireStep((s) => Math.min(questions.length - 1, s + 1));
+    editorRef.current?.commands.setContent("");
+    setHasContent(false);
+  }, [questions]);
+
   const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (questions?.length) {
+      const text = editorRef.current?.getText()?.trim() ?? "";
+      editorRef.current?.commands.setContent("");
+      setHasContent(false);
+      continueStep(text);
+      return;
+    }
+
     if (isSubmitting) return;
 
     const text = editorRef.current?.getText()?.trim() ?? "";
@@ -207,6 +371,19 @@ const ComposerRoot = ({
     };
   }, []);
 
+  // ESC handler for questionnaire
+  useEffect(() => {
+    if (!questions?.length) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        dismissStep();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [questions, dismissStep]);
+
   const contextValue = useMemo(
     () => ({
       editorRef,
@@ -225,6 +402,16 @@ const ComposerRoot = ({
       setWebSearch,
       thinking,
       setThinking,
+      questions: questions ?? null,
+      questionnaireStep: questionnaireStep,
+      questionnaireAnswers: questionnaireAnswers,
+      toggleQuestionOption,
+      continueStep,
+      dismissStep,
+      isLastQuestionStep,
+      isSingleQuestion,
+      goBack: goBackStep,
+      goNext: goNextStep,
     }),
     [
       isDragging,
@@ -234,6 +421,16 @@ const ComposerRoot = ({
       attachmentError,
       webSearch,
       thinking,
+      questions,
+      questionnaireStep,
+      questionnaireAnswers,
+      toggleQuestionOption,
+      continueStep,
+      dismissStep,
+      isLastQuestionStep,
+      isSingleQuestion,
+      goBackStep,
+      goNextStep,
     ],
   );
 
@@ -242,7 +439,7 @@ const ComposerRoot = ({
       <form
         onSubmit={handleFormSubmit}
         ref={rootRef}
-        className={cn("relative w-full flex flex-col gap-2", className)}
+        className={cn("relative w-full flex flex-col", className)}
         {...formProps}
       >
         {children}
@@ -699,25 +896,15 @@ const ComposerStates = ({
   const [ref, bounds] = useMeasure();
   const hasChildren = Children.toArray(children).some(isValidElement);
 
+  // Hold last non-zero height so the panel doesn't collapse to 0
+  // during the AnimatePresence mode="wait" gap between exit and enter.
+  const lastHeightRef = useRef(0);
+  if (bounds.height > 0) lastHeightRef.current = bounds.height;
+
   return (
-    // <div data-slot="composer-state" className={cn(className)} {...props}>
-    //   <AnimatePresence initial={false}>
-    //     {hasChildren && (
-    //       <motion.div
-    //         initial={{ height: 0, opacity: 0 }}
-    //         animate={{ height: "auto", opacity: 1 }}
-    //         exit={{ height: 0, opacity: 0 }}
-    //         transition={{ duration: 0.3, ease: "easeOut" }}
-    //         className="overflow-hidden relative border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
-    //       >
-    //         <AnimatePresence mode="wait">{children}</AnimatePresence>
-    //       </motion.div>
-    //     )}
-    //   </AnimatePresence>
-    // </div>
     <div
       data-slot="composer-state"
-      className={cn("overflow-hidden", className)}
+      className={cn("overflow-hidden", hasChildren && "pb-2", className)}
       {...props}
     >
       <MotionConfig
@@ -731,12 +918,16 @@ const ComposerStates = ({
           {hasChildren && (
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
-              animate={{ y: -8, opacity: 1, height: bounds.height }}
+              animate={{
+                y: 0,
+                opacity: 1,
+                height: bounds.height,
+              }}
               exit={{ y: "100%", opacity: 0 }}
-              className="flex flex-col justify-end overflow-hidden border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
+              className="overflow-hidden border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
             >
               <div ref={ref} className="relative">
-                <AnimatePresence mode="wait" initial={false}>
+                <AnimatePresence mode="popLayout" initial={false}>
                   {children}
                 </AnimatePresence>
               </div>
@@ -764,6 +955,150 @@ const ComposerState = ({ children, ...props }: ComposerStateProps) => (
   </motion.div>
 );
 
+// Questionnaire — self-contained, reads from ComposerContext.
+// Holds a snapshot of questions so it can still render during exit animations
+// (the parent unmounts this via AnimatePresence, but context clears first).
+const ComposerQuestionnaire = () => {
+  const {
+    questions,
+    questionnaireStep,
+    questionnaireAnswers,
+    toggleQuestionOption,
+    isSingleQuestion,
+    goBack,
+    goNext,
+  } = useContext(ComposerContext);
+
+  // Hold last valid question so content stays rendered during exit animations.
+  // The parent controls mount/unmount — if we're in the tree, we render.
+  const question = questions?.[questionnaireStep] ?? null;
+  const lastQuestionRef = useRef(question);
+  if (question) lastQuestionRef.current = question;
+  const display = question ?? lastQuestionRef.current;
+
+  if (!display) return null;
+
+  const entry = questionnaireAnswers.get(questionnaireStep) ?? {
+    selected: new Set<string>(),
+    freeText: "",
+  };
+
+  const totalQuestions = questions?.length ?? 0;
+
+  return (
+    <div className="flex flex-col gap-3 p-3">
+      {!isSingleQuestion && totalQuestions > 1 && (
+        <div className="flex items-center gap-1 self-end shrink-0">
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={questionnaireStep === 0}
+            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
+          >
+            <ChevronLeftIcon className="size-3.5" />
+          </button>
+          <span className="text-2xs tabular-nums text-slate-10">
+            {questionnaireStep + 1} of {totalQuestions}
+          </span>
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={questionnaireStep === totalQuestions - 1}
+            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
+          >
+            <ChevronRightIcon className="size-3.5" />
+          </button>
+        </div>
+      )}
+
+      <p className="text-sm font-medium leading-tight">{display.question}</p>
+
+      {display.options && (
+        <fieldset className="flex flex-col gap-1.5">
+          {display.options.map((option) => {
+            const isSelected = entry.selected.has(option.label);
+            return (
+              <label
+                key={option.label}
+                className={cn(
+                  "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors",
+                  isSelected
+                    ? "border-slate-7 bg-slate-1"
+                    : "border-slate-7 bg-slate-2 hover:bg-slate-3",
+                )}
+              >
+                <input
+                  type={display.multiSelect ? "checkbox" : "radio"}
+                  name={`q-${questionnaireStep}`}
+                  checked={isSelected}
+                  onChange={() =>
+                    toggleQuestionOption(
+                      questionnaireStep,
+                      option.label,
+                      !!display.multiSelect,
+                    )
+                  }
+                  className="mt-0.5 accent-primary"
+                />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-sm leading-tight">{option.label}</span>
+                  {option.description && (
+                    <span className="text-muted-foreground text-xs leading-snug">
+                      {option.description}
+                    </span>
+                  )}
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
+      )}
+    </div>
+  );
+};
+
+// DismissAction — ghost button with ESC indicator
+type ComposerDismissActionProps = ComponentProps<typeof Button>;
+
+const ComposerDismissAction = ({
+  className,
+  ...props
+}: ComposerDismissActionProps) => {
+  const { dismissStep } = useContext(ComposerContext);
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className={cn("gap-2", className)}
+      onClick={dismissStep}
+      {...props}
+    >
+      Dismiss
+      <kbd className="pointer-events-none text-2xs text-slate-10 font-normal">
+        ESC
+      </kbd>
+    </Button>
+  );
+};
+
+// ContinueAction — submit button for questionnaire
+type ComposerContinueActionProps = ComponentProps<typeof Button>;
+
+const ComposerContinueAction = ({
+  className,
+  ...props
+}: ComposerContinueActionProps) => {
+  const { isLastQuestionStep } = useContext(ComposerContext);
+  return (
+    <Button type="submit" className={cn("gap-2", className)} {...props}>
+      {isLastQuestionStep ? "Submit" : "Continue"}
+      <kbd className="pointer-events-none text-2xs text-slate-10 font-normal">
+        ↵
+      </kbd>
+    </Button>
+  );
+};
+
 // Compound export
 export const Composer = Object.assign(ComposerRoot, {
   Container: ComposerContainer,
@@ -775,4 +1110,7 @@ export const Composer = Object.assign(ComposerRoot, {
   States: ComposerStates,
   State: ComposerState,
   Textarea: ComposerTextarea,
+  Questionnaire: ComposerQuestionnaire,
+  DismissAction: ComposerDismissAction,
+  ContinueAction: ComposerContinueAction,
 });

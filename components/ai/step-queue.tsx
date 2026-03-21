@@ -100,7 +100,11 @@ const StepQueueItem = ({
       initial={{ height: 0 }}
       animate={{ height: ITEM_HEIGHT }}
       exit={{ height: 0 }}
-      transition={{ duration: 0.2, type: "spring", bounce: 0 }}
+      transition={{
+        duration: 0.2,
+        type: "spring",
+        bounce: 0,
+      }}
       className={cn(
         "flex shrink-0 items-center text-sm font-medium text-slate-11",
         className,

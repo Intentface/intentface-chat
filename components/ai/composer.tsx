@@ -195,13 +195,13 @@ const ComposerRoot = ({
   attachmentRef.current = attachments;
 
   // Questionnaire state — reset when questions identity changes
-  const prevQuestionsRef = useRef(questions);
+  const previousQuestionsRef = useRef(questions);
   const [questionnaireStep, setQuestionnaireStep] = useState(0);
   const [questionnaireAnswers, setQuestionnaireAnswers] = useState<
     Map<number, AnswerEntry>
   >(() => new Map());
-  if (prevQuestionsRef.current !== questions) {
-    prevQuestionsRef.current = questions;
+  if (previousQuestionsRef.current !== questions) {
+    previousQuestionsRef.current = questions;
     setQuestionnaireStep(0);
     setQuestionnaireAnswers(new Map());
   }
@@ -275,10 +275,11 @@ const ComposerRoot = ({
         setQuestionnaireAnswers(updatedAnswers);
       }
 
+      editorRef.current?.commands.setContent("");
+      setHasContent(false);
+
       if (questionnaireStep < questions.length - 1) {
         setQuestionnaireStep((s) => s + 1);
-        editorRef.current?.commands.setContent("");
-        setHasContent(false);
       } else {
         onQuestionsDone?.(compileAnswers(updatedAnswers));
       }
@@ -987,31 +988,34 @@ const ComposerQuestionnaire = () => {
 
   return (
     <div className="flex flex-col gap-3 p-3">
-      {!isSingleQuestion && totalQuestions > 1 && (
-        <div className="flex items-center gap-1 self-end shrink-0">
-          <button
-            type="button"
-            onClick={goBack}
-            disabled={questionnaireStep === 0}
-            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
-          >
-            <ChevronLeftIcon className="size-3.5" />
-          </button>
-          <span className="text-2xs tabular-nums text-slate-10">
-            {questionnaireStep + 1} of {totalQuestions}
-          </span>
-          <button
-            type="button"
-            onClick={goNext}
-            disabled={questionnaireStep === totalQuestions - 1}
-            className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
-          >
-            <ChevronRightIcon className="size-3.5" />
-          </button>
-        </div>
-      )}
-
-      <p className="text-sm font-medium leading-tight">{display.question}</p>
+      <div className="flex h-6 items-center gap-2">
+        <p className="min-w-0 flex-1 text-sm font-medium leading-tight">
+          {display.question}
+        </p>
+        {!isSingleQuestion && totalQuestions > 1 && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={goBack}
+              disabled={questionnaireStep === 0}
+              className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
+            >
+              <ChevronLeftIcon className="size-3.5" />
+            </button>
+            <span className="text-2xs tabular-nums text-slate-10">
+              {questionnaireStep + 1} of {totalQuestions}
+            </span>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={questionnaireStep === totalQuestions - 1}
+              className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
+            >
+              <ChevronRightIcon className="size-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {display.options && (
         <fieldset className="flex flex-col gap-1.5">

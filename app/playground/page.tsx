@@ -69,6 +69,10 @@ const multipleQuestions: AskUserQuestion[] = [
         label: "Session-based",
         description: "Server-side sessions with cookies",
       },
+      {
+        label: "Passkeys",
+        description: "WebAuthn-based passwordless authentication",
+      },
     ],
   },
   {
@@ -88,6 +92,10 @@ const multipleQuestions: AskUserQuestion[] = [
         label: "Analytics",
         description: "Usage tracking and dashboard",
       },
+      {
+        label: "i18n",
+        description: "Multi-language support with locale detection",
+      },
     ],
   },
 ];
@@ -101,7 +109,7 @@ export default function ComponentsPlayground() {
 
   // Composer state
   const [composerState, setComposerState] = useState<
-    "idle" | "active" | "ask-user"
+    "idle" | "active" | "ask-user" | "ask-user-multi"
   >("idle");
   const [composerSteps, setComposerSteps] = useState(
     stepLabels.slice(0, 1),
@@ -146,45 +154,53 @@ export default function ComponentsPlayground() {
             Composer
           </p>
           <div className="flex items-center gap-2">
-            {(["idle", "active", "ask-user"] as const).map((state) => (
-              <button
-                key={state}
-                type="button"
-                onClick={() => {
-                  if (state === "active") {
-                    if (composerState === "active") {
-                      const next =
-                        stepLabels[
-                          composerSteps.length % stepLabels.length
-                        ];
-                      setComposerSteps((prev) => [...prev, next]);
-                      return;
+            {(["idle", "active", "ask-user", "ask-user-multi"] as const).map(
+              (state) => (
+                <button
+                  key={state}
+                  type="button"
+                  onClick={() => {
+                    if (state === "active") {
+                      if (composerState === "active") {
+                        const next =
+                          stepLabels[
+                            composerSteps.length % stepLabels.length
+                          ];
+                        setComposerSteps((prev) => [...prev, next]);
+                        return;
+                      }
+                      setComposerSteps(stepLabels.slice(0, 1));
                     }
-                    setComposerSteps(stepLabels.slice(0, 1));
-                  }
-                  setComposerState(state);
-                }}
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs font-medium transition-colors",
-                  composerState === state
-                    ? "bg-slate-12 text-slate-1"
-                    : "border border-slate-7 text-slate-11 hover:bg-slate-3",
-                )}
-              >
-                {state === "idle"
-                  ? "Idle"
-                  : state === "active"
-                    ? "Active"
-                    : "Ask User"}
-              </button>
-            ))}
+                    setComposerState(state);
+                  }}
+                  className={cn(
+                    "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                    composerState === state
+                      ? "bg-slate-12 text-slate-1"
+                      : "border border-slate-7 text-slate-11 hover:bg-slate-3",
+                  )}
+                >
+                  {state === "idle"
+                    ? "Idle"
+                    : state === "active"
+                      ? "Active"
+                      : state === "ask-user"
+                        ? "Ask User"
+                        : "Ask Multi"}
+                </button>
+              ),
+            )}
           </div>
         </div>
         <div className="flex min-h-[448px] items-end rounded-lg border border-slate-6 bg-slate-2 p-4">
           <Composer
             onSubmit={() => {}}
             questions={
-              composerState === "ask-user" ? singleQuestion : undefined
+              composerState === "ask-user"
+                ? singleQuestion
+                : composerState === "ask-user-multi"
+                  ? multipleQuestions
+                  : undefined
             }
             onQuestionsDone={() => setComposerState("idle")}
           >
@@ -209,7 +225,8 @@ export default function ComponentsPlayground() {
                   </StepQueue>
                 </Composer.State>
               )}
-              {composerState === "ask-user" && (
+              {(composerState === "ask-user" ||
+                composerState === "ask-user-multi") && (
                 <Composer.State key="ask-user">
                   <Composer.Questionnaire />
                 </Composer.State>
@@ -221,7 +238,8 @@ export default function ComponentsPlayground() {
               <Composer.Textarea>
                 <Composer.Placeholder
                   placeholder={
-                    composerState === "ask-user"
+                    composerState === "ask-user" ||
+                    composerState === "ask-user-multi"
                       ? "Or type your own answer..."
                       : [
                           "Ask me anything...",
@@ -232,7 +250,8 @@ export default function ComponentsPlayground() {
                 />
               </Composer.Textarea>
               <Composer.Actions className="flex items-center justify-between">
-                {composerState === "ask-user" ? (
+                {composerState === "ask-user" ||
+                composerState === "ask-user-multi" ? (
                   <>
                     <Composer.DismissAction />
                     <Composer.ContinueAction />

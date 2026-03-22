@@ -111,9 +111,7 @@ export default function ComponentsPlayground() {
   const [composerState, setComposerState] = useState<
     "idle" | "active" | "ask-user" | "ask-user-multi"
   >("idle");
-  const [composerSteps, setComposerSteps] = useState(
-    stepLabels.slice(0, 1),
-  );
+  const [composerSteps, setComposerSteps] = useState(stepLabels.slice(0, 1));
 
   // AskUser state
   const [singleAnswers, setSingleAnswers] = useState<Record<
@@ -163,9 +161,7 @@ export default function ComponentsPlayground() {
                     if (state === "active") {
                       if (composerState === "active") {
                         const next =
-                          stepLabels[
-                            composerSteps.length % stepLabels.length
-                          ];
+                          stepLabels[composerSteps.length % stepLabels.length];
                         setComposerSteps((prev) => [...prev, next]);
                         return;
                       }
@@ -249,18 +245,18 @@ export default function ComponentsPlayground() {
                   }
                 />
               </Composer.Textarea>
-              <Composer.Actions className="flex items-center justify-between">
+              <Composer.Actions>
                 {composerState === "ask-user" ||
                 composerState === "ask-user-multi" ? (
-                  <>
+                  <div className="flex items-center justify-end gap-2">
                     <Composer.DismissAction />
                     <Composer.ContinueAction />
-                  </>
+                  </div>
                 ) : (
-                  <>
+                  <div className="flex items-center justify-between gap-2">
                     <Composer.AttachmentTrigger />
                     <Composer.Submit />
-                  </>
+                  </div>
                 )}
               </Composer.Actions>
             </Composer.Container>

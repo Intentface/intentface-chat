@@ -80,6 +80,7 @@ type ComposerContextValue = {
   dismissStep: () => void;
   isLastQuestionStep: boolean;
   isSingleQuestion: boolean;
+  clearQuestionSelections: (step: number) => void;
   goBack: () => void;
   goNext: () => void;
 };
@@ -109,6 +110,7 @@ const ComposerContext = createContext<ComposerContextValue>({
   dismissStep: () => {},
   isLastQuestionStep: false,
   isSingleQuestion: false,
+  clearQuestionSelections: () => {},
   goBack: () => {},
   goNext: () => {},
 });
@@ -237,6 +239,16 @@ const ComposerRoot = ({
     },
     [],
   );
+
+  const clearQuestionSelections = useCallback((step: number) => {
+    setQuestionnaireAnswers((prev) => {
+      const entry = prev.get(step);
+      if (!entry || entry.selected.size === 0) return prev;
+      const next = new Map(prev);
+      next.set(step, { selected: new Set(), freeText: entry.freeText });
+      return next;
+    });
+  }, []);
 
   const compileAnswers = useCallback(
     (answers: Map<number, AnswerEntry>) => {
@@ -411,6 +423,7 @@ const ComposerRoot = ({
       dismissStep,
       isLastQuestionStep,
       isSingleQuestion,
+      clearQuestionSelections,
       goBack: goBackStep,
       goNext: goNextStep,
     }),
@@ -430,6 +443,7 @@ const ComposerRoot = ({
       dismissStep,
       isLastQuestionStep,
       isSingleQuestion,
+      clearQuestionSelections,
       goBackStep,
       goNextStep,
     ],
@@ -665,14 +679,26 @@ const ComposerTextarea = ({
   autoFocus = false,
   children,
 }: ComposerTextareaProps) => {
-  const { editorRef, attachmentsApi, attachmentRef, setHasContent } =
-    useContext(ComposerContext);
+  const {
+    editorRef,
+    attachmentsApi,
+    attachmentRef,
+    setHasContent,
+    questions,
+    questionnaireStep,
+    clearQuestionSelections,
+  } = useContext(ComposerContext);
 
   const isControlled = value !== undefined;
 
   // Ref-ify to prevent stale closure in TipTap's onUpdate
   const onValueChangeRef = useRef(onValueChange);
   onValueChangeRef.current = onValueChange;
+
+  const clearSelectionsRef = useRef(() => {});
+  clearSelectionsRef.current = () => {
+    if (questions) clearQuestionSelections(questionnaireStep);
+  };
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -733,6 +759,7 @@ const ComposerTextarea = ({
     onUpdate: ({ editor }) => {
       const text = editor.getText();
       setHasContent(text.trim().length > 0);
+      if (text.trim().length > 0) clearSelectionsRef.current();
       onValueChangeRef.current?.(text);
     },
     editable: !disabled,

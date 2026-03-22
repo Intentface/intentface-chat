@@ -1,11 +1,20 @@
 "use client";
 
+import { mergeAttributes, Node as TiptapNode } from "@tiptap/core";
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
-import { type Editor, EditorContent, useEditor } from "@tiptap/react";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
+import {
+  type Editor,
+  EditorContent,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+  useEditor,
+  useEditorState,
+} from "@tiptap/react";
 import type { FileUIPart } from "ai";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CodeIcon, FileTextIcon, LinkIcon, SparklesIcon } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import React, {
   type ChangeEvent,
@@ -34,7 +43,10 @@ import {
   revokeAttachmentUrl,
   toAttachmentItem,
 } from "@/components/ai/attachments";
+import { BrainIcon } from "@/components/icons/brain";
+import { GlobeIcon } from "@/components/icons/globe";
 import { SendIcon } from "@/components/icons/send";
+import { Questionnaire } from "@/components/questionnaire";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { useLoop } from "@/hooks/use-loop";
@@ -42,96 +54,398 @@ import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 
-// Types
-type AttachmentsApi = {
-  add: (files: File[] | FileList) => void;
-  remove: (id: string) => void;
-  openFileDialog: () => void;
+// Types — Command List
+type CommandItem = {
+  id: string;
+  label: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  group: string;
+  kind: "mention" | "command";
+  value: string;
+  description?: string;
+};
+
+type CommandTrigger = "@" | "/";
+
+type CommandListState = {
+  isOpen: boolean;
+  trigger: CommandTrigger | null;
+  query: string;
+  triggerStartPosition: number;
+};
+
+const CLOSED_COMMAND_STATE: CommandListState = {
+  isOpen: false,
+  trigger: null,
+  query: "",
+  triggerStartPosition: 0,
+};
+
+const MENTION_ITEMS: CommandItem[] = [
+  {
+    id: "files",
+    label: "Files",
+    icon: FileTextIcon,
+    group: "Context",
+    kind: "mention",
+    value: "files",
+    description: "Attach files as context",
+  },
+  {
+    id: "url",
+    label: "URL",
+    icon: LinkIcon,
+    group: "Context",
+    kind: "mention",
+    value: "url",
+    description: "Reference a URL",
+  },
+  {
+    id: "web-search",
+    label: "Web Search",
+    icon: GlobeIcon,
+    group: "Tools",
+    kind: "mention",
+    value: "webSearch",
+    description: "Search the web",
+  },
+  {
+    id: "code-execution",
+    label: "Code Execution",
+    icon: CodeIcon,
+    group: "Tools",
+    kind: "mention",
+    value: "codeExecution",
+    description: "Run code snippets",
+  },
+];
+
+const COMMAND_ITEMS: CommandItem[] = [
+  {
+    id: "search",
+    label: "Search the web",
+    icon: GlobeIcon,
+    group: "Commands",
+    kind: "command",
+    value: "webSearch",
+    description: "Enable web search for this message",
+  },
+  {
+    id: "summarize",
+    label: "Summarize",
+    icon: SparklesIcon,
+    group: "Commands",
+    kind: "command",
+    value: "summarize",
+    description: "Summarize the conversation",
+  },
+  {
+    id: "think",
+    label: "Think deeply",
+    icon: BrainIcon,
+    group: "Commands",
+    kind: "command",
+    value: "thinking",
+    description: "Enable extended thinking",
+  },
+];
+
+// Fuzzy scorer — lightweight, no external dependency
+const fuzzyScore = (query: string, target: string): number => {
+  if (!query) return 1;
+  const lowerQuery = query.toLowerCase();
+  const lowerTarget = target.toLowerCase();
+
+  if (lowerTarget.startsWith(lowerQuery)) return 2;
+
+  let queryIndex = 0;
+  let score = 0;
+  let previousMatchIndex = -1;
+
+  for (
+    let targetIndex = 0;
+    targetIndex < lowerTarget.length && queryIndex < lowerQuery.length;
+    targetIndex++
+  ) {
+    if (lowerTarget[targetIndex] === lowerQuery[queryIndex]) {
+      score += 1;
+      if (previousMatchIndex === targetIndex - 1) score += 2;
+      if (targetIndex === 0 || lowerTarget[targetIndex - 1] === " ") score += 1;
+      previousMatchIndex = targetIndex;
+      queryIndex++;
+    }
+  }
+
+  return queryIndex === lowerQuery.length ? score / lowerQuery.length : 0;
+};
+
+const filterCommandItems = (
+  items: CommandItem[],
+  query: string,
+): CommandItem[] => {
+  if (!query) return items;
+  return items
+    .map((item) => ({ item, score: fuzzyScore(query, item.label) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(({ item }) => item);
 };
 
 type AnswerEntry = { selected: Set<string>; freeText: string };
 
 type ComposerContextValue = {
-  editorRef: RefObject<Editor | null>;
-  attachmentsApi: RefObject<AttachmentsApi | null>;
-  isDragging: boolean;
-  isSubmitting: boolean;
-  hasContent: boolean;
-  setHasContent: (has: boolean) => void;
-  attachments: AttachmentItem[];
-  setAttachments: React.Dispatch<React.SetStateAction<AttachmentItem[]>>;
-  attachmentRef: RefObject<AttachmentItem[]>;
-  attachmentError: string | null;
-  setAttachmentError: (error: string | null) => void;
-  globalDropRef: RefObject<boolean>;
-  webSearch: boolean;
-  setWebSearch: (value: boolean) => void;
-  thinking: boolean;
-  setThinking: (value: boolean) => void;
-  questions: AskUserQuestion[] | null;
-  questionnaireStep: number;
-  questionnaireAnswers: Map<number, AnswerEntry>;
-  toggleQuestionOption: (
-    step: number,
-    label: string,
-    multiSelect: boolean,
-  ) => void;
-  continueStep: (freeText?: string) => void;
-  dismissStep: () => void;
-  isLastQuestionStep: boolean;
-  isSingleQuestion: boolean;
-  clearQuestionSelections: (step: number) => void;
-  goBack: () => void;
-  goNext: () => void;
+  editor: {
+    ref: RefObject<Editor | null>;
+    hasContent: boolean;
+    setHasContent: (has: boolean) => void;
+    isSubmitting: boolean;
+  };
+  attachments: {
+    items: AttachmentItem[];
+    add: (files: File[] | FileList) => void;
+    remove: (id: string) => void;
+    openFileDialog: () => void;
+    error: string | null;
+    isDragging: boolean;
+    fileInputRef: RefObject<HTMLInputElement | null>;
+    globalDropRef: RefObject<boolean>;
+  };
+  tools: {
+    webSearch: boolean;
+    setWebSearch: (value: boolean) => void;
+    thinking: boolean;
+    setThinking: (value: boolean) => void;
+  };
+  questionnaire: {
+    questions: AskUserQuestion[] | null;
+    step: number;
+    answers: Map<number, AnswerEntry>;
+    toggleOption: (step: number, label: string, multiSelect: boolean) => void;
+    continueStep: (freeText?: string) => void;
+    dismissStep: () => void;
+    isLastStep: boolean;
+    isSingle: boolean;
+    clearSelections: (step: number) => void;
+    goBack: () => void;
+    goNext: () => void;
+  };
+  mentions: {
+    open: boolean;
+    setOpen: (open: boolean) => void;
+    selectRef: RefObject<(() => void) | null>;
+    navigateRef: RefObject<((direction: number) => void) | null>;
+    items: CommandItem[];
+  };
+  commands: {
+    open: boolean;
+    setOpen: (open: boolean) => void;
+    selectRef: RefObject<(() => void) | null>;
+    navigateRef: RefObject<((direction: number) => void) | null>;
+    items: CommandItem[];
+  };
 };
 
 const ComposerContext = createContext<ComposerContextValue>({
-  editorRef: { current: null },
-  attachmentsApi: { current: null },
-  isDragging: false,
-  isSubmitting: false,
-  hasContent: false,
-  setHasContent: () => {},
-  attachments: [],
-  setAttachments: () => {},
-  attachmentRef: { current: [] },
-  attachmentError: null,
-  setAttachmentError: () => {},
-  globalDropRef: { current: false },
-  webSearch: false,
-  setWebSearch: () => {},
-  thinking: true,
-  setThinking: () => {},
-  questions: null,
-  questionnaireStep: 0,
-  questionnaireAnswers: new Map(),
-  toggleQuestionOption: () => {},
-  continueStep: () => {},
-  dismissStep: () => {},
-  isLastQuestionStep: false,
-  isSingleQuestion: false,
-  clearQuestionSelections: () => {},
-  goBack: () => {},
-  goNext: () => {},
+  editor: {
+    ref: { current: null },
+    hasContent: false,
+    setHasContent: () => {},
+    isSubmitting: false,
+  },
+  attachments: {
+    items: [],
+    add: () => {},
+    remove: () => {},
+    openFileDialog: () => {},
+    error: null,
+    isDragging: false,
+    fileInputRef: { current: null },
+    globalDropRef: { current: false },
+  },
+  tools: {
+    webSearch: false,
+    setWebSearch: () => {},
+    thinking: true,
+    setThinking: () => {},
+  },
+  questionnaire: {
+    questions: null,
+    step: 0,
+    answers: new Map(),
+    toggleOption: () => {},
+    continueStep: () => {},
+    dismissStep: () => {},
+    isLastStep: false,
+    isSingle: false,
+    clearSelections: () => {},
+    goBack: () => {},
+    goNext: () => {},
+  },
+  mentions: {
+    open: false,
+    setOpen: () => {},
+    selectRef: { current: null },
+    navigateRef: { current: null },
+    items: MENTION_ITEMS,
+  },
+  commands: {
+    open: false,
+    setOpen: () => {},
+    selectRef: { current: null },
+    navigateRef: { current: null },
+    items: COMMAND_ITEMS,
+  },
 });
 
 export const useComposer = () => useContext(ComposerContext);
 
+// ProseMirror Plugin — trigger detection for @ and /
+const commandListPluginKey = new PluginKey<CommandListState>("commandList");
+
+const createCommandListPlugin = () =>
+  new Plugin<CommandListState>({
+    key: commandListPluginKey,
+    state: {
+      init: () => CLOSED_COMMAND_STATE,
+      apply(transaction, previousState, _oldEditorState, newEditorState) {
+        const meta = transaction.getMeta(commandListPluginKey);
+        if (meta?.close) return CLOSED_COMMAND_STATE;
+
+        if (!transaction.docChanged && !transaction.selectionSet) {
+          return previousState;
+        }
+
+        const { selection } = newEditorState;
+        const cursorPosition = selection.$from.pos;
+        const blockStart = selection.$from.start();
+        const textBeforeCursor = newEditorState.doc.textBetween(
+          blockStart,
+          cursorPosition,
+          "\n",
+        );
+
+        // / trigger — position 0 only (entire doc starts with /)
+        const fullDocText = newEditorState.doc.textContent;
+        if (fullDocText.startsWith("/")) {
+          const query = fullDocText.slice(1);
+          if (
+            query.includes(" ") &&
+            filterCommandItems(COMMAND_ITEMS, query.split(" ")[0]).length === 0
+          ) {
+            return CLOSED_COMMAND_STATE;
+          }
+          return {
+            isOpen: true,
+            trigger: "/" as CommandTrigger,
+            query,
+            triggerStartPosition: blockStart,
+          };
+        }
+
+        // @ trigger — after whitespace or at start of text block
+        const atMatch = textBeforeCursor.match(/(^|[\s])@([^\s]*)$/);
+        if (atMatch) {
+          const triggerOffset = (atMatch.index ?? 0) + atMatch[1].length;
+          const triggerStartPosition = blockStart + triggerOffset;
+          const query = atMatch[2];
+          return {
+            isOpen: true,
+            trigger: "@" as CommandTrigger,
+            query,
+            triggerStartPosition,
+          };
+        }
+
+        return CLOSED_COMMAND_STATE;
+      },
+    },
+  });
+
+// Icon map for mention chips — resolves icon id to component
+const ICON_MAP: Record<
+  string,
+  React.ComponentType<React.SVGProps<SVGSVGElement>>
+> = {
+  files: FileTextIcon,
+  url: LinkIcon,
+  "web-search": GlobeIcon,
+  "code-execution": CodeIcon,
+  search: GlobeIcon,
+  summarize: SparklesIcon,
+  think: BrainIcon,
+};
+
+// MentionChip — TipTap Node extension for inline chips
+const MentionChipNodeView = ({
+  node,
+}: {
+  node: { attrs: Record<string, unknown> };
+}) => {
+  const label = node.attrs.label as string;
+  const icon = node.attrs.icon as string;
+  const Icon = ICON_MAP[icon];
+  return (
+    <NodeViewWrapper
+      as="span"
+      data-mention-chip
+      className="inline-flex items-center gap-1 rounded-md bg-slate-3 border border-slate-6 px-1.5 py-0.5 text-xs font-medium text-slate-12 align-baseline mx-0.5 select-none"
+    >
+      {Icon && <Icon className="size-3 text-slate-10" />}
+      <span>{label}</span>
+    </NodeViewWrapper>
+  );
+};
+
+const MentionChipExtension = TiptapNode.create({
+  name: "mentionChip",
+  group: "inline",
+  inline: true,
+  atom: true,
+
+  addAttributes() {
+    return {
+      label: { default: "" },
+      value: { default: "" },
+      icon: { default: "" },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: "span[data-mention-chip]" }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "span",
+      mergeAttributes({ "data-mention-chip": "" }, HTMLAttributes),
+      0,
+    ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(MentionChipNodeView);
+  },
+
+  addProseMirrorPlugins() {
+    return [createCommandListPlugin()];
+  },
+});
+
 // Drag handler factory — always on document, scope-checked at event time
 const createDragHandlers = (
-  api: RefObject<AttachmentsApi | null>,
+  addRef: RefObject<((files: File[] | FileList) => void) | null>,
   counter: { current: number },
   setDragging: (v: boolean) => void,
   isInScope: (e: DragEvent) => boolean,
 ) => ({
   onDragOver: (e: Event) => {
-    if (!api.current) return;
+    if (!addRef.current) return;
     const event = e as DragEvent;
     if (!isInScope(event)) return;
     if (event.dataTransfer?.types?.includes("Files")) event.preventDefault();
   },
   onDragEnter: (e: Event) => {
-    if (!api.current) return;
+    if (!addRef.current) return;
     const event = e as DragEvent;
     if (!isInScope(event)) return;
     if (event.dataTransfer?.types?.includes("Files")) {
@@ -140,21 +454,21 @@ const createDragHandlers = (
     }
   },
   onDragLeave: (e: Event) => {
-    if (!api.current) return;
+    if (!addRef.current) return;
     const event = e as DragEvent;
     if (!isInScope(event)) return;
     counter.current--;
     if (counter.current === 0) setDragging(false);
   },
   onDrop: (e: Event) => {
-    if (!api.current) return;
+    if (!addRef.current) return;
     const event = e as DragEvent;
     if (!isInScope(event)) return;
     if (event.dataTransfer?.types?.includes("Files")) event.preventDefault();
     counter.current = 0;
     setDragging(false);
     if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-      api.current.add(event.dataTransfer.files);
+      addRef.current(event.dataTransfer.files);
     }
   },
 });
@@ -169,7 +483,10 @@ type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   }) => void | Promise<void>;
   isSubmitting?: boolean;
   questions?: AskUserQuestion[];
-  onQuestionsDone?: (answers: Record<string, string>) => void;
+  onQuestionsSubmit?: (answers: Record<string, string>) => void;
+  attachmentAccept?: string;
+  attachmentMaxFiles?: number;
+  attachmentMaxFileSize?: number;
 };
 
 const ComposerRoot = ({
@@ -178,23 +495,81 @@ const ComposerRoot = ({
   onSubmit,
   isSubmitting = false,
   questions,
-  onQuestionsDone,
+  onQuestionsSubmit,
+  attachmentAccept: accept = DEFAULT_ATTACHMENT_ACCEPT,
+  attachmentMaxFiles: maxFiles = DEFAULT_ATTACHMENT_MAX_FILES,
+  attachmentMaxFileSize: maxFileSize = DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
   ...formProps
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
-  const attachmentsApi = useRef<AttachmentsApi | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const rootRef = useRef<HTMLFormElement | null>(null);
   const globalDropRef = useRef(false);
   const dragCounter = useRef(0);
+  const commandListSelectRef = useRef<(() => void) | null>(null);
+  const commandListNavigateRef = useRef<((direction: number) => void) | null>(
+    null,
+  );
 
   const [isDragging, setIsDragging] = useState(false);
-  const [hasContent, setHasContent] = useState(false);
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  const attachmentRef = useRef<AttachmentItem[]>(attachments);
+  const [editorHasContent, setEditorHasContent] = useState(false);
+  const [attachmentItems, setAttachmentItems] = useState<AttachmentItem[]>([]);
+  const attachmentRef = useRef<AttachmentItem[]>(attachmentItems);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [webSearch, setWebSearch] = useState(false);
   const [thinking, setThinking] = useState(true);
-  attachmentRef.current = attachments;
+  const [activeTrigger, setActiveTrigger] = useState<CommandTrigger | null>(
+    null,
+  );
+  attachmentRef.current = attachmentItems;
+
+  // Attachment operations — lifted here so they're available on context directly
+  const addAttachments = useCallback(
+    (fileList: File[] | FileList) => {
+      const incoming = [...fileList];
+      if (!incoming.length) return;
+
+      const accepted = incoming.filter((f) => matchesAccept(f, accept));
+      if (incoming.length > 0 && !accepted.length) {
+        setAttachmentError("No files match the accepted types.");
+        return;
+      }
+
+      const sized = accepted.filter((f) => f.size <= maxFileSize);
+      if (accepted.length > 0 && !sized.length) {
+        setAttachmentError("All files exceed the maximum size.");
+        return;
+      }
+
+      const capacity = Math.max(0, maxFiles - attachmentRef.current.length);
+      const capped = sized.slice(0, capacity);
+
+      if (sized.length > capacity) {
+        setAttachmentError("Too many files. Some were not added.");
+      }
+
+      if (!capped.length) return;
+
+      setAttachmentError(null);
+      setAttachmentItems((prev) => [...prev, ...capped.map(toAttachmentItem)]);
+    },
+    [accept, maxFiles, maxFileSize],
+  );
+
+  const removeAttachment = useCallback((id: string) => {
+    const found = attachmentRef.current.find((item) => item.id === id);
+    if (found) revokeAttachmentUrl(found);
+    setAttachmentItems((prev) => prev.filter((item) => item.id !== id));
+    setAttachmentError(null);
+  }, []);
+
+  const openFileDialog = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  // Stable ref for drag handlers (avoids re-registering document listeners)
+  const addRef = useRef(addAttachments);
+  addRef.current = addAttachments;
 
   // Questionnaire state — reset when questions identity changes
   const previousQuestionsRef = useRef(questions);
@@ -235,7 +610,7 @@ const ComposerRoot = ({
         return next;
       });
       editorRef.current?.commands.setContent("");
-      setHasContent(false);
+      setEditorHasContent(false);
     },
     [],
   );
@@ -288,22 +663,22 @@ const ComposerRoot = ({
       }
 
       editorRef.current?.commands.setContent("");
-      setHasContent(false);
+      setEditorHasContent(false);
 
       if (questionnaireStep < questions.length - 1) {
         setQuestionnaireStep((s) => s + 1);
       } else {
-        onQuestionsDone?.(compileAnswers(updatedAnswers));
+        onQuestionsSubmit?.(compileAnswers(updatedAnswers));
       }
     },
-    [questions, questionnaireStep, onQuestionsDone, compileAnswers],
+    [questions, questionnaireStep, onQuestionsSubmit, compileAnswers],
   );
 
   const dismissStep = useCallback(() => {
     if (!questions?.length) return;
 
     editorRef.current?.commands.setContent("");
-    setHasContent(false);
+    setEditorHasContent(false);
 
     const updatedAnswers = new Map(answersRef.current);
     updatedAnswers.delete(questionnaireStep);
@@ -312,21 +687,21 @@ const ComposerRoot = ({
     if (questionnaireStep < questions.length - 1) {
       setQuestionnaireStep((s) => s + 1);
     } else {
-      onQuestionsDone?.(compileAnswers(updatedAnswers));
+      onQuestionsSubmit?.(compileAnswers(updatedAnswers));
     }
-  }, [questions, questionnaireStep, onQuestionsDone, compileAnswers]);
+  }, [questions, questionnaireStep, onQuestionsSubmit, compileAnswers]);
 
   const goBackStep = useCallback(() => {
     setQuestionnaireStep((s) => Math.max(0, s - 1));
     editorRef.current?.commands.setContent("");
-    setHasContent(false);
+    setEditorHasContent(false);
   }, []);
 
   const goNextStep = useCallback(() => {
     if (!questions) return;
     setQuestionnaireStep((s) => Math.min(questions.length - 1, s + 1));
     editorRef.current?.commands.setContent("");
-    setHasContent(false);
+    setEditorHasContent(false);
   }, [questions]);
 
   const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -335,7 +710,7 @@ const ComposerRoot = ({
     if (questions?.length) {
       const text = editorRef.current?.getText()?.trim() ?? "";
       editorRef.current?.commands.setContent("");
-      setHasContent(false);
+      setEditorHasContent(false);
       continueStep(text);
       return;
     }
@@ -343,18 +718,18 @@ const ComposerRoot = ({
     if (isSubmitting) return;
 
     const text = editorRef.current?.getText()?.trim() ?? "";
-    if (!text && !attachments.length) return;
+    if (!text && !attachmentItems.length) return;
 
     const submitText = text || "Sent with attachments";
     const files =
-      attachments.length > 0
-        ? await prepareAttachmentsForSend(attachments)
+      attachmentItems.length > 0
+        ? await prepareAttachmentsForSend(attachmentItems)
         : [];
 
-    revokeAllAttachmentUrls(attachments);
-    setAttachments([]);
+    revokeAllAttachmentUrls(attachmentItems);
+    setAttachmentItems([]);
     editorRef.current?.commands.setContent("");
-    setHasContent(false);
+    setEditorHasContent(false);
 
     await onSubmit?.({ text: submitText, files, webSearch, thinking });
   };
@@ -366,7 +741,7 @@ const ComposerRoot = ({
       (rootRef.current?.contains(e.target as Node) ?? false);
 
     const { onDragOver, onDragEnter, onDragLeave, onDrop } = createDragHandlers(
-      attachmentsApi,
+      addRef,
       dragCounter,
       setIsDragging,
       isInScope,
@@ -399,39 +774,64 @@ const ComposerRoot = ({
 
   const contextValue = useMemo(
     () => ({
-      editorRef,
-      attachmentsApi,
-      isDragging,
-      isSubmitting,
-      hasContent,
-      setHasContent,
-      attachments,
-      attachmentRef,
-      setAttachments,
-      attachmentError,
-      setAttachmentError,
-      globalDropRef,
-      webSearch,
-      setWebSearch,
-      thinking,
-      setThinking,
-      questions: questions ?? null,
-      questionnaireStep: questionnaireStep,
-      questionnaireAnswers: questionnaireAnswers,
-      toggleQuestionOption,
-      continueStep,
-      dismissStep,
-      isLastQuestionStep,
-      isSingleQuestion,
-      clearQuestionSelections,
-      goBack: goBackStep,
-      goNext: goNextStep,
+      editor: {
+        ref: editorRef,
+        hasContent: editorHasContent,
+        setHasContent: setEditorHasContent,
+        isSubmitting,
+      },
+      attachments: {
+        items: attachmentItems,
+        add: addAttachments,
+        remove: removeAttachment,
+        openFileDialog,
+        error: attachmentError,
+        isDragging,
+        fileInputRef,
+        globalDropRef,
+      },
+      tools: {
+        webSearch,
+        setWebSearch,
+        thinking,
+        setThinking,
+      },
+      questionnaire: {
+        questions: questions ?? null,
+        step: questionnaireStep,
+        answers: questionnaireAnswers,
+        toggleOption: toggleQuestionOption,
+        continueStep,
+        dismissStep,
+        isLastStep: isLastQuestionStep,
+        isSingle: isSingleQuestion,
+        clearSelections: clearQuestionSelections,
+        goBack: goBackStep,
+        goNext: goNextStep,
+      },
+      mentions: {
+        open: activeTrigger === "@",
+        setOpen: (open: boolean) => setActiveTrigger(open ? "@" : null),
+        selectRef: commandListSelectRef,
+        navigateRef: commandListNavigateRef,
+        items: MENTION_ITEMS,
+      },
+      commands: {
+        open: activeTrigger === "/",
+        setOpen: (open: boolean) => setActiveTrigger(open ? "/" : null),
+        selectRef: commandListSelectRef,
+        navigateRef: commandListNavigateRef,
+        items: COMMAND_ITEMS,
+      },
     }),
     [
       isDragging,
       isSubmitting,
-      hasContent,
-      attachments,
+      editorHasContent,
+      attachmentItems,
+      addAttachments,
+      removeAttachment,
+      openFileDialog,
       attachmentError,
       webSearch,
       thinking,
@@ -446,6 +846,7 @@ const ComposerRoot = ({
       clearQuestionSelections,
       goBackStep,
       goNextStep,
+      activeTrigger,
     ],
   );
 
@@ -471,7 +872,7 @@ const ComposerContainer = ({
   children,
   ...props
 }: ComposerContainerProps) => {
-  const { editorRef } = useContext(ComposerContext);
+  const { editor } = useComposer();
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -484,9 +885,9 @@ const ComposerContainer = ({
       return;
 
     e.preventDefault();
-    const editor = editorRef.current;
-    if (editor && !editor.isFocused) {
-      editor.commands.focus();
+    const editorInstance = editor.ref.current;
+    if (editorInstance && !editorInstance.isFocused) {
+      editorInstance.commands.focus();
     }
   };
 
@@ -508,12 +909,10 @@ const ComposerContainer = ({
   );
 };
 
-// Attachments — self-registering leaf, internal state
+// Attachments — renders file input + attachment list, reads operations from context
 type ComposerAttachmentsProps = {
   className?: string;
   accept?: string;
-  maxFiles?: number;
-  maxFileSize?: number;
   multiple?: boolean;
   globalDrop?: boolean;
 };
@@ -521,91 +920,16 @@ type ComposerAttachmentsProps = {
 const ComposerAttachments = ({
   className,
   accept = DEFAULT_ATTACHMENT_ACCEPT,
-  maxFiles = DEFAULT_ATTACHMENT_MAX_FILES,
-  maxFileSize = DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
   multiple = true,
   globalDrop = false,
 }: ComposerAttachmentsProps) => {
-  const {
-    attachmentsApi,
-    isDragging,
-    attachments,
-    attachmentRef,
-    setAttachments,
-    setAttachmentError,
-    globalDropRef,
-  } = useContext(ComposerContext);
+  const { attachments } = useComposer();
 
-  globalDropRef.current = globalDrop;
-
-  // Callbacks — stable deps (functional setAttachments + primitive config).
-  // attachmentRef.current is intentionally read at call time, not a reactive dep.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: itemsRef is a stable ref read at call time
-  const add = useCallback(
-    (fileList: File[] | FileList) => {
-      const incoming = [...fileList];
-      if (!incoming.length) return;
-
-      const accepted = incoming.filter((f) => matchesAccept(f, accept));
-      if (incoming.length > 0 && !accepted.length) {
-        setAttachmentError("No files match the accepted types.");
-        return;
-      }
-
-      const sized = accepted.filter((f) => f.size <= maxFileSize);
-      if (accepted.length > 0 && !sized.length) {
-        setAttachmentError("All files exceed the maximum size.");
-        return;
-      }
-
-      const capacity = Math.max(0, maxFiles - attachmentRef.current.length);
-      const capped = sized.slice(0, capacity);
-
-      if (sized.length > capacity) {
-        setAttachmentError("Too many files. Some were not added.");
-      }
-
-      if (!capped.length) return;
-
-      setAttachmentError(null);
-      setAttachments((prev) => [...prev, ...capped.map(toAttachmentItem)]);
-    },
-    [accept, maxFiles, maxFileSize, setAttachmentError, setAttachments],
-  );
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: itemsRef is a stable ref read at call time
-  const remove = useCallback(
-    (id: string) => {
-      const found = attachmentRef.current.find((item) => item.id === id);
-      if (found) revokeAttachmentUrl(found);
-      setAttachments((prev) => prev.filter((item) => item.id !== id));
-      setAttachmentError(null);
-    },
-    [setAttachmentError, setAttachments],
-  );
-
-  // Callback ref: register API when input mounts, cleanup on unmount.
-  // Re-runs only when add/remove change (config prop changes).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: attachmentsApi/itemsRef are stable refs
-  const inputCallbackRef = useCallback(
-    (node: HTMLInputElement | null) => {
-      if (!node) return;
-      attachmentsApi.current = {
-        add,
-        remove,
-        openFileDialog: () => node.click(),
-      };
-      return () => {
-        attachmentsApi.current = null;
-        revokeAllAttachmentUrls(attachmentRef.current);
-      };
-    },
-    [add, remove],
-  );
+  attachments.globalDropRef.current = globalDrop;
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.currentTarget.files) {
-      add(event.currentTarget.files);
+      attachments.add(event.currentTarget.files);
     }
     event.currentTarget.value = "";
   };
@@ -617,13 +941,13 @@ const ComposerAttachments = ({
         className="hidden"
         multiple={multiple}
         onChange={handleFileChange}
-        ref={inputCallbackRef}
+        ref={attachments.fileInputRef}
         type="file"
       />
 
       {/* Attachments container with dropzone overlay */}
       <AnimatePresence initial={false}>
-        {(isDragging || attachments.length > 0) && (
+        {(attachments.isDragging || attachments.items.length > 0) && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -632,16 +956,13 @@ const ComposerAttachments = ({
             className="overflow-hidden"
           >
             <div className="relative">
-              {attachments.length > 0 ? (
+              {attachments.items.length > 0 ? (
                 <div className={cn("flex flex-wrap gap-2 p-2", className)}>
                   <AnimatePresence initial={false}>
-                    {attachments.map((attachmentsApi) => (
-                      <Attachments.Item
-                        key={attachmentsApi.id}
-                        item={attachmentsApi}
-                      >
+                    {attachments.items.map((attachment) => (
+                      <Attachments.Item key={attachment.id} item={attachment}>
                         <Attachments.Remove
-                          onRemove={() => remove(attachmentsApi.id)}
+                          onRemove={() => attachments.remove(attachment.id)}
                         />
                       </Attachments.Item>
                     ))}
@@ -650,7 +971,10 @@ const ComposerAttachments = ({
               ) : (
                 <div className="h-14" />
               )}
-              <Attachments.Dropzone visible={isDragging} variant="inline" />
+              <Attachments.Dropzone
+                visible={attachments.isDragging}
+                variant="inline"
+              />
             </div>
           </motion.div>
         )}
@@ -679,15 +1003,8 @@ const ComposerTextarea = ({
   autoFocus = false,
   children,
 }: ComposerTextareaProps) => {
-  const {
-    editorRef,
-    attachmentsApi,
-    attachmentRef,
-    setHasContent,
-    questions,
-    questionnaireStep,
-    clearQuestionSelections,
-  } = useContext(ComposerContext);
+  const { editor, attachments, questionnaire, mentions, commands } =
+    useComposer();
 
   const isControlled = value !== undefined;
 
@@ -697,12 +1014,17 @@ const ComposerTextarea = ({
 
   const clearSelectionsRef = useRef(() => {});
   clearSelectionsRef.current = () => {
-    if (questions) clearQuestionSelections(questionnaireStep);
+    if (questionnaire.questions)
+      questionnaire.clearSelections(questionnaire.step);
   };
 
-  const editor = useEditor({
+  // Ref-ify attachment operations to prevent stale closure in TipTap handlers
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
+
+  const tiptapEditor = useEditor({
     immediatelyRender: false,
-    extensions: [Document, Paragraph, Text],
+    extensions: [Document, Paragraph, Text, MentionChipExtension],
     content: isControlled ? value : "",
     editorProps: {
       attributes: {
@@ -720,15 +1042,43 @@ const ComposerTextarea = ({
         if (!files.length) return false;
 
         event.preventDefault();
-        attachmentsApi.current?.add(files);
+        attachmentsRef.current.add(files);
         return true;
       },
       handleKeyDown: (view, event) => {
+        // Mentions/commands interception — read plugin state synchronously
+        const cmdState = commandListPluginKey.getState(view.state);
+        if (cmdState?.isOpen) {
+          const active = cmdState.trigger === "@" ? mentions : commands;
+          if (event.key === "Tab") {
+            event.preventDefault();
+            active.selectRef.current?.();
+            return true;
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            view.dispatch(
+              view.state.tr.setMeta(commandListPluginKey, { close: true }),
+            );
+            return true;
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            active.navigateRef.current?.(-1);
+            return true;
+          }
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            active.navigateRef.current?.(1);
+            return true;
+          }
+        }
+
         if (event.key === "Backspace" && view.state.doc.textContent === "") {
-          const lastItem = attachmentRef.current.at(-1);
+          const lastItem = attachmentsRef.current.items.at(-1);
           if (lastItem) {
             event.preventDefault();
-            attachmentsApi.current?.remove(lastItem.id);
+            attachmentsRef.current.remove(lastItem.id);
             return true;
           }
         }
@@ -750,17 +1100,23 @@ const ComposerTextarea = ({
         return false;
       },
     },
-    onMount: ({ editor }) => {
-      editorRef.current = editor;
+    onMount: ({ editor: instance }) => {
+      editor.ref.current = instance;
     },
     onUnmount: () => {
-      editorRef.current = null;
+      editor.ref.current = null;
     },
-    onUpdate: ({ editor }) => {
-      const text = editor.getText();
-      setHasContent(text.trim().length > 0);
+    onUpdate: ({ editor: instance }) => {
+      const text = instance.getText();
+      editor.setHasContent(text.trim().length > 0);
       if (text.trim().length > 0) clearSelectionsRef.current();
       onValueChangeRef.current?.(text);
+      const pluginState = commandListPluginKey.getState(instance.state);
+      if (pluginState?.isOpen && pluginState.trigger) {
+        (pluginState.trigger === "@" ? mentions : commands).setOpen(true);
+      } else {
+        mentions.setOpen(false);
+      }
     },
     editable: !disabled,
     autofocus: autoFocus,
@@ -768,11 +1124,11 @@ const ComposerTextarea = ({
 
   // Sync controlled value
   useEffect(() => {
-    if (isControlled && editor && value !== editor.getText()) {
-      editor.commands.setContent(value);
-      setHasContent(value.trim().length > 0);
+    if (isControlled && tiptapEditor && value !== tiptapEditor.getText()) {
+      tiptapEditor.commands.setContent(value);
+      editor.setHasContent(value.trim().length > 0);
     }
-  }, [value, editor, isControlled, setHasContent]);
+  }, [value, tiptapEditor, isControlled, editor]);
 
   const placeholder = useMemo(() => {
     return Children.toArray(children).find(
@@ -790,9 +1146,9 @@ const ComposerTextarea = ({
         className,
       )}
     >
-      {editor !== null ? (
-        <EditorContent editor={editor} className="relative">
-          {editor.isEmpty && placeholder && (
+      {tiptapEditor !== null ? (
+        <EditorContent editor={tiptapEditor} className="relative">
+          {tiptapEditor.isEmpty && placeholder && (
             <div
               data-slot="composer-placeholder"
               className="absolute inset-0 min-h-lh pointer-events-none"
@@ -871,18 +1227,17 @@ const ComposerActions = ({ className, ...props }: ComposerFooterProps) => (
   <div className={cn("flex justify-end p-2", className)} {...props} />
 );
 
-// AttachmentTrigger — reads attachmentsApi from context
+// AttachmentTrigger — calls openFileDialog from context
 type ComposerAttachmentTriggerProps = ComponentProps<typeof IconButton>;
 
 const ComposerAttachmentTrigger = (props: ComposerAttachmentTriggerProps) => {
-  const { attachmentsApi } = useContext(ComposerContext);
-
-  const handleClick = useCallback(() => {
-    attachmentsApi.current?.openFileDialog();
-  }, [attachmentsApi]);
+  const { attachments } = useComposer();
 
   return (
-    <Attachments.Trigger onClick={handleClick} {...props}></Attachments.Trigger>
+    <Attachments.Trigger
+      onClick={attachments.openFileDialog}
+      {...props}
+    />
   );
 };
 
@@ -895,10 +1250,12 @@ const ComposerSubmit = ({
   disabled,
   ...props
 }: ComposerSubmitProps) => {
-  const { hasContent, attachments, isSubmitting } = useContext(ComposerContext);
+  const { editor, attachments } = useComposer();
 
   const autoDisabled =
-    disabled ?? ((!hasContent && attachments.length === 0) || isSubmitting);
+    disabled ??
+    ((!editor.hasContent && attachments.items.length === 0) ||
+      editor.isSubmitting);
 
   return (
     <IconButton
@@ -913,16 +1270,28 @@ const ComposerSubmit = ({
   );
 };
 
-// State — morphing container that collapses when empty
-type ComposerStatesProps = ComponentProps<"div">;
+// State — value-matched morphing container
+type ComposerStatesProps = ComponentProps<"div"> & {
+  value?: string;
+};
 
 const ComposerStates = ({
   children,
   className,
+  value,
   ...props
 }: ComposerStatesProps) => {
   const [ref, bounds] = useMeasure();
-  const hasChildren = Children.toArray(children).some(isValidElement);
+
+  // Find the child whose value matches
+  const matchedChild = value
+    ? Children.toArray(children).find(
+        (child) =>
+          isValidElement(child) &&
+          (child.props as { value?: string }).value === value,
+      )
+    : null;
+  const hasMatch = matchedChild != null;
 
   // Hold last non-zero height so the panel doesn't collapse to 0
   // during the AnimatePresence mode="wait" gap between exit and enter.
@@ -932,7 +1301,7 @@ const ComposerStates = ({
   return (
     <div
       data-slot="composer-state"
-      className={cn("overflow-hidden", hasChildren && "pb-2", className)}
+      className={cn("overflow-hidden", hasMatch && "pb-2", className)}
       {...props}
     >
       <MotionConfig
@@ -943,7 +1312,7 @@ const ComposerStates = ({
         }}
       >
         <AnimatePresence initial={false}>
-          {hasChildren && (
+          {hasMatch && (
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
               animate={{
@@ -956,7 +1325,7 @@ const ComposerStates = ({
             >
               <div ref={ref} className="relative">
                 <AnimatePresence mode="popLayout" initial={false}>
-                  {children}
+                  {matchedChild}
                 </AnimatePresence>
               </div>
             </motion.div>
@@ -969,11 +1338,13 @@ const ComposerStates = ({
 
 // StateItem — crossfade wrapper for content inside Composer.State
 type ComposerStateProps = {
+  value: string;
   children: ReactNode;
-} & ComponentProps<typeof motion.div>;
+} & Omit<ComponentProps<typeof motion.div>, "value">;
 
-const ComposerState = ({ children, ...props }: ComposerStateProps) => (
+const ComposerState = ({ value, children, ...props }: ComposerStateProps) => (
   <motion.div
+    key={value}
     initial={{ opacity: 0, filter: "blur(8px)" }}
     animate={{ opacity: 1, filter: "blur(0px)" }}
     exit={{ opacity: 0, filter: "blur(8px)" }}
@@ -983,108 +1354,86 @@ const ComposerState = ({ children, ...props }: ComposerStateProps) => (
   </motion.div>
 );
 
-// Questionnaire — self-contained, reads from ComposerContext.
+// Questionnaire — composes Questionnaire primitives with ComposerContext data.
 // Holds a snapshot of questions so it can still render during exit animations
 // (the parent unmounts this via AnimatePresence, but context clears first).
 const ComposerQuestionnaire = () => {
-  const {
-    questions,
-    questionnaireStep,
-    questionnaireAnswers,
-    toggleQuestionOption,
-    isSingleQuestion,
-    goBack,
-    goNext,
-  } = useContext(ComposerContext);
+  const { questionnaire } = useComposer();
 
   // Hold last valid question so content stays rendered during exit animations.
-  // The parent controls mount/unmount — if we're in the tree, we render.
-  const question = questions?.[questionnaireStep] ?? null;
+  const question = questionnaire.questions?.[questionnaire.step] ?? null;
   const lastQuestionRef = useRef(question);
   if (question) lastQuestionRef.current = question;
   const display = question ?? lastQuestionRef.current;
 
   if (!display) return null;
 
-  const entry = questionnaireAnswers.get(questionnaireStep) ?? {
+  const entry = questionnaire.answers.get(questionnaire.step) ?? {
     selected: new Set<string>(),
     freeText: "",
   };
 
-  const totalQuestions = questions?.length ?? 0;
+  const totalQuestions = questionnaire.questions?.length ?? 0;
 
   return (
-    <div className="flex flex-col gap-3 p-3">
-      <div className="flex h-6 items-center gap-2">
-        <p className="min-w-0 flex-1 text-sm font-medium leading-tight">
-          {display.question}
-        </p>
-        {!isSingleQuestion && totalQuestions > 1 && (
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={questionnaireStep === 0}
-              className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
-            >
-              <ChevronLeftIcon className="size-3.5" />
-            </button>
-            <span className="text-2xs tabular-nums text-slate-10">
-              {questionnaireStep + 1} of {totalQuestions}
-            </span>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={questionnaireStep === totalQuestions - 1}
-              className="flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30"
-            >
-              <ChevronRightIcon className="size-3.5" />
-            </button>
-          </div>
+    <Questionnaire>
+      <Questionnaire.Header>
+        <Questionnaire.Label>{display.question}</Questionnaire.Label>
+        {!questionnaire.isSingle && totalQuestions > 1 && (
+          <Questionnaire.Navigation>
+            <Questionnaire.Previous
+              onClick={questionnaire.goBack}
+              disabled={questionnaire.step === 0}
+            />
+            <Questionnaire.StepLabel
+              current={questionnaire.step + 1}
+              total={totalQuestions}
+            />
+            <Questionnaire.Next
+              onClick={questionnaire.goNext}
+              disabled={questionnaire.step === totalQuestions - 1}
+            />
+          </Questionnaire.Navigation>
         )}
-      </div>
-
+      </Questionnaire.Header>
       {display.options && (
-        <fieldset className="flex flex-col gap-1.5">
-          {display.options.map((option) => {
-            const isSelected = entry.selected.has(option.label);
-            return (
-              <label
-                key={option.label}
-                className={cn(
-                  "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors",
-                  isSelected
-                    ? "border-slate-7 bg-slate-1"
-                    : "border-slate-7 bg-slate-2 hover:bg-slate-3",
+        <Questionnaire.Options
+          multiSelect={!!display.multiSelect}
+          groupName={`q-${questionnaire.step}`}
+          value={[...entry.selected][0] ?? ""}
+          onValueChange={(value) =>
+            questionnaire.toggleOption(questionnaire.step, value, false)
+          }
+        >
+          {display.options.map((option) => (
+            <Questionnaire.Option
+              key={option.label}
+              value={option.label}
+              selected={entry.selected.has(option.label)}
+              onSelect={() =>
+                questionnaire.toggleOption(
+                  questionnaire.step,
+                  option.label,
+                  !!display.multiSelect,
+                )
+              }
+            >
+              <Questionnaire.OptionInput />
+              <Questionnaire.OptionContent>
+                <Questionnaire.OptionLabel>
+                  {option.label}
+                </Questionnaire.OptionLabel>
+                {option.description && (
+                  <Questionnaire.OptionDescription>
+                    {option.description}
+                  </Questionnaire.OptionDescription>
                 )}
-              >
-                <input
-                  type={display.multiSelect ? "checkbox" : "radio"}
-                  name={`q-${questionnaireStep}`}
-                  checked={isSelected}
-                  onChange={() =>
-                    toggleQuestionOption(
-                      questionnaireStep,
-                      option.label,
-                      !!display.multiSelect,
-                    )
-                  }
-                  className="mt-0.5 accent-primary"
-                />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-sm leading-tight">{option.label}</span>
-                  {option.description && (
-                    <span className="text-muted-foreground text-xs leading-snug">
-                      {option.description}
-                    </span>
-                  )}
-                </span>
-              </label>
-            );
-          })}
-        </fieldset>
+              </Questionnaire.OptionContent>
+            </Questionnaire.Option>
+          ))}
+        </Questionnaire.Options>
       )}
-    </div>
+    </Questionnaire>
   );
 };
 
@@ -1095,13 +1444,13 @@ const ComposerDismissAction = ({
   className,
   ...props
 }: ComposerDismissActionProps) => {
-  const { dismissStep } = useContext(ComposerContext);
+  const { questionnaire } = useComposer();
   return (
     <Button
       type="button"
       variant="ghost"
       className={cn("gap-2", className)}
-      onClick={dismissStep}
+      onClick={questionnaire.dismissStep}
       {...props}
     >
       Dismiss
@@ -1119,14 +1468,170 @@ const ComposerContinueAction = ({
   className,
   ...props
 }: ComposerContinueActionProps) => {
-  const { isLastQuestionStep } = useContext(ComposerContext);
+  const { questionnaire } = useComposer();
   return (
     <Button type="submit" className={cn("gap-2", className)} {...props}>
-      {isLastQuestionStep ? "Submit" : "Continue"}
+      {questionnaire.isLastStep ? "Submit" : "Continue"}
       <kbd className="pointer-events-none text-2xs text-slate-10 font-normal">
         ↵
       </kbd>
     </Button>
+  );
+};
+
+// CommandList — reads plugin state, renders grouped items, manages selection
+type ComposerCommandListProps = { className?: string };
+
+const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
+  const { editor, mentions, commands, tools } = useComposer();
+
+  const tiptapEditor = editor.ref.current;
+  const active = mentions.open ? mentions : commands.open ? commands : null;
+
+  const commandState =
+    useEditorState({
+      editor: tiptapEditor,
+      selector: ({ editor: currentEditor }) => {
+        if (!currentEditor) return CLOSED_COMMAND_STATE;
+        return (
+          commandListPluginKey.getState(currentEditor.state) ??
+          CLOSED_COMMAND_STATE
+        );
+      },
+    }) ?? CLOSED_COMMAND_STATE;
+
+  const { isOpen, trigger, query, triggerStartPosition } = commandState;
+
+  const items = useMemo(() => {
+    if (!isOpen || !trigger) return [];
+    const source = trigger === "@" ? mentions.items : commands.items;
+    return filterCommandItems(source, query);
+  }, [isOpen, trigger, query, mentions.items, commands.items]);
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Reset selected index when items change (inline ref comparison, no useEffect)
+  const previousItemsLengthRef = useRef(items.length);
+  if (previousItemsLengthRef.current !== items.length) {
+    previousItemsLengthRef.current = items.length;
+    setSelectedIndex(0);
+  }
+
+  const handleSelect = useCallback(
+    (item: CommandItem) => {
+      if (!tiptapEditor) return;
+
+      const cursorPosition = tiptapEditor.state.selection.$from.pos;
+
+      if (item.kind === "mention") {
+        tiptapEditor
+          .chain()
+          .focus()
+          .deleteRange({ from: triggerStartPosition, to: cursorPosition })
+          .insertContentAt(triggerStartPosition, {
+            type: "mentionChip",
+            attrs: { label: item.label, value: item.value, icon: item.id },
+          })
+          .run();
+      } else {
+        // Command: delete trigger text and toggle state
+        tiptapEditor
+          .chain()
+          .focus()
+          .deleteRange({ from: triggerStartPosition, to: cursorPosition })
+          .run();
+
+        if (item.value === "webSearch") tools.setWebSearch(true);
+        if (item.value === "thinking") tools.setThinking(true);
+      }
+
+      // Close command list
+      tiptapEditor.view.dispatch(
+        tiptapEditor.state.tr.setMeta(commandListPluginKey, { close: true }),
+      );
+    },
+    [tiptapEditor, triggerStartPosition, tools],
+  );
+
+  // Register refs for keyboard handlers
+  if (active) {
+    active.selectRef.current =
+      items.length > 0 ? () => handleSelect(items[selectedIndex]) : null;
+    active.navigateRef.current = (direction: number) => {
+      setSelectedIndex((previous) => {
+        const next = previous + direction;
+        if (next < 0) return items.length - 1;
+        if (next >= items.length) return 0;
+        return next;
+      });
+    };
+  }
+
+  if (!isOpen || items.length === 0) return null;
+
+  // Group items
+  const groups = new Map<string, CommandItem[]>();
+  for (const item of items) {
+    const existing = groups.get(item.group);
+    if (existing) {
+      existing.push(item);
+    } else {
+      groups.set(item.group, [item]);
+    }
+  }
+
+  let flatIndex = 0;
+
+  return (
+    <div
+      className={cn("flex flex-col py-2", className)}
+      data-slot="command-list"
+    >
+      {[...groups.entries()].map(([groupName, groupItems]) => (
+        <div key={groupName}>
+          <div className="px-3 py-1 text-2xs font-medium text-slate-10 uppercase tracking-wider">
+            {groupName}
+          </div>
+          {groupItems.map((item) => {
+            const currentFlatIndex = flatIndex++;
+            const isSelected = currentFlatIndex === selectedIndex;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                data-selected={isSelected || undefined}
+                className={cn(
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-sm text-slate-12 transition-colors cursor-pointer",
+                  isSelected ? "bg-slate-3" : "hover:bg-slate-2",
+                )}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  handleSelect(item);
+                }}
+                onMouseEnter={() => setSelectedIndex(currentFlatIndex)}
+              >
+                <Icon className="size-4 text-slate-10 shrink-0" />
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.description && (
+                  <span className="text-xs text-slate-10 truncate max-w-[200px]">
+                    {item.description}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+      <div className="border-t border-slate-6 mt-1 pt-1 px-3 flex items-center gap-3 text-2xs text-slate-10">
+        <span>
+          <kbd className="font-mono">Tab</kbd> to select
+        </span>
+        <span>
+          <kbd className="font-mono">Esc</kbd> to dismiss
+        </span>
+      </div>
+    </div>
   );
 };
 
@@ -1144,4 +1649,5 @@ export const Composer = Object.assign(ComposerRoot, {
   Questionnaire: ComposerQuestionnaire,
   DismissAction: ComposerDismissAction,
   ContinueAction: ComposerContinueAction,
+  CommandList: ComposerCommandList,
 });

@@ -362,16 +362,16 @@ const ChatMessages = () => {
 };
 
 const ActiveTools = () => {
-  const { webSearch, setWebSearch, thinking, setThinking } = useComposer();
+  const { tools } = useComposer();
 
   return (
     <div className="flex items-center gap-px">
-      {webSearch && (
+      {tools.webSearch && (
         <Button
           type="button"
           variant="ghost"
           className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => setWebSearch(false)}
+          onClick={() => tools.setWebSearch(false)}
         >
           <span className="relative size-4">
             <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
@@ -381,12 +381,12 @@ const ActiveTools = () => {
         </Button>
       )}
 
-      {thinking && (
+      {tools.thinking && (
         <Button
           type="button"
           variant="ghost"
           className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => setThinking(false)}
+          onClick={() => tools.setThinking(false)}
         >
           <span className="relative size-4">
             <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
@@ -400,8 +400,7 @@ const ActiveTools = () => {
 };
 
 const ToolsMenu = () => {
-  const { attachmentsApi, webSearch, setWebSearch, thinking, setThinking } =
-    useComposer();
+  const { attachments, tools } = useComposer();
 
   return (
     <DropdownMenu>
@@ -419,21 +418,21 @@ const ToolsMenu = () => {
         className="w-auto"
       >
         <DropdownMenu.Item
-          onClick={() => attachmentsApi.current?.openFileDialog()}
+          onClick={() => attachments.openFileDialog()}
         >
           <PaperClipIcon />
           <span className="flex-1">Attach files</span>
         </DropdownMenu.Item>
         <DropdownMenu.Separator />
         <DropdownMenu.SwitchItem
-          checked={webSearch}
-          onCheckedChange={setWebSearch}
+          checked={tools.webSearch}
+          onCheckedChange={tools.setWebSearch}
         >
           <GlobeIcon /> <span className="flex-1">Web Search</span>
         </DropdownMenu.SwitchItem>
         <DropdownMenu.SwitchItem
-          checked={thinking}
-          onCheckedChange={setThinking}
+          checked={tools.thinking}
+          onCheckedChange={tools.setThinking}
         >
           <BrainIcon /> <span className="flex-1">Thinking</span>
         </DropdownMenu.SwitchItem>
@@ -442,14 +441,12 @@ const ToolsMenu = () => {
   );
 };
 
-const ComposerPanel = ({
-  panelState,
-}: { panelState: ComposerPanelState }) => (
-  <Composer.States>
-    {panelState.type === "active" && (
-      <Composer.State key="steps">
-        <StepQueue>
-          {panelState.steps.map((step, i) => {
+const ComposerPanel = ({ panelState }: { panelState: ComposerPanelState }) => (
+  <Composer.States value={panelState.type}>
+    <Composer.State value="active">
+      <StepQueue>
+        {panelState.type === "active" &&
+          panelState.steps.map((step, i) => {
             const active = i === panelState.steps.length - 1;
             return (
               <StepQueue.Item key={step.key}>
@@ -464,20 +461,15 @@ const ComposerPanel = ({
                     <CircleDotIcon className="size-3.5" />
                   )}
                 </StepQueue.Icon>
-                <StepQueue.Label active={active}>
-                  {step.label}
-                </StepQueue.Label>
+                <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
               </StepQueue.Item>
             );
           })}
-        </StepQueue>
-      </Composer.State>
-    )}
-    {panelState.type === "ask-user" && (
-      <Composer.State key="ask-user">
-        <Composer.Questionnaire />
-      </Composer.State>
-    )}
+      </StepQueue>
+    </Composer.State>
+    <Composer.State value="ask-user">
+      <Composer.Questionnaire />
+    </Composer.State>
   </Composer.States>
 );
 
@@ -546,7 +538,7 @@ const ChatInput = () => {
       onSubmit={handleSubmit}
       isSubmitting={isSending}
       questions={isAskUser ? panelState.questions : undefined}
-      onQuestionsDone={handleAskUserSubmit}
+      onQuestionsSubmit={handleAskUserSubmit}
     >
       <ComposerPanel panelState={panelState} />
       <Composer.Container>

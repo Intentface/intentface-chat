@@ -2,13 +2,184 @@
 
 import { CheckIcon, CircleDotIcon, Loader } from "lucide-react";
 import { useState } from "react";
-import { Composer } from "@/components/ai/composer";
+import { Composer, useComposer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
 import { Questionnaire } from "@/components/questionnaire";
 import { ThemeButton } from "@/components/theme-button";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
+
+// ---------------------------------------------------------------------------
+// QuestionnaireDemo — local state wrapper for the Questionnaire primitive
+// ---------------------------------------------------------------------------
+
+const QuestionnaireDemo = ({
+  questions,
+  onSubmit,
+}: {
+  questions: AskUserQuestion[];
+  onSubmit: (answers: Record<string, string>) => void;
+}) => {
+  const [step, setStep] = useState(0);
+  const [selected, setSelected] = useState<Map<number, Set<string>>>(
+    () => new Map(),
+  );
+
+  const current = questions[step];
+  const isSingle = questions.length === 1;
+  const currentSelected = selected.get(step) ?? new Set<string>();
+
+  const toggle = (label: string) => {
+    setSelected((prev) => {
+      const next = new Map(prev);
+      const set = new Set(prev.get(step) ?? []);
+      if (current.multiSelect) {
+        if (set.has(label)) set.delete(label);
+        else set.add(label);
+      } else {
+        set.clear();
+        set.add(label);
+      }
+      next.set(step, set);
+      return next;
+    });
+  };
+
+  const handleSubmit = () => {
+    const result: Record<string, string> = {};
+    for (let i = 0; i < questions.length; i++) {
+      const sel = selected.get(i);
+      result[questions[i].question] = sel ? [...sel].join(", ") : "";
+    }
+    onSubmit(result);
+  };
+
+  return (
+    <Questionnaire>
+      <Questionnaire.Header>
+        <Questionnaire.Label>{current.question}</Questionnaire.Label>
+        {!isSingle && (
+          <Questionnaire.Navigation>
+            <Questionnaire.Previous
+              onClick={() => setStep((s) => Math.max(0, s - 1))}
+              disabled={step === 0}
+            />
+            <Questionnaire.StepLabel
+              current={step + 1}
+              total={questions.length}
+            />
+            <Questionnaire.Next
+              onClick={() =>
+                setStep((s) => Math.min(questions.length - 1, s + 1))
+              }
+              disabled={step === questions.length - 1}
+            />
+          </Questionnaire.Navigation>
+        )}
+      </Questionnaire.Header>
+      {current.options && (
+        <Questionnaire.Options
+          multiSelect={!!current.multiSelect}
+          groupName={`demo-q-${step}`}
+          value={[...currentSelected][0] ?? ""}
+          onValueChange={(value) => toggle(value)}
+        >
+          {current.options.map((option) => (
+            <Questionnaire.Option
+              key={option.label}
+              value={option.label}
+              selected={currentSelected.has(option.label)}
+              onSelect={() => toggle(option.label)}
+            >
+              <Questionnaire.OptionInput />
+              <Questionnaire.OptionContent>
+                <Questionnaire.OptionLabel>
+                  {option.label}
+                </Questionnaire.OptionLabel>
+                {option.description && (
+                  <Questionnaire.OptionDescription>
+                    {option.description}
+                  </Questionnaire.OptionDescription>
+                )}
+              </Questionnaire.OptionContent>
+            </Questionnaire.Option>
+          ))}
+        </Questionnaire.Options>
+      )}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={currentSelected.size === 0}
+          className={cn(
+            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+            "bg-slate-12 text-slate-1 disabled:opacity-30",
+          )}
+        >
+          Submit
+        </button>
+      </div>
+    </Questionnaire>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Composer States panel — needs useComposer() so must be inside <Composer>
+// ---------------------------------------------------------------------------
+
+const PlaygroundComposerStates = ({
+  composerState,
+  composerSteps,
+}: {
+  composerState: "idle" | "active" | "ask-user" | "ask-user-multi";
+  composerSteps: string[];
+}) => {
+  const { mentions, commands } = useComposer();
+
+  const deriveStatesValue = () => {
+    if (mentions.open || commands.open) return "command-list";
+    switch (composerState) {
+      case "active":
+        return "active";
+      case "ask-user":
+      case "ask-user-multi":
+        return "ask-user";
+      default:
+        return "idle";
+    }
+  };
+  const statesValue = deriveStatesValue();
+
+  return (
+    <Composer.States value={statesValue}>
+      <Composer.State value="command-list">
+        <Composer.CommandList />
+      </Composer.State>
+      <Composer.State value="active">
+        <StepQueue>
+          {composerSteps.map((step, i, arr) => (
+            <StepQueue.Item key={`${step}-${i}`}>
+              <StepQueue.Icon>
+                {i === arr.length - 1 ? (
+                  <Loader className="size-3.5 animate-spin" />
+                ) : (
+                  <CircleDotIcon className="size-3.5" />
+                )}
+              </StepQueue.Icon>
+              <StepQueue.Label active={i === arr.length - 1}>
+                {step}
+              </StepQueue.Label>
+            </StepQueue.Item>
+          ))}
+        </StepQueue>
+      </Composer.State>
+      <Composer.State value="ask-user">
+        <Composer.Questionnaire />
+      </Composer.State>
+    </Composer.States>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Mock data — Steps
@@ -198,36 +369,12 @@ export default function ComponentsPlayground() {
                   ? multipleQuestions
                   : undefined
             }
-            onQuestionsDone={() => setComposerState("idle")}
+            onQuestionsSubmit={() => setComposerState("idle")}
           >
-            <Composer.States>
-              {composerState === "active" && (
-                <Composer.State key="steps">
-                  <StepQueue>
-                    {composerSteps.map((step, i, arr) => (
-                      <StepQueue.Item key={`${step}-${i}`}>
-                        <StepQueue.Icon>
-                          {i === arr.length - 1 ? (
-                            <Loader className="size-3.5 animate-spin" />
-                          ) : (
-                            <CircleDotIcon className="size-3.5" />
-                          )}
-                        </StepQueue.Icon>
-                        <StepQueue.Label active={i === arr.length - 1}>
-                          {step}
-                        </StepQueue.Label>
-                      </StepQueue.Item>
-                    ))}
-                  </StepQueue>
-                </Composer.State>
-              )}
-              {(composerState === "ask-user" ||
-                composerState === "ask-user-multi") && (
-                <Composer.State key="ask-user">
-                  <Composer.Questionnaire />
-                </Composer.State>
-              )}
-            </Composer.States>
+            <PlaygroundComposerStates
+              composerState={composerState}
+              composerSteps={composerSteps}
+            />
 
             <Composer.Container>
               <Composer.Attachments />
@@ -245,20 +392,18 @@ export default function ComponentsPlayground() {
                   }
                 />
               </Composer.Textarea>
-              <Composer.Actions>
-                {composerState === "ask-user" ||
-                composerState === "ask-user-multi" ? (
-                  <div className="flex items-center justify-end gap-2">
-                    <Composer.DismissAction />
-                    <Composer.ContinueAction />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-2">
-                    <Composer.AttachmentTrigger />
-                    <Composer.Submit />
-                  </div>
-                )}
-              </Composer.Actions>
+              {composerState === "ask-user" ||
+              composerState === "ask-user-multi" ? (
+                <Composer.Actions>
+                  <Composer.DismissAction />
+                  <Composer.ContinueAction />
+                </Composer.Actions>
+              ) : (
+                <Composer.Actions className="justify-between">
+                  <Composer.AttachmentTrigger />
+                  <Composer.Submit />
+                </Composer.Actions>
+              )}
             </Composer.Container>
           </Composer>
         </div>
@@ -363,37 +508,13 @@ export default function ComponentsPlayground() {
             <p className="mb-2 text-xs text-slate-10">Single question</p>
             <div className="rounded-lg border border-slate-6 bg-slate-2 p-4">
               <div className="rounded-2xl border border-slate-6 bg-slate-1">
-                <Questionnaire
+                <QuestionnaireDemo
+                  questions={singleQuestion}
                   onSubmit={(answers) => {
                     console.log("Single question answers:", answers);
                     setSingleAnswers(answers);
                   }}
-                >
-                  <Questionnaire.Content>
-                    {singleQuestion.map((q) => (
-                      <Questionnaire.Step
-                        key={q.question}
-                        value={q.question}
-                        multiSelect={q.multiSelect}
-                      >
-                        <Questionnaire.Label>{q.question}</Questionnaire.Label>
-                        <Questionnaire.Options>
-                          {q.options?.map((option) => (
-                            <Questionnaire.Option
-                              key={option.label}
-                              value={option.label}
-                              description={option.description}
-                            />
-                          ))}
-                        </Questionnaire.Options>
-                        <Questionnaire.TextInput
-                          hasOptions={!!q.options?.length}
-                        />
-                      </Questionnaire.Step>
-                    ))}
-                  </Questionnaire.Content>
-                  <Questionnaire.Actions />
-                </Questionnaire>
+                />
               </div>
               {singleAnswers && (
                 <pre className="mt-3 rounded-md bg-slate-3 p-3 text-xs text-slate-11">
@@ -410,43 +531,13 @@ export default function ComponentsPlayground() {
             </p>
             <div className="rounded-lg border border-slate-6 bg-slate-2 p-4">
               <div className="rounded-2xl border border-slate-6 bg-slate-1">
-                <Questionnaire
+                <QuestionnaireDemo
+                  questions={multipleQuestions}
                   onSubmit={(answers) => {
                     console.log("Multi question answers:", answers);
                     setMultiAnswers(answers);
                   }}
-                >
-                  <div className="flex items-center gap-1 self-end shrink-0">
-                    <Questionnaire.Previous />
-                    <Questionnaire.StepLabel />
-                    <Questionnaire.Next />
-                  </div>
-                  <Questionnaire.Content>
-                    {multipleQuestions.map((q) => (
-                      <Questionnaire.Step
-                        key={q.question}
-                        value={q.question}
-                        multiSelect={q.multiSelect}
-                      >
-                        <Questionnaire.Label>{q.question}</Questionnaire.Label>
-                        <Questionnaire.Options>
-                          {q.options?.map((option) => (
-                            <Questionnaire.Option
-                              key={option.label}
-                              value={option.label}
-                              description={option.description}
-                            />
-                          ))}
-                        </Questionnaire.Options>
-                        <Questionnaire.TextInput
-                          hasOptions={!!q.options?.length}
-                        />
-                      </Questionnaire.Step>
-                    ))}
-                    <Questionnaire.Review />
-                  </Questionnaire.Content>
-                  <Questionnaire.Actions />
-                </Questionnaire>
+                />
               </div>
               {multiAnswers && (
                 <pre className="mt-3 rounded-md bg-slate-3 p-3 text-xs text-slate-11">

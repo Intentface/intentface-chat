@@ -759,18 +759,21 @@ const ComposerRoot = ({
     };
   }, []);
 
-  // ESC handler for questionnaire
+  // ESC handler for questionnaire — ref avoids re-subscribing when dismissStep changes
+  const dismissStepRef = useRef(dismissStep);
+  dismissStepRef.current = dismissStep;
+
   useEffect(() => {
     if (!questions?.length) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        dismissStep();
+        dismissStepRef.current();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [questions, dismissStep]);
+  }, [questions]);
 
   const contextValue = useMemo(
     () => ({

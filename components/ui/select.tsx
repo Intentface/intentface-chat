@@ -120,7 +120,7 @@ function SelectContent({
               // "w-(--anchor-width)",
               // Styling
               "rounded-lg p-1 shadow-md",
-              "bg-slate-1 text-slate-12 border border-slate-7",
+              "bg-slate-1 text-slate-12 border border-slate-8",
               // Overflow
               "overflow-x-hidden overflow-y-auto",
               // Animation base

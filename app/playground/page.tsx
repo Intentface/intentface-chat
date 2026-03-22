@@ -359,7 +359,7 @@ export default function ComponentsPlayground() {
             )}
           </div>
         </div>
-        <div className="flex min-h-[448px] items-end rounded-lg border border-slate-6 bg-slate-2 p-4">
+        <div className="flex min-h-[448px] items-end rounded-lg border border-slate-7 bg-slate-2 p-4">
           <Composer
             onSubmit={() => {}}
             questions={

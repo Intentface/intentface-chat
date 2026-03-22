@@ -901,7 +901,7 @@ const ComposerContainer = ({
       data-slot="composer-container"
       onMouseDown={handleMouseDown}
       className={cn(
-        "border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle] cursor-text",
+        "border border-slate-8 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle] cursor-text",
         "transition-colors",
         className,
       )}
@@ -1227,7 +1227,7 @@ const ComposerPlaceholder = ({
 type ComposerFooterProps = ComponentProps<"div">;
 
 const ComposerActions = ({ className, ...props }: ComposerFooterProps) => (
-  <div className={cn("flex justify-end p-2", className)} {...props} />
+  <div className={cn("flex justify-end gap-2 p-2", className)} {...props} />
 );
 
 // AttachmentTrigger — calls openFileDialog from context
@@ -1237,10 +1237,7 @@ const ComposerAttachmentTrigger = (props: ComposerAttachmentTriggerProps) => {
   const { attachments } = useComposer();
 
   return (
-    <Attachments.Trigger
-      onClick={attachments.openFileDialog}
-      {...props}
-    />
+    <Attachments.Trigger onClick={attachments.openFileDialog} {...props} />
   );
 };
 
@@ -1263,7 +1260,6 @@ const ComposerSubmit = ({
   return (
     <IconButton
       type="submit"
-      variant="outline"
       className={cn("rounded-full", className)}
       disabled={autoDisabled}
       {...props}
@@ -1324,7 +1320,7 @@ const ComposerStates = ({
                 height: bounds.height,
               }}
               exit={{ y: "100%", opacity: 0 }}
-              className="overflow-hidden border border-slate-6 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
+              className="overflow-hidden border border-slate-8 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
             >
               <div ref={ref} className="relative">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -1605,8 +1601,7 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
                 type="button"
                 data-selected={isSelected || undefined}
                 className={cn(
-                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-sm text-slate-12 transition-colors cursor-pointer",
-                  isSelected ? "bg-slate-3" : "hover:bg-slate-2",
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-sm text-slate-12 transition-colors cursor-pointer data-selected:bg-slate-4 hover:bg-slate-4",
                 )}
                 onMouseDown={(event) => {
                   event.preventDefault();

@@ -9,6 +9,27 @@
     "liga" 1,
     "calt" 1;
 
+  /* Theme base colors */
+  --surface: #ffffff;
+  --ink: #1a1a1a;
+  --accent: #0169cc;
+  --contrast: 0.35;
+
+  /* Slate scale: monotonic surface → ink */
+  --slate-1:  var(--surface);
+  --slate-2:  color-mix(in oklch, var(--surface), var(--ink) calc(4%  * var(--contrast)));
+  --slate-3:  color-mix(in oklch, var(--surface), var(--ink) calc(10%  * var(--contrast)));
+  --slate-4:  color-mix(in oklch, var(--surface), var(--ink) calc(14% * var(--contrast)));
+  --slate-5:  color-mix(in oklch, var(--surface), var(--ink) calc(18% * var(--contrast)));
+  --slate-6:  color-mix(in oklch, var(--surface), var(--ink) calc(24% * var(--contrast)));
+  --slate-7:  color-mix(in oklch, var(--surface), var(--ink) calc(24% * var(--contrast)));
+  --slate-8:  color-mix(in oklch, var(--surface), var(--ink) calc(28% * var(--contrast)));
+  --slate-9:  color-mix(in oklch, var(--surface), var(--ink) calc(32% * var(--contrast)));
+  --slate-10: color-mix(in oklch, var(--surface), var(--ink) calc(74% * var(--contrast)));
+  --slate-11: color-mix(in oklch, var(--surface), var(--ink) 58%);
+  --slate-12: color-mix(in oklch, var(--surface), var(--ink) 85%);
+
+  /* Previous light theme values:
   --slate-1: oklch(99.7% 0 0);
   --slate-2: oklch(98.8% 0 0);
   --slate-3: oklch(97.2% 0 0);
@@ -20,7 +41,7 @@
   --slate-9: oklch(86.3% 0 0);
   --slate-10: oklch(80.2% 0 0);
   --slate-11: oklch(54% 0 0);
-  --slate-12: oklch(24.4% 0 0);
+  --slate-12: oklch(24.4% 0 0); */
 
   --radius: 8px;
 
@@ -30,19 +51,25 @@
 }
 
 .dark {
-  /* --slate-1: oklch(20.3% 0 286.051);
-  --slate-2: oklch(17.808% 0 286.051);
-  --slate-3: oklch(19.616% 0 286.056);
-  --slate-4: oklch(21.82% 0 286.055);
-  --slate-5: oklch(21.342% 0 286.051);
-  --slate-6: oklch(23.116% 0 286.052);
-  --slate-7: oklch(25.236% 0 286.044);
-  --slate-8: oklch(23.116% 0 286.052);
-  --slate-9: oklch(25.615% 0 286.051);
-  --slate-10: oklch(27.7% 0 285);
-  --slate-11: oklch(58.3% 0 285);
-  --slate-12: oklch(86.9% 0 285); */
+  --surface: #111111;
+  --ink: #fcfcfc;
+  --accent: #4a9eed;
 
+  /* Slate scale — slate-3 is surface, slate-2/1 recessed, then 4+ toward ink */
+  --slate-1:  color-mix(in oklch, var(--surface), var(--ink) calc(12% * var(--contrast)));
+  --slate-2:  color-mix(in oklch, var(--surface), var(--ink) calc(3%  * var(--contrast)));
+  --slate-3:  var(--surface);
+  --slate-4:  color-mix(in oklch, var(--surface), var(--ink) calc(20% * var(--contrast)));
+  --slate-5:  color-mix(in oklch, var(--surface), var(--ink) calc(29% * var(--contrast)));
+  --slate-6:  color-mix(in oklch, var(--surface), var(--ink) calc(34% * var(--contrast)));
+  --slate-7:  color-mix(in oklch, var(--surface), var(--ink) calc(16% * var(--contrast)));
+  --slate-8:  color-mix(in oklch, var(--surface), var(--ink) calc(24% * var(--contrast)));
+  --slate-9:  color-mix(in oklch, var(--surface), var(--ink) calc(36% * var(--contrast)));
+  --slate-10: color-mix(in oklch, var(--surface), var(--ink) 28%);
+  --slate-11: color-mix(in oklch, var(--surface), var(--ink) 56%);
+  --slate-12: color-mix(in oklch, var(--surface), var(--ink) 84%);
+
+  /* Previous dark theme values:
   --slate-1: oklch(20.3% 0 285);
   --slate-2: oklch(18.2% 0 285);
   --slate-3: oklch(19.6% 0 285);
@@ -54,7 +81,7 @@
   --slate-9: oklch(28.6% 0 285);
   --slate-10: oklch(29.7% 0 285);
   --slate-11: oklch(58.3% 0 285);
-  --slate-12: oklch(86.9% 0 285);
+  --slate-12: oklch(86.9% 0 285); */
 }
 
 @theme inline {
@@ -107,7 +134,7 @@
     @apply border-slate-4 ring-slate-12;
   }
   body {
-    @apply text-slate-12;
+    @apply bg-slate-3 text-slate-12;
   }
 }
 

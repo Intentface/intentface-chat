@@ -23,7 +23,7 @@ import { ChevronDownIcon } from "./icons/chevron-down";
 type QuestionnaireRootProps = ComponentProps<"div">;
 
 const QuestionnaireRoot = ({ className, ...props }: QuestionnaireRootProps) => (
-  <div className={cn("flex flex-col gap-3 p-3", className)} {...props} />
+  <div className={cn("flex flex-col gap-2 p-2", className)} {...props} />
 );
 
 /** Question heading text. */
@@ -164,7 +164,7 @@ const QuestionnaireOptions = ({
         content
       ) : (
         <RadioGroup
-          value={value ?? ""}
+          value={value}
           onValueChange={onValueChange}
           className="gap-0"
         >
@@ -210,8 +210,7 @@ const QuestionnaireOption = ({
       <label
         htmlFor={id}
         className={cn(
-          "flex cursor-pointer items-start gap-2.5 bg-slate-1 hover:bg-slate-3 rounded-lg border border-slate-6 px-3 py-2 transition-colors",
-          selected && "bg-slate-1",
+          "flex cursor-pointer items-start gap-2 bg-slate-1 hover:bg-slate-4 rounded-lg p-2 transition-colors",
           className,
         )}
         {...props}
@@ -273,7 +272,7 @@ const QuestionnaireOptionLabel = ({
   className,
   ...props
 }: QuestionnaireOptionLabelProps) => (
-  <span className={cn("text-sm leading-tight", className)} {...props} />
+  <span className={cn("text-sm leading-[normal]", className)} {...props} />
 );
 
 /** Option subtitle/description text. */

@@ -10,13 +10,13 @@ const iconButtonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-slate-1 border-slate-7 text-slate-12 hover:bg-slate-4",
+        default: "bg-slate-1 border-slate-8 text-slate-12 hover:bg-slate-4",
         outline:
           "border-border bg-transparent border-slate-6 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
-          "hover:bg-slate-4 hover:slate-12 aria-expanded:bg-muted aria-expanded:text-foreground",
+          "hover:bg-slate-4 hover:text-slate-12 aria-expanded:bg-muted aria-expanded:text-foreground",
         link: "text-slate-12 underline-offset-4 hover:underline",
       },
       size: {

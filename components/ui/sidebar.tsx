@@ -275,7 +275,7 @@ const SidebarViewport = ({
     data-slot="sidebar-viewport"
     className={cn(
       "flex h-full min-h-0 flex-1 bg-slate-2 overflow-hidden border border-transparent",
-      "group-data-expanded/sidebar-inset:border-slate-6 group-data-expanded/sidebar-inset:rounded-xl",
+      "group-data-expanded/sidebar-inset:border-slate-7 group-data-expanded/sidebar-inset:rounded-xl",
       className,
     )}
     {...props}

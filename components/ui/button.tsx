@@ -10,10 +10,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-slate-1 border-slate-6 text-slate-12 hover:bg-slate-4",
+        primary: "bg-slate-1 border-slate-8 text-slate-12 hover:bg-slate-4",
+        secondary: "bg-slate-4 text-slate-12 hover:bg-slate-5",
+        tertiary: "bg-slate-5 text-slate-12 hover:bg-slate-6",
         outline:
           "border-border bg-transparent border-slate-6 hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground",
-        secondary: "bg-slate-4 text-slate-12 hover:bg-slate-5",
         ghost:
           "hover:bg-slate-4 hover:text-foreground dark:hover:bg-muted/50 aria-expanded:bg-muted aria-expanded:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
@@ -27,7 +28,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "md",
     },
   },
@@ -35,7 +36,7 @@ const buttonVariants = cva(
 
 function Button({
   className,
-  variant = "default",
+  variant = "primary",
   size = "md",
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {

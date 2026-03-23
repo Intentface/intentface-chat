@@ -13,7 +13,7 @@ type CommandsRootProps = ComponentProps<"div">;
 const CommandsRoot = ({ className, ...props }: CommandsRootProps) => (
   <div
     data-slot="command-list"
-    className={cn("flex flex-col py-2", className)}
+    className={cn("flex flex-col p-1", className)}
     {...props}
   />
 );
@@ -24,7 +24,13 @@ const CommandsRoot = ({ className, ...props }: CommandsRootProps) => (
 
 type CommandsGroupProps = ComponentProps<"div">;
 
-const CommandsGroup = (props: CommandsGroupProps) => <div {...props} />;
+const CommandsGroup = ({ className, ...props }: CommandsGroupProps) => (
+  <div
+    data-slot="command-group"
+    className={cn("flex flex-col", className)}
+    {...props}
+  />
+);
 
 // ---------------------------------------------------------------------------
 // GroupLabel
@@ -32,8 +38,12 @@ const CommandsGroup = (props: CommandsGroupProps) => <div {...props} />;
 
 type CommandsGroupLabelProps = ComponentProps<"div">;
 
-const CommandsGroupLabel = ({ className, ...props }: CommandsGroupLabelProps) => (
+const CommandsGroupLabel = ({
+  className,
+  ...props
+}: CommandsGroupLabelProps) => (
   <div
+    data-slot="command-group-label"
     className={cn(
       "px-3 py-1 text-2xs font-medium text-slate-10 uppercase tracking-wider",
       className,
@@ -48,21 +58,22 @@ const CommandsGroupLabel = ({ className, ...props }: CommandsGroupLabelProps) =>
 
 type CommandsItemProps = ComponentProps<"button"> & {
   icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  selected?: boolean;
+  highlighted?: boolean;
 };
 
 const CommandsItem = ({
   icon: Icon,
-  selected,
+  highlighted,
   className,
   children,
   ...props
 }: CommandsItemProps) => (
   <button
     type="button"
-    data-selected={selected || undefined}
+    data-slot="command-item"
+    data-highlighted={highlighted || undefined}
     className={cn(
-      "flex w-full items-center gap-2.5 px-3 py-1.5 text-sm text-slate-12 transition-colors cursor-pointer data-selected:bg-slate-4 hover:bg-slate-4",
+      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm text-slate-12 transition-colors cursor-pointer data-highlighted:bg-slate-5",
       className,
     )}
     {...props}
@@ -79,7 +90,7 @@ const CommandsItem = ({
 type CommandsItemLabelProps = ComponentProps<"span">;
 
 const CommandsItemLabel = ({ className, ...props }: CommandsItemLabelProps) => (
-  <span className={cn("flex-1 text-left", className)} {...props} />
+  <span className={cn("text-sm", className)} {...props} />
 );
 
 // ---------------------------------------------------------------------------
@@ -93,33 +104,31 @@ const CommandsItemDescription = ({
   ...props
 }: CommandsItemDescriptionProps) => (
   <span
-    className={cn("text-xs text-slate-10 truncate max-w-[200px]", className)}
+    className={cn("text-xs text-slate-10 truncate", className)}
     {...props}
   />
 );
 
 // ---------------------------------------------------------------------------
-// Filter
+// Empty
 // ---------------------------------------------------------------------------
 
-type CommandsFilterProps = ComponentProps<"input"> & {
-  trigger?: string;
-};
+type CommandsEmptyProps = ComponentProps<"div">;
 
-const CommandsFilter = ({
-  trigger = "/",
+const CommandsEmpty = ({
   className,
-  placeholder = "Type to filter",
+  children,
   ...props
-}: CommandsFilterProps) => (
-  <div className={cn("flex items-center gap-1 px-3 py-1.5", className)}>
-    <span className="text-sm text-slate-10 select-none">{trigger}</span>
-    <input
-      type="text"
-      className="flex-1 bg-transparent text-sm text-slate-12 placeholder:text-slate-10 outline-none"
-      placeholder={placeholder}
-      {...props}
-    />
+}: CommandsEmptyProps) => (
+  <div
+    data-slot="command-empty"
+    className={cn(
+      "flex items-center px-3 h-8 text-sm text-slate-10",
+      className,
+    )}
+    {...props}
+  >
+    {children ?? "No results"}
   </div>
 );
 
@@ -132,7 +141,7 @@ type CommandsFooterProps = ComponentProps<"div">;
 const CommandsFooter = ({ className, ...props }: CommandsFooterProps) => (
   <div
     className={cn(
-      "border-t border-slate-6 mt-1 pt-1 px-3 flex items-center gap-3 text-2xs text-slate-10",
+      "border-t border-slate-6 pt-1 px-3 flex items-center gap-3 text-2xs text-slate-10",
       className,
     )}
     {...props}
@@ -149,6 +158,6 @@ export const Commands = Object.assign(CommandsRoot, {
   Item: CommandsItem,
   ItemLabel: CommandsItemLabel,
   ItemDescription: CommandsItemDescription,
-  Filter: CommandsFilter,
+  Empty: CommandsEmpty,
   Footer: CommandsFooter,
 });

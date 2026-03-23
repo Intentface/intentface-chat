@@ -5,6 +5,7 @@ import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import {
   type Editor,
   EditorContent,
@@ -14,7 +15,6 @@ import {
   useEditorState,
 } from "@tiptap/react";
 import type { FileUIPart } from "ai";
-import { CodeIcon, FileTextIcon, LinkIcon, SparklesIcon } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import React, {
   type ChangeEvent,
@@ -45,6 +45,7 @@ import {
 } from "@/components/ai/attachments";
 import { Commands } from "@/components/ai/commands";
 import { BrainIcon } from "@/components/icons/brain";
+import { FileTextIcon } from "@/components/icons/file-text";
 import { GlobeIcon } from "@/components/icons/globe";
 import { SendIcon } from "@/components/icons/send";
 import { Questionnaire } from "@/components/questionnaire";
@@ -54,6 +55,9 @@ import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
+import { BubbleWideSparkleIcon } from "../icons/bubble-wide-sparkle";
+import { ChainLinkIcon } from "../icons/chain-link";
+import { CodeIcon } from "../icons/code";
 
 // ---------------------------------------------------------------------------
 // Command types & data
@@ -98,7 +102,7 @@ const MENTION_ITEMS: CommandItem[] = [
   {
     id: "url",
     label: "URL",
-    icon: LinkIcon,
+    icon: ChainLinkIcon,
     group: "Context",
     kind: "mention",
     value: "url",
@@ -137,7 +141,7 @@ const COMMAND_ITEMS: CommandItem[] = [
   {
     id: "summarize",
     label: "Summarize",
-    icon: SparklesIcon,
+    icon: BubbleWideSparkleIcon,
     group: "Commands",
     kind: "command",
     value: "summarize",
@@ -204,6 +208,29 @@ const filterCommandItems = (
 
 const commandListPluginKey = new PluginKey<CommandListState>("commandList");
 
+const BADGE_CLASSES =
+  "inline-flex items-center rounded-sm bg-slate-5 border border-slate-6 px-0.75 py-0.5 leading-[normal]";
+const PLACEHOLDER_CLASSES =
+  "after:content-['Type_to_filter'] after:text-slate-10 after:whitespace-nowrap after:pointer-events-none";
+
+const commandFilterDecorations = (
+  state: Parameters<NonNullable<Plugin["props"]["decorations"]>>[0],
+) => {
+  const pluginState = commandListPluginKey.getState(state);
+  if (!pluginState?.isOpen) return DecorationSet.empty;
+
+  const triggerStart = pluginState.triggerStartPosition;
+  const cursorPos = state.selection.$from.pos;
+  const classes = pluginState.query
+    ? BADGE_CLASSES
+    : `${BADGE_CLASSES} ${PLACEHOLDER_CLASSES}`;
+
+  const inline = Decoration.inline(triggerStart, cursorPos, {
+    class: classes,
+  });
+  return DecorationSet.create(state.doc, [inline]);
+};
+
 const createCommandListPlugin = () =>
   new Plugin<CommandListState>({
     key: commandListPluginKey,
@@ -247,9 +274,8 @@ const createCommandListPlugin = () =>
         // @ trigger — after whitespace or at start of text block
         const atMatch = textBeforeCursor.match(/(^|[\s])@([^\s]*)$/);
         if (atMatch) {
-          const triggerOffset = (atMatch.index ?? 0) + atMatch[1].length;
-          const triggerStartPosition = blockStart + triggerOffset;
           const query = atMatch[2];
+          const triggerStartPosition = cursorPosition - query.length - 1;
           return {
             isOpen: true,
             trigger: "@" as CommandTrigger,
@@ -260,6 +286,9 @@ const createCommandListPlugin = () =>
 
         return CLOSED_COMMAND_STATE;
       },
+    },
+    props: {
+      decorations: commandFilterDecorations,
     },
   });
 
@@ -272,11 +301,11 @@ const ICON_MAP: Record<
   React.ComponentType<React.SVGProps<SVGSVGElement>>
 > = {
   files: FileTextIcon,
-  url: LinkIcon,
+  url: ChainLinkIcon,
   "web-search": GlobeIcon,
   "code-execution": CodeIcon,
   search: GlobeIcon,
-  summarize: SparklesIcon,
+  summarize: BubbleWideSparkleIcon,
   think: BrainIcon,
 };
 
@@ -292,9 +321,9 @@ const MentionChipNodeView = ({
     <NodeViewWrapper
       as="span"
       data-mention-chip
-      className="inline-flex items-center gap-1 rounded-md bg-slate-3 border border-slate-6 px-1.5 py-0.5 text-xs font-medium text-slate-12 align-baseline mx-0.5 select-none"
+      className="inline-flex items-center gap-0.5"
     >
-      {Icon && <Icon className="size-3 text-slate-10" />}
+      {Icon && <Icon className="size-4 text-slate-10" />}
       <span>{label}</span>
     </NodeViewWrapper>
   );
@@ -327,7 +356,10 @@ const MentionChipExtension = TiptapNode.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(MentionChipNodeView);
+    return ReactNodeViewRenderer(MentionChipNodeView, {
+      className:
+        "inline-flex items-center gap-0.5 rounded-sm bg-slate-5 border border-slate-6 px-0.75 py-0.5 leading-[normal] text-slate-12 align-[-3px] select-none",
+    });
   },
 
   addProseMirrorPlugins() {
@@ -1127,7 +1159,7 @@ const ComposerTextarea = ({
     },
     onUpdate: ({ editor: instance }) => {
       const text = instance.getText();
-      editor.setHasContent(text.trim().length > 0);
+      editor.setHasContent(text.trim().length > 0 || !instance.isEmpty);
       if (text.trim().length > 0) clearSelectionsRef.current();
       onValueChangeRef.current?.(text);
       const pluginState = commandListPluginKey.getState(instance.state);
@@ -1167,7 +1199,7 @@ const ComposerTextarea = ({
     >
       {tiptapEditor !== null ? (
         <EditorContent editor={tiptapEditor} className="relative">
-          {tiptapEditor.isEmpty && placeholder && (
+          {!editor.hasContent && placeholder && (
             <div
               data-slot="composer-placeholder"
               className="absolute inset-0 min-h-lh pointer-events-none"
@@ -1336,7 +1368,7 @@ const ComposerStates = ({
                 height: bounds.height,
               }}
               exit={{ y: "100%", opacity: 0 }}
-              className="overflow-hidden border border-slate-8 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
+              className="overflow-hidden box-content border border-slate-8 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
             >
               <div ref={ref} className="relative">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -1582,7 +1614,15 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
     };
   }
 
-  if (!isOpen || items.length === 0) return null;
+  if (!isOpen) return null;
+
+  if (items.length === 0) {
+    return (
+      <Commands className={className}>
+        <Commands.Empty>No results</Commands.Empty>
+      </Commands>
+    );
+  }
 
   // Group items
   const groups = new Map<string, CommandItem[]>();
@@ -1601,14 +1641,14 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
     <Commands className={className}>
       {[...groups.entries()].map(([groupName, groupItems]) => (
         <Commands.Group key={groupName}>
-          <Commands.GroupLabel>{groupName}</Commands.GroupLabel>
+          {/* <Commands.GroupLabel>{groupName}</Commands.GroupLabel> */}
           {groupItems.map((item) => {
             const currentFlatIndex = flatIndex++;
             return (
               <Commands.Item
                 key={item.id}
                 icon={item.icon}
-                selected={currentFlatIndex === selectedIndex}
+                highlighted={currentFlatIndex === selectedIndex}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   handleSelect(item);

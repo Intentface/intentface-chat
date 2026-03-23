@@ -417,9 +417,7 @@ const ToolsMenu = () => {
         sideOffset={8}
         className="w-auto"
       >
-        <DropdownMenu.Item
-          onClick={() => attachments.openFileDialog()}
-        >
+        <DropdownMenu.Item onClick={() => attachments.openFileDialog()}>
           <PaperClipIcon />
           <span className="flex-1">Attach files</span>
         </DropdownMenu.Item>
@@ -441,37 +439,49 @@ const ToolsMenu = () => {
   );
 };
 
-const ComposerPanel = ({ panelState }: { panelState: ComposerPanelState }) => (
-  <Composer.States value={panelState.type}>
-    <Composer.State value="active">
-      <StepQueue>
-        {panelState.type === "active" &&
-          panelState.steps.map((step, i) => {
-            const active = i === panelState.steps.length - 1;
-            return (
-              <StepQueue.Item key={step.key}>
-                <StepQueue.Icon>
-                  {step.kind === "thinking" ? (
-                    <BrainIcon
-                      className={cn("size-3.5", active && "animate-pulse")}
-                    />
-                  ) : active ? (
-                    <Loader className="size-3.5 animate-spin" />
-                  ) : (
-                    <CircleDotIcon className="size-3.5" />
-                  )}
-                </StepQueue.Icon>
-                <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
-              </StepQueue.Item>
-            );
-          })}
-      </StepQueue>
-    </Composer.State>
-    <Composer.State value="ask-user">
-      <Composer.Questionnaire />
-    </Composer.State>
-  </Composer.States>
-);
+const ComposerPanel = ({ panelState }: { panelState: ComposerPanelState }) => {
+  const { mentions, commands } = useComposer();
+
+  const statesValue =
+    mentions.open || commands.open ? "command-list" : panelState.type;
+
+  return (
+    <Composer.States value={statesValue}>
+      <Composer.State value="command-list">
+        <Composer.CommandList />
+      </Composer.State>
+      <Composer.State value="active">
+        <StepQueue>
+          {panelState.type === "active" &&
+            panelState.steps.map((step, i) => {
+              const active = i === panelState.steps.length - 1;
+              return (
+                <StepQueue.Item key={step.key}>
+                  <StepQueue.Icon>
+                    {step.kind === "thinking" ? (
+                      <BrainIcon
+                        className={cn("size-3.5", active && "animate-pulse")}
+                      />
+                    ) : active ? (
+                      <Loader className="size-3.5 animate-spin" />
+                    ) : (
+                      <CircleDotIcon className="size-3.5" />
+                    )}
+                  </StepQueue.Icon>
+                  <StepQueue.Label active={active}>
+                    {step.label}
+                  </StepQueue.Label>
+                </StepQueue.Item>
+              );
+            })}
+        </StepQueue>
+      </Composer.State>
+      <Composer.State value="ask-user">
+        <Composer.Questionnaire />
+      </Composer.State>
+    </Composer.States>
+  );
+};
 
 const ChatInput = () => {
   const { chatId, messages, sendMessage, status, addToolOutput } =

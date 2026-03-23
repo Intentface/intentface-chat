@@ -59,11 +59,11 @@
   --slate-1:  color-mix(in oklch, var(--surface), var(--ink) calc(12% * var(--contrast)));
   --slate-2:  color-mix(in oklch, var(--surface), var(--ink) calc(3%  * var(--contrast)));
   --slate-3:  var(--surface);
-  --slate-4:  color-mix(in oklch, var(--surface), var(--ink) calc(20% * var(--contrast)));
+  --slate-4:  color-mix(in oklch, var(--surface), var(--ink) calc(22% * var(--contrast)));
   --slate-5:  color-mix(in oklch, var(--surface), var(--ink) calc(29% * var(--contrast)));
   --slate-6:  color-mix(in oklch, var(--surface), var(--ink) calc(34% * var(--contrast)));
   --slate-7:  color-mix(in oklch, var(--surface), var(--ink) calc(16% * var(--contrast)));
-  --slate-8:  color-mix(in oklch, var(--surface), var(--ink) calc(24% * var(--contrast)));
+  --slate-8:  color-mix(in oklch, var(--surface), var(--ink) calc(28% * var(--contrast)));
   --slate-9:  color-mix(in oklch, var(--surface), var(--ink) calc(36% * var(--contrast)));
   --slate-10: color-mix(in oklch, var(--surface), var(--ink) 28%);
   --slate-11: color-mix(in oklch, var(--surface), var(--ink) 56%);

@@ -43,6 +43,7 @@ import {
   revokeAttachmentUrl,
   toAttachmentItem,
 } from "@/components/ai/attachments";
+import { Commands } from "@/components/ai/commands";
 import { BrainIcon } from "@/components/icons/brain";
 import { GlobeIcon } from "@/components/icons/globe";
 import { SendIcon } from "@/components/icons/send";
@@ -54,7 +55,10 @@ import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 
-// Types — Command List
+// ---------------------------------------------------------------------------
+// Command types & data
+// ---------------------------------------------------------------------------
+
 type CommandItem = {
   id: string;
   label: string;
@@ -150,7 +154,10 @@ const COMMAND_ITEMS: CommandItem[] = [
   },
 ];
 
-// Fuzzy scorer — lightweight, no external dependency
+// ---------------------------------------------------------------------------
+// Fuzzy scoring & filtering
+// ---------------------------------------------------------------------------
+
 const fuzzyScore = (query: string, target: string): number => {
   if (!query) return 1;
   const lowerQuery = query.toLowerCase();
@@ -190,6 +197,147 @@ const filterCommandItems = (
     .sort((a, b) => b.score - a.score)
     .map(({ item }) => item);
 };
+
+// ---------------------------------------------------------------------------
+// ProseMirror Plugin — trigger detection for @ and /
+// ---------------------------------------------------------------------------
+
+const commandListPluginKey = new PluginKey<CommandListState>("commandList");
+
+const createCommandListPlugin = () =>
+  new Plugin<CommandListState>({
+    key: commandListPluginKey,
+    state: {
+      init: () => CLOSED_COMMAND_STATE,
+      apply(transaction, previousState, _oldEditorState, newEditorState) {
+        const meta = transaction.getMeta(commandListPluginKey);
+        if (meta?.close) return CLOSED_COMMAND_STATE;
+
+        if (!transaction.docChanged && !transaction.selectionSet) {
+          return previousState;
+        }
+
+        const { selection } = newEditorState;
+        const cursorPosition = selection.$from.pos;
+        const blockStart = selection.$from.start();
+        const textBeforeCursor = newEditorState.doc.textBetween(
+          blockStart,
+          cursorPosition,
+          "\n",
+        );
+
+        // / trigger — position 0 only (entire doc starts with /)
+        const fullDocText = newEditorState.doc.textContent;
+        if (fullDocText.startsWith("/")) {
+          const query = fullDocText.slice(1);
+          if (
+            query.includes(" ") &&
+            filterCommandItems(COMMAND_ITEMS, query.split(" ")[0]).length === 0
+          ) {
+            return CLOSED_COMMAND_STATE;
+          }
+          return {
+            isOpen: true,
+            trigger: "/" as CommandTrigger,
+            query,
+            triggerStartPosition: blockStart,
+          };
+        }
+
+        // @ trigger — after whitespace or at start of text block
+        const atMatch = textBeforeCursor.match(/(^|[\s])@([^\s]*)$/);
+        if (atMatch) {
+          const triggerOffset = (atMatch.index ?? 0) + atMatch[1].length;
+          const triggerStartPosition = blockStart + triggerOffset;
+          const query = atMatch[2];
+          return {
+            isOpen: true,
+            trigger: "@" as CommandTrigger,
+            query,
+            triggerStartPosition,
+          };
+        }
+
+        return CLOSED_COMMAND_STATE;
+      },
+    },
+  });
+
+// ---------------------------------------------------------------------------
+// MentionChip — TipTap Node extension for inline chips
+// ---------------------------------------------------------------------------
+
+const ICON_MAP: Record<
+  string,
+  React.ComponentType<React.SVGProps<SVGSVGElement>>
+> = {
+  files: FileTextIcon,
+  url: LinkIcon,
+  "web-search": GlobeIcon,
+  "code-execution": CodeIcon,
+  search: GlobeIcon,
+  summarize: SparklesIcon,
+  think: BrainIcon,
+};
+
+const MentionChipNodeView = ({
+  node,
+}: {
+  node: { attrs: Record<string, unknown> };
+}) => {
+  const label = node.attrs.label as string;
+  const icon = node.attrs.icon as string;
+  const Icon = ICON_MAP[icon];
+  return (
+    <NodeViewWrapper
+      as="span"
+      data-mention-chip
+      className="inline-flex items-center gap-1 rounded-md bg-slate-3 border border-slate-6 px-1.5 py-0.5 text-xs font-medium text-slate-12 align-baseline mx-0.5 select-none"
+    >
+      {Icon && <Icon className="size-3 text-slate-10" />}
+      <span>{label}</span>
+    </NodeViewWrapper>
+  );
+};
+
+const MentionChipExtension = TiptapNode.create({
+  name: "mentionChip",
+  group: "inline",
+  inline: true,
+  atom: true,
+
+  addAttributes() {
+    return {
+      label: { default: "" },
+      value: { default: "" },
+      icon: { default: "" },
+    };
+  },
+
+  parseHTML() {
+    return [{ tag: "span[data-mention-chip]" }];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "span",
+      mergeAttributes({ "data-mention-chip": "" }, HTMLAttributes),
+      0,
+    ];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(MentionChipNodeView);
+  },
+
+  addProseMirrorPlugins() {
+    return [createCommandListPlugin()];
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Composer
+// ---------------------------------------------------------------------------
 
 type AnswerEntry = { selected: Set<string>; freeText: string };
 
@@ -298,138 +446,6 @@ const ComposerContext = createContext<ComposerContextValue>({
 });
 
 export const useComposer = () => useContext(ComposerContext);
-
-// ProseMirror Plugin — trigger detection for @ and /
-const commandListPluginKey = new PluginKey<CommandListState>("commandList");
-
-const createCommandListPlugin = () =>
-  new Plugin<CommandListState>({
-    key: commandListPluginKey,
-    state: {
-      init: () => CLOSED_COMMAND_STATE,
-      apply(transaction, previousState, _oldEditorState, newEditorState) {
-        const meta = transaction.getMeta(commandListPluginKey);
-        if (meta?.close) return CLOSED_COMMAND_STATE;
-
-        if (!transaction.docChanged && !transaction.selectionSet) {
-          return previousState;
-        }
-
-        const { selection } = newEditorState;
-        const cursorPosition = selection.$from.pos;
-        const blockStart = selection.$from.start();
-        const textBeforeCursor = newEditorState.doc.textBetween(
-          blockStart,
-          cursorPosition,
-          "\n",
-        );
-
-        // / trigger — position 0 only (entire doc starts with /)
-        const fullDocText = newEditorState.doc.textContent;
-        if (fullDocText.startsWith("/")) {
-          const query = fullDocText.slice(1);
-          if (
-            query.includes(" ") &&
-            filterCommandItems(COMMAND_ITEMS, query.split(" ")[0]).length === 0
-          ) {
-            return CLOSED_COMMAND_STATE;
-          }
-          return {
-            isOpen: true,
-            trigger: "/" as CommandTrigger,
-            query,
-            triggerStartPosition: blockStart,
-          };
-        }
-
-        // @ trigger — after whitespace or at start of text block
-        const atMatch = textBeforeCursor.match(/(^|[\s])@([^\s]*)$/);
-        if (atMatch) {
-          const triggerOffset = (atMatch.index ?? 0) + atMatch[1].length;
-          const triggerStartPosition = blockStart + triggerOffset;
-          const query = atMatch[2];
-          return {
-            isOpen: true,
-            trigger: "@" as CommandTrigger,
-            query,
-            triggerStartPosition,
-          };
-        }
-
-        return CLOSED_COMMAND_STATE;
-      },
-    },
-  });
-
-// Icon map for mention chips — resolves icon id to component
-const ICON_MAP: Record<
-  string,
-  React.ComponentType<React.SVGProps<SVGSVGElement>>
-> = {
-  files: FileTextIcon,
-  url: LinkIcon,
-  "web-search": GlobeIcon,
-  "code-execution": CodeIcon,
-  search: GlobeIcon,
-  summarize: SparklesIcon,
-  think: BrainIcon,
-};
-
-// MentionChip — TipTap Node extension for inline chips
-const MentionChipNodeView = ({
-  node,
-}: {
-  node: { attrs: Record<string, unknown> };
-}) => {
-  const label = node.attrs.label as string;
-  const icon = node.attrs.icon as string;
-  const Icon = ICON_MAP[icon];
-  return (
-    <NodeViewWrapper
-      as="span"
-      data-mention-chip
-      className="inline-flex items-center gap-1 rounded-md bg-slate-3 border border-slate-6 px-1.5 py-0.5 text-xs font-medium text-slate-12 align-baseline mx-0.5 select-none"
-    >
-      {Icon && <Icon className="size-3 text-slate-10" />}
-      <span>{label}</span>
-    </NodeViewWrapper>
-  );
-};
-
-const MentionChipExtension = TiptapNode.create({
-  name: "mentionChip",
-  group: "inline",
-  inline: true,
-  atom: true,
-
-  addAttributes() {
-    return {
-      label: { default: "" },
-      value: { default: "" },
-      icon: { default: "" },
-    };
-  },
-
-  parseHTML() {
-    return [{ tag: "span[data-mention-chip]" }];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      "span",
-      mergeAttributes({ "data-mention-chip": "" }, HTMLAttributes),
-      0,
-    ];
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(MentionChipNodeView);
-  },
-
-  addProseMirrorPlugins() {
-    return [createCommandListPlugin()];
-  },
-});
 
 // Drag handler factory — always on document, scope-checked at event time
 const createDragHandlers = (
@@ -1582,54 +1598,35 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
   let flatIndex = 0;
 
   return (
-    <div
-      className={cn("flex flex-col py-2", className)}
-      data-slot="command-list"
-    >
+    <Commands className={className}>
       {[...groups.entries()].map(([groupName, groupItems]) => (
-        <div key={groupName}>
-          <div className="px-3 py-1 text-2xs font-medium text-slate-10 uppercase tracking-wider">
-            {groupName}
-          </div>
+        <Commands.Group key={groupName}>
+          <Commands.GroupLabel>{groupName}</Commands.GroupLabel>
           {groupItems.map((item) => {
             const currentFlatIndex = flatIndex++;
-            const isSelected = currentFlatIndex === selectedIndex;
-            const Icon = item.icon;
             return (
-              <button
+              <Commands.Item
                 key={item.id}
-                type="button"
-                data-selected={isSelected || undefined}
-                className={cn(
-                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-sm text-slate-12 transition-colors cursor-pointer data-selected:bg-slate-4 hover:bg-slate-4",
-                )}
+                icon={item.icon}
+                selected={currentFlatIndex === selectedIndex}
                 onMouseDown={(event) => {
                   event.preventDefault();
                   handleSelect(item);
                 }}
                 onMouseEnter={() => setSelectedIndex(currentFlatIndex)}
               >
-                <Icon className="size-4 text-slate-10 shrink-0" />
-                <span className="flex-1 text-left">{item.label}</span>
+                <Commands.ItemLabel>{item.label}</Commands.ItemLabel>
                 {item.description && (
-                  <span className="text-xs text-slate-10 truncate max-w-[200px]">
+                  <Commands.ItemDescription>
                     {item.description}
-                  </span>
+                  </Commands.ItemDescription>
                 )}
-              </button>
+              </Commands.Item>
             );
           })}
-        </div>
+        </Commands.Group>
       ))}
-      <div className="border-t border-slate-6 mt-1 pt-1 px-3 flex items-center gap-3 text-2xs text-slate-10">
-        <span>
-          <kbd className="font-mono">Tab</kbd> to select
-        </span>
-        <span>
-          <kbd className="font-mono">Esc</kbd> to dismiss
-        </span>
-      </div>
-    </div>
+    </Commands>
   );
 };
 

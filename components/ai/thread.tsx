@@ -13,7 +13,6 @@ import {
   useState,
 } from "react";
 import { DynamicSpacer } from "@/components/ai/dynamic-spacer";
-import type Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
@@ -294,7 +293,7 @@ export interface ThreadMessage {
 }
 
 export type ThreadDownloadProps = Omit<
-  ComponentProps<typeof Button>,
+  ComponentProps<typeof IconButton>,
   "onClick"
 > & {
   messages: ThreadMessage[];
@@ -342,7 +341,7 @@ const ThreadDownload = ({
       onClick={handleDownload}
       size="xs"
       type="button"
-      variant="outline"
+      variant="ghost"
       {...props}
     >
       {children ?? <DownloadIcon className="size-4" />}

@@ -10,24 +10,24 @@
     "calt" 1;
 
   /* Theme base colors */
-  --surface: #ffffff;
-  --ink: #1a1a1a;
+  --background: #ffffff;
+  --foreground: #1a1a1a;
   --accent: #0169cc;
   --contrast: 0.35;
 
   /* Slate scale: monotonic surface → ink */
-  --slate-1:  var(--surface);
-  --slate-2:  color-mix(in oklch, var(--surface), var(--ink) calc(4%  * var(--contrast)));
-  --slate-3:  color-mix(in oklch, var(--surface), var(--ink) calc(10%  * var(--contrast)));
-  --slate-4:  color-mix(in oklch, var(--surface), var(--ink) calc(14% * var(--contrast)));
-  --slate-5:  color-mix(in oklch, var(--surface), var(--ink) calc(18% * var(--contrast)));
-  --slate-6:  color-mix(in oklch, var(--surface), var(--ink) calc(24% * var(--contrast)));
-  --slate-7:  color-mix(in oklch, var(--surface), var(--ink) calc(24% * var(--contrast)));
-  --slate-8:  color-mix(in oklch, var(--surface), var(--ink) calc(28% * var(--contrast)));
-  --slate-9:  color-mix(in oklch, var(--surface), var(--ink) calc(32% * var(--contrast)));
-  --slate-10: color-mix(in oklch, var(--surface), var(--ink) calc(74% * var(--contrast)));
-  --slate-11: color-mix(in oklch, var(--surface), var(--ink) 58%);
-  --slate-12: color-mix(in oklch, var(--surface), var(--ink) 85%);
+  --slate-1:  var(--background);
+  --slate-2:  color-mix(in oklch, var(--background), var(--foreground) calc(4%  * var(--contrast)));
+  --slate-3:  color-mix(in oklch, var(--background), var(--foreground) calc(10%  * var(--contrast)));
+  --slate-4:  color-mix(in oklch, var(--background), var(--foreground) calc(14% * var(--contrast)));
+  --slate-5:  color-mix(in oklch, var(--background), var(--foreground) calc(18% * var(--contrast)));
+  --slate-6:  color-mix(in oklch, var(--background), var(--foreground) calc(24% * var(--contrast)));
+  --slate-7:  color-mix(in oklch, var(--background), var(--foreground) calc(24% * var(--contrast)));
+  --slate-8:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast)));
+  --slate-9:  color-mix(in oklch, var(--background), var(--foreground) calc(32% * var(--contrast)));
+  --slate-10: color-mix(in oklch, var(--background), var(--foreground) 42%);
+  --slate-11: color-mix(in oklch, var(--background), var(--foreground) 58%);
+  --slate-12: color-mix(in oklch, var(--background), var(--foreground) 85%);
 
   /* Previous light theme values:
   --slate-1: oklch(99.7% 0 0);
@@ -51,23 +51,23 @@
 }
 
 .dark {
-  --surface: #111111;
-  --ink: #fcfcfc;
+  --background: #111111;
+  --foreground: #fcfcfc;
   --accent: #4a9eed;
 
   /* Slate scale — slate-3 is surface, slate-2/1 recessed, then 4+ toward ink */
-  --slate-1:  color-mix(in oklch, var(--surface), var(--ink) calc(12% * var(--contrast)));
-  --slate-2:  color-mix(in oklch, var(--surface), var(--ink) calc(3%  * var(--contrast)));
-  --slate-3:  var(--surface);
-  --slate-4:  color-mix(in oklch, var(--surface), var(--ink) calc(22% * var(--contrast)));
-  --slate-5:  color-mix(in oklch, var(--surface), var(--ink) calc(29% * var(--contrast)));
-  --slate-6:  color-mix(in oklch, var(--surface), var(--ink) calc(34% * var(--contrast)));
-  --slate-7:  color-mix(in oklch, var(--surface), var(--ink) calc(16% * var(--contrast)));
-  --slate-8:  color-mix(in oklch, var(--surface), var(--ink) calc(28% * var(--contrast)));
-  --slate-9:  color-mix(in oklch, var(--surface), var(--ink) calc(36% * var(--contrast)));
-  --slate-10: color-mix(in oklch, var(--surface), var(--ink) 28%);
-  --slate-11: color-mix(in oklch, var(--surface), var(--ink) 56%);
-  --slate-12: color-mix(in oklch, var(--surface), var(--ink) 84%);
+  --slate-1:  color-mix(in oklch, var(--background), var(--foreground) calc(12% * var(--contrast)));
+  --slate-2:  color-mix(in oklch, var(--background), var(--foreground) calc(3%  * var(--contrast)));
+  --slate-3:  var(--background);
+  --slate-4:  color-mix(in oklch, var(--background), var(--foreground) calc(22% * var(--contrast)));
+  --slate-5:  color-mix(in oklch, var(--background), var(--foreground) calc(29% * var(--contrast)));
+  --slate-6:  color-mix(in oklch, var(--background), var(--foreground) calc(34% * var(--contrast)));
+  --slate-7:  color-mix(in oklch, var(--background), var(--foreground) calc(16% * var(--contrast)));
+  --slate-8:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast)));
+  --slate-9:  color-mix(in oklch, var(--background), var(--foreground) calc(36% * var(--contrast)));
+  --slate-10: color-mix(in oklch, var(--background), var(--foreground) 28%);
+  --slate-11: color-mix(in oklch, var(--background), var(--foreground) 56%);
+  --slate-12: color-mix(in oklch, var(--background), var(--foreground) 84%);
 
   /* Previous dark theme values:
   --slate-1: oklch(20.3% 0 285);

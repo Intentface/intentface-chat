@@ -49,8 +49,8 @@ import { FileChartIcon } from "@/components/icons/file-chart";
 import { FileTextIcon } from "@/components/icons/file-text";
 import { GlobeIcon } from "@/components/icons/globe";
 import { ImageAltIcon } from "@/components/icons/image-alt";
-import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 import { SendIcon } from "@/components/icons/send";
+import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 import { Questionnaire } from "@/components/questionnaire";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -59,7 +59,6 @@ import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 import { BubbleWideSparkleIcon } from "../icons/bubble-wide-sparkle";
-import { ChainLinkIcon } from "../icons/chain-link";
 import { CodeIcon } from "../icons/code";
 
 // ---------------------------------------------------------------------------
@@ -241,7 +240,7 @@ const filterCommandItems = (
 const commandListPluginKey = new PluginKey<CommandListState>("commandList");
 
 const BADGE_CLASSES =
-  "inline-flex items-center rounded-sm bg-slate-5 border border-slate-6 px-0.75 py-0.5 leading-[normal]";
+  "inline-flex items-center h-6 rounded-sm bg-slate-5 border border-slate-6 px-0.75 leading-[normal]";
 const PLACEHOLDER_CLASSES =
   "after:content-['Type_to_filter'] after:text-slate-10 after:whitespace-nowrap after:pointer-events-none";
 
@@ -359,7 +358,11 @@ const MentionChipNodeView = ({
       data-mention-chip
       className="inline-flex items-center gap-0.5"
     >
-      {Icon && <Icon className="size-4 text-slate-10" />}
+      {Icon && (
+        <span className="relative w-4 h-[1em]">
+          <Icon className="size-4 text-slate-10 absolute top-1/2 left-0 -translate-y-1/2" />
+        </span>
+      )}
       <span>{label}</span>
     </NodeViewWrapper>
   );
@@ -394,7 +397,7 @@ const MentionChipExtension = TiptapNode.create({
   addNodeView() {
     return ReactNodeViewRenderer(MentionChipNodeView, {
       className:
-        "inline-flex items-center gap-0.5 rounded-sm bg-slate-5 border border-slate-6 px-0.75 py-0.5 leading-[normal] text-slate-12 align-[-3px] select-none",
+        "inline-flex items-center gap-0.5 h-6 rounded-sm bg-slate-5 border border-slate-6 px-0.75 leading-[normal] text-slate-12 align-[-1px] select-none [text-box:trim-both_cap_alphabetic]",
     });
   },
 
@@ -481,7 +484,7 @@ const ComposerContext = createContext<ComposerContextValue>({
   tools: {
     webSearch: false,
     setWebSearch: () => {},
-    thinking: true,
+    thinking: false,
     setThinking: () => {},
   },
   questionnaire: {
@@ -601,7 +604,7 @@ const ComposerRoot = ({
   const attachmentRef = useRef<AttachmentItem[]>(attachmentItems);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [webSearch, setWebSearch] = useState(false);
-  const [thinking, setThinking] = useState(true);
+  const [thinking, setThinking] = useState(false);
   const [activeTrigger, setActiveTrigger] = useState<CommandTrigger | null>(
     null,
   );

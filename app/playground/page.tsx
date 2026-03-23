@@ -1,12 +1,15 @@
 "use client";
 
-import { CheckIcon, CircleDotIcon, Loader } from "lucide-react";
+import { CheckIcon, CircleDotIcon, Loader, XIcon } from "lucide-react";
 import { useState } from "react";
 import { Composer, useComposer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
+import { BrainIcon } from "@/components/icons/brain";
+import { GlobeIcon } from "@/components/icons/globe";
 import { Questionnaire } from "@/components/questionnaire";
 import { ThemeButton } from "@/components/theme-button";
+import Button from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 
@@ -121,6 +124,47 @@ const QuestionnaireDemo = ({
         </button>
       </div>
     </Questionnaire>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ActiveTools — shows toggled tools as dismissable pills
+// ---------------------------------------------------------------------------
+
+const PlaygroundActiveTools = () => {
+  const { tools } = useComposer();
+
+  return (
+    <div className="flex items-center gap-px">
+      {tools.webSearch && (
+        <Button
+          type="button"
+          variant="ghost"
+          className="group/pill cursor-pointer rounded-full font-normal"
+          onClick={() => tools.setWebSearch(false)}
+        >
+          <span className="relative size-4">
+            <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
+            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+          </span>
+          Web Search
+        </Button>
+      )}
+      {tools.thinking && (
+        <Button
+          type="button"
+          variant="ghost"
+          className="group/pill cursor-pointer rounded-full font-normal"
+          onClick={() => tools.setThinking(false)}
+        >
+          <span className="relative size-4">
+            <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
+            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+          </span>
+          Thinking
+        </Button>
+      )}
+    </div>
   );
 };
 
@@ -400,7 +444,10 @@ export default function ComponentsPlayground() {
                 </Composer.Actions>
               ) : (
                 <Composer.Actions className="justify-between">
-                  <Composer.AttachmentTrigger />
+                  <div className="flex items-center">
+                    <Composer.AttachmentTrigger />
+                    <PlaygroundActiveTools />
+                  </div>
                   <Composer.Submit />
                 </Composer.Actions>
               )}

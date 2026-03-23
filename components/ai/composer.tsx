@@ -45,8 +45,11 @@ import {
 } from "@/components/ai/attachments";
 import { Commands } from "@/components/ai/commands";
 import { BrainIcon } from "@/components/icons/brain";
+import { FileChartIcon } from "@/components/icons/file-chart";
 import { FileTextIcon } from "@/components/icons/file-text";
 import { GlobeIcon } from "@/components/icons/globe";
+import { ImageAltIcon } from "@/components/icons/image-alt";
+import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 import { SendIcon } from "@/components/icons/send";
 import { Questionnaire } from "@/components/questionnaire";
 import Button from "@/components/ui/button";
@@ -91,40 +94,60 @@ const CLOSED_COMMAND_STATE: CommandListState = {
 
 const MENTION_ITEMS: CommandItem[] = [
   {
-    id: "files",
-    label: "Files",
+    id: "quarterly-report",
+    label: "Q4 Quarterly Report",
     icon: FileTextIcon,
-    group: "Context",
+    group: "",
     kind: "mention",
-    value: "files",
-    description: "Attach files as context",
+    value: "quarterly-report",
   },
   {
-    id: "url",
-    label: "URL",
-    icon: ChainLinkIcon,
-    group: "Context",
+    id: "meeting-notes",
+    label: "Meeting Notes - March 2026",
+    icon: FileTextIcon,
+    group: "",
     kind: "mention",
-    value: "url",
-    description: "Reference a URL",
+    value: "meeting-notes",
   },
   {
-    id: "web-search",
-    label: "Web Search",
-    icon: GlobeIcon,
-    group: "Tools",
+    id: "product-roadmap",
+    label: "Product Roadmap",
+    icon: SpreadsheetIcon,
+    group: "",
     kind: "mention",
-    value: "webSearch",
-    description: "Search the web",
+    value: "product-roadmap",
   },
   {
-    id: "code-execution",
-    label: "Code Execution",
-    icon: CodeIcon,
-    group: "Tools",
+    id: "brand-guidelines",
+    label: "Brand Guidelines",
+    icon: FileTextIcon,
+    group: "",
     kind: "mention",
-    value: "codeExecution",
-    description: "Run code snippets",
+    value: "brand-guidelines",
+  },
+  {
+    id: "api-documentation",
+    label: "API Documentation",
+    icon: FileChartIcon,
+    group: "",
+    kind: "mention",
+    value: "api-documentation",
+  },
+  {
+    id: "screenshot-dashboard",
+    label: "Screenshot - Dashboard",
+    icon: ImageAltIcon,
+    group: "",
+    kind: "mention",
+    value: "screenshot-dashboard",
+  },
+  {
+    id: "wireframe-checkout",
+    label: "Wireframe - Checkout Flow",
+    icon: ImageAltIcon,
+    group: "",
+    kind: "mention",
+    value: "wireframe-checkout",
   },
 ];
 
@@ -133,28 +156,37 @@ const COMMAND_ITEMS: CommandItem[] = [
     id: "search",
     label: "Search the web",
     icon: GlobeIcon,
-    group: "Commands",
+    group: "Tools",
     kind: "command",
     value: "webSearch",
     description: "Enable web search for this message",
   },
   {
-    id: "summarize",
-    label: "Summarize",
-    icon: BubbleWideSparkleIcon,
-    group: "Commands",
+    id: "code-execution",
+    label: "Code Execution",
+    icon: CodeIcon,
+    group: "Tools",
     kind: "command",
-    value: "summarize",
-    description: "Summarize the conversation",
+    value: "codeExecution",
+    description: "Run code snippets",
   },
   {
     id: "think",
     label: "Think deeply",
     icon: BrainIcon,
-    group: "Commands",
+    group: "Tools",
     kind: "command",
     value: "thinking",
     description: "Enable extended thinking",
+  },
+  {
+    id: "summarize",
+    label: "Summarize",
+    icon: BubbleWideSparkleIcon,
+    group: "Tools",
+    kind: "command",
+    value: "summarize",
+    description: "Summarize the conversation",
   },
 ];
 
@@ -300,11 +332,15 @@ const ICON_MAP: Record<
   string,
   React.ComponentType<React.SVGProps<SVGSVGElement>>
 > = {
-  files: FileTextIcon,
-  url: ChainLinkIcon,
-  "web-search": GlobeIcon,
-  "code-execution": CodeIcon,
+  "quarterly-report": FileTextIcon,
+  "meeting-notes": FileTextIcon,
+  "product-roadmap": SpreadsheetIcon,
+  "brand-guidelines": FileTextIcon,
+  "api-documentation": FileChartIcon,
+  "screenshot-dashboard": ImageAltIcon,
+  "wireframe-checkout": ImageAltIcon,
   search: GlobeIcon,
+  "code-execution": CodeIcon,
   summarize: BubbleWideSparkleIcon,
   think: BrainIcon,
 };

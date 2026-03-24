@@ -8,13 +8,18 @@ import {
 import {
   type ComponentProps,
   createContext,
+  type RefObject,
   use,
+  useCallback,
   useId,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible } from "@/components/ui/collapsible";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 import { ChevronDownIcon } from "./icons/chevron-down";
@@ -121,18 +126,39 @@ const QuestionnaireStepLabel = ({
   </span>
 );
 
-/** Fieldset wrapper for `Option` items. Provides `multiSelect` and `groupName` to child `OptionInput` components via context. When `multiSelect` is false, wraps children in a `RadioGroup`. */
+/** Fieldset wrapper for `Option` items. Provides `multiSelect`, `groupName`, and highlight state to child `OptionInput` components via context. Items self-register on mount (cmdk pattern). When `multiSelect` is false, wraps children in a `RadioGroup`. */
 type OptionsContextValue = {
   multiSelect: boolean;
   groupName: string;
+  highlightedValue: string | null;
+  items: RefObject<string[]>;
+  register: (value: string) => () => void;
+  onItemHover: (value: string) => void;
 };
 
 const OptionsContext = createContext<OptionsContextValue>({
   multiSelect: false,
   groupName: "",
+  highlightedValue: null,
+  items: { current: [] },
+  register: () => () => {},
+  onItemHover: () => {},
 });
 
-type QuestionnaireOptionsProps = Omit<ComponentProps<"fieldset">, "value"> & {
+/** Imperative handle exposed by `QuestionnaireOptions` for keyboard navigation. */
+export type QuestionnaireOptionsHandle = {
+  /** Move highlight by direction. Returns the new highlighted value (null = past the list boundary). */
+  navigate: (direction: number) => string | null;
+  select: () => { value: string } | null;
+  clearHighlight: () => void;
+  resetHighlight: () => void;
+  highlightedValue: string | null;
+};
+
+type QuestionnaireOptionsProps = Omit<
+  ComponentProps<"fieldset">,
+  "value" | "ref"
+> & {
   /** When true, `OptionInput` renders as checkboxes. When false (default), renders as radio buttons inside a `RadioGroup`. */
   multiSelect?: boolean;
   /** Shared `name` attribute for all `OptionInput` elements in this group. */
@@ -141,6 +167,8 @@ type QuestionnaireOptionsProps = Omit<ComponentProps<"fieldset">, "value"> & {
   value?: string;
   /** Called when the RadioGroup value changes (single-select mode only). */
   onValueChange?: (value: string) => void;
+  /** Imperative ref for keyboard navigation (navigate, select, clearHighlight, resetHighlight). */
+  ref?: RefObject<QuestionnaireOptionsHandle | null>;
 };
 
 const QuestionnaireOptions = ({
@@ -148,10 +176,84 @@ const QuestionnaireOptions = ({
   groupName = "",
   value,
   onValueChange,
+  ref,
   className,
   children,
   ...props
 }: QuestionnaireOptionsProps) => {
+  const registeredItems = useRef<string[]>([]);
+  const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
+
+  // Track highlight in a ref so imperative methods see latest value without re-binding
+  const highlightedValueRef = useRef(highlightedValue);
+  highlightedValueRef.current = highlightedValue;
+
+  const register = useCallback((itemValue: string) => {
+    registeredItems.current = [...registeredItems.current, itemValue];
+    // Auto-highlight first item when first option registers and nothing is highlighted
+    if (
+      registeredItems.current.length === 1 &&
+      highlightedValueRef.current === null
+    ) {
+      highlightedValueRef.current = itemValue;
+      setHighlightedValue(itemValue);
+    }
+    return () => {
+      registeredItems.current = registeredItems.current.filter(
+        (v) => v !== itemValue,
+      );
+      // Clear highlight when the highlighted item deregisters — allows auto-highlight
+      // to fire for the next set of items (e.g. on step change)
+      if (highlightedValueRef.current === itemValue) {
+        highlightedValueRef.current = null;
+        setHighlightedValue(null);
+      }
+    };
+  }, []);
+
+  const onItemHover = useCallback((itemValue: string) => {
+    setHighlightedValue(itemValue);
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      navigate: (direction: number): string | null => {
+        const items = registeredItems.current;
+        if (items.length === 0) return null;
+        const previous = highlightedValueRef.current;
+        let next: string | null;
+        if (previous === null) {
+          next = direction > 0 ? items[0] : items[items.length - 1];
+        } else {
+          const currentIndex = items.indexOf(previous);
+          const nextIndex = currentIndex + direction;
+          if (nextIndex >= items.length || nextIndex < 0) next = null;
+          else next = items[nextIndex];
+        }
+        highlightedValueRef.current = next;
+        setHighlightedValue(next);
+        return next;
+      },
+      select: () => {
+        const current = highlightedValueRef.current;
+        if (current === null) return null;
+        return { value: current };
+      },
+      clearHighlight: () => {
+        setHighlightedValue(null);
+      },
+      resetHighlight: () => {
+        const items = registeredItems.current;
+        setHighlightedValue(items.length > 0 ? items[0] : null);
+      },
+      get highlightedValue() {
+        return highlightedValueRef.current;
+      },
+    }),
+    [],
+  );
+
   const content = (
     <fieldset className={cn("flex flex-col gap-1.5", className)} {...props}>
       {children}
@@ -159,7 +261,16 @@ const QuestionnaireOptions = ({
   );
 
   return (
-    <OptionsContext value={{ multiSelect, groupName }}>
+    <OptionsContext
+      value={{
+        multiSelect,
+        groupName,
+        highlightedValue,
+        items: registeredItems,
+        register,
+        onItemHover,
+      }}
+    >
       {multiSelect ? (
         content
       ) : (
@@ -175,7 +286,7 @@ const QuestionnaireOptions = ({
   );
 };
 
-/** Selectable card. Provides `selected`, `onSelect`, and `value` to child `OptionInput` via context. Compose with `OptionInput`, `OptionContent`, `OptionLabel`, and `OptionDescription`. */
+/** Selectable card. Self-registers with parent `Options` on mount (cmdk pattern). Derives highlight state from context. Compose with `OptionInput`, `OptionContent`, `OptionLabel`, and `OptionDescription`. */
 type OptionContextValue = {
   id: string;
   value: string;
@@ -205,12 +316,23 @@ const QuestionnaireOption = ({
   ...props
 }: QuestionnaireOptionProps) => {
   const id = useId();
+  const { highlightedValue, register, onItemHover } = use(OptionsContext);
+  const isHighlighted = value === highlightedValue;
+
+  // Self-register on mount, deregister on unmount (true subscription side effect)
+  const registerRef = useRef(register);
+  registerRef.current = register;
+  useItemRegistration(value, registerRef);
+
   return (
     <OptionContext value={{ id, value, selected, onSelect }}>
       <label
         htmlFor={id}
+        data-highlighted={isHighlighted || undefined}
+        onMouseMove={() => onItemHover(value)}
         className={cn(
-          "flex cursor-pointer items-start gap-2 bg-slate-1 hover:bg-slate-4 rounded-lg p-2 transition-colors",
+          "flex cursor-pointer items-center gap-2 bg-slate-1 rounded-lg p-2 transition-colors",
+          "data-highlighted:bg-slate-4",
           className,
         )}
         {...props}
@@ -219,6 +341,18 @@ const QuestionnaireOption = ({
       </label>
     </OptionContext>
   );
+};
+
+/** Registers an item value with the parent Options container synchronously before paint and deregisters on unmount. */
+const useItemRegistration = (
+  value: string,
+  registerRef: RefObject<(value: string) => () => void>,
+) => {
+  // useLayoutEffect ensures items are registered before paint so the initial highlight resolves immediately
+  // biome-ignore lint/correctness/useExhaustiveDependencies: register is ref-stable
+  useLayoutEffect(() => {
+    return registerRef.current(value);
+  }, [value]);
 };
 
 /** Renders a `Checkbox` or native radio based on the parent `Options` `multiSelect` prop. Reads all state from context. */
@@ -247,12 +381,28 @@ const QuestionnaireOptionCheckbox = (
   );
 };
 
-/** Radio input using `RadioGroupItem`. Reads `value` from `Option` context. Must be inside an `Options` with `multiSelect={false}`. */
-const QuestionnaireOptionRadio = (
-  props: Omit<Parameters<typeof RadioGroupItem>[0], "value">,
-) => {
+/** Numbered radio indicator for single-select options. Shows the item's 1-based index instead of a dot. */
+const QuestionnaireOptionRadio = ({
+  className,
+  ...props
+}: Omit<Parameters<typeof RadioGroup.Item>[0], "value" | "children">) => {
   const option = use(OptionContext);
-  return <RadioGroupItem value={option.value} {...props} />;
+  const { items } = use(OptionsContext);
+  const index = items.current.indexOf(option.value) + 1;
+
+  return (
+    <RadioGroup.Item
+      value={option.value}
+      className={cn(
+        "size-4 rounded-[4px] border-0 bg-slate-4 text-2xs font-medium tabular-nums text-slate-11",
+        "data-checked:bg-slate-12 data-checked:text-slate-1",
+        className,
+      )}
+      {...props}
+    >
+      {index}
+    </RadioGroup.Item>
+  );
 };
 
 /** Flex column wrapper for `OptionLabel` and `OptionDescription`. */
@@ -342,6 +492,23 @@ const QuestionnaireSummary = ({
   );
 };
 
+/** Keyboard shortcut hints displayed below the questionnaire options. */
+type QuestionnaireHintsProps = ComponentProps<"div">;
+
+const QuestionnaireHints = ({
+  className,
+  ...props
+}: QuestionnaireHintsProps) => (
+  <div
+    data-slot="questionnaire-hints"
+    className={cn(
+      "flex items-center gap-3 px-2 pt-1 text-2xs text-slate-10",
+      className,
+    )}
+    {...props}
+  />
+);
+
 export const Questionnaire = Object.assign(QuestionnaireRoot, {
   Header: QuestionnaireHeader,
   Label: QuestionnaireLabel,
@@ -358,4 +525,5 @@ export const Questionnaire = Object.assign(QuestionnaireRoot, {
   OptionLabel: QuestionnaireOptionLabel,
   OptionDescription: QuestionnaireOptionDescription,
   Summary: QuestionnaireSummary,
+  Hints: QuestionnaireHints,
 });

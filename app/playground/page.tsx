@@ -439,6 +439,7 @@ export default function ComponentsPlayground() {
               {composerState === "ask-user" ||
               composerState === "ask-user-multi" ? (
                 <Composer.Actions>
+                  <Composer.Hints />
                   <Composer.DismissAction />
                   <Composer.ContinueAction />
                 </Composer.Actions>

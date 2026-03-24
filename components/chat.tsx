@@ -577,18 +577,20 @@ const ChatInput = () => {
             }
           />
         </Composer.Textarea>
-        <Composer.Actions className="flex items-center justify-between">
-          {isAskUser ? (
+        {isAskUser ? (
+          <Composer.Actions className="flex items-center justify-end">
+            <Composer.Hints />
             <Composer.DismissAction />
-          ) : (
-            <div className="flex items-center">
-              <ToolsMenu />
-              <ModelSelector value={model} onValueChange={setModel} />
-              <ActiveTools />
-            </div>
-          )}
-          {isAskUser ? <Composer.ContinueAction /> : <Composer.Submit />}
-        </Composer.Actions>
+            <Composer.ContinueAction />
+          </Composer.Actions>
+        ) : (
+          <Composer.Actions className="flex items-center justify-between">
+            <ToolsMenu />
+            <ModelSelector value={model} onValueChange={setModel} />
+            <ActiveTools />
+            <Composer.Submit />
+          </Composer.Actions>
+        )}
       </Composer.Container>
     </Composer>
   );

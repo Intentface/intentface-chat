@@ -51,7 +51,10 @@ import { GlobeIcon } from "@/components/icons/globe";
 import { ImageAltIcon } from "@/components/icons/image-alt";
 import { SendIcon } from "@/components/icons/send";
 import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
-import { Questionnaire } from "@/components/questionnaire";
+import {
+  Questionnaire,
+  type QuestionnaireOptionsHandle,
+} from "@/components/questionnaire";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { useLoop } from "@/hooks/use-loop";
@@ -447,6 +450,7 @@ type ComposerContextValue = {
     clearSelections: (step: number) => void;
     goBack: () => void;
     goNext: () => void;
+    optionsRef: RefObject<QuestionnaireOptionsHandle | null>;
   };
   mentions: {
     open: boolean;
@@ -499,6 +503,7 @@ const ComposerContext = createContext<ComposerContextValue>({
     clearSelections: () => {},
     goBack: () => {},
     goNext: () => {},
+    optionsRef: { current: null },
   },
   mentions: {
     open: false,
@@ -597,6 +602,9 @@ const ComposerRoot = ({
   const commandListNavigateRef = useRef<((direction: number) => void) | null>(
     null,
   );
+  const questionnaireOptionsRef = useRef<QuestionnaireOptionsHandle | null>(
+    null,
+  );
 
   const [isDragging, setIsDragging] = useState(false);
   const [editorHasContent, setEditorHasContent] = useState(false);
@@ -668,6 +676,10 @@ const ComposerRoot = ({
     previousQuestionsRef.current = questions;
     setQuestionnaireStep(0);
     setQuestionnaireAnswers(new Map());
+    // Blur editor when questionnaire appears — first option will be highlighted
+    if (questions?.length) {
+      editorRef.current?.commands.blur();
+    }
   }
   const answersRef = useRef(questionnaireAnswers);
   answersRef.current = questionnaireAnswers;
@@ -754,6 +766,8 @@ const ComposerRoot = ({
 
       if (questionnaireStep < questions.length - 1) {
         setQuestionnaireStep((s) => s + 1);
+        questionnaireOptionsRef.current?.resetHighlight();
+        editorRef.current?.commands.blur();
       } else {
         onQuestionsSubmit?.(compileAnswers(updatedAnswers));
       }
@@ -773,6 +787,8 @@ const ComposerRoot = ({
 
     if (questionnaireStep < questions.length - 1) {
       setQuestionnaireStep((s) => s + 1);
+      questionnaireOptionsRef.current?.resetHighlight();
+      editorRef.current?.commands.blur();
     } else {
       onQuestionsSubmit?.(compileAnswers(updatedAnswers));
     }
@@ -782,6 +798,8 @@ const ComposerRoot = ({
     setQuestionnaireStep((s) => Math.max(0, s - 1));
     editorRef.current?.commands.setContent("");
     setEditorHasContent(false);
+    questionnaireOptionsRef.current?.resetHighlight();
+    editorRef.current?.commands.blur();
   }, []);
 
   const goNextStep = useCallback(() => {
@@ -789,6 +807,8 @@ const ComposerRoot = ({
     setQuestionnaireStep((s) => Math.min(questions.length - 1, s + 1));
     editorRef.current?.commands.setContent("");
     setEditorHasContent(false);
+    questionnaireOptionsRef.current?.resetHighlight();
+    editorRef.current?.commands.blur();
   }, [questions]);
 
   const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -846,16 +866,88 @@ const ComposerRoot = ({
     };
   }, []);
 
-  // ESC handler for questionnaire — ref avoids re-subscribing when dismissStep changes
+  // Questionnaire keyboard handler — document-level because editor is blurred when highlight is active.
+  // Refs avoid re-subscribing when callbacks change.
   const dismissStepRef = useRef(dismissStep);
   dismissStepRef.current = dismissStep;
+  const continueStepRef = useRef(continueStep);
+  continueStepRef.current = continueStep;
+  const toggleOptionRef = useRef(toggleQuestionOption);
+  toggleOptionRef.current = toggleQuestionOption;
+  const goBackStepRef = useRef(goBackStep);
+  goBackStepRef.current = goBackStep;
+  const goNextStepRef = useRef(goNextStep);
+  goNextStepRef.current = goNextStep;
+  const questionnaireStepRef = useRef(questionnaireStep);
+  questionnaireStepRef.current = questionnaireStep;
+  const questionsRef = useRef(questions);
+  questionsRef.current = questions;
 
   useEffect(() => {
     if (!questions?.length) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const optionsHandle = questionnaireOptionsRef.current;
+      const isHighlighted = optionsHandle?.highlightedValue != null;
+
+      // ESC always dismisses (whether highlight active or textarea focused)
       if (e.key === "Escape") {
         e.preventDefault();
         dismissStepRef.current();
+        return;
+      }
+
+      // Remaining keys only apply when an option is highlighted (editor blurred)
+      if (!isHighlighted) return;
+
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+        const direction = e.key === "ArrowUp" ? -1 : 1;
+        const newValue = optionsHandle.navigate(direction);
+        if (newValue === null) {
+          // Past the list → focus editor
+          editorRef.current?.commands.focus();
+        }
+        return;
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const item = optionsHandle.select();
+        if (!item) return;
+        const currentQuestion =
+          questionsRef.current?.[questionnaireStepRef.current];
+        if (currentQuestion?.multiSelect) {
+          toggleOptionRef.current(
+            questionnaireStepRef.current,
+            item.value,
+            true,
+          );
+        } else {
+          toggleOptionRef.current(
+            questionnaireStepRef.current,
+            item.value,
+            false,
+          );
+          continueStepRef.current();
+        }
+        return;
+      }
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        if (e.key === "ArrowLeft") goBackStepRef.current();
+        else goNextStepRef.current();
+        return;
+      }
+
+      // Printable character → focus editor, clear highlight, insert character
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        optionsHandle.clearHighlight();
+        const editorInstance = editorRef.current;
+        editorInstance?.commands.focus();
+        editorInstance?.commands.insertContent(e.key);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -898,6 +990,7 @@ const ComposerRoot = ({
         clearSelections: clearQuestionSelections,
         goBack: goBackStep,
         goNext: goNextStep,
+        optionsRef: questionnaireOptionsRef,
       },
       mentions: {
         open: activeTrigger === "@",
@@ -1108,9 +1201,12 @@ const ComposerTextarea = ({
       questionnaire.clearSelections(questionnaire.step);
   };
 
-  // Ref-ify attachment operations to prevent stale closure in TipTap handlers
+  // Ref-ify attachment and questionnaire operations to prevent stale closure in TipTap handlers
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
+
+  const questionnaireRef = useRef(questionnaire);
+  questionnaireRef.current = questionnaire;
 
   const tiptapEditor = useEditor({
     immediatelyRender: false,
@@ -1169,6 +1265,22 @@ const ComposerTextarea = ({
           }
         }
 
+        // Questionnaire: Arrow from empty textarea → blur and navigate to options
+        const currentQuestionnaire = questionnaireRef.current;
+        if (currentQuestionnaire.questions?.length) {
+          if (
+            (event.key === "ArrowUp" || event.key === "ArrowDown") &&
+            view.state.doc.textContent === ""
+          ) {
+            event.preventDefault();
+            const optionsHandle = currentQuestionnaire.optionsRef.current;
+            const direction = event.key === "ArrowUp" ? -1 : 1;
+            optionsHandle?.navigate(direction);
+            view.dom.blur();
+            return true;
+          }
+        }
+
         if (event.key === "Backspace" && view.state.doc.textContent === "") {
           const lastItem = attachmentsRef.current.items.at(-1);
           if (lastItem) {
@@ -1195,6 +1307,9 @@ const ComposerTextarea = ({
         return false;
       },
     },
+    onFocus: () => {
+      questionnaireRef.current.optionsRef.current?.clearHighlight();
+    },
     onMount: ({ editor: instance }) => {
       editor.ref.current = instance;
     },
@@ -1204,7 +1319,10 @@ const ComposerTextarea = ({
     onUpdate: ({ editor: instance }) => {
       const text = instance.getText();
       editor.setHasContent(text.trim().length > 0 || !instance.isEmpty);
-      if (text.trim().length > 0) clearSelectionsRef.current();
+      if (text.trim().length > 0) {
+        clearSelectionsRef.current();
+        questionnaireRef.current.optionsRef.current?.clearHighlight();
+      }
       onValueChangeRef.current?.(text);
       const pluginState = commandListPluginKey.getState(instance.state);
       if (pluginState?.isOpen && pluginState.trigger) {
@@ -1489,6 +1607,7 @@ const ComposerQuestionnaire = () => {
       </Questionnaire.Header>
       {display.options && (
         <Questionnaire.Options
+          ref={questionnaire.optionsRef}
           multiSelect={!!display.multiSelect}
           groupName={`q-${questionnaire.step}`}
           value={[...entry.selected][0] ?? ""}
@@ -1567,6 +1686,33 @@ const ComposerContinueAction = ({
         ↵
       </kbd>
     </Button>
+  );
+};
+
+// Hints — keyboard shortcut hints for questionnaire, rendered in the actions bar
+type ComposerHintsProps = ComponentProps<typeof Questionnaire.Hints>;
+
+const ComposerHints = ({ className, ...props }: ComposerHintsProps) => {
+  const { questionnaire } = useComposer();
+  const totalQuestions = questionnaire.questions?.length ?? 0;
+
+  return (
+    <Questionnaire.Hints className={cn("flex-1", className)} {...props}>
+      <span>
+        <kbd>↑↓</kbd> navigate
+      </span>
+      <span>
+        <kbd>↵</kbd> select
+      </span>
+      {!questionnaire.isSingle && totalQuestions > 1 && (
+        <span>
+          <kbd>←→</kbd> between questions
+        </span>
+      )}
+      <span>
+        <kbd>esc</kbd> skip
+      </span>
+    </Questionnaire.Hints>
   );
 };
 
@@ -1728,5 +1874,6 @@ export const Composer = Object.assign(ComposerRoot, {
   Questionnaire: ComposerQuestionnaire,
   DismissAction: ComposerDismissAction,
   ContinueAction: ComposerContinueAction,
+  Hints: ComposerHints,
   CommandList: ComposerCommandList,
 });

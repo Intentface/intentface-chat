@@ -1162,6 +1162,11 @@ const ComposerTextarea = ({
             active.navigateRef.current?.(1);
             return true;
           }
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            active.selectRef.current?.();
+            return true;
+          }
         }
 
         if (event.key === "Backspace" && view.state.doc.textContent === "") {

@@ -35,7 +35,7 @@ const QuestionnaireLabel = ({
 }: QuestionnaireLabelProps) => (
   <p
     className={cn(
-      "min-w-0 flex-1 text-sm font-medium leading-tight",
+      "min-w-0 flex-1 p-2 text-sm font-medium leading-tight",
       className,
     )}
     {...props}

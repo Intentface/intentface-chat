@@ -439,7 +439,7 @@ const sidebarMenuButtonVariants = cva(
     "peer/menu-button cursor-pointer flex w-full items-center gap-2",
     "overflow-hidden rounded-md px-2 font-[450] text-left text-sm outline-hidden",
     "transition-[width,height,padding] focus-visible:ring-1",
-    "hover:bg-slate-5 data-active:bg-slate-6",
+    "hover:bg-slate-4 data-active:bg-slate-5",
     "disabled:pointer-events-none disabled:opacity-50",
     "group-has-data-[sidebar=menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",

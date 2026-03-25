@@ -705,11 +705,16 @@ const ComposerRoot = ({
           newSelected.clear();
           newSelected.add(label);
         }
-        next.set(step, { selected: newSelected, freeText: "" });
+        next.set(step, {
+          selected: newSelected,
+          freeText: multiSelect ? entry.freeText : "",
+        });
         return next;
       });
-      editorRef.current?.commands.setContent("");
-      setEditorHasContent(false);
+      if (!multiSelect) {
+        editorRef.current?.commands.setContent("");
+        setEditorHasContent(false);
+      }
     },
     [],
   );

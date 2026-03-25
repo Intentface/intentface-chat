@@ -585,9 +585,11 @@ const ChatInput = () => {
           </Composer.Actions>
         ) : (
           <Composer.Actions className="flex items-center justify-between">
-            <ToolsMenu />
-            <ModelSelector value={model} onValueChange={setModel} />
-            <ActiveTools />
+            <div className="flex items-center gap-2">
+              <ToolsMenu />
+              <ModelSelector value={model} onValueChange={setModel} />
+              <ActiveTools />
+            </div>
             <Composer.Submit />
           </Composer.Actions>
         )}

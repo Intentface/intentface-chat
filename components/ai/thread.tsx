@@ -284,72 +284,6 @@ const ThreadPlaceholder = ({
 );
 
 // ---------------------------------------------------------------------------
-// ThreadDownload
-// ---------------------------------------------------------------------------
-
-export interface ThreadMessage {
-  role: "user" | "assistant" | "system" | "data" | "tool";
-  content: string;
-}
-
-export type ThreadDownloadProps = Omit<
-  ComponentProps<typeof IconButton>,
-  "onClick"
-> & {
-  messages: ThreadMessage[];
-  filename?: string;
-  formatMessage?: (message: ThreadMessage, index: number) => string;
-};
-
-const defaultFormatMessage = (message: ThreadMessage): string => {
-  const roleLabel =
-    message.role.charAt(0).toUpperCase() + message.role.slice(1);
-  return `**${roleLabel}:** ${message.content}`;
-};
-
-export const messagesToMarkdown = (
-  messages: ThreadMessage[],
-  formatMessage: (
-    message: ThreadMessage,
-    index: number,
-  ) => string = defaultFormatMessage,
-): string => messages.map((msg, i) => formatMessage(msg, i)).join("\n\n");
-
-const ThreadDownload = ({
-  messages,
-  filename = "conversation.md",
-  formatMessage = defaultFormatMessage,
-  className,
-  children,
-  ...props
-}: ThreadDownloadProps) => {
-  const handleDownload = useCallback(() => {
-    const markdown = messagesToMarkdown(messages, formatMessage);
-    const blob = new Blob([markdown], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }, [messages, filename, formatMessage]);
-
-  return (
-    <IconButton
-      onClick={handleDownload}
-      size="xs"
-      type="button"
-      variant="ghost"
-      {...props}
-    >
-      {children ?? <DownloadIcon className="size-4" />}
-    </IconButton>
-  );
-};
-
-// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -359,6 +293,5 @@ export const Thread = Object.assign(ThreadRoot, {
   Composer: ThreadComposer,
   Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
-  Download: ThreadDownload,
   Spacer: DynamicSpacer,
 });

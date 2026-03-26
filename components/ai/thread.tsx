@@ -1,6 +1,5 @@
 "use client";
 
-import { DownloadIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentProps, ReactNode, RefObject } from "react";
 import {
@@ -163,17 +162,15 @@ const ThreadViewport = ({
         data-slot="thread-viewport"
         className={cn(
           "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
-          // might cause issues with the overflow-y-auto
-          "h-full",
+          "min-h-full",
           className,
         )}
         {...props}
       >
-        <div className="relative flex h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
+        <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
           <div
             className={cn(
-              "mx-auto px-4 flex h-full w-full max-w-(--thread-width) flex-col gap-4",
-              "[&>[data-slot=message]:last-child]:min-h-[50vh]",
+              "mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4",
             )}
           >
             {children}

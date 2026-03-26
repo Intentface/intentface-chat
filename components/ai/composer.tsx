@@ -775,6 +775,7 @@ const ComposerRoot = ({
         editorRef.current?.commands.blur();
       } else {
         onQuestionsSubmit?.(compileAnswers(updatedAnswers));
+        editorRef.current?.commands.focus();
       }
     },
     [questions, questionnaireStep, onQuestionsSubmit, compileAnswers],
@@ -796,25 +797,47 @@ const ComposerRoot = ({
       editorRef.current?.commands.blur();
     } else {
       onQuestionsSubmit?.(compileAnswers(updatedAnswers));
+      editorRef.current?.commands.focus();
     }
   }, [questions, questionnaireStep, onQuestionsSubmit, compileAnswers]);
 
+  /** Save current editor text as freeText for the given step, then load the target step's freeText. */
+  const transitionStep = useCallback(
+    (targetStep: number) => {
+      const currentText = editorRef.current?.getText()?.trim() ?? "";
+      // Save freeText for the step we're leaving
+      if (currentText) {
+        setQuestionnaireAnswers((prev) => {
+          const next = new Map(prev);
+          const entry = next.get(questionnaireStep) ?? {
+            selected: new Set<string>(),
+            freeText: "",
+          };
+          next.set(questionnaireStep, { ...entry, freeText: currentText });
+          return next;
+        });
+      }
+      // Load freeText for the target step
+      const targetEntry = answersRef.current.get(targetStep);
+      const targetFreeText = targetEntry?.freeText ?? "";
+      editorRef.current?.commands.setContent(targetFreeText);
+      setEditorHasContent(targetFreeText.length > 0);
+
+      setQuestionnaireStep(targetStep);
+      questionnaireOptionsRef.current?.resetHighlight();
+      editorRef.current?.commands.blur();
+    },
+    [questionnaireStep],
+  );
+
   const goBackStep = useCallback(() => {
-    setQuestionnaireStep((s) => Math.max(0, s - 1));
-    editorRef.current?.commands.setContent("");
-    setEditorHasContent(false);
-    questionnaireOptionsRef.current?.resetHighlight();
-    editorRef.current?.commands.blur();
-  }, []);
+    transitionStep(Math.max(0, questionnaireStep - 1));
+  }, [transitionStep, questionnaireStep]);
 
   const goNextStep = useCallback(() => {
     if (!questions) return;
-    setQuestionnaireStep((s) => Math.min(questions.length - 1, s + 1));
-    editorRef.current?.commands.setContent("");
-    setEditorHasContent(false);
-    questionnaireOptionsRef.current?.resetHighlight();
-    editorRef.current?.commands.blur();
-  }, [questions]);
+    transitionStep(Math.min(questions.length - 1, questionnaireStep + 1));
+  }, [transitionStep, questionnaireStep, questions]);
 
   const handleFormSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1202,8 +1225,12 @@ const ComposerTextarea = ({
 
   const clearSelectionsRef = useRef(() => {});
   clearSelectionsRef.current = () => {
-    if (questionnaire.questions)
+    if (!questionnaire.questions) return;
+    const currentQuestion = questionnaire.questions[questionnaire.step];
+    // Only clear selections for single-select — multi-select allows text + options together
+    if (!currentQuestion?.multiSelect) {
       questionnaire.clearSelections(questionnaire.step);
+    }
   };
 
   // Ref-ify attachment and questionnaire operations to prevent stale closure in TipTap handlers
@@ -1270,13 +1297,10 @@ const ComposerTextarea = ({
           }
         }
 
-        // Questionnaire: Arrow from empty textarea → blur and navigate to options
+        // Questionnaire: Arrow up/down from textarea → blur and navigate to options
         const currentQuestionnaire = questionnaireRef.current;
         if (currentQuestionnaire.questions?.length) {
-          if (
-            (event.key === "ArrowUp" || event.key === "ArrowDown") &&
-            view.state.doc.textContent === ""
-          ) {
+          if (event.key === "ArrowUp" || event.key === "ArrowDown") {
             event.preventDefault();
             const optionsHandle = currentQuestionnaire.optionsRef.current;
             const direction = event.key === "ArrowUp" ? -1 : 1;

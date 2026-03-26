@@ -8,10 +8,10 @@ import {
   use,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import { DynamicSpacer } from "@/components/ai/dynamic-spacer";
 import { IconButton } from "@/components/ui/icon-button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
@@ -281,6 +281,168 @@ const ThreadPlaceholder = ({
 );
 
 // ---------------------------------------------------------------------------
+// DynamicSpacer
+// ---------------------------------------------------------------------------
+
+const getScrollParent = (element: HTMLElement): HTMLElement | null => {
+  let parent = element.parentElement;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (overflowY === "auto" || overflowY === "scroll") return parent;
+    parent = parent.parentElement;
+  }
+  return null;
+};
+
+type DynamicSpacerProps = {
+  /** Explicit ref to the element to keep at the top. Defaults to the last user message. */
+  targetRef?: RefObject<HTMLElement | null>;
+  /** Offset from the top of the visible area in px. Defaults to 0. */
+  topOffset?: number;
+  /** Minimum spacer height in px. Defaults to 0. */
+  minHeight?: number;
+};
+
+const ThreadSpacer = ({
+  targetRef,
+  topOffset,
+  minHeight,
+}: DynamicSpacerProps) => {
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const scrollParentRef = useRef<HTMLElement | null>(null);
+  const prevUserMessageCountRef = useRef(0);
+  const pendingScrollRef = useRef<number | null>(null);
+  // Cache overlay heights — only recomputed on resize
+  const overlayCache = useRef<{
+    topOffset: number;
+    bottomOffset: number;
+  } | null>(null);
+
+  const resolveOverlays = useCallback(
+    (threadRoot: HTMLElement | null) => {
+      if (overlayCache.current) return overlayCache.current;
+      const remSize = Number.parseFloat(
+        getComputedStyle(document.documentElement).fontSize,
+      );
+      const rootStyles = threadRoot ? getComputedStyle(threadRoot) : null;
+      const top = rootStyles
+        ? Number.parseFloat(
+            rootStyles.getPropertyValue("--thread-overlay-top-height"),
+          ) * remSize
+        : 0;
+      const bottom = rootStyles
+        ? Number.parseFloat(
+            rootStyles.getPropertyValue("--thread-overlay-bottom-height"),
+          ) * remSize
+        : 0;
+      overlayCache.current = {
+        topOffset: topOffset ?? top,
+        bottomOffset: bottom,
+      };
+      return overlayCache.current;
+    },
+    [topOffset],
+  );
+
+  const calculateHeight = useCallback(() => {
+    if (!spacerRef.current) return;
+
+    if (!scrollParentRef.current) {
+      scrollParentRef.current = getScrollParent(spacerRef.current);
+    }
+    const scrollContainer = scrollParentRef.current;
+    if (!scrollContainer) return;
+
+    const userMessages = scrollContainer.querySelectorAll<HTMLElement>(
+      '[data-slot="message"][data-role="user"]',
+    );
+    const target =
+      targetRef?.current ?? userMessages[userMessages.length - 1] ?? null;
+    if (!target) return;
+
+    const threadRoot = scrollContainer.closest<HTMLElement>(
+      '[data-slot="thread-root"]',
+    );
+    const rootHeight = threadRoot?.clientHeight ?? scrollContainer.clientHeight;
+    const overlays = resolveOverlays(threadRoot);
+    const effectiveMinHeight = minHeight ?? 0;
+
+    // Measure actual content height: sum heights of siblings from target to spacer
+    const parent = spacerRef.current.parentElement;
+    let contentHeight = 0;
+    if (parent) {
+      const children = Array.from(parent.children) as HTMLElement[];
+      const spacerIndex = children.indexOf(spacerRef.current);
+      const targetChild =
+        children.find((child) => child.contains(target)) ?? target;
+      const targetIndex = children.indexOf(targetChild);
+      const gap = Number.parseFloat(getComputedStyle(parent).gap) || 0;
+
+      for (let i = targetIndex; i >= 0 && i < spacerIndex; i++) {
+        contentHeight += children[i].offsetHeight;
+        if (gap && i > targetIndex) contentHeight += gap;
+      }
+    }
+
+    const calculatedHeight =
+      rootHeight - overlays.topOffset - overlays.bottomOffset - contentHeight;
+
+    spacerRef.current.style.height = `${Math.max(effectiveMinHeight, calculatedHeight)}px`;
+
+    // Scroll when a new user message appears
+    if (userMessages.length > prevUserMessageCountRef.current) {
+      if (calculatedHeight <= 0) {
+        pendingScrollRef.current = scrollContainer.scrollHeight;
+      } else {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        const targetAbsoluteTop =
+          scrollContainer.scrollTop + (targetRect.top - containerRect.top);
+        pendingScrollRef.current = Math.max(
+          0,
+          targetAbsoluteTop - overlays.topOffset,
+        );
+      }
+    }
+    prevUserMessageCountRef.current = userMessages.length;
+  }, [targetRef, minHeight, resolveOverlays]);
+
+  // Recalculate before paint
+  useLayoutEffect(() => {
+    calculateHeight();
+  });
+
+  // Smooth-scroll after paint
+  useEffect(() => {
+    if (pendingScrollRef.current !== null && scrollParentRef.current) {
+      scrollParentRef.current.scrollTo({
+        top: pendingScrollRef.current,
+        behavior: "smooth",
+      });
+      pendingScrollRef.current = null;
+    }
+  });
+
+  useEffect(() => {
+    const onResize = () => {
+      overlayCache.current = null; // Invalidate on resize (rem/viewport may change)
+      calculateHeight();
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => window.removeEventListener("resize", onResize);
+  }, [calculateHeight]);
+
+  return (
+    <div
+      ref={spacerRef}
+      data-slot="thread-spacer"
+      className="w-full shrink-0 ease-out"
+      style={{ overflowAnchor: "none" }}
+    />
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -290,5 +452,5 @@ export const Thread = Object.assign(ThreadRoot, {
   Composer: ThreadComposer,
   Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
-  Spacer: DynamicSpacer,
+  Spacer: ThreadSpacer,
 });

@@ -173,7 +173,7 @@ const AttachmentsItem = ({
         layout: { duration: 0.2, ease: "easeOut" },
       }}
       className={cn(
-        "group relative flex h-12 max-w-48 items-center gap-2 rounded-lg border bg-secondary px-2",
+        "group relative flex h-12 max-w-48 items-center gap-2 rounded-lg border border-secondary-border bg-secondary px-2",
         className,
       )}
     >
@@ -235,9 +235,9 @@ type AttachmentsDropzoneProps = {
 
 const dropzoneVariants = {
   inline:
-    "absolute inset-0 m-1 flex items-center justify-center rounded-xl border border-dashed border-slate-8 bg-secondary",
+    "absolute inset-0 m-1 flex items-center justify-center rounded-xl border border-dashed border-secondary-border bg-secondary",
   global:
-    "absolute inset-0 z-50 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-slate-8 bg-secondary/80 backdrop-blur-xs",
+    "absolute inset-0 z-50 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-secondary-border bg-secondary/80 backdrop-blur-xs",
 };
 
 const GLOBAL_DROPZONE_SELECTOR = '[data-slot="sidebar-inset"]';

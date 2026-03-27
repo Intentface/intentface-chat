@@ -183,7 +183,6 @@ const SidebarRoot = ({
           data-sidebar="sidebar"
           className={cn(
             "bg-sidebar flex h-full w-full flex-col py-2 pl-2 gap-2",
-            "group-data-[state=collapsed]:border-sidebar-border group-data-[state=collapsed]:rounded-lg group-data-[state=collapsed]:border group-data-[state=collapsed]:shadow-sm",
           )}
         >
           {children}

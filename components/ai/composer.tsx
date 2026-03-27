@@ -243,9 +243,9 @@ const filterCommandItems = (
 const commandListPluginKey = new PluginKey<CommandListState>("commandList");
 
 const BADGE_CLASSES =
-  "inline-flex items-center h-6 rounded-sm bg-slate-5 border border-slate-6 px-0.75 leading-[normal]";
+  "inline-flex items-center h-6 rounded-sm bg-primary-hover border border-transparent px-0.75 leading-[normal]";
 const PLACEHOLDER_CLASSES =
-  "after:content-['Type_to_filter'] after:text-slate-10 after:whitespace-nowrap after:pointer-events-none";
+  "after:content-['Type_to_filter'] after:text-ink-tertiary after:whitespace-nowrap after:pointer-events-none";
 
 const commandFilterDecorations = (
   state: Parameters<NonNullable<Plugin["props"]["decorations"]>>[0],
@@ -363,7 +363,7 @@ const MentionChipNodeView = ({
     >
       {Icon && (
         <span className="relative w-4 h-[1em]">
-          <Icon className="size-4 text-slate-10 absolute top-1/2 left-0 -translate-y-1/2" />
+          <Icon className="size-4 text-ink-tertiary absolute top-1/2 left-0 -translate-y-1/2" />
         </span>
       )}
       <span>{label}</span>
@@ -400,7 +400,7 @@ const MentionChipExtension = TiptapNode.create({
   addNodeView() {
     return ReactNodeViewRenderer(MentionChipNodeView, {
       className:
-        "inline-flex items-center gap-0.5 h-6 rounded-sm bg-slate-5 border border-slate-6 px-0.75 leading-[normal] text-slate-12 align-[-1px] select-none [text-box:trim-both_cap_alphabetic]",
+        "inline-flex items-center gap-0.5 h-6 rounded-sm bg-primary-hover px-0.75 font-medium leading-[normal] text-ink-primary align-[-1px] select-none [text-box:trim-both_cap_alphabetic]",
     });
   },
 
@@ -1109,7 +1109,7 @@ const ComposerContainer = ({
       data-slot="composer-container"
       onMouseDown={handleMouseDown}
       className={cn(
-        "border border-slate-8 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle] cursor-text",
+        "border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle] cursor-text",
         "transition-colors",
         className,
       )}
@@ -1247,6 +1247,7 @@ const ComposerTextarea = ({
     editorProps: {
       attributes: {
         class: cn("max-w-none focus:outline-none w-full"),
+        spellcheck: "false",
       },
       handlePaste: (_view, event) => {
         const items = event.clipboardData?.items;
@@ -1382,7 +1383,7 @@ const ComposerTextarea = ({
     <div
       data-slot="composer-textarea"
       className={cn(
-        "max-h-32 min-h-8 overflow-y-auto px-3 py-2 text-md",
+        "max-h-32 min-h-8 overflow-y-auto px-4 py-2 text-md",
         "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
         disabled && "opacity-50 cursor-not-allowed",
         className,
@@ -1435,7 +1436,7 @@ const ComposerPlaceholder = ({
 
   if (!isLooping && items.length === 1) {
     const content = items[0];
-    return <div className={cn("text-slate-10", className)}>{content}</div>;
+    return <div className={cn("text-ink-tertiary", className)}>{content}</div>;
   }
 
   if (!isLooping && items.length === 0) {
@@ -1451,7 +1452,7 @@ const ComposerPlaceholder = ({
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className={cn("text-slate-10", className)}
+          className={cn("text-ink-tertiary", className)}
         >
           {typeof items[0] === "string"
             ? currentItem
@@ -1499,6 +1500,7 @@ const ComposerSubmit = ({
   return (
     <IconButton
       type="submit"
+      variant="tertiary"
       className={cn("rounded-full", className)}
       disabled={autoDisabled}
       {...props}
@@ -1538,8 +1540,12 @@ const ComposerStates = ({
 
   return (
     <div
-      data-slot="composer-state"
-      className={cn("overflow-hidden", hasMatch && "pb-2", className)}
+      data-slot="composer-states"
+      className={cn(
+        "overflow-hidden transition-transform",
+        hasMatch && "pb-2",
+        className,
+      )}
       {...props}
     >
       <MotionConfig
@@ -1559,7 +1565,7 @@ const ComposerStates = ({
                 height: bounds.height,
               }}
               exit={{ y: "100%", opacity: 0 }}
-              className="overflow-hidden box-content border border-slate-8 bg-slate-1 rounded-4xl shadow-xs [corner-shape:squircle]"
+              className="overflow-hidden box-content border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle]"
             >
               <div ref={ref} className="relative">
                 <AnimatePresence mode="popLayout" initial={false}>
@@ -1583,6 +1589,7 @@ type ComposerStateProps = {
 const ComposerState = ({ value, children, ...props }: ComposerStateProps) => (
   <motion.div
     key={value}
+    data-slot="composer-state"
     initial={{ opacity: 0, filter: "blur(8px)" }}
     animate={{ opacity: 1, filter: "blur(0px)" }}
     exit={{ opacity: 0, filter: "blur(8px)" }}
@@ -1693,7 +1700,7 @@ const ComposerDismissAction = ({
       {...props}
     >
       Dismiss
-      <kbd className="pointer-events-none text-2xs text-slate-10 font-normal">
+      <kbd className="pointer-events-none text-2xs text-ink-tertiary font-normal">
         ESC
       </kbd>
     </Button>
@@ -1709,9 +1716,14 @@ const ComposerContinueAction = ({
 }: ComposerContinueActionProps) => {
   const { questionnaire } = useComposer();
   return (
-    <Button type="submit" className={cn("gap-2", className)} {...props}>
+    <Button
+      variant="tertiary"
+      type="submit"
+      className={cn("gap-2", className)}
+      {...props}
+    >
       {questionnaire.isLastStep ? "Submit" : "Continue"}
-      <kbd className="pointer-events-none text-2xs text-slate-10 font-normal">
+      <kbd className="pointer-events-none text-2xs text-ink-tertiary font-normal">
         ↵
       </kbd>
     </Button>

@@ -120,13 +120,14 @@ const ThreadOverlay = memo(
         "group/thread-overlay absolute right-0 left-0 z-1 mx-auto w-full max-w-(--thread-width)",
         'data-[thread-overlay="top"]:h-(--thread-overlay-top-height) data-[thread-overlay="top"]:top-0',
         'data-[thread-overlay="bottom"]:h-(--thread-overlay-bottom-height) data-[thread-overlay="bottom"]:bottom-0',
+
         className,
       )}
     >
       <ProgressiveBlur
         direction={direction}
         className={cn(
-          "h-full w-full bg-linear-to-b from-slate-2 to-transparent",
+          "h-full w-full bg-linear-to-b from-secondary to-transparent",
           "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
           "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
         )}
@@ -163,6 +164,7 @@ const ThreadViewport = ({
         className={cn(
           "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
           "min-h-full",
+          "has-data-[slot=thread-placeholder]:h-full",
           className,
         )}
         {...props}
@@ -225,7 +227,7 @@ const ThreadScrollButton = ({
   }, [scrollToBottom]);
 
   return (
-    <div className="absolute -top-3 right-3 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
+    <div className="absolute -top-3 right-4 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
       <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-end">
         <AnimatePresence>
           {!isAtBottom && (
@@ -238,6 +240,7 @@ const ThreadScrollButton = ({
               {...props}
             >
               <IconButton
+                size="lg"
                 onClick={handleScrollToBottom}
                 className="rounded-full"
               >

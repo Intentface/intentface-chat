@@ -171,7 +171,7 @@ const ReasoningTrigger = memo(
     return (
       <Collapsible.Trigger
         className={cn(
-          "flex cursor-pointer w-full text-sm items-center gap-2 text-slate-11 rounded-md transition-colors hover:text-slate-12",
+          "flex cursor-pointer w-full text-sm items-center gap-2 text-ink-secondary rounded-md transition-colors hover:text-ink-primary",
           className,
         )}
         {...props}
@@ -229,12 +229,12 @@ const ReasoningContent = ({
         {sections.map((section, i) => (
           <div key={i} className="flex flex-col gap-1">
             {section.header && (
-              <span className="text-sm font-medium text-slate-12">
+              <span className="text-sm font-medium text-ink-primary">
                 {section.header}
               </span>
             )}
             {section.body && (
-              <Markdown className="text-slate-11 text-sm [&_p]:mb-0">
+              <Markdown className="text-ink-secondary text-sm [&_p]:mb-0">
                 {section.body}
               </Markdown>
             )}

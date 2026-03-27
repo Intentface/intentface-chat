@@ -45,7 +45,7 @@ const CommandsGroupLabel = ({
   <div
     data-slot="command-group-label"
     className={cn(
-      "px-3 py-1 text-2xs font-medium text-slate-10 uppercase tracking-wider",
+      "px-3 py-1 text-2xs font-medium text-ink-tertiary uppercase tracking-wider",
       className,
     )}
     {...props}
@@ -73,12 +73,12 @@ const CommandsItem = ({
     data-slot="command-item"
     data-highlighted={highlighted || undefined}
     className={cn(
-      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm text-slate-12 transition-colors cursor-pointer data-highlighted:bg-slate-5",
+      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm text-ink-primary cursor-pointer data-highlighted:bg-primary-hover",
       className,
     )}
     {...props}
   >
-    {Icon && <Icon className="size-4 text-slate-10 shrink-0" />}
+    {Icon && <Icon className="size-4 text-ink-tertiary shrink-0" />}
     {children}
   </button>
 );
@@ -104,7 +104,7 @@ const CommandsItemDescription = ({
   ...props
 }: CommandsItemDescriptionProps) => (
   <span
-    className={cn("text-xs text-slate-10 truncate", className)}
+    className={cn("text-xs text-ink-tertiary truncate", className)}
     {...props}
   />
 );
@@ -123,7 +123,7 @@ const CommandsEmpty = ({
   <div
     data-slot="command-empty"
     className={cn(
-      "flex items-center px-3 h-8 text-sm text-slate-10",
+      "flex items-center px-3 h-8 text-sm text-ink-tertiary",
       className,
     )}
     {...props}
@@ -141,7 +141,7 @@ type CommandsFooterProps = ComponentProps<"div">;
 const CommandsFooter = ({ className, ...props }: CommandsFooterProps) => (
   <div
     className={cn(
-      "border-t border-slate-6 pt-1 px-3 flex items-center gap-3 text-2xs text-slate-10",
+      "border-t border-slate-6 pt-1 px-3 flex items-center gap-3 text-2xs text-ink-tertiary",
       className,
     )}
     {...props}

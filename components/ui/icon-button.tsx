@@ -10,14 +10,15 @@ const iconButtonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-slate-1 border-slate-8 text-slate-12 hover:bg-slate-4",
-        outline:
-          "border-border bg-transparent border-slate-6 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+        primary:
+          "bg-primary border-primary-border text-ink-primary hover:bg-primary-hover",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary text-ink-primary hover:bg-secondary-hover border-secondary-border",
+        tertiary:
+          "bg-tertiary text-ink-primary hover:bg-tertiary-hover border-tertiary-border",
         ghost:
-          "hover:bg-slate-4 hover:text-slate-12 aria-expanded:bg-muted aria-expanded:text-foreground",
-        link: "text-slate-12 underline-offset-4 hover:underline",
+          "hover:bg-primary-hover hover:text-ink-primary aria-expanded:bg-muted aria-expanded:text-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
         "2xs":
@@ -30,7 +31,7 @@ const iconButtonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "primary",
       size: "md",
     },
   },
@@ -38,7 +39,7 @@ const iconButtonVariants = cva(
 
 function IconButton({
   className,
-  variant = "default",
+  variant = "primary",
   size = "md",
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof iconButtonVariants>) {

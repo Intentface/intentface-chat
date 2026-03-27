@@ -10,24 +10,126 @@
     "calt" 1;
 
   /* Theme base colors */
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  --accent: #0169cc;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --acc: #0169cc;
   --contrast: 0.35;
 
-  /* Slate scale: monotonic surface → ink */
-  --slate-1:  var(--background);
+  /* ─── Shared deltas ─── */
+  --mix-hover: calc(12% * var(--contrast));
+  --mix-active: calc(16% * var(--contrast));
+  --mix-border: calc(20% * var(--contrast));
+
+  /* ─── Base: body background ─── */
+  --base: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--contrast)));
+  --base-hover: color-mix(in oklch, var(--base), var(--fg) var(--mix-hover));
+  --base-active: color-mix(in oklch, var(--base), var(--fg) var(--mix-active));
+  --base-border: color-mix(in oklch, var(--base), var(--fg) var(--mix-border));
+
+  /* ─── Secondary: panels, sidebar ─── */
+  --secondary: color-mix(
+    in oklch,
+    var(--bg),
+    var(--fg) calc(4% * var(--contrast))
+  );
+  --secondary-hover: color-mix(
+    in oklch,
+    var(--secondary),
+    var(--fg) var(--mix-hover)
+  );
+  --secondary-active: color-mix(
+    in oklch,
+    var(--secondary),
+    var(--fg) var(--mix-active)
+  );
+  --secondary-border: color-mix(
+    in oklch,
+    var(--secondary),
+    var(--fg) var(--mix-border)
+  );
+
+  /* ─── Primary: cards, inputs, dropdowns, composer ─── */
+  --primary: var(--bg);
+  --primary-hover: color-mix(
+    in oklch,
+    var(--primary),
+    var(--fg) var(--mix-hover)
+  );
+  --primary-active: color-mix(
+    in oklch,
+    var(--primary),
+    var(--fg) var(--mix-active)
+  );
+  --primary-border: color-mix(
+    in oklch,
+    var(--primary),
+    var(--fg) var(--mix-border)
+  );
+
+  /* ─── Tertiary: filled controls (buttons, tags, badges) ─── */
+  --tertiary: color-mix(
+    in oklch,
+    var(--bg),
+    var(--fg) calc(2% * var(--contrast))
+  );
+  --tertiary-hover: color-mix(
+    in oklch,
+    var(--tertiary),
+    var(--fg) var(--mix-hover)
+  );
+  --tertiary-active: color-mix(
+    in oklch,
+    var(--tertiary),
+    var(--fg) var(--mix-active)
+  );
+  --tertiary-border: color-mix(
+    in oklch,
+    var(--tertiary),
+    var(--fg) var(--mix-border)
+  );
+
+  --accent: color-mix(
+    in oklch,
+    var(--acc),
+    var(--fg) calc(28% * var(--contrast))
+  );
+  --accent-hover: color-mix(in oklch, var(--accent), var(--fg) var(--mix-hover));
+  --accent-active: color-mix(
+    in oklch,
+    var(--accent),
+    var(--fg) var(--mix-active)
+  );
+  --accent-border: color-mix(
+    in oklch,
+    var(--accent),
+    var(--fg) var(--mix-border)
+  );
+
+  /* ─── Text ─── */
+  --text-primary: color-mix(in oklch, var(--bg), var(--fg) 85%);
+  --text-secondary: color-mix(in oklch, var(--bg), var(--fg) 58%);
+  --text-tertiary: color-mix(in oklch, var(--bg), var(--fg) 40%);
+
+  /* Backgrounds */
+
+  /* --slate-1:  var(--background);
   --slate-2:  color-mix(in oklch, var(--background), var(--foreground) calc(4%  * var(--contrast)));
-  --slate-3:  color-mix(in oklch, var(--background), var(--foreground) calc(10%  * var(--contrast)));
-  --slate-4:  color-mix(in oklch, var(--background), var(--foreground) calc(14% * var(--contrast)));
-  --slate-5:  color-mix(in oklch, var(--background), var(--foreground) calc(18% * var(--contrast)));
-  --slate-6:  color-mix(in oklch, var(--background), var(--foreground) calc(24% * var(--contrast)));
-  --slate-7:  color-mix(in oklch, var(--background), var(--foreground) calc(24% * var(--contrast)));
-  --slate-8:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast)));
-  --slate-9:  color-mix(in oklch, var(--background), var(--foreground) calc(32% * var(--contrast)));
-  --slate-10: color-mix(in oklch, var(--background), var(--foreground) 42%);
+  --slate-3:  color-mix(in oklch, var(--background), var(--foreground) calc(10%  * var(--contrast))); */
+  /* Active states */
+
+  /* --slate-4:  color-mix(in oklch, var(--background), var(--foreground) calc(18% * var(--contrast)));
+  --slate-5:  color-mix(in oklch, var(--background), var(--foreground) calc(24% * var(--contrast)));
+  --slate-6:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast))); */
+  /* Borders */
+
+  /* --slate-7:  color-mix(in oklch, var(--background), var(--foreground) calc(32% * var(--contrast)));
+  --slate-8:  color-mix(in oklch, var(--background), var(--foreground) calc(36% * var(--contrast)));
+  --slate-9:  color-mix(in oklch, var(--background), var(--foreground) calc(40% * var(--contrast))); */
+  /* Text colors */
+
+  /* --slate-10: color-mix(in oklch, var(--background), var(--foreground) 46%);
   --slate-11: color-mix(in oklch, var(--background), var(--foreground) 58%);
-  --slate-12: color-mix(in oklch, var(--background), var(--foreground) 85%);
+  --slate-12: color-mix(in oklch, var(--background), var(--foreground) 85%); */
 
   /* Previous light theme values:
   --slate-1: oklch(99.7% 0 0);
@@ -51,23 +153,52 @@
 }
 
 .dark {
-  --background: #111111;
-  --foreground: #fcfcfc;
+  --bg: #111111;
+  --fg: #fcfcfc;
   --accent: #4a9eed;
 
-  /* Slate scale — slate-3 is surface, slate-2/1 recessed, then 4+ toward ink */
-  --slate-1:  color-mix(in oklch, var(--background), var(--foreground) calc(12% * var(--contrast)));
+  --base: var(--bg);
+  --primary: color-mix(
+    in oklch,
+    var(--bg),
+    var(--fg) calc(12% * var(--contrast))
+  );
+  --secondary: color-mix(
+    in oklch,
+    var(--bg),
+    var(--fg) calc(3% * var(--contrast))
+  );
+  --tertiary: color-mix(
+    in oklch,
+    var(--bg),
+    var(--fg) calc(20% * var(--contrast))
+  );
+
+  /* ─── Optionally adjust deltas for dark ─── */
+  --mix-hover: calc(12% * var(--contrast));
+  --mix-active: calc(14% * var(--contrast));
+  --mix-border: calc(16% * var(--contrast)); /* subtler borders in dark */
+
+  /* Backgrounds */
+
+  /* --slate-1:  color-mix(in oklch, var(--background), var(--foreground) calc(12% * var(--contrast)));
   --slate-2:  color-mix(in oklch, var(--background), var(--foreground) calc(3%  * var(--contrast)));
-  --slate-3:  var(--background);
-  --slate-4:  color-mix(in oklch, var(--background), var(--foreground) calc(22% * var(--contrast)));
-  --slate-5:  color-mix(in oklch, var(--background), var(--foreground) calc(29% * var(--contrast)));
-  --slate-6:  color-mix(in oklch, var(--background), var(--foreground) calc(34% * var(--contrast)));
-  --slate-7:  color-mix(in oklch, var(--background), var(--foreground) calc(16% * var(--contrast)));
+  --slate-3:  var(--background); */
+  /* Active states */
+
+  /* --slate-4:  color-mix(in oklch, var(--background), var(--foreground) calc(24% * var(--contrast)));
+  --slate-5:  color-mix(in oklch, var(--background), var(--foreground) calc(26% * var(--contrast)));
+  --slate-6:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast))); */
+  /* Borders */
+
+  /* --slate-7:  color-mix(in oklch, var(--background), var(--foreground) calc(16% * var(--contrast)));
   --slate-8:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast)));
-  --slate-9:  color-mix(in oklch, var(--background), var(--foreground) calc(36% * var(--contrast)));
-  --slate-10: color-mix(in oklch, var(--background), var(--foreground) 28%);
+  --slate-9:  color-mix(in oklch, var(--background), var(--foreground) calc(36% * var(--contrast))); */
+  /* Text colors */
+
+  /* --slate-10: color-mix(in oklch, var(--background), var(--foreground) 28%);
   --slate-11: color-mix(in oklch, var(--background), var(--foreground) 56%);
-  --slate-12: color-mix(in oklch, var(--background), var(--foreground) 84%);
+  --slate-12: color-mix(in oklch, var(--background), var(--foreground) 84%); */
 
   /* Previous dark theme values:
   --slate-1: oklch(20.3% 0 285);
@@ -103,6 +234,40 @@
   --color-slate-11: var(--slate-11);
   --color-slate-12: var(--slate-12);
 
+  /* Background */
+  --color-base: var(--base);
+  --color-base-hover: var(--base-hover);
+  --color-base-active: var(--base-active);
+  --color-base-border: var(--base-border);
+
+  /* Surface: secondary (panels, sidebar) */
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-active: var(--secondary-active);
+  --color-secondary-border: var(--secondary-border);
+
+  /* Surface: primary (cards, inputs, composer) */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-border: var(--primary-border);
+
+  /* Surface: tertiary (filled controls) */
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-hover: var(--tertiary-hover);
+  --color-tertiary-active: var(--tertiary-active);
+  --color-tertiary-border: var(--tertiary-border);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-border: var(--accent-border);
+
+  /* Text */
+  --color-ink-primary: var(--text-primary);
+  --color-ink-secondary: var(--text-secondary);
+  --color-ink-tertiary: var(--text-tertiary);
+
   --radius-xs: calc(var(--radius) - 4px);
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
@@ -134,22 +299,22 @@
     @apply border-slate-4 ring-slate-12;
   }
   body {
-    @apply bg-slate-3 text-slate-12;
+    @apply bg-base text-ink-primary;
   }
 }
 
 /* Streamdown element styles */
 [data-streamdown="heading-1"] {
-  @apply mt-6 mb-3 text-xl font-semibold text-slate-12;
+  @apply mt-6 mb-3 text-xl font-semibold text-ink-primary;
 }
 [data-streamdown="heading-2"] {
-  @apply mt-5 mb-2.5 text-lg font-semibold text-slate-12;
+  @apply mt-5 mb-2.5 text-lg font-semibold text-ink-primary;
 }
 [data-streamdown="heading-3"] {
-  @apply mt-4 mb-2 text-md font-semibold text-slate-12;
+  @apply mt-4 mb-2 text-md font-semibold text-ink-primary;
 }
 [data-streamdown="heading-4"] {
-  @apply mt-3 mb-1.5 text-md font-medium text-slate-12;
+  @apply mt-3 mb-1.5 text-md font-medium text-ink-primary;
 }
 
 [data-streamdown="code-block"] {
@@ -163,11 +328,11 @@
 }
 
 [data-streamdown="inline-code"] {
-  @apply rounded-sm bg-slate-3 px-1 py-0.5 text-sm text-slate-12;
+  @apply rounded-sm bg-slate-3 px-1 py-0.5 text-sm text-ink-primary;
 }
 
 [data-streamdown="link"] {
-  @apply text-slate-12 underline underline-offset-2 decoration-slate-8 hover:decoration-slate-11;
+  @apply text-ink-primary underline underline-offset-2 decoration-slate-8 hover:decoration-slate-11;
 }
 
 [data-streamdown="blockquote"] {
@@ -212,7 +377,7 @@
   @apply border-b border-slate-6 bg-slate-3;
 }
 [data-streamdown="table-header-cell"] {
-  @apply px-3 py-1.5 text-left font-medium text-slate-12;
+  @apply px-3 py-1.5 text-left font-medium text-ink-primary;
 }
 [data-streamdown="table-row"] {
   @apply border-b border-slate-6;

@@ -625,7 +625,10 @@ const ChatPlaceholder = () => {
           <motion.span variants={variants} className="text-lg font-semibold">
             Intentface Chat
           </motion.span>
-          <motion.span variants={variants} className="text-sm text-slate-11">
+          <motion.span
+            variants={variants}
+            className="text-sm text-ink-secondary"
+          >
             Start a conversation
           </motion.span>
         </div>

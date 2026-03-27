@@ -40,7 +40,7 @@ const QuestionnaireLabel = ({
 }: QuestionnaireLabelProps) => (
   <p
     className={cn(
-      "min-w-0 flex-1 p-2 text-sm font-medium leading-tight",
+      "min-w-0 flex-1 px-2 text-sm font-medium leading-tight",
       className,
     )}
     {...props}
@@ -54,7 +54,7 @@ const QuestionnaireHeader = ({
   className,
   ...props
 }: QuestionnaireHeaderProps) => (
-  <div className={cn("flex h-6 items-center gap-2", className)} {...props} />
+  <div className={cn("flex h-7 items-center gap-2", className)} {...props} />
 );
 
 /** Row container for `Previous`, `StepLabel`, and `Next`. */
@@ -80,7 +80,7 @@ const QuestionnairePrevious = ({
   <button
     type="button"
     className={cn(
-      "flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30",
+      "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30",
       className,
     )}
     {...props}
@@ -96,7 +96,7 @@ const QuestionnaireNext = ({ className, ...props }: QuestionnaireNextProps) => (
   <button
     type="button"
     className={cn(
-      "flex size-6 cursor-pointer items-center justify-center rounded-md text-slate-11 transition-colors hover:bg-slate-3 hover:text-slate-12 disabled:pointer-events-none disabled:opacity-30",
+      "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30",
       className,
     )}
     {...props}
@@ -119,7 +119,7 @@ const QuestionnaireStepLabel = ({
   ...props
 }: QuestionnaireStepLabelProps) => (
   <span
-    className={cn("text-2xs tabular-nums text-slate-10", className)}
+    className={cn("text-2xs tabular-nums text-ink-tertiary", className)}
     {...props}
   >
     {children ?? `${current} of ${total}`}
@@ -331,8 +331,8 @@ const QuestionnaireOption = ({
         data-highlighted={isHighlighted || undefined}
         onMouseMove={() => onItemHover(value)}
         className={cn(
-          "flex cursor-pointer items-center gap-2 bg-slate-1 rounded-lg p-2 transition-colors",
-          "data-highlighted:bg-slate-4",
+          "flex cursor-pointer items-start gap-2 rounded-lg p-2 transition-colors",
+          "data-highlighted:bg-primary-hover",
           className,
         )}
         {...props}
@@ -394,8 +394,8 @@ const QuestionnaireOptionRadio = ({
     <RadioGroup.Item
       value={option.value}
       className={cn(
-        "size-4 rounded-[4px] border-0 bg-slate-4 text-2xs font-medium tabular-nums text-slate-11",
-        "data-checked:bg-slate-12 data-checked:text-slate-1",
+        "size-4 rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
+        "data-checked:bg-tertiary-active data-checked:border-tertiary-active data-checked:text-ink-primary",
         className,
       )}
       {...props}
@@ -412,7 +412,10 @@ const QuestionnaireOptionContent = ({
   className,
   ...props
 }: QuestionnaireOptionContentProps) => (
-  <span className={cn("flex min-w-0 flex-1 flex-col", className)} {...props} />
+  <span
+    className={cn("flex min-w-0 flex-1 gap-1 flex-col", className)}
+    {...props}
+  />
 );
 
 /** Option title text. */
@@ -433,7 +436,7 @@ const QuestionnaireOptionDescription = ({
   ...props
 }: QuestionnaireOptionDescriptionProps) => (
   <span
-    className={cn("text-slate-11 text-xs leading-tight", className)}
+    className={cn("text-ink-secondary text-xs leading-tight", className)}
     {...props}
   />
 );
@@ -460,7 +463,7 @@ const QuestionnaireSummary = ({
       className={cn("not-prose w-full", className)}
       {...props}
     >
-      <Collapsible.Trigger className="flex w-full cursor-pointer items-center gap-2 rounded-md py-1 text-sm text-slate-11 transition-colors hover:text-slate-12">
+      <Collapsible.Trigger className="flex w-full cursor-pointer items-center gap-2 rounded-md py-1 text-sm text-ink-secondary transition-colors hover:text-ink-primary">
         <span className="text-gray-11/60">
           Answered {count} {count === 1 ? "question" : "questions"}
         </span>
@@ -481,7 +484,7 @@ const QuestionnaireSummary = ({
               <span className="text-sm font-medium leading-tight">
                 {q.question}
               </span>
-              <span className="text-sm leading-tight text-slate-11">
+              <span className="text-sm leading-tight text-ink-secondary">
                 {answers[q.question] ?? "—"}
               </span>
             </div>
@@ -502,7 +505,7 @@ const QuestionnaireHints = ({
   <div
     data-slot="questionnaire-hints"
     className={cn(
-      "flex items-center gap-3 px-2 pt-1 text-2xs text-slate-10",
+      "flex items-center gap-3 px-2 pt-1 text-2xs text-ink-tertiary",
       className,
     )}
     {...props}

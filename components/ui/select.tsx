@@ -36,8 +36,9 @@ const selectTriggerVariants = cva(
     variants: {
       variant: {
         primary:
-          "border-border bg-slate-1 hover:bg-slate-4 hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground",
-        ghost: "border-transparent hover:bg-slate-4 aria-expanded:bg-slate-4",
+          "border-border bg-primary hover:bg-primary-hover hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground",
+        ghost:
+          "border-transparent hover:bg-primary-hover aria-expanded:bg-primary-hover",
       },
       size: {
         sm: "h-8 pr-2 pl-2.5 text-sm *:data-[slot=select-value]:text-sm *:data-[slot=select-icon]:size-3.5",
@@ -120,7 +121,7 @@ function SelectContent({
               // "w-(--anchor-width)",
               // Styling
               "rounded-lg p-1 shadow-md",
-              "bg-slate-1 text-slate-12 border border-slate-8",
+              "bg-primary text-ink-primary border border-primary-border",
               // Overflow
               "overflow-x-hidden overflow-y-auto",
               // Animation base
@@ -185,7 +186,7 @@ const SelectItem = ({
       className={cn(
         "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-md text-sm flex w-full items-center gap-2",
         // Focus states
-        "data-highlighted:bg-slate-4",
+        "data-highlighted:bg-primary-hover",
         "not-data-[variant=destructive]:focus:**:text-accent-foreground",
         // Disabled states
         "data-disabled:pointer-events-none data-disabled:opacity-50",
@@ -246,7 +247,7 @@ const SelectScrollUpButton = ({
           "top-0 z-10 flex w-full items-center justify-center",
           "py-1",
           // Styling
-          "cursor-default hover:bg-slate-4",
+          "cursor-default hover:bg-primary-hover",
           // SVG sizing
           "[&_svg:not([class*='size-'])]:size-4",
         ],
@@ -271,7 +272,7 @@ const SelectScrollDownButton = ({
         "bottom-0 z-10 flex w-full items-center justify-center",
         "py-1",
         // Styling
-        "cursor-default hover:bg-slate-4",
+        "cursor-default hover:bg-primary-hover",
         // SVG sizing
         "[&_svg:not([class*='size-'])]:size-4",
 

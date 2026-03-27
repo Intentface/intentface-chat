@@ -28,7 +28,7 @@ export function TextShimmer({
         className,
       )}
       style={{
-        backgroundImage: `linear-gradient(to right, var(--slate-11) ${50 - dynamicSpread}%, var(--slate-12) 50%, var(--slate-11) ${50 + dynamicSpread}%)`,
+        backgroundImage: `linear-gradient(to right, var(--color-ink-secondary) ${50 - dynamicSpread}%, var(--color-ink-primary) 50%, var(--color-ink-secondary) ${50 + dynamicSpread}%)`,
         animationDuration: `${duration}s`,
       }}
       {...props}

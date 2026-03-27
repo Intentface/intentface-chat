@@ -106,7 +106,7 @@ const StepQueueItem = ({
         bounce: 0,
       }}
       className={cn(
-        "flex shrink-0 items-center text-sm font-medium text-slate-11",
+        "flex shrink-0 items-center text-sm font-medium text-ink-secondary",
         className,
       )}
       {...props}

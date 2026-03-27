@@ -102,7 +102,7 @@ const StepsHeader = ({ children, className, ...props }: StepsHeaderProps) => {
   return (
     <Collapsible.Trigger
       className={cn(
-        "flex w-full cursor-pointer items-center gap-2 py-1 text-sm text-slate-11 transition-colors hover:text-slate-12",
+        "flex w-full cursor-pointer items-center gap-2 py-1 text-sm text-ink-secondary transition-colors hover:text-ink-primary",
         className,
       )}
       {...props}
@@ -173,15 +173,15 @@ const StepsStep = ({
   const hasContent = Children.toArray(children).length > 0;
 
   const iconClasses = cn(
-    status === "complete" && "text-slate-11",
-    status === "active" && "text-slate-12",
+    status === "complete" && "text-ink-secondary",
+    status === "active" && "text-ink-primary",
     status === "pending" && "text-slate-9",
   );
 
   const labelClasses = cn(
     "text-sm text-left",
-    status === "active" && "text-slate-12 font-medium",
-    status === "complete" && "text-slate-11",
+    status === "active" && "text-ink-primary font-medium",
+    status === "complete" && "text-ink-secondary",
     status === "pending" && "text-slate-9",
   );
 
@@ -223,7 +223,7 @@ const StepsStep = ({
       data-status={status}
       className={className}
     >
-      <Collapsible.Trigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-0.5 transition-colors hover:text-slate-12">
+      <Collapsible.Trigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-0.5 transition-colors hover:text-ink-primary">
         <div
           className={cn(
             "relative flex size-4 shrink-0 items-center justify-center",
@@ -273,7 +273,10 @@ type StepsBodyProps = ComponentProps<typeof Markdown>;
 
 const StepsBody = ({ className, children, ...props }: StepsBodyProps) => (
   <Markdown
-    className={cn("text-sm leading-tight text-slate-11 [&_p]:mb-0", className)}
+    className={cn(
+      "text-sm leading-tight text-ink-secondary [&_p]:mb-0",
+      className,
+    )}
     {...props}
   >
     {children}
@@ -291,7 +294,7 @@ type StepsSummaryProps = ComponentProps<"span">;
 const StepsSummary = ({ className, children, ...props }: StepsSummaryProps) => (
   <span
     data-slot="steps-summary"
-    className={cn("text-xs text-slate-11", className)}
+    className={cn("text-xs text-ink-secondary", className)}
     {...props}
   >
     {children}
@@ -449,11 +452,11 @@ const StepsAskUser = ({ part, className }: StepsAskUserProps) => {
       <div className="flex flex-col gap-1.5">
         {questions.map((q) => (
           <div key={q.question} className="flex flex-col gap-0.5">
-            <span className="text-xs font-medium leading-tight text-slate-12">
+            <span className="text-xs font-medium leading-tight text-ink-primary">
               {q.question}
             </span>
             {isComplete && (
-              <span className="text-xs leading-tight text-slate-11">
+              <span className="text-xs leading-tight text-ink-secondary">
                 {answers[q.question] ?? "—"}
               </span>
             )}

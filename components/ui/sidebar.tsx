@@ -115,7 +115,7 @@ const SidebarProvider = ({
       <div
         data-slot="sidebar-wrapper"
         className={cn(
-          "group/sidebar-wrapper flex min-h-svh w-full bg-slate-3",
+          "group/sidebar-wrapper flex min-h-svh w-full bg-base",
           className,
         )}
         data-state={state}
@@ -255,7 +255,7 @@ const SidebarInset = ({
       data-slot="sidebar-inset"
       data-expanded={state === "expanded" ? "" : undefined}
       className={cn(
-        "group/sidebar-inset bg-slate-3 relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
+        "group/sidebar-inset bg-base relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
         "data-expanded:p-2 transition-padding duration-200 ease-out",
         className,
       )}
@@ -274,8 +274,8 @@ const SidebarViewport = ({
   <div
     data-slot="sidebar-viewport"
     className={cn(
-      "flex h-full min-h-0 flex-1 bg-slate-2 overflow-hidden border border-transparent",
-      "group-data-expanded/sidebar-inset:border-slate-7 group-data-expanded/sidebar-inset:rounded-xl",
+      "flex h-full min-h-0 flex-1 bg-secondary overflow-hidden border border-transparent",
+      "group-data-expanded/sidebar-inset:border-secondary-border group-data-expanded/sidebar-inset:rounded-xl",
       className,
     )}
     {...props}
@@ -375,7 +375,7 @@ const SidebarGroupLabel = ({
       "data-sidebar": "group-label",
       ...props,
       className: cn(
-        "text-slate-11 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-ink-secondary flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         className,
       ),
     },
@@ -437,14 +437,14 @@ const SidebarMenuItem = ({ className, ...props }: ComponentProps<"li">) => (
 const sidebarMenuButtonVariants = cva(
   [
     "peer/menu-button cursor-pointer flex w-full items-center gap-2",
-    "overflow-hidden rounded-md px-2 font-[450] text-left text-sm outline-hidden",
+    "overflow-hidden rounded-md px-2 font-medium text-left text-sm outline-hidden",
     "transition-[width,height,padding] focus-visible:ring-1",
-    "hover:bg-slate-4 data-active:bg-slate-5",
+    "hover:bg-base-hover data-active:bg-base-active",
     "disabled:pointer-events-none disabled:opacity-50",
     "group-has-data-[sidebar=menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",
-    "data-[state=open]:bg-slate-5",
-    "[&>span:last-child]:truncate [&_svg]:text-slate-11 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-slate-12",
+    "data-[state=open]:bg-base-active",
+    "[&>span:last-child]:truncate [&_svg]:text-ink-secondary [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-ink-primary",
   ],
   {
     variants: {
@@ -530,7 +530,7 @@ const SidebarMenuAction = ({
       onClick: handleClick,
       ...props,
       className: cn(
-        "text-slate-11 cursor-pointer hover:text-slate-12 flex aspect-square size-6 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-ink-secondary cursor-pointer hover:text-ink-primary flex aspect-square size-6 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
         showOnHover &&
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
         className,

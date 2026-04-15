@@ -16,9 +16,9 @@
   --contrast: 0.35;
 
   /* ─── Shared deltas ─── */
-  --mix-hover: calc(12% * var(--contrast));
-  --mix-active: calc(16% * var(--contrast));
-  --mix-border: calc(20% * var(--contrast));
+  --mix-hover: calc(16% * var(--contrast));
+  --mix-active: calc(20% * var(--contrast));
+  --mix-border: calc(24% * var(--contrast));
 
   /* ─── Base: body background ─── */
   --base: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--contrast)));
@@ -155,7 +155,7 @@
 .dark {
   --bg: #111111;
   --fg: #fcfcfc;
-  --accent: #4a9eed;
+  --acc: #4a9eed;
 
   --base: var(--bg);
   --primary: color-mix(
@@ -175,9 +175,9 @@
   );
 
   /* ─── Optionally adjust deltas for dark ─── */
-  --mix-hover: calc(12% * var(--contrast));
-  --mix-active: calc(14% * var(--contrast));
-  --mix-border: calc(16% * var(--contrast)); /* subtler borders in dark */
+  --mix-hover: calc(16% * var(--contrast));
+  --mix-active: calc(18% * var(--contrast));
+  --mix-border: calc(20% * var(--contrast)); /* subtler borders in dark */
 
   /* Backgrounds */
 

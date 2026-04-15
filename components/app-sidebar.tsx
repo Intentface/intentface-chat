@@ -4,14 +4,17 @@ import {
   FlaskConicalIcon,
   MonitorIcon,
   MoonIcon,
+  PaletteIcon,
   SunIcon,
   Trash2Icon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useState } from "react";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
 import { SettingsIcon } from "@/components/icons/settings";
+import { ThemeConfigurator } from "@/components/theme-configurator";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
@@ -26,6 +29,7 @@ export const AppSidebar = () => {
   const chats = useChatStore((state) => state.chats);
   const deleteChat = useChatStore((state) => state.deleteChat);
   const { showBalsam, setShowBalsam } = useSettingsStore();
+  const [themeConfiguratorOpen, setThemeConfiguratorOpen] = useState(false);
 
   const handleDelete = (chatId: string) => {
     const isActive = pathname === `/chat/${chatId}`;
@@ -96,14 +100,11 @@ export const AppSidebar = () => {
                 }
               />
               <DropdownMenu.Content side="top" align="start">
-                <DropdownMenu.Item inset>
-                  Test Dropdown Menu Item
-                </DropdownMenu.Item>
-                <DropdownMenu.Item inset>
-                  Test Dropdown Menu Item
-                </DropdownMenu.Item>
-                <DropdownMenu.Item inset>
-                  Test Dropdown Menu Item
+                <DropdownMenu.Item
+                  onClick={() => setThemeConfiguratorOpen(true)}
+                >
+                  <PaletteIcon />
+                  Appearance
                 </DropdownMenu.Item>
                 <DropdownMenu.Sub>
                   <DropdownMenu.SubTrigger>
@@ -140,6 +141,10 @@ export const AppSidebar = () => {
                 </DropdownMenu.CheckboxItem>
               </DropdownMenu.Content>
             </DropdownMenu>
+            <ThemeConfigurator
+              open={themeConfiguratorOpen}
+              onOpenChange={setThemeConfiguratorOpen}
+            />
           </Sidebar.MenuItem>
         </Sidebar.Menu>
       </Sidebar.Footer>

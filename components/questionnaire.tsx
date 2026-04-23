@@ -190,11 +190,11 @@ const QuestionnaireOptions = ({
 
   const register = useCallback((itemValue: string) => {
     registeredItems.current = [...registeredItems.current, itemValue];
-    // Auto-highlight first item when first option registers and nothing is highlighted
-    if (
-      registeredItems.current.length === 1 &&
-      highlightedValueRef.current === null
-    ) {
+    // Auto-highlight whenever an item registers while nothing is highlighted.
+    // Using length === 1 here is fragile: during a step transition, React can
+    // interleave old-item cleanups with new-item setups, so the new first
+    // option may arrive when the list is not exactly length 1.
+    if (highlightedValueRef.current === null) {
       highlightedValueRef.current = itemValue;
       setHighlightedValue(itemValue);
     }
@@ -244,8 +244,10 @@ const QuestionnaireOptions = ({
         setHighlightedValue(null);
       },
       resetHighlight: () => {
-        const items = registeredItems.current;
-        setHighlightedValue(items.length > 0 ? items[0] : null);
+        // Clear synchronously — the auto-highlight path in `register` will pick
+        // up the first new item when it mounts after a step change.
+        highlightedValueRef.current = null;
+        setHighlightedValue(null);
       },
       get highlightedValue() {
         return highlightedValueRef.current;

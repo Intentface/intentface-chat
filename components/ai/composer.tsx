@@ -805,6 +805,11 @@ const ComposerRoot = ({
   /** Save current editor text as freeText for the given step, then load the target step's freeText. */
   const transitionStep = useCallback(
     (targetStep: number) => {
+      // No-op if caller clamped to the current step (e.g. Right arrow on the
+      // last question, or any arrow with only one question). Otherwise
+      // resetHighlight clears the highlight without any item remount to
+      // re-trigger the auto-highlight path.
+      if (targetStep === questionnaireStep) return;
       const currentText = editorRef.current?.getText()?.trim() ?? "";
       // Save freeText for the step we're leaving
       if (currentText) {

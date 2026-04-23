@@ -57,6 +57,7 @@ import {
 } from "@/components/questionnaire";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
@@ -1739,19 +1740,21 @@ const ComposerHints = ({ className, ...props }: ComposerHintsProps) => {
 
   return (
     <Questionnaire.Hints className={cn("flex-1", className)} {...props}>
-      <span>
-        <kbd>↑↓</kbd> navigate
+      <span className="inline-flex items-center gap-1">
+        <Kbd size="sm">↑</Kbd>
+        <Kbd size="sm">↓</Kbd> navigate
       </span>
-      <span>
-        <kbd>↵</kbd> select
+      <span className="inline-flex items-center gap-1">
+        <Kbd size="sm">↵</Kbd> select
       </span>
       {!questionnaire.isSingle && totalQuestions > 1 && (
-        <span>
-          <kbd>←→</kbd> between questions
+        <span className="inline-flex items-center gap-1">
+          <Kbd size="sm">←</Kbd>
+          <Kbd size="sm">→</Kbd> between questions
         </span>
       )}
-      <span>
-        <kbd>esc</kbd> skip
+      <span className="inline-flex items-center gap-1">
+        <Kbd size="sm">esc</Kbd> skip
       </span>
     </Questionnaire.Hints>
   );

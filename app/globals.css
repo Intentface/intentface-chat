@@ -88,6 +88,27 @@
     var(--fg) var(--mix-border)
   );
 
+  --quaternary: color-mix(
+    in oklch,
+    var(--bg),
+    var(--fg) calc(24% * var(--contrast))
+  );
+  --quaternary-hover: color-mix(
+    in oklch,
+    var(--quaternary),
+    var(--fg) var(--mix-hover)
+  );
+  --quaternary-active: color-mix(
+    in oklch,
+    var(--quaternary),
+    var(--fg) var(--mix-active)
+  );
+  --quaternary-border: color-mix(
+    in oklch,
+    var(--quaternary),
+    var(--fg) var(--mix-border)
+  );
+
   --accent: color-mix(
     in oklch,
     var(--acc),
@@ -178,62 +199,9 @@
   --mix-hover: calc(16% * var(--contrast));
   --mix-active: calc(18% * var(--contrast));
   --mix-border: calc(20% * var(--contrast)); /* subtler borders in dark */
-
-  /* Backgrounds */
-
-  /* --slate-1:  color-mix(in oklch, var(--background), var(--foreground) calc(12% * var(--contrast)));
-  --slate-2:  color-mix(in oklch, var(--background), var(--foreground) calc(3%  * var(--contrast)));
-  --slate-3:  var(--background); */
-  /* Active states */
-
-  /* --slate-4:  color-mix(in oklch, var(--background), var(--foreground) calc(24% * var(--contrast)));
-  --slate-5:  color-mix(in oklch, var(--background), var(--foreground) calc(26% * var(--contrast)));
-  --slate-6:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast))); */
-  /* Borders */
-
-  /* --slate-7:  color-mix(in oklch, var(--background), var(--foreground) calc(16% * var(--contrast)));
-  --slate-8:  color-mix(in oklch, var(--background), var(--foreground) calc(28% * var(--contrast)));
-  --slate-9:  color-mix(in oklch, var(--background), var(--foreground) calc(36% * var(--contrast))); */
-  /* Text colors */
-
-  /* --slate-10: color-mix(in oklch, var(--background), var(--foreground) 28%);
-  --slate-11: color-mix(in oklch, var(--background), var(--foreground) 56%);
-  --slate-12: color-mix(in oklch, var(--background), var(--foreground) 84%); */
-
-  /* Previous dark theme values:
-  --slate-1: oklch(20.3% 0 285);
-  --slate-2: oklch(18.2% 0 285);
-  --slate-3: oklch(19.6% 0 285);
-  --slate-4: oklch(23.2% 0 285);
-  --slate-5: oklch(24.3% 0 285);
-  --slate-6: oklch(25.1% 0 285);
-  --slate-7: oklch(26.2% 0 285);
-  --slate-8: oklch(27.1% 0 285);
-  --slate-9: oklch(28.6% 0 285);
-  --slate-10: oklch(29.7% 0 285);
-  --slate-11: oklch(58.3% 0 285);
-  --slate-12: oklch(86.9% 0 285); */
 }
 
 @theme inline {
-  /* Background colors for interactive elements */
-  --color-slate-1: var(--slate-1);
-  /* Background colors for static elements */
-  --color-slate-2: var(--slate-2);
-  --color-slate-3: var(--slate-3);
-  /* Background colors for hover, active, highlighted, etc. */
-  --color-slate-4: var(--slate-4);
-  --color-slate-5: var(--slate-5);
-  --color-slate-6: var(--slate-6);
-  /* Border colors */
-  --color-slate-7: var(--slate-7);
-  --color-slate-8: var(--slate-8);
-  --color-slate-9: var(--slate-9);
-  /* Text colors */
-  --color-slate-10: var(--slate-10);
-  --color-slate-11: var(--slate-11);
-  --color-slate-12: var(--slate-12);
-
   /* Background */
   --color-base: var(--base);
   --color-base-hover: var(--base-hover);
@@ -257,6 +225,12 @@
   --color-tertiary-hover: var(--tertiary-hover);
   --color-tertiary-active: var(--tertiary-active);
   --color-tertiary-border: var(--tertiary-border);
+
+  /* Surface: quaternary (filled controls) */
+  --color-quaternary: var(--quaternary);
+  --color-quaternary-hover: var(--quaternary-hover);
+  --color-quaternary-active: var(--quaternary-active);
+  --color-quaternary-border: var(--quaternary-border);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
@@ -296,7 +270,7 @@
 
 @layer base {
   * {
-    @apply border-slate-4 ring-slate-12;
+    @apply border-primary-border ring-ink-primary;
   }
   body {
     @apply bg-base text-ink-primary;
@@ -318,25 +292,25 @@
 }
 
 [data-streamdown="code-block"] {
-  @apply my-3 overflow-hidden rounded-lg border border-slate-6 bg-slate-3 [corner-shape:squircle];
+  @apply my-3 overflow-hidden rounded-lg border border-primary-border bg-primary [corner-shape:squircle];
 }
 [data-streamdown="code-block-header"] {
-  @apply flex items-center justify-between border-b border-slate-6 bg-slate-3 p-3 text-xs text-slate-11;
+  @apply flex items-center justify-between border-b border-primary-border bg-primary p-3 text-xs text-ink-primary;
 }
 [data-streamdown="code-block-body"] {
-  @apply overflow-x-auto p-3 bg-slate-1 text-sm leading-relaxed;
+  @apply overflow-x-auto p-3 bg-primary text-sm leading-relaxed;
 }
 
 [data-streamdown="inline-code"] {
-  @apply rounded-sm bg-slate-3 px-1 py-0.5 text-sm text-ink-primary;
+  @apply rounded-sm bg-primary px-1 py-0.5 text-sm text-ink-primary;
 }
 
 [data-streamdown="link"] {
-  @apply text-ink-primary underline underline-offset-2 decoration-slate-8 hover:decoration-slate-11;
+  @apply text-ink-primary underline underline-offset-2 decoration-primary-border hover:decoration-ink-primary;
 }
 
 [data-streamdown="blockquote"] {
-  @apply my-3 border-l-2 border-slate-8 pl-3 text-slate-11;
+  @apply my-3 border-l-2 border-primary-border pl-3 text-ink-primary;
 }
 
 [data-streamdown="ordered-list"],
@@ -353,14 +327,14 @@
   @apply pl-1;
 }
 [data-streamdown="list-item"]::marker {
-  color: var(--slate-10);
+  color: var(--ink-secondary);
 }
 [data-streamdown="list-item"] > [data-streamdown="paragraph"] {
   @apply my-0;
 }
 
 [data-streamdown="horizontal-rule"] {
-  @apply my-4 border-slate-6;
+  @apply my-4 border-primary-border;
 }
 
 [data-streamdown="strong"] {
@@ -374,16 +348,16 @@
   @apply w-full text-sm;
 }
 [data-streamdown="table-header"] {
-  @apply border-b border-slate-6 bg-slate-3;
+  @apply border-b border-primary-border bg-primary;
 }
 [data-streamdown="table-header-cell"] {
   @apply px-3 py-1.5 text-left font-medium text-ink-primary;
 }
 [data-streamdown="table-row"] {
-  @apply border-b border-slate-6;
+  @apply border-b border-primary-border;
 }
 [data-streamdown="table-cell"] {
-  @apply px-3 py-1.5 text-slate-11;
+  @apply px-3 py-1.5 text-ink-primary;
 }
 
 [data-streamdown="image"] {

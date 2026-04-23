@@ -36,7 +36,7 @@ const selectTriggerVariants = cva(
     variants: {
       variant: {
         primary:
-          "border-border bg-primary hover:bg-primary-hover hover:text-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 aria-expanded:bg-muted aria-expanded:text-foreground",
+          "border-border bg-primary hover:bg-primary-hover aria-expanded:bg-muted aria-expanded:text-foreground",
         ghost:
           "border-transparent hover:bg-primary-hover aria-expanded:bg-primary-hover",
       },

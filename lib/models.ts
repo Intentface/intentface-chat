@@ -1,28 +1,23 @@
-export const GEMINI_MODELS = [
+export const OPENAI_MODELS = [
   {
-    id: "gemini-3-pro-preview",
-    label: "Gemini 3 Pro",
-    provider: "google",
+    id: "gpt-5.5",
+    label: "GPT-5.5",
+    provider: "openai",
   },
   {
-    id: "gemini-3-flash-preview",
-    label: "Gemini 3 Flash",
-    provider: "google",
+    id: "gpt-5.4",
+    label: "GPT-5.4",
+    provider: "openai",
   },
   {
-    id: "gemini-2.5-pro",
-    label: "Gemini 2.5 Pro",
-    provider: "google",
+    id: "gpt-5.4-mini",
+    label: "GPT-5.4 Mini",
+    provider: "openai",
   },
   {
-    id: "gemini-2.5-flash",
-    label: "Gemini 2.5 Flash",
-    provider: "google",
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    label: "Gemini 2.5 Flash Lite",
-    provider: "google",
+    id: "gpt-5.4-nano",
+    label: "GPT-5.4 Nano",
+    provider: "openai",
   },
 ] as const;
 
@@ -53,7 +48,7 @@ export const BALSAM_MODELS = [
 ] as const;
 
 export const ALL_MODELS = [
-  ...GEMINI_MODELS,
+  ...OPENAI_MODELS,
   ...INCEPTION_MODELS,
   ...BALSAM_MODELS,
 ] as const;
@@ -61,7 +56,7 @@ export const ALL_MODELS = [
 export type ModelId = (typeof ALL_MODELS)[number]["id"];
 export type Provider = (typeof ALL_MODELS)[number]["provider"];
 
-export const DEFAULT_MODEL: ModelId = "gemini-2.5-flash";
+export const DEFAULT_MODEL: ModelId = "gpt-5.4-mini";
 
 export const getModelConfig = (id: ModelId) =>
   ALL_MODELS.find((model) => model.id === id);

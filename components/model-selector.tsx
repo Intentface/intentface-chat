@@ -3,9 +3,9 @@
 import Select from "@/components/ui/select";
 import {
   ALL_MODELS,
-  GEMINI_MODELS,
   INCEPTION_MODELS,
   type ModelId,
+  OPENAI_MODELS,
 } from "@/lib/models";
 import { useSettingsStore } from "@/lib/store/settings";
 
@@ -18,7 +18,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
   const showBalsam = useSettingsStore((state) => state.showBalsam);
   const models = showBalsam
     ? ALL_MODELS
-    : ([...GEMINI_MODELS, ...INCEPTION_MODELS] as const);
+    : ([...OPENAI_MODELS, ...INCEPTION_MODELS] as const);
 
   return (
     <Select

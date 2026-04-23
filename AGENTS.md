@@ -5,7 +5,7 @@ This file provides guidance to coding agents when working with code in this repo
 ### Tech Stack
 
 - Framework: Next.js 16 with App Router
-- AI: Vercel AI SDK (`ai` package) with Google Gemini via `@ai-sdk/google`
+- AI: Vercel AI SDK (`ai` package) with OpenAI GPT via `@ai-sdk/openai`
 - UI Libraries:
   - Base UI (`@base-ui/react`) for headless accessible components
   - Motion (`motion/react`) for animations
@@ -87,4 +87,4 @@ The chat API follows Vercel AI SDK conventions
 
 ## Environment Variables
 
-The project requires `.env.local` with Google AI credentials (e.g. `GOOGLE_API_KEY`) for `@ai-sdk/google`.
+The project requires `.env.local` with OpenAI credentials (e.g. `OPENAI_API_KEY`) for `@ai-sdk/openai`.

@@ -1,5 +1,4 @@
-import { google } from "@ai-sdk/google";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAI, openai } from "@ai-sdk/openai";
 import type { UIMessage } from "ai";
 import {
   convertToModelMessages,
@@ -43,7 +42,7 @@ const getModel = (modelId: string, provider: string | undefined) => {
     case "balsam":
       return balsam(modelId);
     default:
-      return google(modelId);
+      return openai(modelId);
   }
 };
 
@@ -216,7 +215,7 @@ export async function POST(req: Request) {
   const modelId = isValidModelId(model) ? model : DEFAULT_MODEL;
   const config = getModelConfig(modelId);
   const provider = config?.provider;
-  const isGoogle = provider === "google" || !provider;
+  const isOpenAI = provider === "openai" || !provider;
   const isDiffusing = modelId === "mercury-2-diffusing";
 
   // Diffusion models get a custom stream with data-diffusion parts
@@ -244,14 +243,11 @@ export async function POST(req: Request) {
       ...(webSearchEnabled && { webSearch }),
     },
     stopWhen: stepCountIs(15),
-    ...(isGoogle &&
+    ...(isOpenAI &&
       thinkingEnabled && {
         providerOptions: {
-          google: {
-            thinkingConfig: {
-              thinkingBudget: 2048,
-              includeThoughts: true,
-            },
+          openai: {
+            reasoningEffort: "medium",
           },
         },
       }),

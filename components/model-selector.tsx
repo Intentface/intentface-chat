@@ -1,49 +1,138 @@
 "use client";
 
-import Select from "@/components/ui/select";
+import { CheckIcon } from "lucide-react";
+import { ChevronGrabberVerticalIcon } from "@/components/icons/chevron-grabber-vertical";
+import { ClaudeIcon } from "@/components/icons/claude";
+import { GeminiIcon } from "@/components/icons/gemini";
+import { GrokIcon } from "@/components/icons/grok";
+import { InceptionIcon } from "@/components/icons/inception";
+import { OpenAIIcon } from "@/components/icons/openai";
+import Button from "@/components/ui/button";
+import DropdownMenu from "@/components/ui/dropdown-menu";
 import {
   ALL_MODELS,
+  BALSAM_MODELS,
   INCEPTION_MODELS,
   type ModelId,
   OPENAI_MODELS,
 } from "@/lib/models";
 import { useSettingsStore } from "@/lib/store/settings";
+import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
   value: ModelId;
   onValueChange: (value: ModelId) => void;
 };
 
+const PROVIDER_GROUPS = [
+  { provider: "openai", label: "OpenAI", models: OPENAI_MODELS },
+  { provider: "inception", label: "Inception", models: INCEPTION_MODELS },
+  { provider: "balsam", label: "Balsam", models: BALSAM_MODELS },
+] as const;
+
+const DISABLED_PROVIDERS = [
+  { provider: "grok", label: "Grok" },
+  { provider: "gemini", label: "Gemini" },
+  { provider: "claude", label: "Claude" },
+] as const;
+
+const getProviderIcon = (
+  provider:
+    | (typeof PROVIDER_GROUPS)[number]["provider"]
+    | (typeof DISABLED_PROVIDERS)[number]["provider"],
+) => {
+  switch (provider) {
+    case "openai":
+      return OpenAIIcon;
+    case "inception":
+      return InceptionIcon;
+    case "grok":
+      return GrokIcon;
+    case "gemini":
+      return GeminiIcon;
+    case "claude":
+      return ClaudeIcon;
+    default:
+      return null;
+  }
+};
+
 export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
   const showBalsam = useSettingsStore((state) => state.showBalsam);
-  const models = showBalsam
-    ? ALL_MODELS
-    : ([...OPENAI_MODELS, ...INCEPTION_MODELS] as const);
+  const currentModel = ALL_MODELS.find((model) => model.id === value);
+  const currentLabel = currentModel?.label ?? "Select model";
+  const CurrentProviderIcon = currentModel
+    ? getProviderIcon(currentModel.provider)
+    : null;
+
+  const groups = PROVIDER_GROUPS.filter(
+    (group) => group.provider !== "balsam" || showBalsam,
+  );
 
   return (
-    <Select
-      value={value}
-      onValueChange={(newValue) => {
-        if (newValue) onValueChange(newValue as ModelId);
-      }}
-    >
-      <Select.Trigger variant="ghost" size="sm" className="rounded-full">
-        <Select.Value placeholder="Select model">
-          {ALL_MODELS.find((model) => model.id === value)?.label}
-        </Select.Value>
-      </Select.Trigger>
-      <Select.Content
-        side="top"
-        sideOffset={8}
-        align="start"
-        alignItemWithTrigger={false}
-      >
-        {models.map((model) => (
-          <Select.Item key={model.id} value={model.id}>
-            {model.label}
-          </Select.Item>
-        ))}
-      </Select.Content>
-    </Select>
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button
+            variant="ghost"
+            size="md"
+            type="button"
+            className="rounded-full gap-1.5"
+          >
+            {CurrentProviderIcon ? (
+              <CurrentProviderIcon className="text-ink-secondary" />
+            ) : null}
+            <span>{currentLabel}</span>
+            <ChevronGrabberVerticalIcon className="text-ink-tertiary" />
+          </Button>
+        }
+      />
+      <DropdownMenu.Content side="top" align="start" sideOffset={8}>
+        {groups.map((group) => {
+          const GroupProviderIcon = getProviderIcon(group.provider);
+
+          return (
+            <DropdownMenu.Sub key={group.provider}>
+              <DropdownMenu.SubTrigger>
+                {GroupProviderIcon ? (
+                  <GroupProviderIcon className="text-ink-secondary" />
+                ) : null}
+                <span>{group.label}</span>
+              </DropdownMenu.SubTrigger>
+              <DropdownMenu.SubContent>
+                {group.models.map((model) => {
+                  return (
+                    <DropdownMenu.Item
+                      key={model.id}
+                      onClick={() => onValueChange(model.id)}
+                    >
+                      <CheckIcon
+                        className={cn(value !== model.id && "opacity-0")}
+                      />
+                      <span>{model.label}</span>
+                    </DropdownMenu.Item>
+                  );
+                })}
+              </DropdownMenu.SubContent>
+            </DropdownMenu.Sub>
+          );
+        })}
+        <DropdownMenu.Separator />
+        {DISABLED_PROVIDERS.map((provider) => {
+          const ProviderIcon = getProviderIcon(provider.provider);
+
+          return (
+            <DropdownMenu.Sub key={provider.provider}>
+              <DropdownMenu.SubTrigger disabled>
+                {ProviderIcon ? (
+                  <ProviderIcon className="text-ink-secondary" />
+                ) : null}
+                <span>{provider.label}</span>
+              </DropdownMenu.SubTrigger>
+            </DropdownMenu.Sub>
+          );
+        })}
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 };

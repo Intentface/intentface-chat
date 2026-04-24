@@ -1506,7 +1506,7 @@ const ComposerSubmit = ({
   return (
     <IconButton
       type="submit"
-      variant="tertiary"
+      variant="accent"
       className={cn("rounded-full", className)}
       disabled={autoDisabled}
       {...props}

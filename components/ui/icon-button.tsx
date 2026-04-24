@@ -16,6 +16,7 @@ const iconButtonVariants = cva(
           "bg-secondary text-ink-primary hover:bg-secondary-hover border-secondary-border",
         tertiary:
           "bg-tertiary text-ink-primary hover:bg-tertiary-hover border-tertiary-border",
+        accent: "bg-accent text-white hover:bg-accent-hover",
         ghost:
           "hover:bg-primary-hover hover:text-ink-primary aria-expanded:bg-muted aria-expanded:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",

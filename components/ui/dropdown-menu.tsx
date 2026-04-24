@@ -1,8 +1,9 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { CheckIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
+import { ArrowTriangleRightIcon } from "@/components/icons/arrow-triangle-right";
+import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { CircleIcon } from "@/components/icons/circle";
 import { cn } from "@/lib/utils";
 
@@ -121,7 +122,7 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "gap-1.5 rounded-md px-1.5 h-8 text-sm [&_svg:not([class*='size-'])]:size-4 flex cursor-pointer items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "group/dropdown-menu-sub-trigger gap-1.5 rounded-md px-1.5 h-8 text-sm [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-ink-secondary flex cursor-pointer items-center outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
         "data-highlighted:bg-primary-hover data-popup-open:bg-primary-hover",
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         "data-inset:pl-7",
@@ -130,7 +131,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="cn-rtl-flip ml-auto" />
+      <ArrowTriangleRightIcon className="cn-rtl-flip ml-auto size-2 text-ink-tertiary group-data-highlighted/dropdown-menu-sub-trigger:text-ink-primary" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }
@@ -195,7 +196,7 @@ function DropdownMenuCheckboxItem({
     >
       <DropdownMenuIndicator data-slot="dropdown-menu-checkbox-item-indicator">
         <MenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon />
+          <CheckMarkMediumIcon />
         </MenuPrimitive.CheckboxItemIndicator>
       </DropdownMenuIndicator>
       {children}

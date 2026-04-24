@@ -1,8 +1,8 @@
 "use client";
 
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
-import { CheckIcon } from "lucide-react";
 
+import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { cn } from "@/lib/utils";
 
 const Checkbox = ({ className, ...props }: CheckboxPrimitive.Root.Props) => (
@@ -22,7 +22,7 @@ const Checkbox = ({ className, ...props }: CheckboxPrimitive.Root.Props) => (
       data-slot="checkbox-indicator"
       className="grid place-content-center text-current transition-none [&>svg]:size-3"
     >
-      <CheckIcon />
+      <CheckMarkMediumIcon />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 );

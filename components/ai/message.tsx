@@ -1,7 +1,7 @@
 "use client";
 
 import type { FileUIPart, UIMessage } from "ai";
-import { CheckIcon, FileIcon, PaperclipIcon } from "lucide-react";
+import { FileIcon, PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import type { ComponentProps } from "react";
@@ -11,6 +11,7 @@ import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
+import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
 
 type MessageRootProps = {
@@ -209,7 +210,7 @@ const MessageCopy = ({
             className={className}
             {...props}
           >
-            {isCopied ? <CheckIcon /> : <CopyIcon />}
+            {isCopied ? <CheckMarkMediumIcon /> : <CopyIcon />}
           </IconButton>
         }
       />

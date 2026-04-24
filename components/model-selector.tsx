@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon } from "lucide-react";
+import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronGrabberVerticalIcon } from "@/components/icons/chevron-grabber-vertical";
 import { ClaudeIcon } from "@/components/icons/claude";
 import { GeminiIcon } from "@/components/icons/gemini";
@@ -106,7 +106,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
                       key={model.id}
                       onClick={() => onValueChange(model.id)}
                     >
-                      <CheckIcon
+                      <CheckMarkMediumIcon
                         className={cn(value !== model.id && "opacity-0")}
                       />
                       <span>{model.label}</span>

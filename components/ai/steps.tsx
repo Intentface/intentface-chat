@@ -1,7 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-import { CheckIcon, CircleHelpIcon, CircleIcon } from "lucide-react";
+import { CircleHelpIcon, CircleIcon } from "lucide-react";
 import {
   Children,
   type ComponentProps,
@@ -12,6 +11,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
@@ -148,8 +148,8 @@ type StepStatus = "complete" | "active" | "pending";
 
 type IconComponent = React.ComponentType<{ className?: string }>;
 
-const statusIcons: Record<StepStatus, LucideIcon> = {
-  complete: CheckIcon,
+const statusIcons: Record<StepStatus, IconComponent> = {
+  complete: CheckMarkMediumIcon,
   active: CircleIcon,
   pending: CircleIcon,
 };

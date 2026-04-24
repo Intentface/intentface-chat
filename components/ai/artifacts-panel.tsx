@@ -1,8 +1,9 @@
 "use client";
 
-import { CheckIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentProps, ReactNode } from "react";
+import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { CopyIcon } from "@/components/icons/copy";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
@@ -100,7 +101,7 @@ const ArtifactsPanelFooter = ({
                 size="sm"
                 onClick={() => copy(content)}
               >
-                {isCopied ? <CheckIcon /> : <CopyIcon />}
+                {isCopied ? <CheckMarkMediumIcon /> : <CopyIcon />}
               </IconButton>
             }
           />

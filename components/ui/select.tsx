@@ -2,9 +2,10 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cva, type VariantProps } from "class-variance-authority";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
+import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { ChevronGrabberVerticalIcon } from "../icons/chevron-grabber-vertical";
 
 const selectTriggerVariants = cva(
@@ -211,7 +212,7 @@ const SelectItem = ({
         ])}
       >
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="pointer-events-none" />
+          <CheckMarkMediumIcon className="pointer-events-none" />
         </SelectPrimitive.ItemIndicator>
       </div>
     </SelectPrimitive.Item>

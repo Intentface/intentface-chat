@@ -53,7 +53,7 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
     className={cn(
       "flex flex-col gap-4 overflow-hidden border",
       // User message styling
-      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border-primary-border group-data-[role=user]:bg-primary group-data-[role=user]:px-3 group-data-[role=user]:py-2 group-data-[role=user]:shadow-xs group-data-[role=user]:min-h-10 group-data-[role=user]:rounded-[20px]",
+      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border-primary-border group-data-[role=user]:bg-primary group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
       // Assistant message styling
       "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-none",
       // Error styling

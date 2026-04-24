@@ -1,4 +1,4 @@
-import { createOpenAI, openai } from "@ai-sdk/openai";
+import { openai } from "@ai-sdk/openai";
 import type { UIMessage } from "ai";
 import {
   convertToModelMessages,
@@ -24,11 +24,6 @@ import { queryData } from "@/tools/query-data";
 import { sortData } from "@/tools/sort-data";
 import { webSearch } from "@/tools/web-search";
 
-const balsam = createOpenAI({
-  baseURL: "http://localhost:8800/v1",
-  apiKey: "anything",
-});
-
 const getModel = (modelId: string, provider: string | undefined) => {
   switch (provider) {
     case "inception":
@@ -39,8 +34,6 @@ const getModel = (modelId: string, provider: string | undefined) => {
         return inception("mercury-2", { reasoningEffort: "instant" });
       }
       return inception(modelId);
-    case "balsam":
-      return balsam(modelId);
     default:
       return openai(modelId);
   }

@@ -11,12 +11,10 @@ import Button from "@/components/ui/button";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import {
   ALL_MODELS,
-  BALSAM_MODELS,
   INCEPTION_MODELS,
   type ModelId,
   OPENAI_MODELS,
 } from "@/lib/models";
-import { useSettingsStore } from "@/lib/store/settings";
 import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -27,7 +25,6 @@ type ModelSelectorProps = {
 const PROVIDER_GROUPS = [
   { provider: "openai", label: "OpenAI", models: OPENAI_MODELS },
   { provider: "inception", label: "Inception", models: INCEPTION_MODELS },
-  { provider: "balsam", label: "Balsam", models: BALSAM_MODELS },
 ] as const;
 
 const DISABLED_PROVIDERS = [
@@ -58,16 +55,11 @@ const getProviderIcon = (
 };
 
 export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
-  const showBalsam = useSettingsStore((state) => state.showBalsam);
   const currentModel = ALL_MODELS.find((model) => model.id === value);
   const currentLabel = currentModel?.label ?? "Select model";
   const CurrentProviderIcon = currentModel
     ? getProviderIcon(currentModel.provider)
     : null;
-
-  const groups = PROVIDER_GROUPS.filter(
-    (group) => group.provider !== "balsam" || showBalsam,
-  );
 
   return (
     <DropdownMenu>
@@ -88,7 +80,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
         }
       />
       <DropdownMenu.Content side="top" align="start" sideOffset={8}>
-        {groups.map((group) => {
+        {PROVIDER_GROUPS.map((group) => {
           const GroupProviderIcon = getProviderIcon(group.provider);
 
           return (

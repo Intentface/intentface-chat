@@ -39,19 +39,7 @@ export const INCEPTION_MODELS = [
   },
 ] as const;
 
-export const BALSAM_MODELS = [
-  {
-    id: "mock",
-    label: "Balsam Mock",
-    provider: "balsam",
-  },
-] as const;
-
-export const ALL_MODELS = [
-  ...OPENAI_MODELS,
-  ...INCEPTION_MODELS,
-  ...BALSAM_MODELS,
-] as const;
+export const ALL_MODELS = [...OPENAI_MODELS, ...INCEPTION_MODELS] as const;
 
 export type ModelId = (typeof ALL_MODELS)[number]["id"];
 export type Provider = (typeof ALL_MODELS)[number]["provider"];

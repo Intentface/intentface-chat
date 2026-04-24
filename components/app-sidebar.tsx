@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  FlaskConicalIcon,
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
@@ -19,7 +18,6 @@ import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
-import { useSettingsStore } from "@/lib/store/settings";
 import { EditIcon } from "./icons/edit";
 
 export const AppSidebar = () => {
@@ -28,7 +26,6 @@ export const AppSidebar = () => {
   const router = useRouter();
   const chats = useChatStore((state) => state.chats);
   const deleteChat = useChatStore((state) => state.deleteChat);
-  const { showBalsam, setShowBalsam } = useSettingsStore();
   const [themeConfiguratorOpen, setThemeConfiguratorOpen] = useState(false);
 
   const handleDelete = (chatId: string) => {
@@ -131,14 +128,6 @@ export const AppSidebar = () => {
                     </DropdownMenu.RadioGroup>
                   </DropdownMenu.SubContent>
                 </DropdownMenu.Sub>
-                <DropdownMenu.Separator />
-                <DropdownMenu.CheckboxItem
-                  checked={showBalsam}
-                  onCheckedChange={setShowBalsam}
-                >
-                  <FlaskConicalIcon />
-                  Balsam Mock API
-                </DropdownMenu.CheckboxItem>
               </DropdownMenu.Content>
             </DropdownMenu>
             <ThemeConfigurator

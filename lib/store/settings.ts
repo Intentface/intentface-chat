@@ -11,8 +11,6 @@ type ThemeOverrides = {
 type ThemeMode = "light" | "dark";
 
 type SettingsStore = {
-  showBalsam: boolean;
-  setShowBalsam: (show: boolean) => void;
   themeOverrides: Record<ThemeMode, ThemeOverrides>;
   setThemeOverride: (
     mode: ThemeMode,
@@ -27,8 +25,6 @@ export type { ThemeOverrides, ThemeMode };
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      showBalsam: false,
-      setShowBalsam: (show) => set({ showBalsam: show }),
       themeOverrides: { light: {}, dark: {} },
       setThemeOverride: (mode, key, value) =>
         set((state) => ({

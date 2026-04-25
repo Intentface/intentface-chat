@@ -10,126 +10,102 @@
     "calt" 1;
 
   /* Theme base colors */
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  --accent: #0169cc;
-  --contrast: 0.35;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --acc: #0169cc;
+  --con: 0.35;
 
   /* ─── Shared deltas ─── */
-  --mix-hover: calc(16% * var(--contrast));
-  --mix-active: calc(20% * var(--contrast));
-  --mix-border: calc(24% * var(--contrast));
+  --mix-hover: calc(16% * var(--con));
+  --mix-active: calc(20% * var(--con));
+  --mix-border: calc(24% * var(--con));
 
   /* ─── Base: body background ─── */
-  --base: color-mix(in oklch, var(--background), var(--foreground) calc(10% * var(--contrast)));
-  --base-hover: color-mix(in oklch, var(--base), var(--foreground) var(--mix-hover));
-  --base-active: color-mix(in oklch, var(--base), var(--foreground) var(--mix-active));
-  --base-border: color-mix(in oklch, var(--base), var(--foreground) var(--mix-border));
+  --base: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--con)));
+  --base-hover: color-mix(in oklch, var(--base), var(--fg) var(--mix-hover));
+  --base-active: color-mix(in oklch, var(--base), var(--fg) var(--mix-active));
+  --base-border: color-mix(in oklch, var(--base), var(--fg) var(--mix-border));
 
   /* ─── Secondary: panels, sidebar ─── */
-  --secondary: color-mix(
-    in oklch,
-    var(--background),
-    var(--foreground) calc(4% * var(--contrast))
-  );
+  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(4% * var(--con)));
   --secondary-hover: color-mix(
     in oklch,
     var(--secondary),
-    var(--foreground) var(--mix-hover)
+    var(--fg) var(--mix-hover)
   );
   --secondary-active: color-mix(
     in oklch,
     var(--secondary),
-    var(--foreground) var(--mix-active)
+    var(--fg) var(--mix-active)
   );
   --secondary-border: color-mix(
     in oklch,
     var(--secondary),
-    var(--foreground) var(--mix-border)
+    var(--fg) var(--mix-border)
   );
 
   /* ─── Primary: cards, inputs, dropdowns, composer ─── */
-  --primary: var(--background);
+  --primary: var(--bg);
   --primary-hover: color-mix(
     in oklch,
     var(--primary),
-    var(--foreground) var(--mix-hover)
+    var(--fg) var(--mix-hover)
   );
   --primary-active: color-mix(
     in oklch,
     var(--primary),
-    var(--foreground) var(--mix-active)
+    var(--fg) var(--mix-active)
   );
   --primary-border: color-mix(
     in oklch,
     var(--primary),
-    var(--foreground) var(--mix-border)
+    var(--fg) var(--mix-border)
   );
 
   /* ─── Tertiary: filled controls (buttons, tags, badges) ─── */
-  --tertiary: color-mix(
-    in oklch,
-    var(--background),
-    var(--foreground) calc(2% * var(--contrast))
-  );
+  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(2% * var(--con)));
   --tertiary-hover: color-mix(
     in oklch,
     var(--tertiary),
-    var(--foreground) var(--mix-hover)
+    var(--fg) var(--mix-hover)
   );
   --tertiary-active: color-mix(
     in oklch,
     var(--tertiary),
-    var(--foreground) var(--mix-active)
+    var(--fg) var(--mix-active)
   );
   --tertiary-border: color-mix(
     in oklch,
     var(--tertiary),
-    var(--foreground) var(--mix-border)
+    var(--fg) var(--mix-border)
   );
 
-  --quaternary: color-mix(
-    in oklch,
-    var(--background),
-    var(--foreground) calc(24% * var(--contrast))
-  );
+  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(24% * var(--con)));
   --quaternary-hover: color-mix(
     in oklch,
     var(--quaternary),
-    var(--foreground) var(--mix-hover)
+    var(--fg) var(--mix-hover)
   );
   --quaternary-active: color-mix(
     in oklch,
     var(--quaternary),
-    var(--foreground) var(--mix-active)
+    var(--fg) var(--mix-active)
   );
   --quaternary-border: color-mix(
     in oklch,
     var(--quaternary),
-    var(--foreground) var(--mix-border)
+    var(--fg) var(--mix-border)
   );
 
-  --accent: color-mix(
-    in oklch,
-    var(--accent),
-    var(--foreground) calc(28% * var(--contrast))
-  );
-  --accent-hover: color-mix(in oklch, var(--accent), var(--foreground) var(--mix-hover));
-  --accent-active: color-mix(
-    in oklch,
-    var(--accent),
-    var(--foreground) var(--mix-active)
-  );
-  --accent-border: color-mix(
-    in oklch,
-    var(--accent),
-    var(--foreground) var(--mix-border)
-  );
+  --accent: color-mix(in oklch, var(--acc), var(--fg) calc(28% * var(--con)));
+  --accent-hover: color-mix(in oklch, var(--acc), var(--fg) var(--mix-hover));
+  --accent-active: color-mix(in oklch, var(--acc), var(--fg) var(--mix-active));
+  --accent-border: color-mix(in oklch, var(--acc), var(--fg) var(--mix-border));
 
   /* ─── Text ─── */
-  --text-primary: color-mix(in oklch, var(--background), var(--foreground) 85%);
-  --text-secondary: color-mix(in oklch, var(--background), var(--foreground) 58%);
-  --text-tertiary: color-mix(in oklch, var(--background), var(--foreground) 40%);
+  --text-primary: color-mix(in oklch, var(--bg), var(--fg) 85%);
+  --text-secondary: color-mix(in oklch, var(--bg), var(--fg) 58%);
+  --text-tertiary: color-mix(in oklch, var(--bg), var(--fg) 40%);
 
   --radius: 8px;
 
@@ -139,31 +115,20 @@
 }
 
 .dark {
-  --background: #111111;
-  --foreground: #fcfcfc;
-  --accent: #4a9eed;
+  --bg: #111111;
+  --fg: #fcfcfc;
+  --acc: #4a9eed;
 
-  --base: var(--background);
-  --primary: color-mix(
-    in oklch,
-    var(--background),
-    var(--foreground) calc(12% * var(--contrast))
-  );
-  --secondary: color-mix(
-    in oklch,
-    var(--background),
-    var(--foreground) calc(3% * var(--contrast))
-  );
-  --tertiary: color-mix(
-    in oklch,
-    var(--background),
-    var(--foreground) calc(20% * var(--contrast))
-  );
+  --base: var(--bg);
+  --primary: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));
+  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));
+  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));
+  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(56% * var(--con)));
 
   /* ─── Optionally adjust deltas for dark ─── */
-  --mix-hover: calc(16% * var(--contrast));
-  --mix-active: calc(18% * var(--contrast));
-  --mix-border: calc(20% * var(--contrast)); /* subtler borders in dark */
+  --mix-hover: calc(16% * var(--con));
+  --mix-active: calc(18% * var(--con));
+  --mix-border: calc(20% * var(--con)); /* subtler borders in dark */
 }
 
 @theme inline {
@@ -433,8 +398,8 @@
   background: linear-gradient(
     to right,
     transparent 5%,
-    var(--foreground) 30%,
-    var(--foreground) 70%,
+    var(--fg) 30%,
+    var(--fg) 70%,
     transparent 95%
   );
   opacity: 0.12;

@@ -5,7 +5,7 @@ type ThemeOverrides = {
   bg?: string;
   fg?: string;
   acc?: string;
-  contrast?: number;
+  con?: number;
 };
 
 type ThemeMode = "light" | "dark";

@@ -9,7 +9,7 @@ const CSS_VARS = [
   ["bg", "--bg"],
   ["fg", "--fg"],
   ["acc", "--acc"],
-  ["contrast", "--contrast"],
+  ["con", "--con"],
 ] as const;
 
 export const useThemeOverrides = () => {

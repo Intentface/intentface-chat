@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 
 const DEFAULTS: Record<ThemeMode, Required<ThemeOverrides>> = {
-  light: { bg: "#ffffff", fg: "#1a1a1a", acc: "#0169cc", contrast: 0.35 },
-  dark: { bg: "#111111", fg: "#fcfcfc", acc: "#4a9eed", contrast: 0.35 },
+  light: { bg: "#ffffff", fg: "#1a1a1a", acc: "#0169cc", con: 0.35 },
+  dark: { bg: "#111111", fg: "#fcfcfc", acc: "#4a9eed", con: 0.35 },
 };
 
 // ---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ export const ThemeConfigurator = ({
 
   const handleContrastChange = useCallback(
     (value: number) => {
-      setThemeOverride(editingMode, "contrast", value);
+      setThemeOverride(editingMode, "con", value);
     },
     [editingMode, setThemeOverride],
   );
@@ -245,7 +245,7 @@ export const ThemeConfigurator = ({
             onChange={handleColorChange("acc")}
           />
           <ContrastRow
-            value={overrides.contrast ?? defaults.contrast}
+            value={overrides.con ?? defaults.con}
             onChange={handleContrastChange}
           />
         </div>

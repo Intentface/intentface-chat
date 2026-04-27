@@ -2,7 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { ChatStatus, FileUIPart, UIMessage } from "ai";
-import { CircleDotIcon, Loader, PlusIcon, XIcon } from "lucide-react";
+import { CircleDotIcon, Loader } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import {
@@ -21,15 +21,12 @@ import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
 import { ChatArtifactsPanel } from "@/components/artifacts-panel";
+import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
-import { GlobeIcon } from "@/components/icons/globe";
-import { PaperClipIcon } from "@/components/icons/paperclip";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
 import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
-import DropdownMenu from "@/components/ui/dropdown-menu";
-import { IconButton } from "@/components/ui/icon-button";
 import {
   type ComposerPanelState,
   useActiveComposerState,
@@ -50,7 +47,6 @@ import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
 import { cn } from "@/lib/utils";
 import { IntentfaceLogo } from "./icons/intentface-logo";
-import Button from "./ui/button";
 import { TextShimmer } from "./ui/text-shimmer";
 
 export type Artifact = {
@@ -358,84 +354,6 @@ const ChatMessages = () => {
       {isError && <Message.Error />}
       <Thread.Spacer />
     </>
-  );
-};
-
-const ActiveTools = () => {
-  const { tools } = useComposer();
-
-  return (
-    <div className="flex items-center gap-px">
-      {tools.webSearch && (
-        <Button
-          type="button"
-          variant="ghost"
-          className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.setWebSearch(false)}
-        >
-          <span className="relative size-4">
-            <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
-          </span>
-          Web Search
-        </Button>
-      )}
-
-      {tools.thinking && (
-        <Button
-          type="button"
-          variant="ghost"
-          className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.setThinking(false)}
-        >
-          <span className="relative size-4">
-            <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
-          </span>
-          Thinking
-        </Button>
-      )}
-    </div>
-  );
-};
-
-const ToolsMenu = () => {
-  const { attachments, tools } = useComposer();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenu.Trigger
-        render={
-          <IconButton variant="ghost" type="button" className="rounded-full">
-            <PlusIcon />
-          </IconButton>
-        }
-      />
-      <DropdownMenu.Content
-        side="top"
-        align="start"
-        sideOffset={8}
-        className="w-auto"
-      >
-        <DropdownMenu.Item onClick={() => attachments.openFileDialog()}>
-          <PaperClipIcon />
-          <span className="flex-1">Attach files</span>
-        </DropdownMenu.Item>
-        <DropdownMenu.Separator />
-        <DropdownMenu.SwitchItem
-          checked={tools.webSearch}
-          onCheckedChange={tools.setWebSearch}
-        >
-          <GlobeIcon /> <span className="flex-1">Web Search</span>
-        </DropdownMenu.SwitchItem>
-        <DropdownMenu.SwitchItem
-          checked={tools.thinking}
-          onCheckedChange={tools.setThinking}
-        >
-          <BrainIcon /> <span className="flex-1">Thinking</span>
-        </DropdownMenu.SwitchItem>
-      </DropdownMenu.Content>
-    </DropdownMenu>
   );
 };
 

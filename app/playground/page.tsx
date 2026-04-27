@@ -1,56 +1,15 @@
 "use client";
 
-import { CircleDotIcon, Loader, XIcon } from "lucide-react";
+import { CircleDotIcon, Loader } from "lucide-react";
 import { useState } from "react";
 import { Composer, useComposer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
-import { BrainIcon } from "@/components/icons/brain";
-import { GlobeIcon } from "@/components/icons/globe";
+import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
+import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
-import Button from "@/components/ui/button";
+import { useModelStore } from "@/lib/store/model";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
-
-// ---------------------------------------------------------------------------
-// ActiveTools — shows toggled tools as dismissable pills
-// ---------------------------------------------------------------------------
-
-const PlaygroundActiveTools = () => {
-  const { tools } = useComposer();
-
-  return (
-    <div className="flex items-center gap-px">
-      {tools.webSearch && (
-        <Button
-          type="button"
-          variant="ghost"
-          className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.setWebSearch(false)}
-        >
-          <span className="relative size-4">
-            <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
-          </span>
-          Web Search
-        </Button>
-      )}
-      {tools.thinking && (
-        <Button
-          type="button"
-          variant="ghost"
-          className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.setThinking(false)}
-        >
-          <span className="relative size-4">
-            <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
-          </span>
-          Thinking
-        </Button>
-      )}
-    </div>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // Composer States panel — needs useComposer() so must be inside <Composer>
@@ -200,6 +159,7 @@ export default function ComponentsPlayground() {
     "idle" | "active" | "ask-user" | "ask-user-multi"
   >("idle");
   const [composerSteps, setComposerSteps] = useState(stepLabels.slice(0, 1));
+  const { model, setModel } = useModelStore();
 
   return (
     <main className="mx-auto max-w-3xl space-y-8 px-6 py-10">
@@ -285,16 +245,17 @@ export default function ComponentsPlayground() {
               </Composer.Textarea>
               {composerState === "ask-user" ||
               composerState === "ask-user-multi" ? (
-                <Composer.Actions>
+                <Composer.Actions className="flex items-center justify-end">
                   <Composer.Hints />
                   <Composer.DismissAction />
                   <Composer.ContinueAction />
                 </Composer.Actions>
               ) : (
-                <Composer.Actions className="justify-between">
+                <Composer.Actions className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <Composer.AttachmentTrigger />
-                    <PlaygroundActiveTools />
+                    <ToolsMenu />
+                    <ModelSelector value={model} onValueChange={setModel} />
+                    <ActiveTools />
                   </div>
                   <Composer.Submit />
                 </Composer.Actions>

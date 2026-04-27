@@ -314,6 +314,7 @@ const ThreadSpacer = ({
   const spacerRef = useRef<HTMLDivElement>(null);
   const scrollParentRef = useRef<HTMLElement | null>(null);
   const prevUserMessageCountRef = useRef(0);
+  const hasInitializedRef = useRef(false);
   const pendingScrollRef = useRef<number | null>(null);
   // Cache overlay heights — only recomputed on resize
   const overlayCache = useRef<{
@@ -359,6 +360,9 @@ const ThreadSpacer = ({
     const userMessages = scrollContainer.querySelectorAll<HTMLElement>(
       '[data-slot="message"][data-role="user"]',
     );
+    const messages = scrollContainer.querySelectorAll<HTMLElement>(
+      '[data-slot="message"]',
+    );
     const target =
       targetRef?.current ?? userMessages[userMessages.length - 1] ?? null;
     if (!target) return;
@@ -392,8 +396,12 @@ const ThreadSpacer = ({
 
     spacerRef.current.style.height = `${Math.max(effectiveMinHeight, calculatedHeight)}px`;
 
-    // Scroll when a new user message appears
-    if (userMessages.length > prevUserMessageCountRef.current) {
+    // First time messages appear, jump to bottom synchronously (before paint)
+    // so there's no flash at the top. Subsequent new user messages get a
+    // smooth scroll, queued for after paint.
+    if (!hasInitializedRef.current && messages.length > 0) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    } else if (userMessages.length > prevUserMessageCountRef.current) {
       if (calculatedHeight <= 0) {
         pendingScrollRef.current = scrollContainer.scrollHeight;
       } else {
@@ -408,6 +416,7 @@ const ThreadSpacer = ({
       }
     }
     prevUserMessageCountRef.current = userMessages.length;
+    if (messages.length > 0) hasInitializedRef.current = true;
   }, [targetRef, minHeight, resolveOverlays]);
 
   // Recalculate before paint
@@ -415,7 +424,7 @@ const ThreadSpacer = ({
     calculateHeight();
   });
 
-  // Smooth-scroll after paint
+  // Apply pending scroll after paint
   useEffect(() => {
     if (pendingScrollRef.current !== null && scrollParentRef.current) {
       scrollParentRef.current.scrollTo({

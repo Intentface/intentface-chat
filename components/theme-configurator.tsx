@@ -100,6 +100,8 @@ type ContrastRowProps = {
   onChange: (value: number) => void;
 };
 
+const TICK_COUNT = 5;
+
 const ContrastRow = ({ value, onChange }: ContrastRowProps) => {
   const displayValue = Math.round(value * 100);
 
@@ -109,26 +111,34 @@ const ContrastRow = ({ value, onChange }: ContrastRowProps) => {
   };
 
   return (
-    <div className="flex h-10 items-center justify-between gap-4">
-      <span className="shrink-0 text-sm text-ink-secondary">Contrast</span>
-      <div className="flex flex-1 items-center gap-3">
+    <div className="flex h-10 items-center justify-between">
+      <span className="text-sm text-ink-secondary">Contrast</span>
+      <div className="group relative w-32">
         <Slider
           value={displayValue}
           onValueChange={handleValueChange}
           min={15}
           max={85}
           step={1}
+          className="h-8 gap-0"
         >
-          <Slider.Control>
-            <Slider.Track>
-              <Slider.Indicator />
-              <Slider.Thumb />
+          <Slider.Control className="h-full w-full">
+            <Slider.Track className="relative h-full w-full overflow-hidden rounded-lg bg-base">
+              <div className="pointer-events-none absolute inset-x-2.5 inset-y-2.5 z-0 flex items-stretch justify-between">
+                {Array.from({ length: TICK_COUNT }, (_, i) => (
+                  <span key={i} className="w-px bg-ink-primary/20" />
+                ))}
+              </div>
+              <Slider.Indicator className="rounded-none bg-ink-primary/10" />
+              <Slider.Thumb className="h-6 w-1 rounded-full border-0 bg-ink-primary opacity-0 shadow-none transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[active]:opacity-100" />
             </Slider.Track>
           </Slider.Control>
         </Slider>
-        <span className="w-7 text-right text-sm tabular-nums text-ink-secondary">
-          {displayValue}
-        </span>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-end px-2.5">
+          <span className="text-sm tabular-nums text-ink-secondary">
+            {(displayValue / 100).toFixed(2)}
+          </span>
+        </div>
       </div>
     </div>
   );

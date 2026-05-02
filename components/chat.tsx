@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
-import type { ChatStatus, FileUIPart, UIMessage } from "ai";
+import type { ChatStatus, UIMessage } from "ai";
 import { CircleDotIcon, Loader } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
@@ -14,7 +14,11 @@ import {
   useState,
 } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
-import { Composer, useComposer } from "@/components/ai/composer";
+import {
+  Composer,
+  type ComposerSubmitData,
+  useComposer,
+} from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { StepQueue } from "@/components/ai/step-queue";
@@ -24,7 +28,14 @@ import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
+import { BubbleWideSparkleIcon } from "@/components/icons/bubble-wide-sparkle";
+import { CodeIcon } from "@/components/icons/code";
+import { FileChartIcon } from "@/components/icons/file-chart";
+import { FileTextIcon } from "@/components/icons/file-text";
+import { GlobeIcon } from "@/components/icons/globe";
+import { ImageAltIcon } from "@/components/icons/image-alt";
 import { RefreshIcon } from "@/components/icons/refresh";
+import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 import { ModelSelector } from "@/components/model-selector";
 import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
 import {
@@ -356,16 +367,138 @@ const ChatMessages = () => {
   );
 };
 
-const ComposerPanel = ({ panelState }: { panelState: ComposerPanelState }) => {
-  const { mentions, commands } = useComposer();
+type MentionData = {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
+};
 
-  const statesValue =
-    mentions.open || commands.open ? "command-list" : panelState.type;
+type CommandData = {
+  value: string;
+  label: string;
+  description?: string;
+  icon: React.ReactNode;
+  keywords?: string;
+  onSelect?: (ctx: {
+    tools: {
+      setWebSearch: (v: boolean) => void;
+      setThinking: (v: boolean) => void;
+    };
+  }) => void;
+};
+
+const MENTION_ITEMS: MentionData[] = [
+  {
+    value: "quarterly-report",
+    label: "Q4 Quarterly Report",
+    icon: <FileTextIcon />,
+  },
+  {
+    value: "meeting-notes",
+    label: "Meeting Notes - March 2026",
+    icon: <FileTextIcon />,
+  },
+  {
+    value: "product-roadmap",
+    label: "Product Roadmap",
+    icon: <SpreadsheetIcon />,
+  },
+  {
+    value: "brand-guidelines",
+    label: "Brand Guidelines",
+    icon: <FileTextIcon />,
+  },
+  {
+    value: "api-documentation",
+    label: "API Documentation",
+    icon: <FileChartIcon />,
+  },
+  {
+    value: "screenshot-dashboard",
+    label: "Screenshot - Dashboard",
+    icon: <ImageAltIcon />,
+  },
+  {
+    value: "wireframe-checkout",
+    label: "Wireframe - Checkout Flow",
+    icon: <ImageAltIcon />,
+  },
+];
+
+const COMMAND_ITEMS: CommandData[] = [
+  {
+    value: "webSearch",
+    label: "Search the web",
+    description: "Enable web search for this message",
+    icon: <GlobeIcon />,
+    keywords: "search web",
+    onSelect: ({ tools }) => tools.setWebSearch(true),
+  },
+  {
+    value: "codeExecution",
+    label: "Code Execution",
+    description: "Run code snippets",
+    icon: <CodeIcon />,
+    keywords: "code run execute",
+  },
+  {
+    value: "thinking",
+    label: "Think deeply",
+    description: "Enable extended thinking",
+    icon: <BrainIcon />,
+    keywords: "think reasoning",
+    onSelect: ({ tools }) => tools.setThinking(true),
+  },
+  {
+    value: "summarize",
+    label: "Summarize",
+    description: "Summarize the conversation",
+    icon: <BubbleWideSparkleIcon />,
+    keywords: "summarize summary",
+  },
+];
+
+const COMMANDS_CONFIG = {
+  "@": {
+    kind: "chip" as const,
+    triggerRule: "after-whitespace" as const,
+    items: MENTION_ITEMS,
+  },
+  "/": {
+    kind: "command" as const,
+    triggerRule: "doc-start" as const,
+    items: COMMAND_ITEMS,
+  },
+};
+
+const ComposerPanel = ({ panelState }: { panelState: ComposerPanelState }) => {
+  const { commandList } = useComposer();
+
+  const statesValue = commandList.open ? "command-list" : panelState.type;
 
   return (
     <Composer.States value={statesValue}>
       <Composer.State value="command-list">
-        <Composer.CommandList />
+        <Composer.CommandList prefix="@">
+          {(item: MentionData) => (
+            <Composer.CommandItem value={item.value}>
+              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
+              <span>{item.label}</span>
+            </Composer.CommandItem>
+          )}
+        </Composer.CommandList>
+
+        <Composer.CommandList prefix="/">
+          {(item: CommandData) => (
+            <Composer.CommandItem value={item.value}>
+              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
+              <span>{item.label}</span>
+              {item.description && (
+                <span className="text-ink-tertiary">{item.description}</span>
+              )}
+            </Composer.CommandItem>
+          )}
+        </Composer.CommandList>
       </Composer.State>
       <Composer.State value="active">
         <StepQueue>
@@ -413,51 +546,50 @@ const ChatInput = () => {
   const panelState = useActiveComposerState(messages, status);
   const isAskUser = panelState.type === "ask-user";
 
-  const handleAskUserSubmit = useCallback(
-    (answers: Record<string, string>) => {
-      if (panelState.type !== "ask-user") return;
-      addToolOutput({
-        tool: "askUser",
-        toolCallId: panelState.toolCallId,
-        output: JSON.stringify(answers),
-      });
-    },
-    [panelState, addToolOutput],
-  );
-
   const handleSubmit = useCallback(
-    async ({
-      text,
-      files,
-      webSearch,
-      thinking,
-    }: {
-      text: string;
-      files: FileUIPart[];
-      webSearch: boolean;
-      thinking: boolean;
-    }) => {
+    async (data: ComposerSubmitData) => {
+      if (data.kind === "answers") {
+        if (panelState.type !== "ask-user") return;
+        addToolOutput({
+          tool: "askUser",
+          toolCallId: panelState.toolCallId,
+          output: JSON.stringify(data.answers),
+        });
+        return;
+      }
+
       setIsSending(true);
       try {
         setHasSubmitted(true);
 
         if (isNewChat) {
-          const title = text.slice(0, 50) || "New Chat";
+          const title = data.text.slice(0, 50) || "New Chat";
           createChat(chatId, title);
           router.replace(`/chat/${chatId}`);
         }
 
         await sendMessage(
-          { text, files },
+          { text: data.text, files: data.files },
           {
-            body: { webSearch, thinking },
+            body: {
+              webSearch: data.tools.webSearch ?? false,
+              thinking: data.tools.thinking ?? false,
+            },
           },
         );
       } finally {
         setIsSending(false);
       }
     },
-    [chatId, createChat, isNewChat, router, sendMessage],
+    [
+      chatId,
+      createChat,
+      isNewChat,
+      router,
+      sendMessage,
+      addToolOutput,
+      panelState,
+    ],
   );
 
   return (
@@ -465,7 +597,7 @@ const ChatInput = () => {
       onSubmit={handleSubmit}
       isSubmitting={isSending}
       questions={isAskUser ? panelState.questions : undefined}
-      onQuestionsSubmit={handleAskUserSubmit}
+      commands={COMMANDS_CONFIG}
     >
       <ComposerPanel panelState={panelState} />
       <Composer.Container>

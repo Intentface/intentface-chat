@@ -5,6 +5,9 @@ import { useState } from "react";
 import { Composer, useComposer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
+import { BrainIcon } from "@/components/icons/brain";
+import { FileTextIcon } from "@/components/icons/file-text";
+import { GlobeIcon } from "@/components/icons/globe";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
 import { useModelStore } from "@/lib/store/model";
@@ -97,6 +100,60 @@ const multipleQuestions: AskUserQuestion[] = [
   },
 ];
 
+type PlaygroundMention = {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
+};
+
+type PlaygroundCommand = {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
+  keywords?: string;
+  onSelect?: (ctx: {
+    tools: {
+      setWebSearch: (v: boolean) => void;
+      setThinking: (v: boolean) => void;
+    };
+  }) => void;
+};
+
+const PLAYGROUND_MENTIONS: PlaygroundMention[] = [
+  { value: "demo-doc", label: "Demo Document", icon: <FileTextIcon /> },
+  { value: "release-notes", label: "Release Notes", icon: <FileTextIcon /> },
+];
+
+const PLAYGROUND_COMMANDS: PlaygroundCommand[] = [
+  {
+    value: "webSearch",
+    label: "Search the web",
+    icon: <GlobeIcon />,
+    keywords: "search web",
+    onSelect: ({ tools }) => tools.setWebSearch(true),
+  },
+  {
+    value: "thinking",
+    label: "Think deeply",
+    icon: <BrainIcon />,
+    keywords: "think reasoning",
+    onSelect: ({ tools }) => tools.setThinking(true),
+  },
+];
+
+const PLAYGROUND_COMMANDS_CONFIG = {
+  "@": {
+    kind: "chip" as const,
+    triggerRule: "after-whitespace" as const,
+    items: PLAYGROUND_MENTIONS,
+  },
+  "/": {
+    kind: "command" as const,
+    triggerRule: "doc-start" as const,
+    items: PLAYGROUND_COMMANDS,
+  },
+};
+
 const PlaygroundComposerStates = ({
   composerState,
   composerSteps,
@@ -104,10 +161,10 @@ const PlaygroundComposerStates = ({
   composerState: "idle" | "active" | "ask-user" | "ask-user-multi";
   composerSteps: string[];
 }) => {
-  const { mentions, commands } = useComposer();
+  const { commandList } = useComposer();
 
   const deriveStatesValue = () => {
-    if (mentions.open || commands.open) return "command-list";
+    if (commandList.open) return "command-list";
     switch (composerState) {
       case "active":
         return "active";
@@ -123,7 +180,23 @@ const PlaygroundComposerStates = ({
   return (
     <Composer.States value={statesValue}>
       <Composer.State value="command-list">
-        <Composer.CommandList />
+        <Composer.CommandList prefix="@">
+          {(item: PlaygroundMention) => (
+            <Composer.CommandItem value={item.value}>
+              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
+              <span>{item.label}</span>
+            </Composer.CommandItem>
+          )}
+        </Composer.CommandList>
+
+        <Composer.CommandList prefix="/">
+          {(item: PlaygroundCommand) => (
+            <Composer.CommandItem value={item.value}>
+              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
+              <span>{item.label}</span>
+            </Composer.CommandItem>
+          )}
+        </Composer.CommandList>
       </Composer.State>
       <Composer.State value="active">
         <StepQueue>
@@ -212,7 +285,9 @@ export default function ComponentsPlayground() {
         </div>
         <div className="flex min-h-[448px] items-end rounded-lg border border-secondary-border bg-secondary p-4">
           <Composer
-            onSubmit={() => {}}
+            onSubmit={(data) => {
+              if (data.kind === "answers") setComposerState("idle");
+            }}
             questions={
               composerState === "ask-user"
                 ? singleQuestion
@@ -220,7 +295,7 @@ export default function ComponentsPlayground() {
                   ? multipleQuestions
                   : undefined
             }
-            onQuestionsSubmit={() => setComposerState("idle")}
+            commands={PLAYGROUND_COMMANDS_CONFIG}
           >
             <PlaygroundComposerStates
               composerState={composerState}

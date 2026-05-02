@@ -12,7 +12,6 @@ import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
   useEditor,
-  useEditorState,
 } from "@tiptap/react";
 import type { FileUIPart } from "ai";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
@@ -21,6 +20,7 @@ import React, {
   Children,
   type ComponentProps,
   createContext,
+  Fragment,
   isValidElement,
   type ReactNode,
   type RefObject,
@@ -45,13 +45,7 @@ import {
 } from "@/components/ai/attachments";
 import { Commands } from "@/components/ai/commands";
 import type { AskUserQuestion } from "@/components/ai/types";
-import { BrainIcon } from "@/components/icons/brain";
-import { FileChartIcon } from "@/components/icons/file-chart";
-import { FileTextIcon } from "@/components/icons/file-text";
-import { GlobeIcon } from "@/components/icons/globe";
-import { ImageAltIcon } from "@/components/icons/image-alt";
 import { SendIcon } from "@/components/icons/send";
-import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 import {
   Questionnaire,
   type QuestionnaireOptionsHandle,
@@ -62,31 +56,57 @@ import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
-import { BubbleWideSparkleIcon } from "../icons/bubble-wide-sparkle";
-import { CodeIcon } from "../icons/code";
 
 // ---------------------------------------------------------------------------
-// Command types & data
+// Prefix configuration types
 // ---------------------------------------------------------------------------
 
-export type ComposerCommandItem = {
-  id: string;
-  label: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  iconKey?: string;
-  group: string;
-  kind: "mention" | "command";
-  value: string;
-  description?: string;
+export type PrefixKind = "chip" | "command";
+
+export type TriggerRule = "doc-start" | "after-whitespace";
+
+export type PrefixOnSelectContext = {
+  editor: Editor;
+  tools: ComposerToolsValue;
+  attachments: ComposerAttachmentsValue;
 };
 
-type CommandItem = ComposerCommandItem;
+/**
+ * Minimum shape an item must satisfy if you want the default filter to work.
+ * Custom shapes are fine — pass a `filter` on the prefix config to override.
+ */
+export type CommandItemData = {
+  value: string;
+  label?: string;
+  keywords?: string;
+  /**
+   * Icon JSX. Rendered both in the dropdown row (when the consumer's render
+   * function passes it through) and inside the inserted chip (composer reads
+   * it via the `commands` prop using the chip's `prefix` + `value`).
+   */
+  icon?: ReactNode;
+  onSelect?: (ctx: PrefixOnSelectContext) => void;
+};
 
-type CommandTrigger = "@" | "/";
+export type CommandPrefixConfig<TItem = CommandItemData> = {
+  kind: PrefixKind;
+  triggerRule: TriggerRule;
+  items: TItem[];
+  /**
+   * Custom filter — receives the item and the current query, returns a score
+   * (0 means no match). Default: fuzzy-match against `item.label` (with
+   * `item.keywords` mixed in). Pass `null` to disable filtering.
+   */
+  filter?: ((item: TItem, query: string) => number) | null;
+};
+
+// Erased generic for storing in context / passing through the plugin.
+type AnyCommandPrefixConfig = CommandPrefixConfig<unknown>;
+type CommandsConfig = Record<string, AnyCommandPrefixConfig>;
 
 type CommandListState = {
   isOpen: boolean;
-  trigger: CommandTrigger | null;
+  trigger: string | null;
   query: string;
   triggerStartPosition: number;
 };
@@ -97,104 +117,6 @@ const CLOSED_COMMAND_STATE: CommandListState = {
   query: "",
   triggerStartPosition: 0,
 };
-
-export const DEFAULT_MENTION_ITEMS: CommandItem[] = [
-  {
-    id: "quarterly-report",
-    label: "Q4 Quarterly Report",
-    icon: FileTextIcon,
-    group: "",
-    kind: "mention",
-    value: "quarterly-report",
-  },
-  {
-    id: "meeting-notes",
-    label: "Meeting Notes - March 2026",
-    icon: FileTextIcon,
-    group: "",
-    kind: "mention",
-    value: "meeting-notes",
-  },
-  {
-    id: "product-roadmap",
-    label: "Product Roadmap",
-    icon: SpreadsheetIcon,
-    group: "",
-    kind: "mention",
-    value: "product-roadmap",
-  },
-  {
-    id: "brand-guidelines",
-    label: "Brand Guidelines",
-    icon: FileTextIcon,
-    group: "",
-    kind: "mention",
-    value: "brand-guidelines",
-  },
-  {
-    id: "api-documentation",
-    label: "API Documentation",
-    icon: FileChartIcon,
-    group: "",
-    kind: "mention",
-    value: "api-documentation",
-  },
-  {
-    id: "screenshot-dashboard",
-    label: "Screenshot - Dashboard",
-    icon: ImageAltIcon,
-    group: "",
-    kind: "mention",
-    value: "screenshot-dashboard",
-  },
-  {
-    id: "wireframe-checkout",
-    label: "Wireframe - Checkout Flow",
-    icon: ImageAltIcon,
-    group: "",
-    kind: "mention",
-    value: "wireframe-checkout",
-  },
-];
-
-export const DEFAULT_COMMAND_ITEMS: CommandItem[] = [
-  {
-    id: "search",
-    label: "Search the web",
-    icon: GlobeIcon,
-    group: "Tools",
-    kind: "command",
-    value: "webSearch",
-    description: "Enable web search for this message",
-  },
-  {
-    id: "code-execution",
-    label: "Code Execution",
-    icon: CodeIcon,
-    group: "Tools",
-    kind: "command",
-    value: "codeExecution",
-    description: "Run code snippets",
-  },
-  {
-    id: "think",
-    label: "Think deeply",
-    icon: BrainIcon,
-    group: "Tools",
-    kind: "command",
-    value: "thinking",
-    description: "Enable extended thinking",
-  },
-  {
-    id: "summarize",
-    label: "Summarize",
-    icon: BubbleWideSparkleIcon,
-    group: "Tools",
-    kind: "command",
-    value: "summarize",
-    description: "Summarize the conversation",
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Fuzzy scoring & filtering
@@ -228,20 +150,33 @@ const fuzzyScore = (query: string, target: string): number => {
   return queryIndex === lowerQuery.length ? score / lowerQuery.length : 0;
 };
 
-const filterCommandItems = (
-  items: CommandItem[],
+const defaultItemFilter = (item: unknown, query: string): number => {
+  if (!query) return 1;
+  if (item == null || typeof item !== "object") return 0;
+  const record = item as { label?: string; value?: string; keywords?: string };
+  const label = record.label ?? record.value ?? "";
+  const keywords = record.keywords ?? "";
+  const target = `${label} ${keywords}`.trim();
+  return fuzzyScore(query, target);
+};
+
+const filterCommandItems = <TItem,>(
+  items: TItem[],
   query: string,
-): CommandItem[] => {
+  filter: ((item: TItem, query: string) => number) | null | undefined,
+): TItem[] => {
+  if (filter === null) return items;
   if (!query) return items;
+  const fn = filter ?? (defaultItemFilter as (i: TItem, q: string) => number);
   return items
-    .map((item) => ({ item, score: fuzzyScore(query, item.label) }))
+    .map((item) => ({ item, score: fn(item, query) }))
     .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .map(({ item }) => item);
 };
 
 // ---------------------------------------------------------------------------
-// ProseMirror Plugin — trigger detection for @ and /
+// ProseMirror Plugin — trigger detection driven by registered prefixes
 // ---------------------------------------------------------------------------
 
 const commandListPluginKey = new PluginKey<CommandListState>("commandList");
@@ -269,7 +204,9 @@ const commandFilterDecorations = (
   return DecorationSet.create(state.doc, [inline]);
 };
 
-const createCommandListPlugin = () =>
+const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const createCommandListPlugin = (getCommands: () => CommandsConfig) =>
   new Plugin<CommandListState>({
     key: commandListPluginKey,
     state: {
@@ -282,6 +219,10 @@ const createCommandListPlugin = () =>
           return previousState;
         }
 
+        const commands = getCommands();
+        const prefixKeys = Object.keys(commands);
+        if (prefixKeys.length === 0) return CLOSED_COMMAND_STATE;
+
         const { selection } = newEditorState;
         const cursorPosition = selection.$from.pos;
         const blockStart = selection.$from.start();
@@ -290,30 +231,37 @@ const createCommandListPlugin = () =>
           cursorPosition,
           "\n",
         );
-
-        // / trigger — position 0 only (entire doc starts with /)
         const fullDocText = newEditorState.doc.textContent;
-        if (fullDocText.startsWith("/")) {
-          const query = fullDocText.slice(1);
-          return {
-            isOpen: true,
-            trigger: "/" as CommandTrigger,
-            query,
-            triggerStartPosition: blockStart,
-          };
-        }
 
-        // @ trigger — after whitespace or at start of text block
-        const atMatch = textBeforeCursor.match(/(^|[\s])@([^\s]*)$/);
-        if (atMatch) {
-          const query = atMatch[2];
-          const triggerStartPosition = cursorPosition - query.length - 1;
-          return {
-            isOpen: true,
-            trigger: "@" as CommandTrigger,
-            query,
-            triggerStartPosition,
-          };
+        for (const prefix of prefixKeys) {
+          const config = commands[prefix];
+          if (config.triggerRule === "doc-start") {
+            if (fullDocText.startsWith(prefix)) {
+              return {
+                isOpen: true,
+                trigger: prefix,
+                query: fullDocText.slice(prefix.length),
+                triggerStartPosition: blockStart,
+              };
+            }
+            continue;
+          }
+
+          // after-whitespace
+          const escaped = escapeRegex(prefix);
+          const pattern = new RegExp(`(^|[\\s])${escaped}([^\\s]*)$`);
+          const match = textBeforeCursor.match(pattern);
+          if (match) {
+            const query = match[2];
+            const triggerStartPosition =
+              cursorPosition - query.length - prefix.length;
+            return {
+              isOpen: true,
+              trigger: prefix,
+              query,
+              triggerStartPosition,
+            };
+          }
         }
 
         return CLOSED_COMMAND_STATE;
@@ -326,42 +274,40 @@ const createCommandListPlugin = () =>
 
 // ---------------------------------------------------------------------------
 // MentionChip — TipTap Node extension for inline chips
+//
+// Chip attrs are serialized strings (prefix, label, value). The chip view
+// looks up the source item from the `commands` prop using prefix + value to
+// recover its `icon` JSX. No registry or HTML serialization — the icon comes
+// from the same data array the dropdown rendered from.
 // ---------------------------------------------------------------------------
-
-const ICON_MAP: Record<
-  string,
-  React.ComponentType<React.SVGProps<SVGSVGElement>>
-> = {
-  "quarterly-report": FileTextIcon,
-  "meeting-notes": FileTextIcon,
-  "product-roadmap": SpreadsheetIcon,
-  "brand-guidelines": FileTextIcon,
-  "api-documentation": FileChartIcon,
-  "screenshot-dashboard": ImageAltIcon,
-  "wireframe-checkout": ImageAltIcon,
-  search: GlobeIcon,
-  "code-execution": CodeIcon,
-  summarize: BubbleWideSparkleIcon,
-  think: BrainIcon,
-};
 
 const MentionChipNodeView = ({
   node,
 }: {
   node: { attrs: Record<string, unknown> };
 }) => {
+  const { commands } = useComposer();
+  const prefix = node.attrs.prefix as string;
+  const value = node.attrs.value as string;
   const label = node.attrs.label as string;
-  const icon = node.attrs.icon as string;
-  const Icon = ICON_MAP[icon];
+
+  const item = commands[prefix]?.items.find(
+    (i) => (i as { value?: string } | null)?.value === value,
+  ) as { icon?: ReactNode } | undefined;
+  const icon = item?.icon;
+
   return (
     <NodeViewWrapper
       as="span"
       data-mention-chip
       className="inline-flex items-center gap-0.5"
     >
-      {Icon && (
-        <span className="relative w-4 h-[1em]">
-          <Icon className="size-4 text-ink-tertiary absolute top-1/2 left-0 -translate-y-1/2" />
+      {icon && (
+        <span
+          aria-hidden
+          className="relative w-4 h-[1em] text-ink-tertiary [&>svg]:absolute [&>svg]:top-1/2 [&>svg]:left-0 [&>svg]:size-4 [&>svg]:-translate-y-1/2"
+        >
+          {icon}
         </span>
       )}
       <span>{label}</span>
@@ -369,43 +315,69 @@ const MentionChipNodeView = ({
   );
 };
 
-const MentionChipExtension = TiptapNode.create({
-  name: "mentionChip",
-  group: "inline",
-  inline: true,
-  atom: true,
-
-  addAttributes() {
-    return {
-      label: { default: "" },
-      value: { default: "" },
-      icon: { default: "" },
+/**
+ * Walks the editor doc for chip nodes and returns each chip's `prefix`,
+ * `value`, and `label` in document order. Used to surface structured chip
+ * data on the message submit payload.
+ */
+const extractChips = (
+  editor: Editor,
+): Array<{ prefix: string; value: string; label: string }> => {
+  const out: Array<{ prefix: string; value: string; label: string }> = [];
+  editor.state.doc.descendants((node) => {
+    if (node.type.name !== "mentionChip") return;
+    const { prefix, value, label } = node.attrs as {
+      prefix?: string;
+      value?: string;
+      label?: string;
     };
-  },
-
-  parseHTML() {
-    return [{ tag: "span[data-mention-chip]" }];
-  },
-
-  renderHTML({ HTMLAttributes }) {
-    return [
-      "span",
-      mergeAttributes({ "data-mention-chip": "" }, HTMLAttributes),
-      0,
-    ];
-  },
-
-  addNodeView() {
-    return ReactNodeViewRenderer(MentionChipNodeView, {
-      className:
-        "inline-flex items-center gap-0.5 h-6 rounded-sm bg-primary-hover px-0.75 font-medium leading-[normal] text-ink-primary align-[-1px] select-none [text-box:trim-both_cap_alphabetic]",
+    out.push({
+      prefix: prefix ?? "",
+      value: value ?? "",
+      label: label ?? "",
     });
-  },
+  });
+  return out;
+};
 
-  addProseMirrorPlugins() {
-    return [createCommandListPlugin()];
-  },
-});
+const createMentionChipExtension = (getCommands: () => CommandsConfig) =>
+  TiptapNode.create({
+    name: "mentionChip",
+    group: "inline",
+    inline: true,
+    atom: true,
+
+    addAttributes() {
+      return {
+        prefix: { default: "" },
+        label: { default: "" },
+        value: { default: "" },
+      };
+    },
+
+    parseHTML() {
+      return [{ tag: "span[data-mention-chip]" }];
+    },
+
+    renderHTML({ HTMLAttributes }) {
+      return [
+        "span",
+        mergeAttributes({ "data-mention-chip": "" }, HTMLAttributes),
+        0,
+      ];
+    },
+
+    addNodeView() {
+      return ReactNodeViewRenderer(MentionChipNodeView, {
+        className:
+          "inline-flex items-center gap-0.5 h-6 rounded-sm bg-primary-hover px-0.75 font-medium leading-[normal] text-ink-primary align-[-1px] select-none [text-box:trim-both_cap_alphabetic]",
+      });
+    },
+
+    addProseMirrorPlugins() {
+      return [createCommandListPlugin(getCommands)];
+    },
+  });
 
 // ---------------------------------------------------------------------------
 // Composer
@@ -413,58 +385,63 @@ const MentionChipExtension = TiptapNode.create({
 
 type AnswerEntry = { selected: Set<string>; freeText: string };
 
+
+type ComposerEditorValue = {
+  ref: RefObject<Editor | null>;
+  hasContent: boolean;
+  setHasContent: (has: boolean) => void;
+  isSubmitting: boolean;
+};
+
+type ComposerAttachmentsValue = {
+  items: AttachmentItem[];
+  add: (files: File[] | FileList) => void;
+  remove: (id: string) => void;
+  openFileDialog: () => void;
+  error: string | null;
+  isDragging: boolean;
+  fileInputRef: RefObject<HTMLInputElement | null>;
+  globalDropRef: RefObject<boolean>;
+};
+
+type ComposerToolsValue = {
+  webSearch: boolean;
+  setWebSearch: (value: boolean) => void;
+  thinking: boolean;
+  setThinking: (value: boolean) => void;
+};
+
+type ComposerQuestionnaireValue = {
+  questions: AskUserQuestion[] | null;
+  step: number;
+  answers: Map<number, AnswerEntry>;
+  toggleOption: (step: number, label: string, multiSelect: boolean) => void;
+  continueStep: (freeText?: string) => void;
+  dismissStep: () => void;
+  isLastStep: boolean;
+  isSingle: boolean;
+  clearSelections: (step: number) => void;
+  goBack: () => void;
+  goNext: () => void;
+  optionsRef: RefObject<QuestionnaireOptionsHandle | null>;
+};
+
+type ComposerCommandListValue = {
+  open: boolean;
+  currentPrefix: string | null;
+  query: string;
+  selectRef: RefObject<(() => void) | null>;
+  navigateRef: RefObject<((direction: number) => void) | null>;
+};
+
 type ComposerContextValue = {
-  editor: {
-    ref: RefObject<Editor | null>;
-    hasContent: boolean;
-    setHasContent: (has: boolean) => void;
-    isSubmitting: boolean;
-  };
-  attachments: {
-    items: AttachmentItem[];
-    add: (files: File[] | FileList) => void;
-    remove: (id: string) => void;
-    openFileDialog: () => void;
-    error: string | null;
-    isDragging: boolean;
-    fileInputRef: RefObject<HTMLInputElement | null>;
-    globalDropRef: RefObject<boolean>;
-  };
-  tools: {
-    webSearch: boolean;
-    setWebSearch: (value: boolean) => void;
-    thinking: boolean;
-    setThinking: (value: boolean) => void;
-  };
-  questionnaire: {
-    questions: AskUserQuestion[] | null;
-    step: number;
-    answers: Map<number, AnswerEntry>;
-    toggleOption: (step: number, label: string, multiSelect: boolean) => void;
-    continueStep: (freeText?: string) => void;
-    dismissStep: () => void;
-    isLastStep: boolean;
-    isSingle: boolean;
-    clearSelections: (step: number) => void;
-    goBack: () => void;
-    goNext: () => void;
-    optionsRef: RefObject<QuestionnaireOptionsHandle | null>;
-  };
-  mentions: {
-    open: boolean;
-    setOpen: (open: boolean) => void;
-    selectRef: RefObject<(() => void) | null>;
-    navigateRef: RefObject<((direction: number) => void) | null>;
-    items: CommandItem[];
-  };
-  commands: {
-    open: boolean;
-    setOpen: (open: boolean) => void;
-    selectRef: RefObject<(() => void) | null>;
-    navigateRef: RefObject<((direction: number) => void) | null>;
-    items: CommandItem[];
-    onSelect?: (item: CommandItem) => void;
-  };
+  editor: ComposerEditorValue;
+  attachments: ComposerAttachmentsValue;
+  tools: ComposerToolsValue;
+  questionnaire: ComposerQuestionnaireValue;
+  commandList: ComposerCommandListValue;
+  /** Live `commands` prop value, exposed for <Composer.CommandList>. */
+  commands: CommandsConfig;
 };
 
 const ComposerContext = createContext<ComposerContextValue>({
@@ -504,23 +481,36 @@ const ComposerContext = createContext<ComposerContextValue>({
     goNext: () => {},
     optionsRef: { current: null },
   },
-  mentions: {
+  commandList: {
     open: false,
-    setOpen: () => {},
+    currentPrefix: null,
+    query: "",
     selectRef: { current: null },
     navigateRef: { current: null },
-    items: DEFAULT_MENTION_ITEMS,
   },
-  commands: {
-    open: false,
-    setOpen: () => {},
-    selectRef: { current: null },
-    navigateRef: { current: null },
-    items: DEFAULT_COMMAND_ITEMS,
-  },
+  commands: {},
 });
 
 export const useComposer = () => useContext(ComposerContext);
+
+// Internal context — setters/handles only the composer's own children
+// (textarea, command list) need. Not part of the public API.
+type ComposerInternalsValue = {
+  syncCommandListState: (state: {
+    isOpen: boolean;
+    trigger: string | null;
+    query: string;
+  }) => void;
+  /** Stable getter for the latest `commands` prop, used by the trigger plugin. */
+  getCommands: () => CommandsConfig;
+};
+
+const ComposerInternals = createContext<ComposerInternalsValue>({
+  syncCommandListState: () => {},
+  getCommands: () => ({}),
+});
+
+const useComposerInternals = () => useContext(ComposerInternals);
 
 // Drag handler factory — always on document, scope-checked at event time
 const createDragHandlers = (
@@ -564,24 +554,48 @@ const createDragHandlers = (
   },
 });
 
+// Submitted data variants — discriminated by `kind`. The composer fires a
+// single `onSubmit` for both message sends and questionnaire answers; the
+// shape depends on which mode the form was in when the user pressed enter.
+
+export type ComposerMessageSubmit = {
+  kind: "message";
+  text: string;
+  files: FileUIPart[];
+  /** Chips inserted via chip-kind prefixes, in document order. Each entry
+   * carries the prefix that produced it so consumers can disambiguate when
+   * multiple chip prefixes are configured (e.g. `@` and `#`). */
+  chips: Array<{ prefix: string; value: string; label: string }>;
+  /** Active tool toggles. Forward-compat: typed as a flat record so adding a
+   * new tool doesn't widen the union. */
+  tools: Record<string, boolean>;
+};
+
+export type ComposerAnswersSubmit = {
+  kind: "answers";
+  answers: Record<string, string>;
+};
+
+export type ComposerSubmitData = ComposerMessageSubmit | ComposerAnswersSubmit;
+
 // Root — renders <form>, owns submit lifecycle
 type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
-  onSubmit?: (data: {
-    text: string;
-    files: FileUIPart[];
-    webSearch: boolean;
-    thinking: boolean;
-  }) => void | Promise<void>;
+  onSubmit?: (data: ComposerSubmitData) => void | Promise<void>;
   isSubmitting?: boolean;
   questions?: AskUserQuestion[];
-  onQuestionsSubmit?: (answers: Record<string, string>) => void;
   attachmentAccept?: string;
   attachmentMaxFiles?: number;
   attachmentMaxFileSize?: number;
-  mentionItems?: CommandItem[];
-  commandItems?: CommandItem[];
-  onCommandSelect?: (item: CommandItem) => void;
+  /**
+   * Configuration for command-list prefixes. Map of prefix character to its
+   * config (kind, triggerRule, items, optional filter). When the user types a
+   * prefix that matches one of these keys (per its triggerRule), the matching
+   * <Composer.CommandList prefix="..."> renders.
+   */
+  commands?: CommandsConfig;
 };
+
+const EMPTY_COMMANDS: CommandsConfig = {};
 
 const ComposerRoot = ({
   children,
@@ -589,13 +603,10 @@ const ComposerRoot = ({
   onSubmit,
   isSubmitting = false,
   questions,
-  onQuestionsSubmit,
   attachmentAccept: accept = DEFAULT_ATTACHMENT_ACCEPT,
   attachmentMaxFiles: maxFiles = DEFAULT_ATTACHMENT_MAX_FILES,
   attachmentMaxFileSize: maxFileSize = DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
-  mentionItems = DEFAULT_MENTION_ITEMS,
-  commandItems = DEFAULT_COMMAND_ITEMS,
-  onCommandSelect,
+  commands = EMPTY_COMMANDS,
   ...formProps
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
@@ -618,9 +629,22 @@ const ComposerRoot = ({
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [webSearch, setWebSearch] = useState(false);
   const [thinking, setThinking] = useState(false);
-  const [activeTrigger, setActiveTrigger] = useState<CommandTrigger | null>(
-    null,
-  );
+
+  // Mirrors the ProseMirror plugin's command-list state so React subtrees
+  // (e.g. <Composer.States>) can react to opens/closes. The textarea syncs
+  // this from plugin state on every editor update.
+  const [commandListState, setCommandListState] = useState<{
+    isOpen: boolean;
+    trigger: string | null;
+    query: string;
+  }>({ isOpen: false, trigger: null, query: "" });
+
+  // Live ref to the latest `commands` prop so the ProseMirror plugin (which
+  // captures a getter at editor-creation time) sees current configs.
+  const commandsRef = useRef(commands);
+  commandsRef.current = commands;
+  const getCommands = useCallback(() => commandsRef.current, []);
+
   attachmentRef.current = attachmentItems;
 
   // Attachment operations — lifted here so they're available on context directly
@@ -779,11 +803,14 @@ const ComposerRoot = ({
         questionnaireOptionsRef.current?.resetHighlight();
         editorRef.current?.commands.blur();
       } else {
-        onQuestionsSubmit?.(compileAnswers(updatedAnswers));
+        onSubmit?.({
+        kind: "answers",
+        answers: compileAnswers(updatedAnswers),
+      });
         editorRef.current?.commands.focus();
       }
     },
-    [questions, questionnaireStep, onQuestionsSubmit, compileAnswers],
+    [questions, questionnaireStep, onSubmit, compileAnswers],
   );
 
   const dismissStep = useCallback(() => {
@@ -801,10 +828,13 @@ const ComposerRoot = ({
       questionnaireOptionsRef.current?.resetHighlight();
       editorRef.current?.commands.blur();
     } else {
-      onQuestionsSubmit?.(compileAnswers(updatedAnswers));
+      onSubmit?.({
+        kind: "answers",
+        answers: compileAnswers(updatedAnswers),
+      });
       editorRef.current?.commands.focus();
     }
-  }, [questions, questionnaireStep, onQuestionsSubmit, compileAnswers]);
+  }, [questions, questionnaireStep, onSubmit, compileAnswers]);
 
   /** Save current editor text as freeText for the given step, then load the target step's freeText. */
   const transitionStep = useCallback(
@@ -871,12 +901,22 @@ const ComposerRoot = ({
         ? await prepareAttachmentsForSend(attachmentItems)
         : [];
 
+    const chips = editorRef.current
+      ? extractChips(editorRef.current)
+      : [];
+
     revokeAllAttachmentUrls(attachmentItems);
     setAttachmentItems([]);
     editorRef.current?.commands.setContent("");
     setEditorHasContent(false);
 
-    await onSubmit?.({ text: submitText, files, webSearch, thinking });
+    await onSubmit?.({
+      kind: "message",
+      text: submitText,
+      files,
+      chips,
+      tools: { webSearch, thinking },
+    });
   };
 
   // Drag handlers — always on document, scope-checked at event time via refs
@@ -1030,21 +1070,14 @@ const ComposerRoot = ({
         goNext: goNextStep,
         optionsRef: questionnaireOptionsRef,
       },
-      mentions: {
-        open: activeTrigger === "@",
-        setOpen: (open: boolean) => setActiveTrigger(open ? "@" : null),
+      commandList: {
+        open: commandListState.isOpen,
+        currentPrefix: commandListState.trigger,
+        query: commandListState.query,
         selectRef: commandListSelectRef,
         navigateRef: commandListNavigateRef,
-        items: mentionItems,
       },
-      commands: {
-        open: activeTrigger === "/",
-        setOpen: (open: boolean) => setActiveTrigger(open ? "/" : null),
-        selectRef: commandListSelectRef,
-        navigateRef: commandListNavigateRef,
-        items: commandItems,
-        onSelect: onCommandSelect,
-      },
+      commands,
     }),
     [
       isDragging,
@@ -1068,23 +1101,31 @@ const ComposerRoot = ({
       clearQuestionSelections,
       goBackStep,
       goNextStep,
-      activeTrigger,
-      mentionItems,
-      commandItems,
-      onCommandSelect,
+      commandListState,
+      commands,
     ],
+  );
+
+  const internalsValue = useMemo<ComposerInternalsValue>(
+    () => ({
+      syncCommandListState: setCommandListState,
+      getCommands,
+    }),
+    [getCommands],
   );
 
   return (
     <ComposerContext.Provider value={contextValue}>
-      <form
-        onSubmit={handleFormSubmit}
-        ref={rootRef}
-        className={cn("relative w-full flex flex-col", className)}
-        {...formProps}
-      >
-        {children}
-      </form>
+      <ComposerInternals.Provider value={internalsValue}>
+        <form
+          onSubmit={handleFormSubmit}
+          ref={rootRef}
+          className={cn("relative w-full flex flex-col", className)}
+          {...formProps}
+        >
+          {children}
+        </form>
+      </ComposerInternals.Provider>
     </ComposerContext.Provider>
   );
 };
@@ -1228,8 +1269,13 @@ const ComposerTextarea = ({
   autoFocus = false,
   children,
 }: ComposerTextareaProps) => {
-  const { editor, attachments, questionnaire, mentions, commands } =
-    useComposer();
+  const { editor, attachments, questionnaire, commandList } = useComposer();
+  const { syncCommandListState, getCommands } = useComposerInternals();
+
+  const mentionExtension = useMemo(
+    () => createMentionChipExtension(getCommands),
+    [getCommands],
+  );
 
   const isControlled = value !== undefined;
 
@@ -1256,7 +1302,7 @@ const ComposerTextarea = ({
 
   const tiptapEditor = useEditor({
     immediatelyRender: false,
-    extensions: [Document, Paragraph, Text, MentionChipExtension],
+    extensions: [Document, Paragraph, Text, mentionExtension],
     content: isControlled ? value : "",
     editorProps: {
       attributes: {
@@ -1279,13 +1325,12 @@ const ComposerTextarea = ({
         return true;
       },
       handleKeyDown: (view, event) => {
-        // Mentions/commands interception — read plugin state synchronously
+        // Command-list interception — read plugin state synchronously
         const cmdState = commandListPluginKey.getState(view.state);
         if (cmdState?.isOpen) {
-          const active = cmdState.trigger === "@" ? mentions : commands;
           if (event.key === "Tab") {
             event.preventDefault();
-            active.selectRef.current?.();
+            commandList.selectRef.current?.();
             return true;
           }
           if (event.key === "Escape") {
@@ -1297,17 +1342,17 @@ const ComposerTextarea = ({
           }
           if (event.key === "ArrowUp") {
             event.preventDefault();
-            active.navigateRef.current?.(-1);
+            commandList.navigateRef.current?.(-1);
             return true;
           }
           if (event.key === "ArrowDown") {
             event.preventDefault();
-            active.navigateRef.current?.(1);
+            commandList.navigateRef.current?.(1);
             return true;
           }
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
-            active.selectRef.current?.();
+            commandList.selectRef.current?.();
             return true;
           }
         }
@@ -1369,11 +1414,11 @@ const ComposerTextarea = ({
       }
       onValueChangeRef.current?.(text);
       const pluginState = commandListPluginKey.getState(instance.state);
-      if (pluginState?.isOpen && pluginState.trigger) {
-        (pluginState.trigger === "@" ? mentions : commands).setOpen(true);
-      } else {
-        mentions.setOpen(false);
-      }
+      syncCommandListState({
+        isOpen: pluginState?.isOpen ?? false,
+        trigger: pluginState?.trigger ?? null,
+        query: pluginState?.query ?? "",
+      });
     },
     editable: !disabled,
     autofocus: autoFocus,
@@ -1773,51 +1818,94 @@ const ComposerHints = ({ className, ...props }: ComposerHintsProps) => {
   );
 };
 
-// CommandList — reads plugin state, renders grouped items, manages selection
-type ComposerCommandListProps = { className?: string };
+// ---------------------------------------------------------------------------
+// <Composer.CommandList prefix> — props-driven, render-fn-based command list
+//
+// Reads `commands[prefix]` from context, applies the prefix's filter to its
+// items against the active query, and invokes the render-fn child for each
+// surviving entry. Renders nothing unless `prefix` matches the active prefix.
+//
+// Keyboard navigation: <Composer.CommandItem> children register themselves
+// on mount, in render order. Arrow keys move highlight; Enter/Tab selects.
+// ---------------------------------------------------------------------------
 
-const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
-  const { editor, mentions, commands, tools } = useComposer();
+type CommandListRowHandle = {
+  value: string;
+};
 
-  const tiptapEditor = editor.ref.current;
-  const active = mentions.open ? mentions : commands.open ? commands : null;
+type CommandListNavContextValue = {
+  registerRow: (handle: CommandListRowHandle) => () => void;
+  highlightedValue: string | null;
+  setHighlightedValue: (value: string | null) => void;
+  selectByValue: (value: string) => void;
+};
 
-  const commandState =
-    useEditorState({
-      editor: tiptapEditor,
-      selector: ({ editor: currentEditor }) => {
-        if (!currentEditor) return CLOSED_COMMAND_STATE;
-        return (
-          commandListPluginKey.getState(currentEditor.state) ??
-          CLOSED_COMMAND_STATE
-        );
-      },
-    }) ?? CLOSED_COMMAND_STATE;
+const CommandListNavContext =
+  createContext<CommandListNavContextValue | null>(null);
 
-  const { isOpen, trigger, query, triggerStartPosition } = commandState;
+type ComposerCommandListProps<TItem> = {
+  prefix: string;
+  className?: string;
+  /**
+   * Render function — called for each filtered entry. Type the parameter at
+   * the callsite (e.g. `{(item: MentionData) => ...}`); TypeScript infers
+   * `TItem` from there, so no inline JSX generic is needed.
+   */
+  children: (item: TItem) => ReactNode;
+};
 
-  const items = useMemo(() => {
-    if (!isOpen || !trigger) return [];
-    const source = trigger === "@" ? mentions.items : commands.items;
-    return filterCommandItems(source, query);
-  }, [isOpen, trigger, query, mentions.items, commands.items]);
+const ComposerCommandList = <TItem,>({
+  prefix,
+  className,
+  children: renderItem,
+}: ComposerCommandListProps<TItem>): ReactNode => {
+  const { commandList, commands, editor, tools, attachments } = useComposer();
+  const config = commands[prefix];
+  const isActive = commandList.open && commandList.currentPrefix === prefix;
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const filteredItems = useMemo(() => {
+    if (!config) return [];
+    return filterCommandItems(config.items, commandList.query, config.filter);
+  }, [config, commandList.query]);
 
-  // Reset selected index when items change (inline ref comparison, no useEffect)
-  const previousItemsLengthRef = useRef(items.length);
-  if (previousItemsLengthRef.current !== items.length) {
-    previousItemsLengthRef.current = items.length;
-    setSelectedIndex(0);
+  const [rows, setRows] = useState<CommandListRowHandle[]>([]);
+  const [highlightedValue, setHighlightedValue] = useState<string | null>(
+    null,
+  );
+
+  // Keep highlight valid: snap to first row when it isn't.
+  const validHighlight =
+    highlightedValue !== null &&
+    rows.some((r) => r.value === highlightedValue);
+  if (!validHighlight && rows.length > 0) {
+    queueMicrotask(() => setHighlightedValue(rows[0].value));
+  } else if (rows.length === 0 && highlightedValue !== null) {
+    queueMicrotask(() => setHighlightedValue(null));
   }
 
-  const handleSelect = useCallback(
-    (item: CommandItem) => {
-      if (!tiptapEditor) return;
+  const registerRow = useCallback((handle: CommandListRowHandle) => {
+    setRows((prev) => [...prev, handle]);
+    return () => {
+      setRows((prev) => prev.filter((entry) => entry !== handle));
+    };
+  }, []);
 
+  const selectByValue = useCallback(
+    (value: string) => {
+      const tiptapEditor = editor.ref.current;
+      if (!tiptapEditor || !config) return;
+      // Look up the source item from the data array. label and onSelect come
+      // from here — CommandItem itself only carries `value`.
+      const dataItem = config.items.find(
+        (i) => (i as { value?: string } | null)?.value === value,
+      ) as CommandItemData | undefined;
+      if (!dataItem) return;
+
+      const pluginState = commandListPluginKey.getState(tiptapEditor.state);
+      const triggerStartPosition = pluginState?.triggerStartPosition ?? 0;
       const cursorPosition = tiptapEditor.state.selection.$from.pos;
 
-      if (item.kind === "mention") {
+      if (config.kind === "chip") {
         tiptapEditor
           .chain()
           .focus()
@@ -1825,50 +1913,57 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
           .insertContentAt(triggerStartPosition, {
             type: "mentionChip",
             attrs: {
-              label: item.label,
-              value: item.value,
-              icon: item.iconKey ?? item.id,
+              prefix,
+              label: dataItem.label ?? dataItem.value,
+              value: dataItem.value,
             },
           })
           .run();
       } else {
-        // Command: delete trigger text and toggle state
         tiptapEditor
           .chain()
           .focus()
           .deleteRange({ from: triggerStartPosition, to: cursorPosition })
           .run();
-
-        if (item.value === "webSearch") tools.setWebSearch(true);
-        if (item.value === "thinking") tools.setThinking(true);
-        commands.onSelect?.(item);
+        dataItem.onSelect?.({ editor: tiptapEditor, tools, attachments });
       }
 
-      // Close command list
       tiptapEditor.view.dispatch(
         tiptapEditor.state.tr.setMeta(commandListPluginKey, { close: true }),
       );
     },
-    [tiptapEditor, triggerStartPosition, tools, commands],
+    [editor, config, prefix, tools, attachments],
   );
 
-  // Register refs for keyboard handlers
-  if (active) {
-    active.selectRef.current =
-      items.length > 0 ? () => handleSelect(items[selectedIndex]) : null;
-    active.navigateRef.current = (direction: number) => {
-      setSelectedIndex((previous) => {
-        const next = previous + direction;
-        if (next < 0) return items.length - 1;
-        if (next >= items.length) return 0;
-        return next;
-      });
+  // Wire keyboard refs while active.
+  if (isActive) {
+    commandList.selectRef.current = highlightedValue
+      ? () => selectByValue(highlightedValue)
+      : null;
+    commandList.navigateRef.current = (direction: number) => {
+      if (rows.length === 0) return;
+      const currentIdx = rows.findIndex((r) => r.value === highlightedValue);
+      const nextIdx =
+        currentIdx === -1
+          ? 0
+          : (currentIdx + direction + rows.length) % rows.length;
+      setHighlightedValue(rows[nextIdx].value);
     };
   }
 
-  if (!isOpen) return null;
+  const navCtx = useMemo<CommandListNavContextValue>(
+    () => ({
+      registerRow,
+      highlightedValue,
+      setHighlightedValue,
+      selectByValue,
+    }),
+    [registerRow, highlightedValue, selectByValue],
+  );
 
-  if (items.length === 0) {
+  if (!isActive || !config) return null;
+
+  if (filteredItems.length === 0) {
     return (
       <Commands className={className}>
         <Commands.Empty>No results</Commands.Empty>
@@ -1876,51 +1971,163 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
     );
   }
 
-  // Group items
-  const groups = new Map<string, CommandItem[]>();
-  for (const item of items) {
-    const existing = groups.get(item.group);
-    if (existing) {
-      existing.push(item);
-    } else {
-      groups.set(item.group, [item]);
-    }
-  }
-
-  let flatIndex = 0;
-
   return (
-    <Commands className={className}>
-      {[...groups.entries()].map(([groupName, groupItems]) => (
-        <Commands.Group key={groupName}>
-          {/* <Commands.GroupLabel>{groupName}</Commands.GroupLabel> */}
-          {groupItems.map((item) => {
-            const currentFlatIndex = flatIndex++;
-            return (
-              <Commands.Item
-                key={item.id}
-                icon={item.icon}
-                highlighted={currentFlatIndex === selectedIndex}
-                onMouseDown={(event) => {
-                  event.preventDefault();
-                  handleSelect(item);
-                }}
-                onMouseEnter={() => setSelectedIndex(currentFlatIndex)}
-              >
-                <Commands.ItemLabel>{item.label}</Commands.ItemLabel>
-                {item.description && (
-                  <Commands.ItemDescription>
-                    {item.description}
-                  </Commands.ItemDescription>
-                )}
-              </Commands.Item>
-            );
-          })}
-        </Commands.Group>
-      ))}
-    </Commands>
+    <CommandListNavContext.Provider value={navCtx}>
+      <Commands className={className}>
+        {filteredItems.map((item, i) => (
+          <Fragment
+            key={
+              (item as { value?: string } | null)?.value ?? `__cmd_${i}`
+            }
+          >
+            {renderItem(item as TItem)}
+          </Fragment>
+        ))}
+      </Commands>
+    </CommandListNavContext.Provider>
   );
 };
+
+// ---------------------------------------------------------------------------
+// <Composer.CommandItem> — visual row that registers with the nav context.
+// Place inside the render-fn child of <Composer.CommandList>.
+// ---------------------------------------------------------------------------
+
+type ComposerCommandItemProps = {
+  /**
+   * Stable identifier — joins back to the source data in
+   * `commands[prefix].items` for label/onSelect/etc. Also used for highlight
+   * matching and chip serialization.
+   */
+  value: string;
+  /** Free-form row content. */
+  children?: ReactNode;
+};
+
+const ComposerCommandItem = ({
+  value,
+  children,
+}: ComposerCommandItemProps) => {
+  const navCtx = useContext(CommandListNavContext);
+  if (!navCtx) {
+    throw new Error(
+      "<Composer.CommandItem> must be rendered inside <Composer.CommandList>.",
+    );
+  }
+
+  // Register with the parent list on mount.
+  useEffect(() => {
+    return navCtx.registerRow({ value });
+  }, [navCtx, value]);
+
+  const isHighlighted = navCtx.highlightedValue === value;
+
+  return (
+    <Commands.Item
+      highlighted={isHighlighted}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        navCtx.selectByValue(value);
+      }}
+      onMouseEnter={() => navCtx.setHighlightedValue(value)}
+    >
+      {children}
+    </Commands.Item>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// <Composer.CommandItemIcon> — slot wrapper for the row icon. Children are
+// rendered as the icon JSX; a `data-slot` is set for styling/targeting.
+// ---------------------------------------------------------------------------
+
+type ComposerCommandItemIconProps = ComponentProps<"span">;
+
+const ComposerCommandItemIcon = ({
+  children,
+  className,
+  ...props
+}: ComposerCommandItemIconProps) => (
+  <span
+    data-slot="composer-command-item-icon"
+    className={cn(
+      "inline-flex size-4 items-center justify-center text-ink-tertiary [&>svg]:size-4",
+      className,
+    )}
+    {...props}
+  >
+    {children}
+  </span>
+);
+
+// ---------------------------------------------------------------------------
+// <Composer.CommandGroup> / <Composer.CommandGroupLabel> /
+// <Composer.CommandCollection> — Base-UI-style two-tier rendering.
+//
+//   <Composer.CommandList prefix="/">
+//     {(group) => (
+//       <Composer.CommandGroup>
+//         <Composer.CommandGroupLabel>{group.label}</Composer.CommandGroupLabel>
+//         <Composer.CommandCollection items={group.items}>
+//           {(item) => <Composer.CommandItem ... />}
+//         </Composer.CommandCollection>
+//       </Composer.CommandGroup>
+//     )}
+//   </Composer.CommandList>
+// ---------------------------------------------------------------------------
+
+type ComposerCommandGroupProps = ComponentProps<"div">;
+
+const ComposerCommandGroup = ({
+  className,
+  children,
+  ...props
+}: ComposerCommandGroupProps) => (
+  <Commands.Group className={className} {...props}>
+    {children}
+  </Commands.Group>
+);
+
+type ComposerCommandGroupLabelProps = ComponentProps<"div">;
+
+const ComposerCommandGroupLabel = ({
+  className,
+  children,
+  ...props
+}: ComposerCommandGroupLabelProps) => (
+  <div
+    data-slot="composer-command-group-label"
+    className={cn(
+      "px-2 pt-2 pb-1 text-xs font-medium text-ink-tertiary",
+      className,
+    )}
+    {...props}
+  >
+    {children}
+  </div>
+);
+
+type ComposerCommandCollectionProps<TItem> = {
+  items: TItem[];
+  children: (item: TItem) => ReactNode;
+};
+
+function ComposerCommandCollection<TItem>({
+  items,
+  children: renderItem,
+}: ComposerCommandCollectionProps<TItem>): ReactNode {
+  return (
+    <>
+      {items.map((item, i) => (
+        <Fragment
+          key={(item as { value?: string } | null)?.value ?? `__col_${i}`}
+        >
+          {renderItem(item)}
+        </Fragment>
+      ))}
+    </>
+  );
+}
 
 // Compound export
 export const Composer = Object.assign(ComposerRoot, {
@@ -1934,8 +2141,13 @@ export const Composer = Object.assign(ComposerRoot, {
   State: ComposerState,
   Textarea: ComposerTextarea,
   Questionnaire: ComposerQuestionnaire,
+  CommandList: ComposerCommandList,
+  CommandItem: ComposerCommandItem,
+  CommandItemIcon: ComposerCommandItemIcon,
+  CommandGroup: ComposerCommandGroup,
+  CommandGroupLabel: ComposerCommandGroupLabel,
+  CommandCollection: ComposerCommandCollection,
   DismissAction: ComposerDismissAction,
   ContinueAction: ComposerContinueAction,
   Hints: ComposerHints,
-  CommandList: ComposerCommandList,
 });

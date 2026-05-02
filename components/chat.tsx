@@ -186,7 +186,6 @@ const ChatMessages = () => {
   const model = useModelStore((state) => state.model);
   const isDiffusionModel = model === "mercury-2-diffusing";
   const isError = status === "error";
-  const isLoading = status === "submitted";
   const isStreaming = status === "streaming";
 
   // Derive panel state to know what the panel is handling

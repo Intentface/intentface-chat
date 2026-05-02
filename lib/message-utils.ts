@@ -1,6 +1,10 @@
 import type { FileUIPart, ReasoningUIPart, TextUIPart, UIMessage } from "ai";
 import { isStaticToolUIPart } from "ai";
-import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
+import type {
+  AskUserInput,
+  AskUserQuestion,
+  ToolLabels,
+} from "@/components/ai/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -294,13 +298,7 @@ export const splitReasoningByHeaders = (
 // generator that receives the tool's input for dynamic text.
 // ---------------------------------------------------------------------------
 
-export const toolLabels: Record<
-  string,
-  {
-    active: (input: Record<string, unknown>) => string;
-    complete: (input: Record<string, unknown>) => string;
-  }
-> = {
+export const DEFAULT_TOOL_LABELS: ToolLabels = {
   webSearch: {
     active: (i) => `Searching for '${i.query ?? ""}'`,
     complete: (i) => `Searched for '${i.query ?? ""}'`,
@@ -350,3 +348,5 @@ export const toolLabels: Record<
     complete: (i) => `Exported report "${i.title ?? ""}"`,
   },
 };
+
+export const toolLabels = DEFAULT_TOOL_LABELS;

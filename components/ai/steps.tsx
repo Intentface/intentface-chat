@@ -11,13 +11,17 @@ import {
   useMemo,
   useState,
 } from "react";
+import type {
+  AskUserInput,
+  AskUserQuestion,
+  ToolLabels,
+} from "@/components/ai/types";
 import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
-import { type ToolPart, toolLabels } from "@/lib/message-utils";
+import { DEFAULT_TOOL_LABELS, type ToolPart } from "@/lib/message-utils";
 import { cn } from "@/lib/utils";
-import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
 // Context
@@ -26,6 +30,7 @@ import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
 type StepsContextValue = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  toolLabels: ToolLabels;
 };
 
 const StepsContext = createContext<StepsContextValue | null>(null);
@@ -46,12 +51,14 @@ type StepsRootProps = Omit<ComponentProps<"div">, "defaultOpen"> & {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  toolLabels?: ToolLabels;
 };
 
 const StepsRoot = ({
   open: controlledOpen,
   defaultOpen = false,
   onOpenChange,
+  toolLabels = DEFAULT_TOOL_LABELS,
   className,
   children,
   ...props
@@ -69,8 +76,8 @@ const StepsRoot = ({
   );
 
   const contextValue = useMemo(
-    () => ({ isOpen, setIsOpen }),
-    [isOpen, setIsOpen],
+    () => ({ isOpen, setIsOpen, toolLabels }),
+    [isOpen, setIsOpen, toolLabels],
   );
 
   return (
@@ -361,6 +368,7 @@ type StepsToolCallProps = {
 };
 
 const StepsToolCall = ({ part, className }: StepsToolCallProps) => {
+  const { toolLabels } = useSteps();
   const input = (part.input as Record<string, unknown>) ?? {};
   const isActive =
     part.state === "input-streaming" || part.state === "input-available";

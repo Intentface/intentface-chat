@@ -1,8 +1,8 @@
 "use client";
 
 import { ThemeProvider } from "next-themes";
-import { useThemeOverrides } from "@/hooks/use-theme-overrides";
 import Tooltip from "@/components/ui/tooltip";
+import { useThemeOverrides } from "@/hooks/use-theme-overrides";
 
 const ThemeOverridesApplier = () => {
   useThemeOverrides();

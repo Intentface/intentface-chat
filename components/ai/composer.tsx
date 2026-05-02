@@ -44,6 +44,7 @@ import {
   toAttachmentItem,
 } from "@/components/ai/attachments";
 import { Commands } from "@/components/ai/commands";
+import type { AskUserQuestion } from "@/components/ai/types";
 import { BrainIcon } from "@/components/icons/brain";
 import { FileChartIcon } from "@/components/icons/file-chart";
 import { FileTextIcon } from "@/components/icons/file-text";
@@ -61,7 +62,6 @@ import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { cn } from "@/lib/utils";
-import type { AskUserQuestion } from "@/tools/ask-user";
 import { BubbleWideSparkleIcon } from "../icons/bubble-wide-sparkle";
 import { CodeIcon } from "../icons/code";
 
@@ -69,15 +69,18 @@ import { CodeIcon } from "../icons/code";
 // Command types & data
 // ---------------------------------------------------------------------------
 
-type CommandItem = {
+export type ComposerCommandItem = {
   id: string;
   label: string;
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  iconKey?: string;
   group: string;
   kind: "mention" | "command";
   value: string;
   description?: string;
 };
+
+type CommandItem = ComposerCommandItem;
 
 type CommandTrigger = "@" | "/";
 
@@ -95,7 +98,7 @@ const CLOSED_COMMAND_STATE: CommandListState = {
   triggerStartPosition: 0,
 };
 
-const MENTION_ITEMS: CommandItem[] = [
+export const DEFAULT_MENTION_ITEMS: CommandItem[] = [
   {
     id: "quarterly-report",
     label: "Q4 Quarterly Report",
@@ -154,7 +157,7 @@ const MENTION_ITEMS: CommandItem[] = [
   },
 ];
 
-const COMMAND_ITEMS: CommandItem[] = [
+export const DEFAULT_COMMAND_ITEMS: CommandItem[] = [
   {
     id: "search",
     label: "Search the web",
@@ -292,12 +295,6 @@ const createCommandListPlugin = () =>
         const fullDocText = newEditorState.doc.textContent;
         if (fullDocText.startsWith("/")) {
           const query = fullDocText.slice(1);
-          if (
-            query.includes(" ") &&
-            filterCommandItems(COMMAND_ITEMS, query.split(" ")[0]).length === 0
-          ) {
-            return CLOSED_COMMAND_STATE;
-          }
           return {
             isOpen: true,
             trigger: "/" as CommandTrigger,
@@ -466,6 +463,7 @@ type ComposerContextValue = {
     selectRef: RefObject<(() => void) | null>;
     navigateRef: RefObject<((direction: number) => void) | null>;
     items: CommandItem[];
+    onSelect?: (item: CommandItem) => void;
   };
 };
 
@@ -511,14 +509,14 @@ const ComposerContext = createContext<ComposerContextValue>({
     setOpen: () => {},
     selectRef: { current: null },
     navigateRef: { current: null },
-    items: MENTION_ITEMS,
+    items: DEFAULT_MENTION_ITEMS,
   },
   commands: {
     open: false,
     setOpen: () => {},
     selectRef: { current: null },
     navigateRef: { current: null },
-    items: COMMAND_ITEMS,
+    items: DEFAULT_COMMAND_ITEMS,
   },
 });
 
@@ -580,6 +578,9 @@ type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   attachmentAccept?: string;
   attachmentMaxFiles?: number;
   attachmentMaxFileSize?: number;
+  mentionItems?: CommandItem[];
+  commandItems?: CommandItem[];
+  onCommandSelect?: (item: CommandItem) => void;
 };
 
 const ComposerRoot = ({
@@ -592,6 +593,9 @@ const ComposerRoot = ({
   attachmentAccept: accept = DEFAULT_ATTACHMENT_ACCEPT,
   attachmentMaxFiles: maxFiles = DEFAULT_ATTACHMENT_MAX_FILES,
   attachmentMaxFileSize: maxFileSize = DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
+  mentionItems = DEFAULT_MENTION_ITEMS,
+  commandItems = DEFAULT_COMMAND_ITEMS,
+  onCommandSelect,
   ...formProps
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
@@ -1031,14 +1035,15 @@ const ComposerRoot = ({
         setOpen: (open: boolean) => setActiveTrigger(open ? "@" : null),
         selectRef: commandListSelectRef,
         navigateRef: commandListNavigateRef,
-        items: MENTION_ITEMS,
+        items: mentionItems,
       },
       commands: {
         open: activeTrigger === "/",
         setOpen: (open: boolean) => setActiveTrigger(open ? "/" : null),
         selectRef: commandListSelectRef,
         navigateRef: commandListNavigateRef,
-        items: COMMAND_ITEMS,
+        items: commandItems,
+        onSelect: onCommandSelect,
       },
     }),
     [
@@ -1064,6 +1069,9 @@ const ComposerRoot = ({
       goBackStep,
       goNextStep,
       activeTrigger,
+      mentionItems,
+      commandItems,
+      onCommandSelect,
     ],
   );
 
@@ -1816,7 +1824,11 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
           .deleteRange({ from: triggerStartPosition, to: cursorPosition })
           .insertContentAt(triggerStartPosition, {
             type: "mentionChip",
-            attrs: { label: item.label, value: item.value, icon: item.id },
+            attrs: {
+              label: item.label,
+              value: item.value,
+              icon: item.iconKey ?? item.id,
+            },
           })
           .run();
       } else {
@@ -1829,6 +1841,7 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
 
         if (item.value === "webSearch") tools.setWebSearch(true);
         if (item.value === "thinking") tools.setThinking(true);
+        commands.onSelect?.(item);
       }
 
       // Close command list
@@ -1836,7 +1849,7 @@ const ComposerCommandList = ({ className }: ComposerCommandListProps) => {
         tiptapEditor.state.tr.setMeta(commandListPluginKey, { close: true }),
       );
     },
-    [tiptapEditor, triggerStartPosition, tools],
+    [tiptapEditor, triggerStartPosition, tools, commands],
   );
 
   // Register refs for keyboard handlers

@@ -15,8 +15,7 @@ const kbdVariants = cva(
       },
       variant: {
         default: "border-secondary-border bg-secondary text-ink-secondary",
-        frosted:
-          "border-white/15 bg-white/25 text-white backdrop-blur-sm",
+        frosted: "border-white/15 bg-white/25 text-white backdrop-blur-sm",
       },
       square: {
         true: "",
@@ -51,7 +50,10 @@ const Kbd = ({
   return (
     <kbd
       data-slot="kbd"
-      className={cn(kbdVariants({ size, square: isSquare, variant }), className)}
+      className={cn(
+        kbdVariants({ size, square: isSquare, variant }),
+        className,
+      )}
       {...props}
     >
       {children}

@@ -82,9 +82,7 @@ const deriveComposerState = (
   if (status === "submitted") {
     return {
       type: "active",
-      steps: [
-        { key: "thinking", label: "Thinking...", kind: "thinking" },
-      ],
+      steps: [{ key: "thinking", label: "Thinking...", kind: "thinking" }],
     };
   }
 
@@ -92,9 +90,7 @@ const deriveComposerState = (
   if (!lastAssistant) {
     return {
       type: "active",
-      steps: [
-        { key: "thinking", label: "Thinking...", kind: "thinking" },
-      ],
+      steps: [{ key: "thinking", label: "Thinking...", kind: "thinking" }],
     };
   }
 
@@ -122,8 +118,7 @@ const deriveComposerState = (
     // Show tool-chain when a tool is active, OR when all tools are complete
     // but text output hasn't started yet (prevents the panel from flickering
     // between tool completion and the next reasoning/tool part).
-    const hasTextAfterTools =
-      !hasActive && parts.at(-1)?.type === "text";
+    const hasTextAfterTools = !hasActive && parts.at(-1)?.type === "text";
 
     if (!hasTextAfterTools) {
       const steps: ComposerStepItem[] = [];

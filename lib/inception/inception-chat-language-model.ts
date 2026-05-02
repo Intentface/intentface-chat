@@ -319,7 +319,11 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
     isDiffusing: boolean,
     textId: string,
   ): ReadableStream<LanguageModelV3StreamPart> {
-    const reader = response.body!.getReader();
+    if (!response.body) {
+      throw new Error("Expected a response body for the Inception SSE stream.");
+    }
+
+    const reader = response.body.getReader();
     const decoder = new TextDecoder();
     const mapFinishReason = this.mapFinishReason.bind(this);
     const mapUsage = this.mapUsage.bind(this);

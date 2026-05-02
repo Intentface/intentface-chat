@@ -17,11 +17,11 @@ import {
   useRef,
   useState,
 } from "react";
+import type { AskUserQuestion } from "@/components/ai/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible } from "@/components/ui/collapsible";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import type { AskUserQuestion } from "@/tools/ask-user";
 import { ChevronDownIcon } from "./icons/chevron-down";
 
 /** Questionnaire root container. Stateless — consumers manage all state externally. */

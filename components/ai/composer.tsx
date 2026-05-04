@@ -20,11 +20,13 @@ import {
   Children,
   type ComponentProps,
   createContext,
+  type Dispatch,
   Fragment,
   isValidElement,
   type ReactNode,
   type Ref,
   type RefObject,
+  type SetStateAction,
   useCallback,
   useContext,
   useEffect,
@@ -759,15 +761,17 @@ export const useComposer = (): ComposerContextValue => {
   return context;
 };
 
+type CommandListSyncState = {
+  isOpen: boolean;
+  trigger: string | null;
+  query: string;
+};
+
 type ComposerInternalsValue = {
   editorRef: RefObject<Editor | null>;
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   commands: ComposerCommandsMap;
-  syncCommandListState: (state: {
-    isOpen: boolean;
-    trigger: string | null;
-    query: string;
-  }) => void;
+  syncCommandListState: Dispatch<SetStateAction<CommandListSyncState>>;
   getRegisteredPrefixes: () => RegisteredPrefix[];
   reportEditorUpdate: (editor: Editor) => void;
 };
@@ -1299,12 +1303,12 @@ const useComposerSnapshot = ({
     lastAppliedRef.current = value;
   }, [editorRef, isControlled, value]);
 
-  const reportUpdate = (editor: Editor) => {
+  const reportUpdate = useCallback((editor: Editor) => {
     if (!onValueChangeRef.current) return;
     const snapshot = snapshotFromEditor(editor);
     lastAppliedRef.current = snapshot;
     onValueChangeRef.current(snapshot);
-  };
+  }, []);
 
   return { reportUpdate };
 };
@@ -1363,11 +1367,8 @@ const ComposerRoot = ({
   });
 
   const [editorHasContent, setEditorHasContent] = useState(false);
-  const [commandListState, setCommandListState] = useState<{
-    isOpen: boolean;
-    trigger: string | null;
-    query: string;
-  }>({ isOpen: false, trigger: null, query: "" });
+  const [commandListState, setCommandListState] =
+    useState<CommandListSyncState>({ isOpen: false, trigger: null, query: "" });
 
   const attachments = useAttachmentStore(attachmentConfigRef);
 
@@ -1929,11 +1930,16 @@ const ComposerTextarea = ({
       onValueChangeRef.current?.(text);
       reportEditorUpdate(instance);
       const pluginState = commandListPluginKey.getState(instance.state);
-      syncCommandListState({
-        isOpen: pluginState?.isOpen ?? false,
-        trigger: pluginState?.trigger ?? null,
-        query: pluginState?.query ?? "",
-      });
+      const isOpen = pluginState?.isOpen ?? false;
+      const trigger = pluginState?.trigger ?? null;
+      const query = pluginState?.query ?? "";
+      syncCommandListState((prev) =>
+        prev.isOpen === isOpen &&
+        prev.trigger === trigger &&
+        prev.query === query
+          ? prev
+          : { isOpen, trigger, query },
+      );
     },
     editable: !disabled,
     autofocus: autoFocus,

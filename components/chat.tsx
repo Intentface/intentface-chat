@@ -461,6 +461,7 @@ const ChatInput = () => {
 
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
+      console.log("[chat] composer submit", data);
       if (data.kind === "answers") {
         if (panelState.type !== "ask-user") return;
         addToolOutput({

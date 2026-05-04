@@ -14,12 +14,12 @@ export const ActiveTools = () => {
 
   return (
     <div className="flex items-center gap-px">
-      {tools.webSearch && (
+      {tools.values.webSearch && (
         <Button
           type="button"
           variant="ghost"
           className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.setWebSearch(false)}
+          onClick={() => tools.set("webSearch", false)}
         >
           <span className="relative size-4">
             <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
@@ -29,12 +29,12 @@ export const ActiveTools = () => {
         </Button>
       )}
 
-      {tools.thinking && (
+      {tools.values.thinking && (
         <Button
           type="button"
           variant="ghost"
           className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.setThinking(false)}
+          onClick={() => tools.set("thinking", false)}
         >
           <span className="relative size-4">
             <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
@@ -71,14 +71,14 @@ export const ToolsMenu = () => {
         </DropdownMenu.Item>
         <DropdownMenu.Separator />
         <DropdownMenu.SwitchItem
-          checked={tools.webSearch}
-          onCheckedChange={tools.setWebSearch}
+          checked={tools.values.webSearch ?? false}
+          onCheckedChange={(value) => tools.set("webSearch", value)}
         >
           <GlobeIcon /> <span className="flex-1">Web Search</span>
         </DropdownMenu.SwitchItem>
         <DropdownMenu.SwitchItem
-          checked={tools.thinking}
-          onCheckedChange={tools.setThinking}
+          checked={tools.values.thinking ?? false}
+          onCheckedChange={(value) => tools.set("thinking", value)}
         >
           <BrainIcon /> <span className="flex-1">Thinking</span>
         </DropdownMenu.SwitchItem>

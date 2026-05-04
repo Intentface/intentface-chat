@@ -2,7 +2,10 @@
 
 import { CircleDotIcon, Loader } from "lucide-react";
 import { useState } from "react";
-import { Composer, useComposer } from "@/components/ai/composer";
+import {
+  type CommandItemData,
+  Composer,
+} from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { BrainIcon } from "@/components/icons/brain";
@@ -100,23 +103,12 @@ const multipleQuestions: AskUserQuestion[] = [
   },
 ];
 
-type PlaygroundMention = {
-  value: string;
-  label: string;
+type PlaygroundMention = CommandItemData & {
   icon: React.ReactNode;
 };
 
-type PlaygroundCommand = {
-  value: string;
-  label: string;
+type PlaygroundCommand = CommandItemData & {
   icon: React.ReactNode;
-  keywords?: string;
-  onSelect?: (ctx: {
-    tools: {
-      setWebSearch: (v: boolean) => void;
-      setThinking: (v: boolean) => void;
-    };
-  }) => void;
 };
 
 const PLAYGROUND_MENTIONS: PlaygroundMention[] = [
@@ -130,98 +122,16 @@ const PLAYGROUND_COMMANDS: PlaygroundCommand[] = [
     label: "Search the web",
     icon: <GlobeIcon />,
     keywords: "search web",
-    onSelect: ({ tools }) => tools.setWebSearch(true),
+    onSelect: ({ tools }) => tools.set("webSearch", true),
   },
   {
     value: "thinking",
     label: "Think deeply",
     icon: <BrainIcon />,
     keywords: "think reasoning",
-    onSelect: ({ tools }) => tools.setThinking(true),
+    onSelect: ({ tools }) => tools.set("thinking", true),
   },
 ];
-
-const PLAYGROUND_COMMANDS_CONFIG = {
-  "@": {
-    kind: "chip" as const,
-    triggerRule: "after-whitespace" as const,
-    items: PLAYGROUND_MENTIONS,
-  },
-  "/": {
-    kind: "command" as const,
-    triggerRule: "doc-start" as const,
-    items: PLAYGROUND_COMMANDS,
-  },
-};
-
-const PlaygroundComposerStates = ({
-  composerState,
-  composerSteps,
-}: {
-  composerState: "idle" | "active" | "ask-user" | "ask-user-multi";
-  composerSteps: string[];
-}) => {
-  const { commandList } = useComposer();
-
-  const deriveStatesValue = () => {
-    if (commandList.open) return "command-list";
-    switch (composerState) {
-      case "active":
-        return "active";
-      case "ask-user":
-      case "ask-user-multi":
-        return "ask-user";
-      default:
-        return "idle";
-    }
-  };
-  const statesValue = deriveStatesValue();
-
-  return (
-    <Composer.States value={statesValue}>
-      <Composer.State value="command-list">
-        <Composer.CommandList prefix="@">
-          {(item: PlaygroundMention) => (
-            <Composer.CommandItem value={item.value}>
-              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
-              <span>{item.label}</span>
-            </Composer.CommandItem>
-          )}
-        </Composer.CommandList>
-
-        <Composer.CommandList prefix="/">
-          {(item: PlaygroundCommand) => (
-            <Composer.CommandItem value={item.value}>
-              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
-              <span>{item.label}</span>
-            </Composer.CommandItem>
-          )}
-        </Composer.CommandList>
-      </Composer.State>
-      <Composer.State value="active">
-        <StepQueue>
-          {composerSteps.map((step, i, arr) => (
-            <StepQueue.Item key={`${step}-${i}`}>
-              <StepQueue.Icon>
-                {i === arr.length - 1 ? (
-                  <Loader className="size-3.5 animate-spin" />
-                ) : (
-                  <CircleDotIcon className="size-3.5" />
-                )}
-              </StepQueue.Icon>
-              <StepQueue.Label active={i === arr.length - 1}>
-                {step}
-              </StepQueue.Label>
-            </StepQueue.Item>
-          ))}
-        </StepQueue>
-      </Composer.State>
-      <Composer.State value="ask-user">
-        <Composer.Questionnaire />
-      </Composer.State>
-    </Composer.States>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // Page
@@ -233,6 +143,20 @@ export default function ComponentsPlayground() {
   >("idle");
   const [composerSteps, setComposerSteps] = useState(stepLabels.slice(0, 1));
   const { model, setModel } = useModelStore();
+
+  const panelValue =
+    composerState === "active"
+      ? "active"
+      : composerState === "ask-user" || composerState === "ask-user-multi"
+        ? "ask-user"
+        : "idle";
+
+  const questions =
+    composerState === "ask-user"
+      ? singleQuestion
+      : composerState === "ask-user-multi"
+        ? multipleQuestions
+        : undefined;
 
   return (
     <main className="mx-auto max-w-3xl space-y-8 px-6 py-10">
@@ -288,19 +212,46 @@ export default function ComponentsPlayground() {
             onSubmit={(data) => {
               if (data.kind === "answers") setComposerState("idle");
             }}
-            questions={
-              composerState === "ask-user"
-                ? singleQuestion
-                : composerState === "ask-user-multi"
-                  ? multipleQuestions
-                  : undefined
-            }
-            commands={PLAYGROUND_COMMANDS_CONFIG}
+            commands={{
+              "@": {
+                kind: "chip",
+                triggerRule: "after-whitespace",
+                items: PLAYGROUND_MENTIONS,
+              },
+              "/": {
+                kind: "command",
+                triggerRule: "doc-start",
+                items: PLAYGROUND_COMMANDS,
+              },
+            }}
+            questions={questions}
           >
-            <PlaygroundComposerStates
-              composerState={composerState}
-              composerSteps={composerSteps}
-            />
+            <Composer.Panel value={panelValue}>
+              <Composer.PanelItem value="command-list">
+                <Composer.Commands />
+              </Composer.PanelItem>
+              <Composer.PanelItem value="active">
+                <StepQueue>
+                  {composerSteps.map((step, i, arr) => (
+                    <StepQueue.Item key={`${step}-${i}`}>
+                      <StepQueue.Icon>
+                        {i === arr.length - 1 ? (
+                          <Loader className="size-3.5 animate-spin" />
+                        ) : (
+                          <CircleDotIcon className="size-3.5" />
+                        )}
+                      </StepQueue.Icon>
+                      <StepQueue.Label active={i === arr.length - 1}>
+                        {step}
+                      </StepQueue.Label>
+                    </StepQueue.Item>
+                  ))}
+                </StepQueue>
+              </Composer.PanelItem>
+              <Composer.PanelItem value="ask-user">
+                <Composer.Questions />
+              </Composer.PanelItem>
+            </Composer.Panel>
 
             <Composer.Container>
               <Composer.Attachments />
@@ -322,8 +273,8 @@ export default function ComponentsPlayground() {
               composerState === "ask-user-multi" ? (
                 <Composer.Actions className="flex items-center justify-end">
                   <Composer.Hints />
-                  <Composer.DismissAction />
-                  <Composer.ContinueAction />
+                  <Composer.Dismiss />
+                  <Composer.Continue />
                 </Composer.Actions>
               ) : (
                 <Composer.Actions className="flex items-center justify-between">

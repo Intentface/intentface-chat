@@ -15,9 +15,9 @@ import {
 } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
 import {
+  type CommandItemData,
   Composer,
   type ComposerSubmitData,
-  useComposer,
 } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
@@ -38,10 +38,7 @@ import { RefreshIcon } from "@/components/icons/refresh";
 import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 import { ModelSelector } from "@/components/model-selector";
 import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
-import {
-  type ComposerPanelState,
-  useActiveComposerState,
-} from "@/hooks/use-active-composer-state";
+import { useActiveComposerState } from "@/hooks/use-active-composer-state";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import {
   getAskUserInfo,
@@ -367,24 +364,12 @@ const ChatMessages = () => {
   );
 };
 
-type MentionData = {
-  value: string;
-  label: string;
+type MentionData = CommandItemData & {
   icon: React.ReactNode;
 };
 
-type CommandData = {
-  value: string;
-  label: string;
-  description?: string;
+type CommandData = CommandItemData & {
   icon: React.ReactNode;
-  keywords?: string;
-  onSelect?: (ctx: {
-    tools: {
-      setWebSearch: (v: boolean) => void;
-      setThinking: (v: boolean) => void;
-    };
-  }) => void;
 };
 
 const MENTION_ITEMS: MentionData[] = [
@@ -432,7 +417,7 @@ const COMMAND_ITEMS: CommandData[] = [
     description: "Enable web search for this message",
     icon: <GlobeIcon />,
     keywords: "search web",
-    onSelect: ({ tools }) => tools.setWebSearch(true),
+    onSelect: ({ tools }) => tools.set("webSearch", true),
   },
   {
     value: "codeExecution",
@@ -447,7 +432,7 @@ const COMMAND_ITEMS: CommandData[] = [
     description: "Enable extended thinking",
     icon: <BrainIcon />,
     keywords: "think reasoning",
-    onSelect: ({ tools }) => tools.setThinking(true),
+    onSelect: ({ tools }) => tools.set("thinking", true),
   },
   {
     value: "summarize",
@@ -457,81 +442,6 @@ const COMMAND_ITEMS: CommandData[] = [
     keywords: "summarize summary",
   },
 ];
-
-const COMMANDS_CONFIG = {
-  "@": {
-    kind: "chip" as const,
-    triggerRule: "after-whitespace" as const,
-    items: MENTION_ITEMS,
-  },
-  "/": {
-    kind: "command" as const,
-    triggerRule: "doc-start" as const,
-    items: COMMAND_ITEMS,
-  },
-};
-
-const ComposerPanel = ({ panelState }: { panelState: ComposerPanelState }) => {
-  const { commandList } = useComposer();
-
-  const statesValue = commandList.open ? "command-list" : panelState.type;
-
-  return (
-    <Composer.States value={statesValue}>
-      <Composer.State value="command-list">
-        <Composer.CommandList prefix="@">
-          {(item: MentionData) => (
-            <Composer.CommandItem value={item.value}>
-              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
-              <span>{item.label}</span>
-            </Composer.CommandItem>
-          )}
-        </Composer.CommandList>
-
-        <Composer.CommandList prefix="/">
-          {(item: CommandData) => (
-            <Composer.CommandItem value={item.value}>
-              <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
-              <span>{item.label}</span>
-              {item.description && (
-                <span className="text-ink-tertiary">{item.description}</span>
-              )}
-            </Composer.CommandItem>
-          )}
-        </Composer.CommandList>
-      </Composer.State>
-      <Composer.State value="active">
-        <StepQueue>
-          {panelState.type === "active" &&
-            panelState.steps.map((step, i) => {
-              const active = i === panelState.steps.length - 1;
-              return (
-                <StepQueue.Item key={step.key}>
-                  <StepQueue.Icon>
-                    {step.kind === "thinking" ? (
-                      <BrainIcon
-                        className={cn("size-3.5", active && "animate-pulse")}
-                      />
-                    ) : active ? (
-                      <Loader className="size-3.5 animate-spin" />
-                    ) : (
-                      <CircleDotIcon className="size-3.5" />
-                    )}
-                  </StepQueue.Icon>
-                  <StepQueue.Label active={active}>
-                    {step.label}
-                  </StepQueue.Label>
-                </StepQueue.Item>
-              );
-            })}
-        </StepQueue>
-      </Composer.State>
-      <Composer.State value="ask-user">
-        <Composer.Questionnaire />
-      </Composer.State>
-    </Composer.States>
-  );
-};
 
 const ChatInput = () => {
   const { chatId, messages, sendMessage, status, addToolOutput } =
@@ -545,6 +455,9 @@ const ChatInput = () => {
 
   const panelState = useActiveComposerState(messages, status);
   const isAskUser = panelState.type === "ask-user";
+  const activeSteps = panelState.type === "active" ? panelState.steps : [];
+  const askUserQuestions =
+    panelState.type === "ask-user" ? panelState.questions : null;
 
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
@@ -596,10 +509,75 @@ const ChatInput = () => {
     <Composer
       onSubmit={handleSubmit}
       isSubmitting={isSending}
-      questions={isAskUser ? panelState.questions : undefined}
-      commands={COMMANDS_CONFIG}
+      commands={{
+        "@": {
+          kind: "chip",
+          triggerRule: "after-whitespace",
+          items: MENTION_ITEMS,
+        },
+        "/": {
+          kind: "command",
+          triggerRule: "doc-start",
+          items: COMMAND_ITEMS,
+        },
+      }}
+      questions={askUserQuestions ?? undefined}
     >
-      <ComposerPanel panelState={panelState} />
+      <Composer.Panel value={panelState.type}>
+        <Composer.PanelItem value="command-list">
+          <Composer.CommandList prefix="@">
+            {(item: MentionData) => (
+              <Composer.CommandItem value={item.value}>
+                <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
+                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+              </Composer.CommandItem>
+            )}
+          </Composer.CommandList>
+
+          <Composer.CommandList prefix="/">
+            {(item: CommandData) => (
+              <Composer.CommandItem value={item.value}>
+                <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
+                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                {item.description && (
+                  <Composer.CommandItemDescription>
+                    {item.description}
+                  </Composer.CommandItemDescription>
+                )}
+              </Composer.CommandItem>
+            )}
+          </Composer.CommandList>
+        </Composer.PanelItem>
+        <Composer.PanelItem value="active">
+          <StepQueue>
+            {activeSteps.map((step, i) => {
+              const active = i === activeSteps.length - 1;
+              return (
+                <StepQueue.Item key={step.key}>
+                  <StepQueue.Icon>
+                    {step.kind === "thinking" ? (
+                      <BrainIcon
+                        className={cn("size-3.5", active && "animate-pulse")}
+                      />
+                    ) : active ? (
+                      <Loader className="size-3.5 animate-spin" />
+                    ) : (
+                      <CircleDotIcon className="size-3.5" />
+                    )}
+                  </StepQueue.Icon>
+                  <StepQueue.Label active={active}>
+                    {step.label}
+                  </StepQueue.Label>
+                </StepQueue.Item>
+              );
+            })}
+          </StepQueue>
+        </Composer.PanelItem>
+        <Composer.PanelItem value="ask-user">
+          <Composer.Questions />
+        </Composer.PanelItem>
+      </Composer.Panel>
+
       <Composer.Container>
         <Composer.Attachments />
         <Composer.Textarea autoFocus>
@@ -629,8 +607,8 @@ const ChatInput = () => {
         {isAskUser ? (
           <Composer.Actions className="flex items-center justify-end">
             <Composer.Hints />
-            <Composer.DismissAction />
-            <Composer.ContinueAction />
+            <Composer.Dismiss />
+            <Composer.Continue />
           </Composer.Actions>
         ) : (
           <Composer.Actions className="flex items-center justify-between">

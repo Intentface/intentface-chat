@@ -2,15 +2,9 @@
 
 import { CircleDotIcon, Loader } from "lucide-react";
 import { useState } from "react";
-import {
-  type CommandItemData,
-  Composer,
-} from "@/components/ai/composer";
+import { type CommandItemData, Composer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
-import { BrainIcon } from "@/components/icons/brain";
-import { FileTextIcon } from "@/components/icons/file-text";
-import { GlobeIcon } from "@/components/icons/globe";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
 import { useModelStore } from "@/lib/store/model";
@@ -103,31 +97,23 @@ const multipleQuestions: AskUserQuestion[] = [
   },
 ];
 
-type PlaygroundMention = CommandItemData & {
-  icon: React.ReactNode;
-};
-
-type PlaygroundCommand = CommandItemData & {
-  icon: React.ReactNode;
-};
-
-const PLAYGROUND_MENTIONS: PlaygroundMention[] = [
-  { value: "demo-doc", label: "Demo Document", icon: <FileTextIcon /> },
-  { value: "release-notes", label: "Release Notes", icon: <FileTextIcon /> },
+const PLAYGROUND_MENTIONS: CommandItemData[] = [
+  { value: "demo-doc", label: "Demo Document", icon: "fileText" },
+  { value: "release-notes", label: "Release Notes", icon: "fileText" },
 ];
 
-const PLAYGROUND_COMMANDS: PlaygroundCommand[] = [
+const PLAYGROUND_COMMANDS: CommandItemData[] = [
   {
     value: "webSearch",
     label: "Search the web",
-    icon: <GlobeIcon />,
+    icon: "globe",
     keywords: "search web",
     onSelect: ({ tools }) => tools.set("webSearch", true),
   },
   {
     value: "thinking",
     label: "Think deeply",
-    icon: <BrainIcon />,
+    icon: "brain",
     keywords: "think reasoning",
     onSelect: ({ tools }) => tools.set("thinking", true),
   },
@@ -215,12 +201,12 @@ export default function ComponentsPlayground() {
             commands={{
               "@": {
                 kind: "chip",
-                triggerRule: "after-whitespace",
+                trigger: "after-whitespace",
                 items: PLAYGROUND_MENTIONS,
               },
               "/": {
                 kind: "command",
-                triggerRule: "doc-start",
+                trigger: "doc-start",
                 items: PLAYGROUND_COMMANDS,
               },
             }}

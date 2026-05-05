@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
-import type { ChatStatus, UIMessage } from "ai";
+import type { ChatStatus } from "ai";
 import { CircleDotIcon, Loader } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import {
 } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
 import {
+  type ChipData,
   type CommandItemData,
   Composer,
   type ComposerSubmitData,
@@ -28,18 +29,13 @@ import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
-import { BubbleWideSparkleIcon } from "@/components/icons/bubble-wide-sparkle";
-import { CodeIcon } from "@/components/icons/code";
-import { FileChartIcon } from "@/components/icons/file-chart";
-import { FileTextIcon } from "@/components/icons/file-text";
-import { GlobeIcon } from "@/components/icons/globe";
-import { ImageAltIcon } from "@/components/icons/image-alt";
 import { RefreshIcon } from "@/components/icons/refresh";
-import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 import { ModelSelector } from "@/components/model-selector";
 import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
 import { useActiveComposerState } from "@/hooks/use-active-composer-state";
 import { useChatInstance } from "@/hooks/use-chat-instance";
+import { CHIP_ICONS } from "@/lib/ai/chip-icons";
+import type { AppUIMessage } from "@/lib/ai/types";
 import {
   getAskUserInfo,
   getChainInfo,
@@ -65,13 +61,13 @@ export type Artifact = {
 
 type ChatContextValue = {
   chatId: string;
-  messages: UIMessage[];
+  messages: AppUIMessage[];
   status: ChatStatus;
-  sendMessage: UseChatHelpers<UIMessage>["sendMessage"];
-  regenerate: UseChatHelpers<UIMessage>["regenerate"];
-  stop: UseChatHelpers<UIMessage>["stop"];
-  setMessages: UseChatHelpers<UIMessage>["setMessages"];
-  addToolOutput: UseChatHelpers<UIMessage>["addToolOutput"];
+  sendMessage: UseChatHelpers<AppUIMessage>["sendMessage"];
+  regenerate: UseChatHelpers<AppUIMessage>["regenerate"];
+  stop: UseChatHelpers<AppUIMessage>["stop"];
+  setMessages: UseChatHelpers<AppUIMessage>["setMessages"];
+  addToolOutput: UseChatHelpers<AppUIMessage>["addToolOutput"];
   activeArtifact: Artifact | null;
   isArtifactOpen: boolean;
   openArtifact: (artifact: Artifact) => void;
@@ -221,6 +217,9 @@ const ChatMessages = () => {
           : null;
         const askUser = getAskUserInfo(parts);
         const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
+        const userChips: ChipData[] = isUser
+          ? parts.flatMap((p) => (p.type === "data-chip" ? p.data : []))
+          : [];
 
         // Only show reasoning/tools inline after the message has finished streaming
         const shouldShowReasoning =
@@ -291,10 +290,23 @@ const ChatMessages = () => {
                         );
                         if (index <= lastChainIdx) return null;
                       }
+                      if (isUser) {
+                        return (
+                          <Message.Text
+                            key={index}
+                            text={part.text}
+                            chips={userChips}
+                          />
+                        );
+                      }
                       return (
-                        <Message.Text key={index}>{part.text}</Message.Text>
+                        <Message.Markdown key={index}>
+                          {part.text}
+                        </Message.Markdown>
                       );
                     }
+                    case "data-chip":
+                      return null;
                     case "tool-createArtifact": {
                       const input = part.input as {
                         title?: string;
@@ -364,58 +376,50 @@ const ChatMessages = () => {
   );
 };
 
-type MentionData = CommandItemData & {
-  icon: React.ReactNode;
-};
-
-type CommandData = CommandItemData & {
-  icon: React.ReactNode;
-};
-
-const MENTION_ITEMS: MentionData[] = [
+const MENTION_ITEMS: CommandItemData[] = [
   {
     value: "quarterly-report",
     label: "Q4 Quarterly Report",
-    icon: <FileTextIcon />,
+    icon: "fileText",
   },
   {
     value: "meeting-notes",
     label: "Meeting Notes - March 2026",
-    icon: <FileTextIcon />,
+    icon: "fileText",
   },
   {
     value: "product-roadmap",
     label: "Product Roadmap",
-    icon: <SpreadsheetIcon />,
+    icon: "spreadsheet",
   },
   {
     value: "brand-guidelines",
     label: "Brand Guidelines",
-    icon: <FileTextIcon />,
+    icon: "fileText",
   },
   {
     value: "api-documentation",
     label: "API Documentation",
-    icon: <FileChartIcon />,
+    icon: "fileChart",
   },
   {
     value: "screenshot-dashboard",
     label: "Screenshot - Dashboard",
-    icon: <ImageAltIcon />,
+    icon: "imageAlt",
   },
   {
     value: "wireframe-checkout",
     label: "Wireframe - Checkout Flow",
-    icon: <ImageAltIcon />,
+    icon: "imageAlt",
   },
 ];
 
-const COMMAND_ITEMS: CommandData[] = [
+const COMMAND_ITEMS: CommandItemData[] = [
   {
     value: "webSearch",
     label: "Search the web",
     description: "Enable web search for this message",
-    icon: <GlobeIcon />,
+    icon: "globe",
     keywords: "search web",
     onSelect: ({ tools }) => tools.set("webSearch", true),
   },
@@ -423,14 +427,14 @@ const COMMAND_ITEMS: CommandData[] = [
     value: "codeExecution",
     label: "Code Execution",
     description: "Run code snippets",
-    icon: <CodeIcon />,
+    icon: "code",
     keywords: "code run execute",
   },
   {
     value: "thinking",
     label: "Think deeply",
     description: "Enable extended thinking",
-    icon: <BrainIcon />,
+    icon: "brain",
     keywords: "think reasoning",
     onSelect: ({ tools }) => tools.set("thinking", true),
   },
@@ -438,7 +442,7 @@ const COMMAND_ITEMS: CommandData[] = [
     value: "summarize",
     label: "Summarize",
     description: "Summarize the conversation",
-    icon: <BubbleWideSparkleIcon />,
+    icon: "bubbleWideSparkle",
     keywords: "summarize summary",
   },
 ];
@@ -483,7 +487,15 @@ const ChatInput = () => {
         }
 
         await sendMessage(
-          { text: data.text, files: data.files },
+          {
+            parts: [
+              ...data.files,
+              { type: "text", text: data.text },
+              ...(data.chips.length > 0
+                ? [{ type: "data-chip" as const, data: data.chips }]
+                : []),
+            ],
+          },
           {
             body: {
               webSearch: data.tools.webSearch ?? false,
@@ -513,12 +525,12 @@ const ChatInput = () => {
       commands={{
         "@": {
           kind: "chip",
-          triggerRule: "after-whitespace",
+          trigger: "after-whitespace",
           items: MENTION_ITEMS,
         },
         "/": {
           kind: "command",
-          triggerRule: "doc-start",
+          trigger: "doc-start",
           items: COMMAND_ITEMS,
         },
       }}
@@ -527,19 +539,31 @@ const ChatInput = () => {
       <Composer.Panel value={panelState.type}>
         <Composer.PanelItem value="command-list">
           <Composer.CommandList prefix="@">
-            {(item: MentionData) => (
+            {(item: CommandItemData) => (
               <Composer.CommandItem value={item.value}>
-                <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
-                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                {item.icon && (
+                  <Composer.CommandItemIcon>
+                    {CHIP_ICONS[item.icon]}
+                  </Composer.CommandItemIcon>
+                )}
+                <Composer.CommandItemLabel>
+                  {item.label}
+                </Composer.CommandItemLabel>
               </Composer.CommandItem>
             )}
           </Composer.CommandList>
 
           <Composer.CommandList prefix="/">
-            {(item: CommandData) => (
+            {(item: CommandItemData) => (
               <Composer.CommandItem value={item.value}>
-                <Composer.CommandItemIcon>{item.icon}</Composer.CommandItemIcon>
-                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                {item.icon && (
+                  <Composer.CommandItemIcon>
+                    {CHIP_ICONS[item.icon]}
+                  </Composer.CommandItemIcon>
+                )}
+                <Composer.CommandItemLabel>
+                  {item.label}
+                </Composer.CommandItemLabel>
                 {item.description && (
                   <Composer.CommandItemDescription>
                     {item.description}

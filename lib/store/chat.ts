@@ -1,6 +1,6 @@
-import type { UIMessage } from "ai";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { AppUIMessage } from "@/lib/ai/types";
 
 const MESSAGE_KEY_PREFIX = "chat-messages:";
 
@@ -16,22 +16,22 @@ type ChatStore = {
   createChat: (id: string, title: string) => void;
   deleteChat: (id: string) => void;
   updateChatTimestamp: (id: string) => void;
-  getMessages: (id: string) => UIMessage[];
-  setMessages: (id: string, messages: UIMessage[]) => void;
+  getMessages: (id: string) => AppUIMessage[];
+  setMessages: (id: string, messages: AppUIMessage[]) => void;
 };
 
-const getStoredMessages = (chatId: string): UIMessage[] => {
+const getStoredMessages = (chatId: string): AppUIMessage[] => {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(`${MESSAGE_KEY_PREFIX}${chatId}`);
     if (!raw) return [];
-    return JSON.parse(raw) as UIMessage[];
+    return JSON.parse(raw) as AppUIMessage[];
   } catch {
     return [];
   }
 };
 
-const setStoredMessages = (chatId: string, messages: UIMessage[]): void => {
+const setStoredMessages = (chatId: string, messages: AppUIMessage[]): void => {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(

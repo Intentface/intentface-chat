@@ -4,12 +4,16 @@ import type { FileUIPart, UIMessage } from "ai";
 import { FileIcon, PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import type { ComponentProps } from "react";
+import { type ComponentProps, Fragment } from "react";
+import { Chip } from "@/components/ai/chip";
+import type { ChipData } from "@/components/ai/composer";
 import HoverCard from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
+import { CHIP_ICONS } from "@/lib/ai/chip-icons";
+import { parseChipSegments } from "@/lib/ai/chip-syntax";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
@@ -118,12 +122,54 @@ const MessageAction = ({
   );
 };
 
-const MessageText = ({
+const MessageMarkdown = ({
   className,
   ...props
 }: ComponentProps<typeof Markdown>) => (
   <Markdown className={cn("size-full", className)} {...props} />
 );
+
+type MessageChipProps = {
+  label: string;
+  chip?: ChipData;
+  className?: string;
+};
+
+const MessageChip = ({ label, chip, className }: MessageChipProps) => (
+  <Chip variant={chip?.variant} className={className}>
+    {chip?.icon && <Chip.Icon>{CHIP_ICONS[chip.icon]}</Chip.Icon>}
+    <Chip.Label>{label}</Chip.Label>
+  </Chip>
+);
+
+type MessageTextProps = {
+  text: string;
+  chips?: ChipData[];
+  className?: string;
+};
+
+const MessageText = ({ text, chips, className }: MessageTextProps) => {
+  const segments = parseChipSegments(text);
+  const chipByKey = new Map(
+    (chips ?? []).map((c) => [`${c.prefix}:${c.value}`, c]),
+  );
+
+  return (
+    <span className={cn("whitespace-pre-wrap text-md", className)}>
+      {segments.map((segment, index) =>
+        segment.type === "text" ? (
+          <Fragment key={index}>{segment.text}</Fragment>
+        ) : (
+          <MessageChip
+            key={index}
+            label={segment.label}
+            chip={chipByKey.get(`${segment.prefix}:${segment.value}`)}
+          />
+        ),
+      )}
+    </span>
+  );
+};
 
 // Error message display
 const MessageError = ({
@@ -342,6 +388,8 @@ export const Message = Object.assign(MessageRoot, {
   Action: MessageAction,
   Copy: MessageCopy,
   Text: MessageText,
+  Markdown: MessageMarkdown,
+  Chip: MessageChip,
   Error: MessageError,
   Loading: MessageLoading,
   Timestamp: MessageTimestamp,

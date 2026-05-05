@@ -2,12 +2,13 @@
 
 import { useChat } from "@ai-sdk/react";
 import { useEffect, useMemo } from "react";
+import type { AppUIMessage } from "@/lib/ai/types";
 import { getChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 
 export const useChatInstance = (chatId: string) => {
   const chat = useMemo(() => getChatInstance(chatId), [chatId]);
-  const helpers = useChat({ chat });
+  const helpers = useChat<AppUIMessage>({ chat });
 
   // Load persisted messages after mount to avoid hydration mismatch
   // (localStorage is unavailable during SSR, so both server and client

@@ -47,6 +47,7 @@ import {
   revokeAttachmentUrl,
   toAttachmentItem,
 } from "@/components/ai/attachments";
+import { Chip, type ChipVariant } from "@/components/ai/chip";
 import { Commands } from "@/components/ai/commands";
 import type { AskUserQuestion } from "@/components/ai/types";
 import { SendIcon } from "@/components/icons/send";
@@ -59,6 +60,8 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
+import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
+import { escapeMarkdownLink, parseChipSegments } from "@/lib/ai/chip-syntax";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -73,6 +76,8 @@ export type ChipData = {
   prefix: string;
   value: string;
   label: string;
+  icon?: ChipIconKey;
+  variant?: ChipVariant;
 };
 
 export type ComposerEditorHandle = {
@@ -105,7 +110,8 @@ export type CommandItemData = {
   value: string;
   label: string;
   description?: string;
-  icon?: ReactNode;
+  icon?: ChipIconKey;
+  variant?: ChipVariant;
   keywords?: string;
   onSelect?: (context: PrefixOnSelectContext) => void;
 };
@@ -142,7 +148,7 @@ export type ComposerSubmitData = ComposerMessageSubmit | ComposerAnswersSubmit;
 
 export type ComposerCommandsConfig = {
   kind: PrefixKind;
-  triggerRule: TriggerRule;
+  trigger: TriggerRule;
   items: CommandItemData[];
   filter?: ((item: CommandItemData, query: string) => number) | null;
 };
@@ -670,22 +676,91 @@ const applySnapshotToEditor = (
   editor.commands.setContent(snapshot.__pmDoc as never);
 };
 
-const extractChipsFromEditor = (editor: Editor): ChipData[] => {
-  const chips: ChipData[] = [];
-  editor.state.doc.descendants((node) => {
-    if (node.type.name !== "mentionChip") return;
-    const attrs = node.attrs as {
-      prefix?: string;
-      value?: string;
-      label?: string;
-    };
-    chips.push({
-      prefix: attrs.prefix ?? "",
-      value: attrs.value ?? "",
-      label: attrs.label ?? "",
+const serializeEditorContent = (
+  editor: Editor,
+  commands: ComposerCommandsMap,
+): { text: string; chips: ChipData[] } => {
+  const chipsByKey = new Map<string, ChipData>();
+  const blocks: string[] = [];
+
+  editor.state.doc.forEach((block) => {
+    if (block.type.name !== "paragraph") return;
+    let inline = "";
+    block.forEach((child) => {
+      if (child.isText) {
+        inline += child.text ?? "";
+        return;
+      }
+      if (child.type.name !== "mentionChip") return;
+      const attrs = child.attrs as {
+        prefix?: string;
+        value?: string;
+        label?: string;
+      };
+      const prefix = attrs.prefix ?? "";
+      const value = attrs.value ?? "";
+      const label = attrs.label ?? "";
+      inline += `[${escapeMarkdownLink(label)}](chip:${prefix}:${value})`;
+      const key = `${prefix}:${value}`;
+      if (!chipsByKey.has(key)) {
+        const item = commands[prefix]?.items.find((i) => i.value === value);
+        chipsByKey.set(key, {
+          prefix,
+          value,
+          label,
+          ...(item?.icon ? { icon: item.icon } : {}),
+          ...(item?.variant ? { variant: item.variant } : {}),
+        });
+      }
     });
+    blocks.push(inline);
   });
-  return chips;
+
+  return { text: blocks.join("\n"), chips: [...chipsByKey.values()] };
+};
+
+type InlineNodeJSON =
+  | { type: "text"; text: string }
+  | {
+      type: "mentionChip";
+      attrs: { prefix: string; value: string; label: string };
+    };
+
+type ParagraphNodeJSON = {
+  type: "paragraph";
+  content?: InlineNodeJSON[];
+};
+
+const buildChipPasteContent = (
+  segments: ReturnType<typeof parseChipSegments>,
+): ParagraphNodeJSON[] => {
+  const paragraphs: ParagraphNodeJSON[] = [{ type: "paragraph", content: [] }];
+  const pushInline = (node: InlineNodeJSON) => {
+    const target = paragraphs[paragraphs.length - 1];
+    target.content = target.content ?? [];
+    target.content.push(node);
+  };
+
+  for (const segment of segments) {
+    if (segment.type === "text") {
+      const lines = segment.text.split("\n");
+      lines.forEach((line, lineIndex) => {
+        if (lineIndex > 0) paragraphs.push({ type: "paragraph", content: [] });
+        if (line.length > 0) pushInline({ type: "text", text: line });
+      });
+      continue;
+    }
+    pushInline({
+      type: "mentionChip",
+      attrs: {
+        prefix: segment.prefix,
+        value: segment.value,
+        label: segment.label,
+      },
+    });
+  }
+
+  return paragraphs.filter((p) => (p.content?.length ?? 0) > 0);
 };
 
 // ---------------------------------------------------------------------------
@@ -774,6 +849,7 @@ type ComposerInternalsValue = {
   syncCommandListState: Dispatch<SetStateAction<CommandListSyncState>>;
   getRegisteredPrefixes: () => RegisteredPrefix[];
   reportEditorUpdate: (editor: Editor) => void;
+  reportCommandQueryChange: (next: CommandListSyncState) => void;
 };
 
 const ComposerInternalsContext = createContext<ComposerInternalsValue | null>(
@@ -869,23 +945,13 @@ const MentionChipNodeView = ({
   const label = node.attrs.label as string;
 
   const item = commands.lookup(prefix, value);
-  const icon = item?.icon;
 
   return (
-    <NodeViewWrapper
-      as="span"
-      data-mention-chip
-      className="inline-flex items-center gap-0.5"
-    >
-      {icon && (
-        <span
-          aria-hidden
-          className="relative w-4 h-[1em] text-ink-tertiary [&>svg]:absolute [&>svg]:top-1/2 [&>svg]:left-0 [&>svg]:size-4 [&>svg]:-translate-y-1/2"
-        >
-          {icon}
-        </span>
-      )}
-      <span>{label}</span>
+    <NodeViewWrapper as="span" data-mention-chip>
+      <Chip variant={item?.variant}>
+        {item?.icon && <Chip.Icon>{CHIP_ICONS[item.icon]}</Chip.Icon>}
+        <Chip.Label>{label}</Chip.Label>
+      </Chip>
     </NodeViewWrapper>
   );
 };
@@ -920,10 +986,7 @@ const createMentionChipExtension = (
     },
 
     addNodeView() {
-      return ReactNodeViewRenderer(MentionChipNodeView, {
-        className:
-          "inline-flex items-center gap-0.5 h-6 rounded-sm bg-primary-hover px-0.75 font-[450] leading-[normal] text-ink-primary align-[-1px] select-none [text-box:trim-both_cap_alphabetic]",
-      });
+      return ReactNodeViewRenderer(MentionChipNodeView);
     },
 
     addProseMirrorPlugins() {
@@ -1016,7 +1079,7 @@ const useCommandRegistry = (commands: ComposerCommandsMap) => {
   const getRegisteredPrefixes = useCallback((): RegisteredPrefix[] => {
     const result: RegisteredPrefix[] = [];
     for (const [prefix, entry] of Object.entries(registryRef.current)) {
-      result.push({ prefix, triggerRule: entry.triggerRule });
+      result.push({ prefix, triggerRule: entry.trigger });
     }
     return result;
   }, []);
@@ -1330,6 +1393,7 @@ export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
+  onCommandQueryChange?: (query: string, prefix: string | null) => void;
   ref?: Ref<ComposerHandle>;
 };
 
@@ -1346,6 +1410,7 @@ const ComposerRoot = ({
   defaultValue,
   value,
   onValueChange,
+  onCommandQueryChange,
   ref,
   ...formProps
 }: ComposerRootProps) => {
@@ -1383,6 +1448,23 @@ const ComposerRoot = ({
 
   const submitAnswers = useCallback((answers: Record<string, string>) => {
     onSubmitRef.current?.({ kind: "answers", answers });
+  }, []);
+
+  const onCommandQueryChangeRef = useRef(onCommandQueryChange);
+  onCommandQueryChangeRef.current = onCommandQueryChange;
+
+  const previousCommandListRef = useRef<CommandListSyncState>({
+    isOpen: false,
+    trigger: null,
+    query: "",
+  });
+  const reportCommandQueryChange = useCallback((next: CommandListSyncState) => {
+    const previous = previousCommandListRef.current;
+    if (previous.trigger === next.trigger && previous.query === next.query) {
+      return;
+    }
+    previousCommandListRef.current = next;
+    onCommandQueryChangeRef.current?.(next.query, next.trigger);
   }, []);
 
   const questionnaire = useQuestionnaire({
@@ -1484,16 +1566,16 @@ const ComposerRoot = ({
 
     if (isSubmitting) return;
 
-    const text = editorRef.current?.getText()?.trim() ?? "";
-    if (!text && !attachments.items.length) return;
+    const serialized = editorRef.current
+      ? serializeEditorContent(editorRef.current, commands)
+      : { text: "", chips: [] as ChipData[] };
+    const trimmedText = serialized.text.trim();
+    if (!trimmedText && !attachments.items.length) return;
 
-    const submitText = text || "Sent with attachments";
+    const submitText = trimmedText || "Sent with attachments";
     const fileItems: AttachmentItem[] = attachments.items;
     const fileParts =
       fileItems.length > 0 ? await prepareAttachmentsForSend(fileItems) : [];
-    const chips: ChipData[] = editorRef.current
-      ? extractChipsFromEditor(editorRef.current)
-      : [];
 
     attachments.reset();
     editorRef.current?.commands.setContent("");
@@ -1503,7 +1585,7 @@ const ComposerRoot = ({
       kind: "message",
       text: submitText,
       files: fileParts,
-      chips,
+      chips: serialized.chips,
       tools: tools.values,
     });
   };
@@ -1604,8 +1686,14 @@ const ComposerRoot = ({
       syncCommandListState: setCommandListState,
       getRegisteredPrefixes,
       reportEditorUpdate,
+      reportCommandQueryChange,
     }),
-    [commands, getRegisteredPrefixes, reportEditorUpdate],
+    [
+      commands,
+      getRegisteredPrefixes,
+      reportEditorUpdate,
+      reportCommandQueryChange,
+    ],
   );
 
   return (
@@ -1794,6 +1882,7 @@ const ComposerTextarea = ({
     syncCommandListState,
     getRegisteredPrefixes,
     reportEditorUpdate,
+    reportCommandQueryChange,
   } = useComposerInternals();
 
   const isControlled = value !== undefined;
@@ -1838,17 +1927,33 @@ const ComposerTextarea = ({
       },
       handlePaste: (_view, event) => {
         const items = event.clipboardData?.items;
-        if (!items) return false;
+        if (items) {
+          const files = [...items]
+            .filter((item) => item.kind === "file")
+            .map((item) => item.getAsFile())
+            .filter((file): file is File => Boolean(file));
 
-        const files = [...items]
-          .filter((item) => item.kind === "file")
-          .map((item) => item.getAsFile())
-          .filter((file): file is File => Boolean(file));
+          if (files.length) {
+            event.preventDefault();
+            attachmentsRef.current.add(files);
+            return true;
+          }
+        }
 
-        if (!files.length) return false;
+        const pastedText = event.clipboardData?.getData("text/plain");
+        if (!pastedText || !pastedText.includes("(chip:")) return false;
+
+        const segments = parseChipSegments(pastedText);
+        if (!segments.some((segment) => segment.type === "chip")) return false;
+
+        const editor = editorRef.current;
+        if (!editor) return false;
+
+        const paragraphs = buildChipPasteContent(segments);
+        if (paragraphs.length === 0) return false;
 
         event.preventDefault();
-        attachmentsRef.current.add(files);
+        editor.commands.insertContent(paragraphs);
         return true;
       },
       handleKeyDown: (view, event) => {
@@ -1940,6 +2045,7 @@ const ComposerTextarea = ({
           ? prev
           : { isOpen, trigger, query },
       );
+      reportCommandQueryChange({ isOpen, trigger, query });
     },
     editable: !disabled,
     autofocus: autoFocus,
@@ -2180,7 +2286,6 @@ const ComposerPanelItem = ({
 type CommandListRowHandle = { value: string };
 
 type CommandListNavContextValue = {
-  registerRow: (handle: CommandListRowHandle) => () => void;
   highlightedValue: string | null;
   setHighlightedValue: (value: string | null) => void;
   selectByValue: (value: string) => void;
@@ -2218,7 +2323,10 @@ const ComposerCommandList = <TItem extends CommandItemData>({
     [items, commandList.query, filter],
   );
 
-  const [rows, setRows] = useState<CommandListRowHandle[]>([]);
+  const rows = useMemo<CommandListRowHandle[]>(
+    () => filteredItems.map((item) => ({ value: item.value })),
+    [filteredItems],
+  );
   const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
 
   const validHighlight =
@@ -2229,13 +2337,6 @@ const ComposerCommandList = <TItem extends CommandItemData>({
   } else if (rows.length === 0 && highlightedValue !== null) {
     queueMicrotask(() => setHighlightedValue(null));
   }
-
-  const registerRow = useCallback((handle: CommandListRowHandle) => {
-    setRows((current) => [...current, handle]);
-    return () => {
-      setRows((current) => current.filter((entry) => entry !== handle));
-    };
-  }, []);
 
   const selectByValue = useCallback(
     (value: string) => {
@@ -2318,12 +2419,11 @@ const ComposerCommandList = <TItem extends CommandItemData>({
 
   const navContext = useMemo<CommandListNavContextValue>(
     () => ({
-      registerRow,
       highlightedValue,
       setHighlightedValue,
       selectByValue,
     }),
-    [registerRow, highlightedValue, selectByValue],
+    [highlightedValue, selectByValue],
   );
 
   if (!isActive) return null;
@@ -2361,10 +2461,6 @@ const ComposerCommandItem = ({ value, children }: ComposerCommandItemProps) => {
       "<Composer.CommandItem> must be rendered inside <Composer.CommandList>.",
     );
   }
-
-  useEffect(() => {
-    return navContext.registerRow({ value });
-  }, [navContext, value]);
 
   const isHighlighted = navContext.highlightedValue === value;
 
@@ -2491,7 +2587,9 @@ const ComposerCommands = ({ className }: ComposerCommandsProps) => {
           {(item) => (
             <ComposerCommandItem value={item.value}>
               {item.icon && (
-                <ComposerCommandItemIcon>{item.icon}</ComposerCommandItemIcon>
+                <ComposerCommandItemIcon>
+                  {CHIP_ICONS[item.icon]}
+                </ComposerCommandItemIcon>
               )}
               <ComposerCommandItemLabel>{item.label}</ComposerCommandItemLabel>
               {item.description && (

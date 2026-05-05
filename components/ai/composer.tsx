@@ -68,7 +68,7 @@ import { cn } from "@/lib/utils";
 // Public types
 // ---------------------------------------------------------------------------
 
-export type PrefixKind = "chip" | "command";
+export type CommandItemKind = "insert" | "execute";
 
 export type TriggerRule = "doc-start" | "after-whitespace";
 
@@ -139,15 +139,21 @@ export type ComposerMessageSubmit = {
   tools: Record<string, boolean>;
 };
 
+export type ComposerAnswerEntry =
+  | { question: string; option: string }
+  | { question: string; text: string }
+  | { question: string; options: string[]; text: string }
+  | { question: string };
+
 export type ComposerAnswersSubmit = {
   kind: "answers";
-  answers: Record<string, string>;
+  answers: ComposerAnswerEntry[];
 };
 
 export type ComposerSubmitData = ComposerMessageSubmit | ComposerAnswersSubmit;
 
 export type ComposerCommandsConfig = {
-  kind: PrefixKind;
+  kind: CommandItemKind;
   trigger: TriggerRule;
   items: CommandItemData[];
   filter?: ((item: CommandItemData, query: string) => number) | null;
@@ -591,18 +597,23 @@ const questionnaireReducer = (
 const compileAnswers = (
   state: QuestionnaireState,
   questions: AskUserQuestion[],
-): Record<string, string> => {
-  const result: Record<string, string> = {};
-  for (let index = 0; index < questions.length; index++) {
+): ComposerAnswerEntry[] =>
+  questions.map(({ question, multiSelect }, index) => {
     const entry = state.answers.get(index);
-    result[questions[index].question] = !entry
-      ? ""
-      : entry.selected.size > 0
-        ? [...entry.selected].join(", ")
-        : entry.freeText.trim();
-  }
-  return result;
-};
+    if (!entry) return { question };
+
+    const selected = [...entry.selected];
+    const text = entry.freeText.trim();
+
+    if (multiSelect) {
+      if (selected.length === 0 && text === "") return { question };
+      return { question, options: selected, text };
+    }
+
+    if (selected.length > 0) return { question, option: selected[0] };
+    if (text !== "") return { question, text };
+    return { question };
+  });
 
 const isLastStep = (
   state: QuestionnaireState,
@@ -805,7 +816,7 @@ type ComposerQuestionnaireState = {
   optionsRef: RefObject<QuestionnaireOptionsHandle | null>;
 };
 
-type ComposerCommandListState = {
+type ComposerCommandsState = {
   open: boolean;
   currentPrefix: string | null;
   query: string;
@@ -813,17 +824,12 @@ type ComposerCommandListState = {
   navigateRef: RefObject<((direction: number) => void) | null>;
 };
 
-type ComposerCommandsApi = {
-  lookup: (prefix: string, value: string) => CommandItemData | undefined;
-};
-
 type ComposerContextValue = {
   editor: ComposerEditorState;
   attachments: ComposerAttachmentsState;
   tools: ComposerToolsState;
   questionnaire: ComposerQuestionnaireState;
-  commandList: ComposerCommandListState;
-  commands: ComposerCommandsApi;
+  commands: ComposerCommandsState;
 };
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
@@ -939,12 +945,12 @@ const MentionChipNodeView = ({
 }: {
   node: { attrs: Record<string, unknown> };
 }) => {
-  const { commands } = useComposer();
+  const { commands } = useComposerInternals();
   const prefix = node.attrs.prefix as string;
   const value = node.attrs.value as string;
   const label = node.attrs.label as string;
 
-  const item = commands.lookup(prefix, value);
+  const item = commands[prefix]?.items.find((entry) => entry.value === value);
 
   return (
     <NodeViewWrapper as="span" data-mention-chip>
@@ -1084,18 +1090,7 @@ const useCommandRegistry = (commands: ComposerCommandsMap) => {
     return result;
   }, []);
 
-  const api = useMemo<ComposerCommandsApi>(
-    () => ({
-      lookup: (prefix, value) => {
-        const entry = commands[prefix];
-        if (!entry) return undefined;
-        return entry.items.find((item) => item.value === value);
-      },
-    }),
-    [commands],
-  );
-
-  return { api, getRegisteredPrefixes };
+  return { getRegisteredPrefixes };
 };
 
 const useDragDropFiles = ({
@@ -1148,7 +1143,7 @@ const useQuestionnaire = ({
   editorRef: RefObject<Editor | null>;
   optionsRef: RefObject<QuestionnaireOptionsHandle | null>;
   setEditorHasContent: (value: boolean) => void;
-  submitAnswers: (answers: Record<string, string>) => void;
+  submitAnswers: (answers: ComposerAnswerEntry[]) => void;
   questions: AskUserQuestion[] | undefined;
 }) => {
   const [reducerState, setReducerState] = useState<QuestionnaireState>(
@@ -1446,7 +1441,7 @@ const ComposerRoot = ({
   const onSubmitRef = useRef(onSubmit);
   onSubmitRef.current = onSubmit;
 
-  const submitAnswers = useCallback((answers: Record<string, string>) => {
+  const submitAnswers = useCallback((answers: ComposerAnswerEntry[]) => {
     onSubmitRef.current?.({ kind: "answers", answers });
   }, []);
 
@@ -1475,8 +1470,7 @@ const ComposerRoot = ({
     questions,
   });
 
-  const { api: commandsApi, getRegisteredPrefixes } =
-    useCommandRegistry(commands);
+  const { getRegisteredPrefixes } = useCommandRegistry(commands);
 
   const { isDragging } = useDragDropFiles({
     rootRef: formRef,
@@ -1648,7 +1642,7 @@ const ComposerRoot = ({
     ],
   );
 
-  const commandListContextValue = useMemo(
+  const commandsContextValue = useMemo(
     () => ({
       open: commandListState.isOpen,
       currentPrefix: commandListState.trigger,
@@ -1665,16 +1659,14 @@ const ComposerRoot = ({
       attachments: attachmentsState,
       tools,
       questionnaire,
-      commandList: commandListContextValue,
-      commands: commandsApi,
+      commands: commandsContextValue,
     }),
     [
       editorState,
       attachmentsState,
       tools,
       questionnaire,
-      commandListContextValue,
-      commandsApi,
+      commandsContextValue,
     ],
   );
 
@@ -1876,7 +1868,7 @@ const ComposerTextarea = ({
   autoFocus = false,
   children,
 }: ComposerTextareaProps) => {
-  const { editor, attachments, questionnaire, commandList } = useComposer();
+  const { editor, attachments, questionnaire, commands } = useComposer();
   const {
     editorRef,
     syncCommandListState,
@@ -1896,8 +1888,8 @@ const ComposerTextarea = ({
   const questionnaireRef = useRef(questionnaire);
   questionnaireRef.current = questionnaire;
 
-  const commandListRef = useRef(commandList);
-  commandListRef.current = commandList;
+  const commandsRef = useRef(commands);
+  commandsRef.current = commands;
 
   const clearSelectionsRef = useRef(() => {});
   clearSelectionsRef.current = () => {
@@ -1974,7 +1966,7 @@ const ComposerTextarea = ({
         switch (action.type) {
           case "command-select": {
             event.preventDefault();
-            commandListRef.current.selectRef.current?.();
+            commandsRef.current.selectRef.current?.();
             return true;
           }
           case "command-close": {
@@ -1986,7 +1978,7 @@ const ComposerTextarea = ({
           }
           case "command-navigate": {
             event.preventDefault();
-            commandListRef.current.navigateRef.current?.(action.direction);
+            commandsRef.current.navigateRef.current?.(action.direction);
             return true;
           }
           case "questionnaire-arrow": {
@@ -2206,12 +2198,12 @@ const ComposerPanel = ({
   value,
   ...props
 }: ComposerPanelProps) => {
-  const { commandList } = useComposer();
+  const { commands } = useComposer();
   const [contentRef, bounds] = useMeasure();
 
   // When a command-list prefix is active, route the panel to its
   // "command-list" item regardless of what the consumer passed.
-  const effectiveValue = commandList.open ? "command-list" : value;
+  const effectiveValue = commands.open ? "command-list" : value;
 
   const matchedChild = effectiveValue
     ? Children.toArray(children).find(
@@ -2306,21 +2298,21 @@ const ComposerCommandList = <TItem extends CommandItemData>({
   className,
   children: renderItem,
 }: ComposerCommandListProps<TItem>): ReactNode => {
-  const { commandList, tools, attachments } = useComposer();
-  const { editorRef, commands } = useComposerInternals();
+  const { commands, tools, attachments } = useComposer();
+  const internals = useComposerInternals();
 
-  const config = commands[prefix];
-  const isActive = commandList.open && commandList.currentPrefix === prefix;
+  const config = internals.commands[prefix];
+  const isActive = commands.open && commands.currentPrefix === prefix;
   const items = (config?.items ?? []) as TItem[];
   const filter = config?.filter as
     | ((item: TItem, query: string) => number)
     | null
     | undefined;
-  const kind = config?.kind ?? "command";
+  const kind = config?.kind ?? "execute";
 
   const filteredItems = useMemo(
-    () => filterCommandItems(items, commandList.query, filter),
-    [items, commandList.query, filter],
+    () => filterCommandItems(items, commands.query, filter),
+    [items, commands.query, filter],
   );
 
   const rows = useMemo<CommandListRowHandle[]>(
@@ -2340,7 +2332,7 @@ const ComposerCommandList = <TItem extends CommandItemData>({
 
   const selectByValue = useCallback(
     (value: string) => {
-      const editor = editorRef.current;
+      const editor = internals.editorRef.current;
       if (!editor) return;
       const dataItem = items.find((item) => item.value === value);
       if (!dataItem) return;
@@ -2349,7 +2341,7 @@ const ComposerCommandList = <TItem extends CommandItemData>({
       const triggerStartPosition = pluginState?.triggerStartPosition ?? 0;
       const cursorPosition = editor.state.selection.$from.pos;
 
-      if (kind === "chip") {
+      if (kind === "insert") {
         editor
           .chain()
           .focus()
@@ -2400,14 +2392,14 @@ const ComposerCommandList = <TItem extends CommandItemData>({
         editor.state.tr.setMeta(commandListPluginKey, { close: true }),
       );
     },
-    [editorRef, items, kind, prefix, tools, attachments],
+    [internals, items, kind, prefix, tools, attachments],
   );
 
   if (isActive) {
-    commandList.selectRef.current = highlightedValue
+    commands.selectRef.current = highlightedValue
       ? () => selectByValue(highlightedValue)
       : null;
-    commandList.navigateRef.current = (direction: number) => {
+    commands.navigateRef.current = (direction: number) => {
       const next = computeNextHighlight(
         rows,
         highlightedValue,

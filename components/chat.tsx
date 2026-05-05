@@ -524,12 +524,12 @@ const ChatInput = () => {
       isSubmitting={isSending}
       commands={{
         "@": {
-          kind: "chip",
+          kind: "insert",
           trigger: "after-whitespace",
           items: MENTION_ITEMS,
         },
         "/": {
-          kind: "command",
+          kind: "execute",
           trigger: "doc-start",
           items: COMMAND_ITEMS,
         },

@@ -200,12 +200,12 @@ export default function ComponentsPlayground() {
             }}
             commands={{
               "@": {
-                kind: "chip",
+                kind: "insert",
                 trigger: "after-whitespace",
                 items: PLAYGROUND_MENTIONS,
               },
               "/": {
-                kind: "command",
+                kind: "execute",
                 trigger: "doc-start",
                 items: PLAYGROUND_COMMANDS,
               },

@@ -17,6 +17,7 @@ type SettingsStore = {
     key: keyof ThemeOverrides,
     value: string | number,
   ) => void;
+  setThemeOverrides: (mode: ThemeMode, overrides: ThemeOverrides) => void;
   resetThemeOverrides: (mode: ThemeMode) => void;
 };
 
@@ -32,6 +33,10 @@ export const useSettingsStore = create<SettingsStore>()(
             ...state.themeOverrides,
             [mode]: { ...state.themeOverrides[mode], [key]: value },
           },
+        })),
+      setThemeOverrides: (mode, overrides) =>
+        set((state) => ({
+          themeOverrides: { ...state.themeOverrides, [mode]: overrides },
         })),
       resetThemeOverrides: (mode) =>
         set((state) => ({

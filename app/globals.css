@@ -9,103 +9,93 @@
     "liga" 1,
     "calt" 1;
 
-  /* Theme base colors */
+  /* ─── Seeds ─── */
   --bg: #ffffff;
   --fg: #1a1a1a;
   --acc: #0169cc;
-  --con: 0.35;
+  --con: 0.3;
 
-  /* ─── Shared deltas ─── */
-  --mix-hover: calc(16% * var(--con));
-  --mix-active: calc(20% * var(--con));
-  --mix-border: calc(24% * var(--con));
+  /* State deltas (OKLCH L offsets, scale with --con).
+     In light, signs are negative so hover/active/border sink toward
+     darker. Surfaces sit near white; a positive Δ would clamp at #fff.
+     The .dark block below flips signs so states lift toward white. */
+  --state-hover: calc(-0.16 * var(--con));
+  --state-active: calc(-0.18 * var(--con));
+  --state-border: calc(-0.2 * var(--con));
 
-  /* ─── Base: body background ─── */
-  --base: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--con)));
-  --base-hover: color-mix(in oklch, var(--base), var(--fg) var(--mix-hover));
-  --base-active: color-mix(in oklch, var(--base), var(--fg) var(--mix-active));
-  --base-border: color-mix(in oklch, var(--base), var(--fg) var(--mix-border));
+  /* Surface lightness steps. Each tier offsets from --bg by step ×
+     --con. Positive lifts above bg; negative sinks below.
 
-  /* ─── Secondary: panels, sidebar ─── */
-  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(4% * var(--con)));
-  --secondary-hover: color-mix(
-    in oklch,
-    var(--secondary),
-    var(--fg) var(--mix-hover)
-  );
-  --secondary-active: color-mix(
-    in oklch,
-    var(--secondary),
-    var(--fg) var(--mix-active)
-  );
-  --secondary-border: color-mix(
-    in oklch,
-    var(--secondary),
-    var(--fg) var(--mix-border)
-  );
+       step   role
+       ────   ────────────────────────────────
+       0.05   subtle    near-bg, slight elevation
+       0.01   hairline  barely visible separation
+       -0.01  soft      input-strength fill
+       -0.05  moderate  clearly sunken below bg */
+  --primary-lightness: calc(0.05 * var(--con));
+  --tertiary-lightness: calc(0.01 * var(--con));
+  --quaternary-lightness: calc(-0.01 * var(--con));
+  --base-lightness: calc(-0.05 * var(--con));
 
-  /* ─── Primary: cards, inputs, dropdowns, composer ─── */
-  --primary: var(--bg);
-  --primary-hover: color-mix(
-    in oklch,
-    var(--primary),
-    var(--fg) var(--mix-hover)
+  /* Surface families. secondary is passthrough = --bg (canvas). */
+  --primary: oklch(from var(--bg) calc(l + var(--primary-lightness)) c h);
+  --secondary: var(--bg);
+  --tertiary: oklch(from var(--bg) calc(l + var(--tertiary-lightness)) c h);
+  --quaternary: oklch(from var(--bg) calc(l + var(--quaternary-lightness)) c h);
+  --base: oklch(from var(--bg) calc(l + var(--base-lightness)) c h);
+
+  /* Surface state variants — defined once; in .dark the deltas flip
+     sign and the surfaces redefine, so these formulas pick up both. */
+  --primary-hover: oklch(from var(--primary) calc(l + var(--state-hover)) c h);
+  --primary-active: oklch(from var(--primary) calc(l + var(--state-active)) c h);
+  --primary-border: oklch(from var(--primary) calc(l + var(--state-border)) c h);
+
+  --secondary-hover: oklch(
+    from var(--secondary) calc(l + var(--state-hover)) c h
   );
-  --primary-active: color-mix(
-    in oklch,
-    var(--primary),
-    var(--fg) var(--mix-active)
+  --secondary-active: oklch(
+    from var(--secondary) calc(l + var(--state-active)) c h
   );
-  --primary-border: color-mix(
-    in oklch,
-    var(--primary),
-    var(--fg) var(--mix-border)
+  --secondary-border: oklch(
+    from var(--secondary) calc(l + var(--state-border)) c h
   );
 
-  /* ─── Tertiary: filled controls (buttons, tags, badges) ─── */
-  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(2% * var(--con)));
-  --tertiary-hover: color-mix(
-    in oklch,
-    var(--tertiary),
-    var(--fg) var(--mix-hover)
+  --tertiary-hover: oklch(from var(--tertiary) calc(l + var(--state-hover)) c h);
+  --tertiary-active: oklch(
+    from var(--tertiary) calc(l + var(--state-active)) c h
   );
-  --tertiary-active: color-mix(
-    in oklch,
-    var(--tertiary),
-    var(--fg) var(--mix-active)
-  );
-  --tertiary-border: color-mix(
-    in oklch,
-    var(--tertiary),
-    var(--fg) var(--mix-border)
+  --tertiary-border: oklch(
+    from var(--tertiary) calc(l + var(--state-border)) c h
   );
 
-  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(24% * var(--con)));
-  --quaternary-hover: color-mix(
-    in oklch,
-    var(--quaternary),
-    var(--fg) var(--mix-hover)
+  --quaternary-hover: oklch(
+    from var(--quaternary) calc(l + var(--state-hover)) c h
   );
-  --quaternary-active: color-mix(
-    in oklch,
-    var(--quaternary),
-    var(--fg) var(--mix-active)
+  --quaternary-active: oklch(
+    from var(--quaternary) calc(l + var(--state-active)) c h
   );
-  --quaternary-border: color-mix(
-    in oklch,
-    var(--quaternary),
-    var(--fg) var(--mix-border)
+  --quaternary-border: oklch(
+    from var(--quaternary) calc(l + var(--state-border)) c h
   );
 
-  --accent: color-mix(in oklch, var(--acc), var(--fg) calc(28% * var(--con)));
-  --accent-hover: color-mix(in oklch, var(--acc), var(--fg) var(--mix-hover));
-  --accent-active: color-mix(in oklch, var(--acc), var(--fg) var(--mix-active));
-  --accent-border: color-mix(in oklch, var(--acc), var(--fg) var(--mix-border));
+  --base-hover: oklch(from var(--base) calc(l + var(--state-hover)) c h);
+  --base-active: oklch(from var(--base) calc(l + var(--state-active)) c h);
+  --base-border: oklch(from var(--base) calc(l + var(--state-border)) c h);
 
-  /* ─── Text ─── */
-  --text-primary: color-mix(in oklch, var(--bg), var(--fg) 85%);
-  --text-secondary: color-mix(in oklch, var(--bg), var(--fg) 58%);
-  --text-tertiary: color-mix(in oklch, var(--bg), var(--fg) 40%);
+  /* Accent — tinted from --acc, no surface derivation. */
+  --accent: var(--acc);
+  --accent-hover: oklch(from var(--accent) calc(l + var(--state-hover)) c h);
+  --accent-active: oklch(from var(--accent) calc(l + var(--state-active)) c h);
+  --accent-border: oklch(from var(--accent) calc(l + var(--state-border)) c h);
+
+  /* Text. Independent of --con: contrast shouldn't soften when
+     surfaces flatten. Primary = --fg verbatim. Secondary/tertiary
+     shift toward bg's lightness in OKLCH so they stay opaque and
+     keep fg's hue. Sign positive in light (fg dark, lifts toward
+     white bg); negative in dark. */
+  --text-primary: var(--fg);
+  --text-secondary: oklch(from var(--fg) calc(l + 0.3) c h);
+  --text-tertiary: oklch(from var(--fg) calc(l + 0.45) c h);
 
   --radius: 8px;
 
@@ -119,16 +109,45 @@
   --fg: #fcfcfc;
   --acc: #4a9eed;
 
-  --base: var(--bg);
-  --primary: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));
-  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));
-  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));
-  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(56% * var(--con)));
+  /* State deltas flip positive in dark — surfaces sit far from
+     white, so states lift toward white instead of sinking. */
+  --state-hover: calc(0.16 * var(--con));
+  --state-active: calc(0.18 * var(--con));
+  --state-border: calc(0.20 * var(--con));
 
-  /* ─── Optionally adjust deltas for dark ─── */
-  --mix-hover: calc(16% * var(--con));
-  --mix-active: calc(18% * var(--con));
-  --mix-border: calc(20% * var(--con)); /* subtler borders in dark */
+  /* Lightness steps in dark. Most tiers lift (positive) to be
+     visible above the dark canvas; base sinks slightly. */
+  --primary-lightness: calc(0.1 * var(--con));
+  --tertiary-lightness: calc(0.2 * var(--con));
+  --quaternary-lightness: calc(0.3 * var(--con));
+  --base-lightness: calc(-0.03 * var(--con));
+
+  /* Absolute L floors. The natural lift compresses below 1 sRGB
+     unit at bg=#000; floors guarantee tiers stay distinct. At
+     typical dark bgs (#111 etc.) the natural lift wins. */
+  --primary-floor: calc(0.09 + 0.106 * var(--con));
+  --tertiary-floor: calc(0.142 + 0.075 * var(--con));
+  --quaternary-floor: calc(0.194 + 0.063 * var(--con));
+
+  --primary: oklch(
+    from var(--bg) max(var(--primary-floor), calc(l + var(--primary-lightness)))
+      c h
+  );
+  --secondary: var(--bg);
+  --tertiary: oklch(
+    from var(--bg)
+      max(var(--tertiary-floor), calc(l + var(--tertiary-lightness))) c h
+  );
+  --quaternary: oklch(
+    from var(--bg)
+      max(var(--quaternary-floor), calc(l + var(--quaternary-lightness))) c h
+  );
+  --base: oklch(from var(--bg) max(0, calc(l + var(--base-lightness))) c h);
+
+  /* Text shifts negative in dark — fg sits near white, so secondary
+     and tertiary move toward black bg instead of toward white. */
+  --text-secondary: oklch(from var(--fg) calc(l - 0.3) c h);
+  --text-tertiary: oklch(from var(--fg) calc(l - 0.45) c h);
 }
 
 @theme inline {

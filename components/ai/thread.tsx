@@ -61,6 +61,18 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
     if (!el) return;
 
     const check = () => {
+      // If the spacer still has room it's absorbing AI growth — the
+      // latest content is by definition visible, so the scroll-to-bottom
+      // button must stay hidden regardless of mid-flight scrollTop
+      // (e.g., during the submit smooth-scroll animation). Only once the
+      // spacer collapses do we consult raw scroll math.
+      const spacer = el.querySelector<HTMLElement>(
+        '[data-slot="thread-spacer"]',
+      );
+      if (spacer && spacer.offsetHeight > 0) {
+        setIsAtBottom(true);
+        return;
+      }
       const threshold = 50;
       setIsAtBottom(
         el.scrollHeight - el.scrollTop - el.clientHeight < threshold,
@@ -311,6 +323,7 @@ const ThreadSpacer = ({
   topOffset,
   minHeight,
 }: DynamicSpacerProps) => {
+  const { isAtBottom } = useThreadScroll();
   const spacerRef = useRef<HTMLDivElement>(null);
   const scrollParentRef = useRef<HTMLElement | null>(null);
   const prevUserMessageCountRef = useRef(0);
@@ -398,7 +411,9 @@ const ThreadSpacer = ({
 
     // First time messages appear, jump to bottom synchronously (before paint)
     // so there's no flash at the top. Subsequent new user messages get a
-    // smooth scroll, queued for after paint.
+    // smooth scroll, queued for after paint. Once the spacer has fully
+    // collapsed (calculatedHeight ≤ 0), content overflows the viewport —
+    // if the user was at the bottom, follow the stream by snapping.
     if (!hasInitializedRef.current && messages.length > 0) {
       scrollContainer.scrollTop = scrollContainer.scrollHeight;
     } else if (userMessages.length > prevUserMessageCountRef.current) {
@@ -414,10 +429,15 @@ const ThreadSpacer = ({
           targetAbsoluteTop - overlays.topOffset,
         );
       }
+    } else if (calculatedHeight <= 0 && isAtBottom) {
+      scrollContainer.scrollTo({
+        top: scrollContainer.scrollHeight,
+        behavior: "smooth",
+      });
     }
     prevUserMessageCountRef.current = userMessages.length;
     if (messages.length > 0) hasInitializedRef.current = true;
-  }, [targetRef, minHeight, resolveOverlays]);
+  }, [targetRef, minHeight, resolveOverlays, isAtBottom]);
 
   // Recalculate before paint
   useLayoutEffect(() => {

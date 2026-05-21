@@ -11,17 +11,17 @@ import {
   useMemo,
   useState,
 } from "react";
-import type {
-  AskUserInput,
-  AskUserQuestion,
-  ToolLabels,
-} from "@/components/ai/types";
 import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
-import { DEFAULT_TOOL_LABELS, type ToolPart } from "@/lib/message-utils";
+import {
+  DEFAULT_TOOL_LABELS,
+  type ToolLabels,
+  type ToolPart,
+} from "@/lib/message-utils";
 import { cn } from "@/lib/utils";
+import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
 // Context

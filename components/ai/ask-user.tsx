@@ -17,27 +17,24 @@ import {
   useRef,
   useState,
 } from "react";
-import type { AskUserQuestion } from "@/components/ai/types";
+import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible } from "@/components/ui/collapsible";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "./icons/chevron-down";
+import type { AskUserQuestion } from "@/tools/ask-user";
 
-/** Questionnaire root container. Stateless — consumers manage all state externally. */
-type QuestionnaireRootProps = ComponentProps<"div">;
+/** AskUser root container. Stateless — consumers manage all state externally. */
+type AskUserRootProps = ComponentProps<"div">;
 
-const QuestionnaireRoot = ({ className, ...props }: QuestionnaireRootProps) => (
+const AskUserRoot = ({ className, ...props }: AskUserRootProps) => (
   <div className={cn("flex flex-col gap-2 p-2", className)} {...props} />
 );
 
 /** Question heading text. */
-type QuestionnaireLabelProps = ComponentProps<"p">;
+type AskUserLabelProps = ComponentProps<"p">;
 
-const QuestionnaireLabel = ({
-  className,
-  ...props
-}: QuestionnaireLabelProps) => (
+const AskUserLabel = ({ className, ...props }: AskUserLabelProps) => (
   <p
     className={cn(
       "min-w-0 flex-1 px-2 text-sm font-medium leading-tight",
@@ -48,22 +45,16 @@ const QuestionnaireLabel = ({
 );
 
 /** Row container for `Label` and optional `Navigation`. */
-type QuestionnaireHeaderProps = ComponentProps<"div">;
+type AskUserHeaderProps = ComponentProps<"div">;
 
-const QuestionnaireHeader = ({
-  className,
-  ...props
-}: QuestionnaireHeaderProps) => (
+const AskUserHeader = ({ className, ...props }: AskUserHeaderProps) => (
   <div className={cn("flex h-7 items-center gap-2", className)} {...props} />
 );
 
 /** Row container for `Previous`, `StepLabel`, and `Next`. */
-type QuestionnaireNavigationProps = ComponentProps<"div">;
+type AskUserNavigationProps = ComponentProps<"div">;
 
-const QuestionnaireNavigation = ({
-  className,
-  ...props
-}: QuestionnaireNavigationProps) => (
+const AskUserNavigation = ({ className, ...props }: AskUserNavigationProps) => (
   <div
     className={cn("flex items-center gap-1 shrink-0", className)}
     {...props}
@@ -71,12 +62,9 @@ const QuestionnaireNavigation = ({
 );
 
 /** Navigate to the previous step. */
-type QuestionnairePreviousProps = ComponentProps<"button">;
+type AskUserPreviousProps = ComponentProps<"button">;
 
-const QuestionnairePrevious = ({
-  className,
-  ...props
-}: QuestionnairePreviousProps) => (
+const AskUserPrevious = ({ className, ...props }: AskUserPreviousProps) => (
   <button
     type="button"
     className={cn(
@@ -90,9 +78,9 @@ const QuestionnairePrevious = ({
 );
 
 /** Navigate to the next step. */
-type QuestionnaireNextProps = ComponentProps<"button">;
+type AskUserNextProps = ComponentProps<"button">;
 
-const QuestionnaireNext = ({ className, ...props }: QuestionnaireNextProps) => (
+const AskUserNext = ({ className, ...props }: AskUserNextProps) => (
   <button
     type="button"
     className={cn(
@@ -106,18 +94,18 @@ const QuestionnaireNext = ({ className, ...props }: QuestionnaireNextProps) => (
 );
 
 /** Displays "{current} of {total}" step indicator. Supports custom children to override the default text. */
-type QuestionnaireStepLabelProps = ComponentProps<"span"> & {
+type AskUserStepLabelProps = ComponentProps<"span"> & {
   current: number;
   total: number;
 };
 
-const QuestionnaireStepLabel = ({
+const AskUserStepLabel = ({
   current,
   total,
   className,
   children,
   ...props
-}: QuestionnaireStepLabelProps) => (
+}: AskUserStepLabelProps) => (
   <span
     className={cn("text-2xs tabular-nums text-ink-tertiary", className)}
     {...props}
@@ -145,8 +133,8 @@ const OptionsContext = createContext<OptionsContextValue>({
   onItemHover: () => {},
 });
 
-/** Imperative handle exposed by `QuestionnaireOptions` for keyboard navigation. */
-export type QuestionnaireOptionsHandle = {
+/** Imperative handle exposed by `AskUserOptions` for keyboard navigation. */
+export type AskUserOptionsHandle = {
   /** Move highlight by direction. Returns the new highlighted value (null = past the list boundary). */
   navigate: (direction: number) => string | null;
   select: () => { value: string } | null;
@@ -155,10 +143,7 @@ export type QuestionnaireOptionsHandle = {
   highlightedValue: string | null;
 };
 
-type QuestionnaireOptionsProps = Omit<
-  ComponentProps<"fieldset">,
-  "value" | "ref"
-> & {
+type AskUserOptionsProps = Omit<ComponentProps<"fieldset">, "value" | "ref"> & {
   /** When true, `OptionInput` renders as checkboxes. When false (default), renders as radio buttons inside a `RadioGroup`. */
   multiSelect?: boolean;
   /** Shared `name` attribute for all `OptionInput` elements in this group. */
@@ -168,10 +153,10 @@ type QuestionnaireOptionsProps = Omit<
   /** Called when the RadioGroup value changes (single-select mode only). */
   onValueChange?: (value: string) => void;
   /** Imperative ref for keyboard navigation (navigate, select, clearHighlight, resetHighlight). */
-  ref?: RefObject<QuestionnaireOptionsHandle | null>;
+  ref?: RefObject<AskUserOptionsHandle | null>;
 };
 
-const QuestionnaireOptions = ({
+const AskUserOptions = ({
   multiSelect = false,
   groupName = "",
   value,
@@ -180,7 +165,7 @@ const QuestionnaireOptions = ({
   className,
   children,
   ...props
-}: QuestionnaireOptionsProps) => {
+}: AskUserOptionsProps) => {
   const registeredItems = useRef<string[]>([]);
   const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
 
@@ -303,20 +288,20 @@ const OptionContext = createContext<OptionContextValue>({
   onSelect: () => {},
 });
 
-type QuestionnaireOptionProps = ComponentProps<"label"> & {
+type AskUserOptionProps = ComponentProps<"label"> & {
   value?: string;
   selected?: boolean;
   onSelect?: () => void;
 };
 
-const QuestionnaireOption = ({
+const AskUserOption = ({
   value = "",
   selected = false,
   onSelect,
   className,
   children,
   ...props
-}: QuestionnaireOptionProps) => {
+}: AskUserOptionProps) => {
   const id = useId();
   const { highlightedValue, register, onItemHover } = use(OptionsContext);
   const isHighlighted = value === highlightedValue;
@@ -358,19 +343,19 @@ const useItemRegistration = (
 };
 
 /** Renders a `Checkbox` or native radio based on the parent `Options` `multiSelect` prop. Reads all state from context. */
-const QuestionnaireOptionInput = () => {
+const AskUserOptionInput = () => {
   const options = use(OptionsContext);
   const option = use(OptionContext);
 
   return options.multiSelect ? (
-    <QuestionnaireOptionCheckbox id={option.id} />
+    <AskUserOptionCheckbox id={option.id} />
   ) : (
-    <QuestionnaireOptionRadio id={option.id} />
+    <AskUserOptionRadio id={option.id} />
   );
 };
 
 /** Checkbox input that reads `checked` and `onCheckedChange` from `Option` context. */
-const QuestionnaireOptionCheckbox = (
+const AskUserOptionCheckbox = (
   props: Omit<Parameters<typeof Checkbox>[0], "checked" | "onCheckedChange">,
 ) => {
   const option = use(OptionContext);
@@ -384,7 +369,7 @@ const QuestionnaireOptionCheckbox = (
 };
 
 /** Numbered radio indicator for single-select options. Shows the item's 1-based index instead of a dot. */
-const QuestionnaireOptionRadio = ({
+const AskUserOptionRadio = ({
   className,
   ...props
 }: Omit<Parameters<typeof RadioGroup.Item>[0], "value" | "children">) => {
@@ -408,12 +393,12 @@ const QuestionnaireOptionRadio = ({
 };
 
 /** Flex column wrapper for `OptionLabel` and `OptionDescription`. */
-type QuestionnaireOptionContentProps = ComponentProps<"span">;
+type AskUserOptionContentProps = ComponentProps<"span">;
 
-const QuestionnaireOptionContent = ({
+const AskUserOptionContent = ({
   className,
   ...props
-}: QuestionnaireOptionContentProps) => (
+}: AskUserOptionContentProps) => (
   <span
     className={cn("flex min-w-0 flex-1 gap-1 flex-col", className)}
     {...props}
@@ -421,22 +406,22 @@ const QuestionnaireOptionContent = ({
 );
 
 /** Option title text. */
-type QuestionnaireOptionLabelProps = ComponentProps<"span">;
+type AskUserOptionLabelProps = ComponentProps<"span">;
 
-const QuestionnaireOptionLabel = ({
+const AskUserOptionLabel = ({
   className,
   ...props
-}: QuestionnaireOptionLabelProps) => (
+}: AskUserOptionLabelProps) => (
   <span className={cn("text-sm leading-[normal]", className)} {...props} />
 );
 
 /** Option subtitle/description text. */
-type QuestionnaireOptionDescriptionProps = ComponentProps<"span">;
+type AskUserOptionDescriptionProps = ComponentProps<"span">;
 
-const QuestionnaireOptionDescription = ({
+const AskUserOptionDescription = ({
   className,
   ...props
-}: QuestionnaireOptionDescriptionProps) => (
+}: AskUserOptionDescriptionProps) => (
   <span
     className={cn("text-ink-secondary text-xs leading-tight", className)}
     {...props}
@@ -444,17 +429,17 @@ const QuestionnaireOptionDescription = ({
 );
 
 /** Collapsible read-only summary of answered questions. Used for completed tool calls. */
-type QuestionnaireSummaryProps = ComponentProps<typeof Collapsible> & {
+type AskUserSummaryProps = ComponentProps<typeof Collapsible> & {
   questions: AskUserQuestion[];
   answers: Record<string, string>;
 };
 
-const QuestionnaireSummary = ({
+const AskUserSummary = ({
   questions,
   answers,
   className,
   ...props
-}: QuestionnaireSummaryProps) => {
+}: AskUserSummaryProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const count = questions.length;
 
@@ -497,15 +482,12 @@ const QuestionnaireSummary = ({
   );
 };
 
-/** Keyboard shortcut hints displayed below the questionnaire options. */
-type QuestionnaireHintsProps = ComponentProps<"div">;
+/** Keyboard shortcut hints displayed below the ask-user options. */
+type AskUserHintsProps = ComponentProps<"div">;
 
-const QuestionnaireHints = ({
-  className,
-  ...props
-}: QuestionnaireHintsProps) => (
+const AskUserHints = ({ className, ...props }: AskUserHintsProps) => (
   <div
-    data-slot="questionnaire-hints"
+    data-slot="ask-user-hints"
     className={cn(
       "flex items-center gap-3 px-2 pt-1 text-2xs text-ink-tertiary",
       className,
@@ -514,21 +496,21 @@ const QuestionnaireHints = ({
   />
 );
 
-export const Questionnaire = Object.assign(QuestionnaireRoot, {
-  Header: QuestionnaireHeader,
-  Label: QuestionnaireLabel,
-  Navigation: QuestionnaireNavigation,
-  Previous: QuestionnairePrevious,
-  Next: QuestionnaireNext,
-  StepLabel: QuestionnaireStepLabel,
-  Options: QuestionnaireOptions,
-  Option: QuestionnaireOption,
-  OptionInput: QuestionnaireOptionInput,
-  OptionCheckbox: QuestionnaireOptionCheckbox,
-  OptionRadio: QuestionnaireOptionRadio,
-  OptionContent: QuestionnaireOptionContent,
-  OptionLabel: QuestionnaireOptionLabel,
-  OptionDescription: QuestionnaireOptionDescription,
-  Summary: QuestionnaireSummary,
-  Hints: QuestionnaireHints,
+export const AskUser = Object.assign(AskUserRoot, {
+  Header: AskUserHeader,
+  Label: AskUserLabel,
+  Navigation: AskUserNavigation,
+  Previous: AskUserPrevious,
+  Next: AskUserNext,
+  StepLabel: AskUserStepLabel,
+  Options: AskUserOptions,
+  Option: AskUserOption,
+  OptionInput: AskUserOptionInput,
+  OptionCheckbox: AskUserOptionCheckbox,
+  OptionRadio: AskUserOptionRadio,
+  OptionContent: AskUserOptionContent,
+  OptionLabel: AskUserOptionLabel,
+  OptionDescription: AskUserOptionDescription,
+  Summary: AskUserSummary,
+  Hints: AskUserHints,
 });

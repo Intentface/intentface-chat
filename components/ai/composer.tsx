@@ -35,6 +35,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { AskUser, type AskUserOptionsHandle } from "@/components/ai/ask-user";
 import {
   type AttachmentItem,
   Attachments,
@@ -49,12 +50,7 @@ import {
 } from "@/components/ai/attachments";
 import { Chip, type ChipVariant } from "@/components/ai/chip";
 import { Commands } from "@/components/ai/commands";
-import type { AskUserQuestion } from "@/components/ai/types";
 import { SendIcon } from "@/components/icons/send";
-import {
-  Questionnaire,
-  type QuestionnaireOptionsHandle,
-} from "@/components/questionnaire";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
@@ -63,6 +59,7 @@ import { useMeasure } from "@/hooks/use-measure";
 import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
 import { escapeMarkdownLink, parseChipSegments } from "@/lib/ai/chip-syntax";
 import { cn } from "@/lib/utils";
+import type { AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -813,7 +810,7 @@ type ComposerQuestionnaireState = {
   clearSelections: (step: number) => void;
   goBack: () => void;
   goNext: () => void;
-  optionsRef: RefObject<QuestionnaireOptionsHandle | null>;
+  optionsRef: RefObject<AskUserOptionsHandle | null>;
 };
 
 type ComposerCommandsState = {
@@ -1141,7 +1138,7 @@ const useQuestionnaire = ({
   questions,
 }: {
   editorRef: RefObject<Editor | null>;
-  optionsRef: RefObject<QuestionnaireOptionsHandle | null>;
+  optionsRef: RefObject<AskUserOptionsHandle | null>;
   setEditorHasContent: (value: boolean) => void;
   submitAnswers: (answers: ComposerAnswerEntry[]) => void;
   questions: AskUserQuestion[] | undefined;
@@ -1417,9 +1414,7 @@ const ComposerRoot = ({
   const commandListNavigateRef = useRef<((direction: number) => void) | null>(
     null,
   );
-  const questionnaireOptionsRef = useRef<QuestionnaireOptionsHandle | null>(
-    null,
-  );
+  const questionnaireOptionsRef = useRef<AskUserOptionsHandle | null>(null);
   const attachmentConfigRef = useRef<AttachmentStoreConfig>({
     accept: DEFAULT_ATTACHMENT_ACCEPT,
     maxFiles: DEFAULT_ATTACHMENT_MAX_FILES,
@@ -1661,13 +1656,7 @@ const ComposerRoot = ({
       questionnaire,
       commands: commandsContextValue,
     }),
-    [
-      editorState,
-      attachmentsState,
-      tools,
-      questionnaire,
-      commandsContextValue,
-    ],
+    [editorState, attachmentsState, tools, questionnaire, commandsContextValue],
   );
 
   const internalsValue = useMemo<ComposerInternalsValue>(
@@ -2620,28 +2609,28 @@ const ComposerQuestionsRoot = () => {
   const totalQuestions = questionnaire.questions?.length ?? 0;
 
   return (
-    <Questionnaire>
-      <Questionnaire.Header>
-        <Questionnaire.Label>{display.question}</Questionnaire.Label>
+    <AskUser>
+      <AskUser.Header>
+        <AskUser.Label>{display.question}</AskUser.Label>
         {!questionnaire.isSingle && totalQuestions > 1 && (
-          <Questionnaire.Navigation>
-            <Questionnaire.Previous
+          <AskUser.Navigation>
+            <AskUser.Previous
               onClick={questionnaire.goBack}
               disabled={questionnaire.step === 0}
             />
-            <Questionnaire.StepLabel
+            <AskUser.StepLabel
               current={questionnaire.step + 1}
               total={totalQuestions}
             />
-            <Questionnaire.Next
+            <AskUser.Next
               onClick={questionnaire.goNext}
               disabled={questionnaire.step === totalQuestions - 1}
             />
-          </Questionnaire.Navigation>
+          </AskUser.Navigation>
         )}
-      </Questionnaire.Header>
+      </AskUser.Header>
       {display.options && (
-        <Questionnaire.Options
+        <AskUser.Options
           ref={questionnaire.optionsRef}
           multiSelect={!!display.multiSelect}
           groupName={`q-${questionnaire.step}`}
@@ -2651,7 +2640,7 @@ const ComposerQuestionsRoot = () => {
           }
         >
           {display.options.map((option) => (
-            <Questionnaire.Option
+            <AskUser.Option
               key={option.label}
               value={option.label}
               selected={entry.selected.has(option.label)}
@@ -2663,34 +2652,32 @@ const ComposerQuestionsRoot = () => {
                 )
               }
             >
-              <Questionnaire.OptionInput />
-              <Questionnaire.OptionContent>
-                <Questionnaire.OptionLabel>
-                  {option.label}
-                </Questionnaire.OptionLabel>
+              <AskUser.OptionInput />
+              <AskUser.OptionContent>
+                <AskUser.OptionLabel>{option.label}</AskUser.OptionLabel>
                 {option.description && (
-                  <Questionnaire.OptionDescription>
+                  <AskUser.OptionDescription>
                     {option.description}
-                  </Questionnaire.OptionDescription>
+                  </AskUser.OptionDescription>
                 )}
-              </Questionnaire.OptionContent>
-            </Questionnaire.Option>
+              </AskUser.OptionContent>
+            </AskUser.Option>
           ))}
-        </Questionnaire.Options>
+        </AskUser.Options>
       )}
-    </Questionnaire>
+    </AskUser>
   );
 };
 
 const ComposerQuestionsHints = ({
   className,
   ...props
-}: ComponentProps<typeof Questionnaire.Hints>) => {
+}: ComponentProps<typeof AskUser.Hints>) => {
   const { questionnaire } = useComposer();
   const totalQuestions = questionnaire.questions?.length ?? 0;
 
   return (
-    <Questionnaire.Hints className={cn("flex-1", className)} {...props}>
+    <AskUser.Hints className={cn("flex-1", className)} {...props}>
       <span className="inline-flex items-center gap-1">
         <Kbd size="sm">↑</Kbd>
         <Kbd size="sm">↓</Kbd> navigate
@@ -2707,7 +2694,7 @@ const ComposerQuestionsHints = ({
       <span className="inline-flex items-center gap-1">
         <Kbd size="sm">esc</Kbd> skip
       </span>
-    </Questionnaire.Hints>
+    </AskUser.Hints>
   );
 };
 

@@ -66,13 +66,13 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
       // button must stay hidden regardless of mid-flight scrollTop
       // (e.g., during the submit smooth-scroll animation). Only once the
       // spacer collapses do we consult raw scroll math.
-      const spacer = el.querySelector<HTMLElement>(
-        '[data-slot="thread-spacer"]',
-      );
-      if (spacer && spacer.offsetHeight > 0) {
-        setIsAtBottom(true);
-        return;
-      }
+      // const spacer = el.querySelector<HTMLElement>(
+      //   '[data-slot="thread-spacer"]',
+      // );
+      // if (spacer && spacer.offsetHeight > 0) {
+      //   setIsAtBottom(true);
+      //   return;
+      // }
       const threshold = 50;
       setIsAtBottom(
         el.scrollHeight - el.scrollTop - el.clientHeight < threshold,
@@ -400,8 +400,12 @@ const ThreadSpacer = ({
 
       for (let i = targetIndex; i >= 0 && i < spacerIndex; i++) {
         contentHeight += children[i].offsetHeight;
-        if (gap && i > targetIndex) contentHeight += gap;
       }
+      // Each child contributes one trailing gap (between it and the next
+      // sibling, including the gap separating the last child from the spacer
+      // itself). Without this, the spacer ends up one `gap` too tall and the
+      // viewport overflows.
+      if (gap) contentHeight += (spacerIndex - targetIndex) * gap;
     }
 
     const calculatedHeight =

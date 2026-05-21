@@ -1,10 +1,14 @@
 import type { FileUIPart, ReasoningUIPart, TextUIPart, UIMessage } from "ai";
 import { isStaticToolUIPart } from "ai";
-import type {
-  AskUserInput,
-  AskUserQuestion,
-  ToolLabels,
-} from "@/components/ai/types";
+import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
+
+export type ToolLabels = Record<
+  string,
+  {
+    active: (input: Record<string, unknown>) => string;
+    complete: (input: Record<string, unknown>) => string;
+  }
+>;
 
 // ---------------------------------------------------------------------------
 // Types

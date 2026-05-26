@@ -126,7 +126,7 @@ export type ThreadOverlayProps = ComponentProps<typeof ProgressiveBlur> & {
 const ThreadOverlay = memo(
   ({ className, direction, ...props }: ThreadOverlayProps) => (
     <div
-      data-slot="thread-overlay-top"
+      data-slot={`thread-overlay-${direction}`}
       data-thread-overlay={direction}
       className={cn(
         "group/thread-overlay absolute right-0 left-0 z-1 mx-auto w-full max-w-(--thread-width)",

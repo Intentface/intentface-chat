@@ -2136,6 +2136,30 @@ const ComposerPlaceholder = ({
 // Composer.Actions / Composer.Submit
 // ---------------------------------------------------------------------------
 
+type ComposerContextWindowProps = ComponentProps<"div">;
+
+const ComposerContextWindow = ({
+  className,
+  children,
+  ...props
+}: ComposerContextWindowProps) => {
+  const hasContent = Children.toArray(children).length > 0;
+  return (
+    <div
+      data-slot="composer-context-window"
+      className={cn(
+        "relative overflow-hidden transition-all duration-200 px-3 text-xs",
+        'before:content-[""] before:absolute before:inset-0 before:rounded-xl before:bg-ds-base before:pointer-events-none',
+        hasContent ? "max-h-10 py-2 opacity-100" : "max-h-0 py-0 opacity-0",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
+
 const ComposerActions = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="composer-actions"
@@ -2749,6 +2773,7 @@ export const Composer = Object.assign(ComposerRoot, {
   Container: ComposerContainer,
   Attachments: ComposerAttachments,
   AttachmentTrigger: ComposerAttachmentTrigger,
+  ContextWindow: ComposerContextWindow,
   Actions: ComposerActions,
   Placeholder: ComposerPlaceholder,
   Submit: ComposerSubmit,

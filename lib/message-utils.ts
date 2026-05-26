@@ -205,7 +205,12 @@ export const getAskUserInfo = (allParts: UIMessage["parts"]): AskUserInfo => {
       let answers: Record<string, string> = {};
       try {
         answers = JSON.parse(p.output as string) as Record<string, string>;
-      } catch {}
+      } catch (error) {
+        console.error("Failed to parse askUser output", {
+          output: p.output,
+          error,
+        });
+      }
       return {
         toolCallId: p.toolCallId,
         questions: input?.questions ?? [],

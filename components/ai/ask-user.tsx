@@ -226,6 +226,7 @@ const AskUserOptions = ({
         return { value: current };
       },
       clearHighlight: () => {
+        highlightedValueRef.current = null;
         setHighlightedValue(null);
       },
       resetHighlight: () => {

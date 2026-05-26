@@ -444,7 +444,12 @@ const StepsAskUser = ({ part, className }: StepsAskUserProps) => {
   if (isComplete) {
     try {
       answers = JSON.parse(part.output as string) as Record<string, string>;
-    } catch {}
+    } catch (error) {
+      console.error("Failed to parse askUser output", {
+        output: part.output,
+        error,
+      });
+    }
   }
 
   const count = questions.length;

@@ -149,11 +149,17 @@ export type ComposerAnswersSubmit = {
 
 export type ComposerSubmitData = ComposerMessageSubmit | ComposerAnswersSubmit;
 
+export type ComposerCommandsItems =
+  | CommandItemData[]
+  | ((
+      query: string,
+      options: { signal: AbortSignal },
+    ) => CommandItemData[] | Promise<CommandItemData[]>);
+
 export type ComposerCommandsConfig = {
   kind: CommandItemKind;
   trigger: TriggerRule;
-  items: CommandItemData[];
-  filter?: ((item: CommandItemData, query: string) => number) | null;
+  items: ComposerCommandsItems;
 };
 
 export type ComposerCommandsMap = Record<string, ComposerCommandsConfig>;
@@ -190,28 +196,18 @@ const fuzzyScore = (query: string, target: string): number => {
   return queryIndex === lowerQuery.length ? score / lowerQuery.length : 0;
 };
 
-const defaultItemFilter = (item: unknown, query: string): number => {
-  if (!query) return 1;
-  if (item == null || typeof item !== "object") return 0;
-  const record = item as { label?: string; value?: string; keywords?: string };
-  const label = record.label ?? record.value ?? "";
-  const keywords = record.keywords ?? "";
-  const target = `${label} ${keywords}`.trim();
-  return fuzzyScore(query, target);
-};
-
-const filterCommandItems = <TItem,>(
-  items: TItem[],
+const filterArrayItems = (
+  items: CommandItemData[],
   query: string,
-  filter: ((item: TItem, query: string) => number) | null | undefined,
-): TItem[] => {
-  if (filter === null) return items;
+): CommandItemData[] => {
   if (!query) return items;
-  const score =
-    filter ?? (defaultItemFilter as (i: TItem, q: string) => number);
   return items
-    .map((item) => ({ item, score: score(item, query) }))
-    .filter(({ score: itemScore }) => itemScore > 0)
+    .map((item) => {
+      const target =
+        `${item.label ?? item.value ?? ""} ${item.keywords ?? ""}`.trim();
+      return { item, score: fuzzyScore(query, target) };
+    })
+    .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .map(({ item }) => item);
 };
@@ -686,7 +682,6 @@ const applySnapshotToEditor = (
 
 const serializeEditorContent = (
   editor: Editor,
-  commands: ComposerCommandsMap,
 ): { text: string; chips: ChipData[] } => {
   const chipsByKey = new Map<string, ChipData>();
   const blocks: string[] = [];
@@ -704,6 +699,8 @@ const serializeEditorContent = (
         prefix?: string;
         value?: string;
         label?: string;
+        icon?: ChipIconKey | null;
+        variant?: ChipVariant | null;
       };
       const prefix = attrs.prefix ?? "";
       const value = attrs.value ?? "";
@@ -711,13 +708,12 @@ const serializeEditorContent = (
       inline += `[${escapeMarkdownLink(label)}](chip:${prefix}:${value})`;
       const key = `${prefix}:${value}`;
       if (!chipsByKey.has(key)) {
-        const item = commands[prefix]?.items.find((i) => i.value === value);
         chipsByKey.set(key, {
           prefix,
           value,
           label,
-          ...(item?.icon ? { icon: item.icon } : {}),
-          ...(item?.variant ? { variant: item.variant } : {}),
+          ...(attrs.icon ? { icon: attrs.icon } : {}),
+          ...(attrs.variant ? { variant: attrs.variant } : {}),
         });
       }
     });
@@ -852,7 +848,6 @@ type ComposerInternalsValue = {
   syncCommandListState: Dispatch<SetStateAction<CommandListSyncState>>;
   getRegisteredPrefixes: () => RegisteredPrefix[];
   reportEditorUpdate: (editor: Editor) => void;
-  reportCommandQueryChange: (next: CommandListSyncState) => void;
 };
 
 const ComposerInternalsContext = createContext<ComposerInternalsValue | null>(
@@ -942,17 +937,14 @@ const MentionChipNodeView = ({
 }: {
   node: { attrs: Record<string, unknown> };
 }) => {
-  const { commands } = useComposerInternals();
-  const prefix = node.attrs.prefix as string;
-  const value = node.attrs.value as string;
   const label = node.attrs.label as string;
-
-  const item = commands[prefix]?.items.find((entry) => entry.value === value);
+  const icon = node.attrs.icon as ChipIconKey | null;
+  const variant = node.attrs.variant as ChipVariant | null;
 
   return (
     <NodeViewWrapper as="span" data-mention-chip>
-      <Chip variant={item?.variant}>
-        {item?.icon && <Chip.Icon>{CHIP_ICONS[item.icon]}</Chip.Icon>}
+      <Chip variant={variant ?? undefined}>
+        {icon && <Chip.Icon>{CHIP_ICONS[icon]}</Chip.Icon>}
         <Chip.Label>{label}</Chip.Label>
       </Chip>
     </NodeViewWrapper>
@@ -973,6 +965,8 @@ const createMentionChipExtension = (
         prefix: { default: "" },
         label: { default: "" },
         value: { default: "" },
+        icon: { default: null },
+        variant: { default: null },
       };
     },
 
@@ -1385,7 +1379,6 @@ export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
-  onCommandQueryChange?: (query: string, prefix: string | null) => void;
   ref?: Ref<ComposerHandle>;
 };
 
@@ -1402,7 +1395,6 @@ const ComposerRoot = ({
   defaultValue,
   value,
   onValueChange,
-  onCommandQueryChange,
   ref,
   ...formProps
 }: ComposerRootProps) => {
@@ -1438,23 +1430,6 @@ const ComposerRoot = ({
 
   const submitAnswers = useCallback((answers: ComposerAnswerEntry[]) => {
     onSubmitRef.current?.({ kind: "answers", answers });
-  }, []);
-
-  const onCommandQueryChangeRef = useRef(onCommandQueryChange);
-  onCommandQueryChangeRef.current = onCommandQueryChange;
-
-  const previousCommandListRef = useRef<CommandListSyncState>({
-    isOpen: false,
-    trigger: null,
-    query: "",
-  });
-  const reportCommandQueryChange = useCallback((next: CommandListSyncState) => {
-    const previous = previousCommandListRef.current;
-    if (previous.trigger === next.trigger && previous.query === next.query) {
-      return;
-    }
-    previousCommandListRef.current = next;
-    onCommandQueryChangeRef.current?.(next.query, next.trigger);
   }, []);
 
   const questionnaire = useQuestionnaire({
@@ -1556,7 +1531,7 @@ const ComposerRoot = ({
     if (isSubmitting) return;
 
     const serialized = editorRef.current
-      ? serializeEditorContent(editorRef.current, commands)
+      ? serializeEditorContent(editorRef.current)
       : { text: "", chips: [] as ChipData[] };
     const trimmedText = serialized.text.trim();
     if (!trimmedText && !attachments.items.length) return;
@@ -1667,14 +1642,8 @@ const ComposerRoot = ({
       syncCommandListState: setCommandListState,
       getRegisteredPrefixes,
       reportEditorUpdate,
-      reportCommandQueryChange,
     }),
-    [
-      commands,
-      getRegisteredPrefixes,
-      reportEditorUpdate,
-      reportCommandQueryChange,
-    ],
+    [commands, getRegisteredPrefixes, reportEditorUpdate],
   );
 
   return (
@@ -1863,7 +1832,6 @@ const ComposerTextarea = ({
     syncCommandListState,
     getRegisteredPrefixes,
     reportEditorUpdate,
-    reportCommandQueryChange,
   } = useComposerInternals();
 
   const isControlled = value !== undefined;
@@ -2026,7 +1994,6 @@ const ComposerTextarea = ({
           ? prev
           : { isOpen, trigger, query },
       );
-      reportCommandQueryChange({ isOpen, trigger, query });
     },
     editable: !disabled,
     autofocus: autoFocus,
@@ -2288,9 +2255,11 @@ const ComposerPanelItem = ({
 // Composer.CommandList / CommandItem / CommandItemIcon / CommandGroup / etc.
 // ---------------------------------------------------------------------------
 
-type CommandListRowHandle = { value: string };
+type CommandListState = "loading" | "empty" | "ready";
 
 type CommandListNavContextValue = {
+  items: CommandItemData[];
+  state: CommandListState;
   highlightedValue: string | null;
   setHighlightedValue: (value: string | null) => void;
   selectByValue: (value: string) => void;
@@ -2300,46 +2269,117 @@ const CommandListNavContext = createContext<CommandListNavContextValue | null>(
   null,
 );
 
-type ComposerCommandListProps<TItem extends CommandItemData> = {
-  prefix: string;
-  className?: string;
-  children: (item: TItem) => ReactNode;
+const useResolvedItems = (
+  itemsProp: ComposerCommandsItems,
+  query: string,
+  isActive: boolean,
+): { items: CommandItemData[]; state: CommandListState } => {
+  const isCallback = typeof itemsProp === "function";
+
+  const [asyncState, setAsyncState] = useState<{
+    items: CommandItemData[];
+    loading: boolean;
+  }>(() => ({ items: [], loading: isCallback }));
+
+  useEffect(() => {
+    if (typeof itemsProp !== "function") return;
+    if (!isActive) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    let result: CommandItemData[] | Promise<CommandItemData[]>;
+    try {
+      result = itemsProp(query, { signal: controller.signal });
+    } catch (error) {
+      console.warn("Composer.commands items callback threw:", error);
+      setAsyncState({ items: [], loading: false });
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
+    }
+
+    if (result instanceof Promise) {
+      setAsyncState((previous) => ({ ...previous, loading: true }));
+      result.then(
+        (resolved) => {
+          if (cancelled) return;
+          setAsyncState({ items: resolved, loading: false });
+        },
+        (error) => {
+          if (cancelled) return;
+          if ((error as { name?: string })?.name === "AbortError") return;
+          console.warn("Composer.commands items callback rejected:", error);
+          setAsyncState((previous) => ({ ...previous, loading: false }));
+        },
+      );
+    } else {
+      setAsyncState({ items: result, loading: false });
+    }
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [itemsProp, query, isActive]);
+
+  if (Array.isArray(itemsProp)) {
+    const items = filterArrayItems(itemsProp, query);
+    return { items, state: items.length === 0 ? "empty" : "ready" };
+  }
+
+  if (asyncState.loading) {
+    // Locally filter the most-recent resolved set so typing feels instant
+    // while the new fetch is in flight. The server result replaces this once
+    // it lands.
+    return {
+      items: filterArrayItems(asyncState.items, query),
+      state: "loading",
+    };
+  }
+
+  return {
+    items: asyncState.items,
+    state: asyncState.items.length === 0 ? "empty" : "ready",
+  };
 };
 
-const ComposerCommandList = <TItem extends CommandItemData>({
+const EMPTY_ITEMS: CommandItemData[] = [];
+
+type ComposerCommandListProps = {
+  prefix: string;
+  className?: string;
+  children?: ReactNode;
+};
+
+const ComposerCommandList = ({
   prefix,
   className,
-  children: renderItem,
-}: ComposerCommandListProps<TItem>): ReactNode => {
+  children,
+}: ComposerCommandListProps) => {
   const { commands, tools, attachments } = useComposer();
   const internals = useComposerInternals();
 
   const config = internals.commands[prefix];
   const isActive = commands.open && commands.currentPrefix === prefix;
-  const items = (config?.items ?? []) as TItem[];
-  const filter = config?.filter as
-    | ((item: TItem, query: string) => number)
-    | null
-    | undefined;
+  const itemsProp = config?.items ?? EMPTY_ITEMS;
   const kind = config?.kind ?? "execute";
 
-  const filteredItems = useMemo(
-    () => filterCommandItems(items, commands.query, filter),
-    [items, commands.query, filter],
+  const { items, state } = useResolvedItems(
+    itemsProp,
+    commands.query,
+    isActive,
   );
 
-  const rows = useMemo<CommandListRowHandle[]>(
-    () => filteredItems.map((item) => ({ value: item.value })),
-    [filteredItems],
-  );
   const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
 
   const validHighlight =
     highlightedValue !== null &&
-    rows.some((row) => row.value === highlightedValue);
-  if (!validHighlight && rows.length > 0) {
-    queueMicrotask(() => setHighlightedValue(rows[0].value));
-  } else if (rows.length === 0 && highlightedValue !== null) {
+    items.some((item) => item.value === highlightedValue);
+  if (!validHighlight && items.length > 0) {
+    queueMicrotask(() => setHighlightedValue(items[0].value));
+  } else if (items.length === 0 && highlightedValue !== null) {
     queueMicrotask(() => setHighlightedValue(null));
   }
 
@@ -2365,6 +2405,8 @@ const ComposerCommandList = <TItem extends CommandItemData>({
               prefix,
               label: dataItem.label ?? dataItem.value,
               value: dataItem.value,
+              icon: dataItem.icon ?? null,
+              variant: dataItem.variant ?? null,
             },
           })
           .run();
@@ -2414,7 +2456,7 @@ const ComposerCommandList = <TItem extends CommandItemData>({
       : null;
     commands.navigateRef.current = (direction: number) => {
       const next = computeNextHighlight(
-        rows,
+        items,
         highlightedValue,
         direction === -1 ? -1 : 1,
       );
@@ -2424,35 +2466,116 @@ const ComposerCommandList = <TItem extends CommandItemData>({
 
   const navContext = useMemo<CommandListNavContextValue>(
     () => ({
+      items,
+      state,
       highlightedValue,
       setHighlightedValue,
       selectByValue,
     }),
-    [highlightedValue, selectByValue],
+    [items, state, highlightedValue, selectByValue],
   );
 
   if (!isActive) return null;
 
-  if (filteredItems.length === 0) {
-    return (
-      <Commands className={className}>
-        <Commands.Empty>No results</Commands.Empty>
-      </Commands>
-    );
-  }
-
   return (
     <CommandListNavContext.Provider value={navContext}>
-      <Commands className={className}>
-        {filteredItems.map((item, index) => (
-          <Fragment key={item.value ?? `__cmd_${index}`}>
-            {renderItem(item)}
-          </Fragment>
-        ))}
-      </Commands>
+      <div
+        data-slot="composer-command-list"
+        data-state={state}
+        className={cn(
+          "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1",
+          className,
+        )}
+      >
+        {children}
+      </div>
     </CommandListNavContext.Provider>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Composer.CommandItems / CommandLoading / CommandEmpty
+// ---------------------------------------------------------------------------
+
+const useCommandListNav = (caller: string): CommandListNavContextValue => {
+  const navContext = useContext(CommandListNavContext);
+  if (!navContext) {
+    throw new Error(
+      `<${caller}> must be rendered inside <Composer.CommandList>.`,
+    );
+  }
+  return navContext;
+};
+
+type ComposerCommandItemsProps<TItem extends CommandItemData> = {
+  className?: string;
+  children: (item: TItem) => ReactNode;
+};
+
+const ComposerCommandItems = <TItem extends CommandItemData>({
+  className,
+  children: renderItem,
+}: ComposerCommandItemsProps<TItem>): ReactNode => {
+  const nav = useCommandListNav("Composer.CommandItems");
+  const items = nav.items as TItem[];
+
+  return (
+    <div
+      data-slot="composer-command-items"
+      className={cn(
+        "flex flex-col",
+        "group-data-[state=empty]/composer-command-list:hidden",
+        className,
+      )}
+    >
+      {items.map((item, index) => (
+        <Fragment key={item.value ?? `__cmd_${index}`}>
+          {renderItem(item)}
+        </Fragment>
+      ))}
+    </div>
+  );
+};
+
+type ComposerCommandLoadingProps = ComponentProps<"div">;
+
+const ComposerCommandLoading = ({
+  className,
+  children,
+  ...props
+}: ComposerCommandLoadingProps) => (
+  <div
+    data-slot="composer-command-loading"
+    className={cn(
+      "hidden group-data-[state=loading]/composer-command-list:flex",
+      "items-center px-3 h-8 text-sm text-ink-tertiary",
+      className,
+    )}
+    {...props}
+  >
+    {children ?? "Loading…"}
+  </div>
+);
+
+type ComposerCommandEmptyProps = ComponentProps<"div">;
+
+const ComposerCommandEmpty = ({
+  className,
+  children,
+  ...props
+}: ComposerCommandEmptyProps) => (
+  <div
+    data-slot="composer-command-empty"
+    className={cn(
+      "hidden group-data-[state=empty]/composer-command-list:flex",
+      "items-center px-3 h-8 text-sm text-ink-tertiary",
+      className,
+    )}
+    {...props}
+  >
+    {children ?? "No results"}
+  </div>
+);
 
 type ComposerCommandItemProps = {
   value: string;
@@ -2589,21 +2712,27 @@ const ComposerCommands = ({ className }: ComposerCommandsProps) => {
     <>
       {prefixes.map((prefix) => (
         <ComposerCommandList key={prefix} prefix={prefix} className={className}>
-          {(item) => (
-            <ComposerCommandItem value={item.value}>
-              {item.icon && (
-                <ComposerCommandItemIcon>
-                  {CHIP_ICONS[item.icon]}
-                </ComposerCommandItemIcon>
-              )}
-              <ComposerCommandItemLabel>{item.label}</ComposerCommandItemLabel>
-              {item.description && (
-                <ComposerCommandItemDescription>
-                  {item.description}
-                </ComposerCommandItemDescription>
-              )}
-            </ComposerCommandItem>
-          )}
+          <ComposerCommandLoading />
+          <ComposerCommandEmpty />
+          <ComposerCommandItems>
+            {(item) => (
+              <ComposerCommandItem value={item.value}>
+                {item.icon && (
+                  <ComposerCommandItemIcon>
+                    {CHIP_ICONS[item.icon]}
+                  </ComposerCommandItemIcon>
+                )}
+                <ComposerCommandItemLabel>
+                  {item.label}
+                </ComposerCommandItemLabel>
+                {item.description && (
+                  <ComposerCommandItemDescription>
+                    {item.description}
+                  </ComposerCommandItemDescription>
+                )}
+              </ComposerCommandItem>
+            )}
+          </ComposerCommandItems>
         </ComposerCommandList>
       ))}
     </>
@@ -2786,6 +2915,9 @@ export const Composer = Object.assign(ComposerRoot, {
   Continue: ComposerQuestionsContinue,
   Commands: ComposerCommands,
   CommandList: ComposerCommandList,
+  CommandItems: ComposerCommandItems,
+  CommandLoading: ComposerCommandLoading,
+  CommandEmpty: ComposerCommandEmpty,
   CommandItem: ComposerCommandItem,
   CommandItemIcon: ComposerCommandItemIcon,
   CommandItemLabel: ComposerCommandItemLabel,

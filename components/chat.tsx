@@ -539,38 +539,46 @@ const ChatInput = () => {
       <Composer.Panel value={panelState.type}>
         <Composer.PanelItem value="command-list">
           <Composer.CommandList prefix="@">
-            {(item: CommandItemData) => (
-              <Composer.CommandItem value={item.value}>
-                {item.icon && (
-                  <Composer.CommandItemIcon>
-                    {CHIP_ICONS[item.icon]}
-                  </Composer.CommandItemIcon>
-                )}
-                <Composer.CommandItemLabel>
-                  {item.label}
-                </Composer.CommandItemLabel>
-              </Composer.CommandItem>
-            )}
+            <Composer.CommandLoading />
+            <Composer.CommandEmpty />
+            <Composer.CommandItems>
+              {(item) => (
+                <Composer.CommandItem value={item.value}>
+                  {item.icon && (
+                    <Composer.CommandItemIcon>
+                      {CHIP_ICONS[item.icon]}
+                    </Composer.CommandItemIcon>
+                  )}
+                  <Composer.CommandItemLabel>
+                    {item.label}
+                  </Composer.CommandItemLabel>
+                </Composer.CommandItem>
+              )}
+            </Composer.CommandItems>
           </Composer.CommandList>
 
           <Composer.CommandList prefix="/">
-            {(item: CommandItemData) => (
-              <Composer.CommandItem value={item.value}>
-                {item.icon && (
-                  <Composer.CommandItemIcon>
-                    {CHIP_ICONS[item.icon]}
-                  </Composer.CommandItemIcon>
-                )}
-                <Composer.CommandItemLabel>
-                  {item.label}
-                </Composer.CommandItemLabel>
-                {item.description && (
-                  <Composer.CommandItemDescription>
-                    {item.description}
-                  </Composer.CommandItemDescription>
-                )}
-              </Composer.CommandItem>
-            )}
+            <Composer.CommandLoading />
+            <Composer.CommandEmpty />
+            <Composer.CommandItems>
+              {(item) => (
+                <Composer.CommandItem value={item.value}>
+                  {item.icon && (
+                    <Composer.CommandItemIcon>
+                      {CHIP_ICONS[item.icon]}
+                    </Composer.CommandItemIcon>
+                  )}
+                  <Composer.CommandItemLabel>
+                    {item.label}
+                  </Composer.CommandItemLabel>
+                  {item.description && (
+                    <Composer.CommandItemDescription>
+                      {item.description}
+                    </Composer.CommandItemDescription>
+                  )}
+                </Composer.CommandItem>
+              )}
+            </Composer.CommandItems>
           </Composer.CommandList>
         </Composer.PanelItem>
         <Composer.PanelItem value="active">

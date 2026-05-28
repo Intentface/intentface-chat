@@ -119,6 +119,49 @@ const PLAYGROUND_COMMANDS: CommandItemData[] = [
   },
 ];
 
+// Async-callback exercise: a fake "issues" list fetched with simulated latency.
+// Typing `#` opens the list; typing fast aborts in-flight calls via AbortSignal.
+const PLAYGROUND_ISSUES: CommandItemData[] = [
+  { value: "i-123", label: "#123 Login throws on empty password" },
+  { value: "i-142", label: "#142 Memory leak in idle workers" },
+  { value: "i-199", label: "#199 Search returns stale results" },
+  { value: "i-231", label: "#231 Markdown render flash" },
+  { value: "i-287", label: "#287 Composer keyboard nav broken on Safari" },
+  { value: "i-312", label: "#312 Theme picker overflow" },
+  { value: "i-356", label: "#356 Streaming cancellation race" },
+  { value: "i-401", label: "#401 Empty state CTA too small" },
+  { value: "i-445", label: "#445 Sidebar collapse animation jank" },
+  { value: "i-478", label: "#478 i18n stubs out of date" },
+  { value: "i-502", label: "#502 Attachment thumbnails missing" },
+  { value: "i-534", label: "#534 Auth token refresh loop" },
+].map((item) => ({ ...item, icon: "code" as const }));
+
+const abortableDelay = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+    const id = setTimeout(resolve, ms);
+    signal.addEventListener("abort", () => {
+      clearTimeout(id);
+      reject(new DOMException("Aborted", "AbortError"));
+    });
+  });
+
+const fetchPlaygroundIssues = async (
+  query: string,
+  { signal }: { signal: AbortSignal },
+): Promise<CommandItemData[]> => {
+  const latency = 300 + Math.random() * 600;
+  await abortableDelay(latency, signal);
+  const lowered = query.toLowerCase();
+  if (!lowered) return PLAYGROUND_ISSUES;
+  return PLAYGROUND_ISSUES.filter((item) =>
+    item.label.toLowerCase().includes(lowered),
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -208,6 +251,11 @@ export default function ComponentsPlayground() {
                 kind: "execute",
                 trigger: "doc-start",
                 items: PLAYGROUND_COMMANDS,
+              },
+              "#": {
+                kind: "insert",
+                trigger: "after-whitespace",
+                items: fetchPlaygroundIssues,
               },
             }}
             questions={questions}

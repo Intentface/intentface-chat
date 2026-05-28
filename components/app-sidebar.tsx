@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FlaskConicalIcon,
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
@@ -103,6 +104,14 @@ export const AppSidebar = () => {
                   <PaletteIcon />
                   Appearance
                 </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  render={
+                    <Link href="/playground">
+                      <FlaskConicalIcon />
+                      Playground
+                    </Link>
+                  }
+                />
                 <DropdownMenu.Sub>
                   <DropdownMenu.SubTrigger>
                     <SunIcon />

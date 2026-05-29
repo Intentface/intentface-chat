@@ -20,20 +20,20 @@ import {
   Children,
   type ComponentProps,
   createContext,
-  type Dispatch,
   Fragment,
   isValidElement,
   type ReactNode,
   type Ref,
   type RefObject,
-  type SetStateAction,
   useCallback,
   useContext,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { AskUser, type AskUserOptionsHandle } from "@/components/ai/ask-user";
 import {
@@ -57,7 +57,11 @@ import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
-import { escapeMarkdownLink, parseChipSegments } from "@/lib/ai/chip-syntax";
+import {
+  chipSegmentsToParagraphJSON,
+  encodeChipMarkdown,
+  parseChipSegments,
+} from "@/lib/ai/chip-markdown";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 
@@ -293,7 +297,7 @@ type EditorKeyAction =
   | { type: "command-select" }
   | { type: "command-close" }
   | { type: "command-navigate"; direction: 1 | -1 }
-  | { type: "questionnaire-arrow"; direction: 1 | -1 }
+  | { type: "ask-user-arrow"; direction: 1 | -1 }
   | { type: "remove-last-attachment" }
   | { type: "submit-form" }
   | { type: "soft-break" };
@@ -302,7 +306,7 @@ const interpretEditorKey = (
   event: { key: string; shiftKey: boolean },
   context: {
     isCommandListOpen: boolean;
-    hasActiveQuestionnaire: boolean;
+    hasActiveAskUser: boolean;
     isEditorEmpty: boolean;
     hasAttachments: boolean;
   },
@@ -318,11 +322,11 @@ const interpretEditorKey = (
       return { type: "command-select" };
   }
 
-  if (context.hasActiveQuestionnaire) {
+  if (context.hasActiveAskUser) {
     if (event.key === "ArrowUp")
-      return { type: "questionnaire-arrow", direction: -1 };
+      return { type: "ask-user-arrow", direction: -1 };
     if (event.key === "ArrowDown")
-      return { type: "questionnaire-arrow", direction: 1 };
+      return { type: "ask-user-arrow", direction: 1 };
   }
 
   if (
@@ -339,7 +343,7 @@ const interpretEditorKey = (
   return null;
 };
 
-type QuestionnaireKeyAction =
+type AskUserKeyAction =
   | { type: "dismiss-step" }
   | { type: "navigate-options"; direction: 1 | -1 }
   | { type: "select-option" }
@@ -347,7 +351,7 @@ type QuestionnaireKeyAction =
   | { type: "go-next" }
   | { type: "insert-character"; character: string };
 
-const interpretQuestionnaireKey = (
+const interpretAskUserKey = (
   event: {
     key: string;
     ctrlKey: boolean;
@@ -356,7 +360,7 @@ const interpretQuestionnaireKey = (
     defaultPrevented: boolean;
   },
   context: { hasHighlight: boolean },
-): QuestionnaireKeyAction | null => {
+): AskUserKeyAction | null => {
   if (event.defaultPrevented) return null;
   if (event.key === "Escape") return { type: "dismiss-step" };
   if (!context.hasHighlight) return null;
@@ -473,7 +477,7 @@ const attachmentReducer = (
 };
 
 // ---------------------------------------------------------------------------
-// Pure helpers — questionnaire reducer
+// Pure helpers — askUser reducer
 // ---------------------------------------------------------------------------
 
 type AnswerEntry = {
@@ -481,38 +485,15 @@ type AnswerEntry = {
   freeText: string;
 };
 
-type QuestionnaireState = {
+type AskUserState = {
   step: number;
   answers: Map<number, AnswerEntry>;
 };
 
-const INITIAL_QUESTIONNAIRE_STATE: QuestionnaireState = {
+const INITIAL_ASK_USER_STATE: AskUserState = {
   step: 0,
   answers: new Map(),
 };
-
-type QuestionnaireAction =
-  | { type: "reset" }
-  | {
-      type: "toggle-option";
-      step: number;
-      label: string;
-      multiSelect: boolean;
-    }
-  | { type: "clear-selections"; step: number }
-  | {
-      type: "save-and-advance";
-      step: number;
-      text?: string;
-      multiSelect: boolean;
-    }
-  | { type: "dismiss-step"; step: number }
-  | {
-      type: "save-and-navigate";
-      fromStep: number;
-      text: string;
-      targetStep: number;
-    };
 
 const emptyEntry = (): AnswerEntry => ({
   selected: new Set<string>(),
@@ -523,72 +504,8 @@ const cloneAnswers = (
   source: Map<number, AnswerEntry>,
 ): Map<number, AnswerEntry> => new Map(source);
 
-const questionnaireReducer = (
-  state: QuestionnaireState,
-  action: QuestionnaireAction,
-): QuestionnaireState => {
-  switch (action.type) {
-    case "reset":
-      return INITIAL_QUESTIONNAIRE_STATE;
-    case "toggle-option": {
-      const next = cloneAnswers(state.answers);
-      const previous = next.get(action.step) ?? emptyEntry();
-      const selected = new Set(previous.selected);
-      if (action.multiSelect) {
-        if (selected.has(action.label)) selected.delete(action.label);
-        else selected.add(action.label);
-      } else {
-        selected.clear();
-        selected.add(action.label);
-      }
-      next.set(action.step, {
-        selected,
-        freeText: action.multiSelect ? previous.freeText : "",
-      });
-      return { ...state, answers: next };
-    }
-    case "clear-selections": {
-      const previous = state.answers.get(action.step);
-      if (!previous || previous.selected.size === 0) return state;
-      const next = cloneAnswers(state.answers);
-      next.set(action.step, {
-        selected: new Set(),
-        freeText: previous.freeText,
-      });
-      return { ...state, answers: next };
-    }
-    case "save-and-advance": {
-      const next = cloneAnswers(state.answers);
-      if (action.text && action.text.length > 0) {
-        const previous = next.get(action.step) ?? emptyEntry();
-        next.set(action.step, {
-          selected: action.multiSelect ? previous.selected : new Set(),
-          freeText: action.text,
-        });
-      }
-      return { step: state.step + 1, answers: next };
-    }
-    case "dismiss-step": {
-      const next = cloneAnswers(state.answers);
-      next.delete(action.step);
-      return { step: state.step + 1, answers: next };
-    }
-    case "save-and-navigate": {
-      const next = cloneAnswers(state.answers);
-      if (action.text.length > 0) {
-        const previous = next.get(action.fromStep) ?? emptyEntry();
-        next.set(action.fromStep, {
-          ...previous,
-          freeText: action.text,
-        });
-      }
-      return { step: action.targetStep, answers: next };
-    }
-  }
-};
-
 const compileAnswers = (
-  state: QuestionnaireState,
+  state: AskUserState,
   questions: AskUserQuestion[],
 ): ComposerAnswerEntry[] =>
   questions.map(({ question, multiSelect }, index) => {
@@ -609,7 +526,7 @@ const compileAnswers = (
   });
 
 const isLastStep = (
-  state: QuestionnaireState,
+  state: AskUserState,
   questions: AskUserQuestion[],
 ): boolean => state.step >= questions.length - 1;
 
@@ -705,7 +622,7 @@ const serializeEditorContent = (
       const prefix = attrs.prefix ?? "";
       const value = attrs.value ?? "";
       const label = attrs.label ?? "";
-      inline += `[${escapeMarkdownLink(label)}](chip:${prefix}:${value})`;
+      inline += encodeChipMarkdown(prefix, value, label);
       const key = `${prefix}:${value}`;
       if (!chipsByKey.has(key)) {
         chipsByKey.set(key, {
@@ -721,50 +638,6 @@ const serializeEditorContent = (
   });
 
   return { text: blocks.join("\n"), chips: [...chipsByKey.values()] };
-};
-
-type InlineNodeJSON =
-  | { type: "text"; text: string }
-  | {
-      type: "mentionChip";
-      attrs: { prefix: string; value: string; label: string };
-    };
-
-type ParagraphNodeJSON = {
-  type: "paragraph";
-  content?: InlineNodeJSON[];
-};
-
-const buildChipPasteContent = (
-  segments: ReturnType<typeof parseChipSegments>,
-): ParagraphNodeJSON[] => {
-  const paragraphs: ParagraphNodeJSON[] = [{ type: "paragraph", content: [] }];
-  const pushInline = (node: InlineNodeJSON) => {
-    const target = paragraphs[paragraphs.length - 1];
-    target.content = target.content ?? [];
-    target.content.push(node);
-  };
-
-  for (const segment of segments) {
-    if (segment.type === "text") {
-      const lines = segment.text.split("\n");
-      lines.forEach((line, lineIndex) => {
-        if (lineIndex > 0) paragraphs.push({ type: "paragraph", content: [] });
-        if (line.length > 0) pushInline({ type: "text", text: line });
-      });
-      continue;
-    }
-    pushInline({
-      type: "mentionChip",
-      attrs: {
-        prefix: segment.prefix,
-        value: segment.value,
-        label: segment.label,
-      },
-    });
-  }
-
-  return paragraphs.filter((p) => (p.content?.length ?? 0) > 0);
 };
 
 // ---------------------------------------------------------------------------
@@ -794,7 +667,7 @@ type ComposerToolsState = {
   toggle: (name: string) => void;
 };
 
-type ComposerQuestionnaireState = {
+type ComposerAskUserState = {
   questions: AskUserQuestion[] | null;
   step: number;
   answers: Map<number, AnswerEntry>;
@@ -809,20 +682,11 @@ type ComposerQuestionnaireState = {
   optionsRef: RefObject<AskUserOptionsHandle | null>;
 };
 
-type ComposerCommandsState = {
-  open: boolean;
-  currentPrefix: string | null;
-  query: string;
-  selectRef: RefObject<(() => void) | null>;
-  navigateRef: RefObject<((direction: number) => void) | null>;
-};
-
 type ComposerContextValue = {
   editor: ComposerEditorState;
   attachments: ComposerAttachmentsState;
   tools: ComposerToolsState;
-  questionnaire: ComposerQuestionnaireState;
-  commands: ComposerCommandsState;
+  askUser: ComposerAskUserState;
 };
 
 const ComposerContext = createContext<ComposerContextValue | null>(null);
@@ -835,17 +699,57 @@ export const useComposer = (): ComposerContextValue => {
   return context;
 };
 
-type CommandListSyncState = {
+type CommandListSnapshot = {
   isOpen: boolean;
   trigger: string | null;
   query: string;
+};
+
+type CommandListStore = {
+  subscribe: (cb: () => void) => () => void;
+  getSnapshot: () => CommandListSnapshot;
+  setSnapshot: (next: CommandListSnapshot) => void;
+  // Imperative refs co-located with the store; not reactive.
+  selectRef: RefObject<(() => void) | null>;
+  navigateRef: RefObject<((direction: number) => void) | null>;
+};
+
+const createCommandListStore = (): CommandListStore => {
+  let snapshot: CommandListSnapshot = {
+    isOpen: false,
+    trigger: null,
+    query: "",
+  };
+  const listeners = new Set<() => void>();
+  return {
+    subscribe: (cb) => {
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+      };
+    },
+    getSnapshot: () => snapshot,
+    setSnapshot: (next) => {
+      if (
+        snapshot.isOpen === next.isOpen &&
+        snapshot.trigger === next.trigger &&
+        snapshot.query === next.query
+      ) {
+        return;
+      }
+      snapshot = next;
+      for (const l of listeners) l();
+    },
+    selectRef: { current: null },
+    navigateRef: { current: null },
+  };
 };
 
 type ComposerInternalsValue = {
   editorRef: RefObject<Editor | null>;
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   commands: ComposerCommandsMap;
-  syncCommandListState: Dispatch<SetStateAction<CommandListSyncState>>;
+  commandListStore: CommandListStore;
   getRegisteredPrefixes: () => RegisteredPrefix[];
   reportEditorUpdate: (editor: Editor) => void;
 };
@@ -862,6 +766,17 @@ const useComposerInternals = (): ComposerInternalsValue => {
     );
   }
   return context;
+};
+
+const useCommandListSnapshot = <T,>(
+  selector: (s: CommandListSnapshot) => T,
+): T => {
+  const { commandListStore } = useComposerInternals();
+  const getValue = useCallback(
+    () => selector(commandListStore.getSnapshot()),
+    [commandListStore, selector],
+  );
+  return useSyncExternalStore(commandListStore.subscribe, getValue, getValue);
 };
 
 // ---------------------------------------------------------------------------
@@ -995,6 +910,29 @@ const createMentionChipExtension = (
 // Hooks
 // ---------------------------------------------------------------------------
 
+// SSR-safe layout effect — same shape as cmdk's. useLayoutEffect runs before
+// paint; useEffect is a no-op fallback when window is undefined (SSR pass).
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+// Mirror a prop into a ref so closures always see the latest value without
+// having to add the prop to dep arrays. Layout effect ensures `.current` is
+// updated before any sibling layout effect or sync user event observes it.
+const useAsRef = <T,>(value: T) => {
+  const ref = useRef(value);
+  useIsomorphicLayoutEffect(() => {
+    ref.current = value;
+  });
+  return ref;
+};
+
+// Like useRef, but the initializer runs at most once. Used for stable stores.
+const useLazyRef = <T,>(fn: () => T) => {
+  const ref = useRef<T | undefined>(undefined);
+  if (ref.current === undefined) ref.current = fn();
+  return ref as { current: T };
+};
+
 const useAttachmentStore = (configRef: RefObject<AttachmentStoreConfig>) => {
   const [state, setState] = useState<AttachmentStoreState>(
     INITIAL_ATTACHMENT_STATE,
@@ -1041,11 +979,8 @@ const useToolsState = (options: {
   );
 
   const values = isControlled ? (options.tools ?? {}) : internal;
-  const valuesRef = useRef(values);
-  valuesRef.current = values;
-
-  const onToolsChangeRef = useRef(options.onToolsChange);
-  onToolsChangeRef.current = options.onToolsChange;
+  const valuesRef = useAsRef(values);
+  const onToolsChangeRef = useAsRef(options.onToolsChange);
 
   const set = useCallback(
     (name: string, value: boolean) => {
@@ -1070,8 +1005,7 @@ const useToolsState = (options: {
 };
 
 const useCommandRegistry = (commands: ComposerCommandsMap) => {
-  const registryRef = useRef(commands);
-  registryRef.current = commands;
+  const registryRef = useAsRef(commands);
 
   const getRegisteredPrefixes = useCallback((): RegisteredPrefix[] => {
     const result: RegisteredPrefix[] = [];
@@ -1095,8 +1029,7 @@ const useDragDropFiles = ({
 }): { isDragging: boolean } => {
   const [isDragging, setIsDragging] = useState(false);
 
-  const onFilesRef = useRef(onFiles);
-  onFilesRef.current = onFiles;
+  const onFilesRef = useAsRef(onFiles);
 
   useEffect(() => {
     const isInScope = (event: DragEvent) =>
@@ -1124,7 +1057,7 @@ const useDragDropFiles = ({
   return { isDragging };
 };
 
-const useQuestionnaire = ({
+const useAskUser = ({
   editorRef,
   optionsRef,
   setEditorHasContent,
@@ -1137,36 +1070,41 @@ const useQuestionnaire = ({
   submitAnswers: (answers: ComposerAnswerEntry[]) => void;
   questions: AskUserQuestion[] | undefined;
 }) => {
-  const [reducerState, setReducerState] = useState<QuestionnaireState>(
-    INITIAL_QUESTIONNAIRE_STATE,
+  const [reducerState, setReducerState] = useState<AskUserState>(
+    INITIAL_ASK_USER_STATE,
   );
 
-  const stateRef = useRef(reducerState);
-  stateRef.current = reducerState;
-  const questionsRef = useRef<AskUserQuestion[] | null>(questions ?? null);
-  questionsRef.current = questions ?? null;
-
-  const submitAnswersRef = useRef(submitAnswers);
-  submitAnswersRef.current = submitAnswers;
+  const stateRef = useAsRef(reducerState);
+  const questionsRef = useAsRef<AskUserQuestion[] | null>(questions ?? null);
+  const submitAnswersRef = useAsRef(submitAnswers);
 
   // Reset reducer state and blur editor when the questions identity changes.
   const previousQuestionsRef = useRef(questions);
   if (previousQuestionsRef.current !== questions) {
     previousQuestionsRef.current = questions;
-    setReducerState(INITIAL_QUESTIONNAIRE_STATE);
+    setReducerState(INITIAL_ASK_USER_STATE);
     if (questions && questions.length > 0) editorRef.current?.commands.blur();
   }
 
   const toggleOption = useCallback(
     (step: number, label: string, multiSelect: boolean) => {
-      setReducerState((current) =>
-        questionnaireReducer(current, {
-          type: "toggle-option",
-          step,
-          label,
-          multiSelect,
-        }),
-      );
+      setReducerState((current) => {
+        const next = cloneAnswers(current.answers);
+        const previous = next.get(step) ?? emptyEntry();
+        const selected = new Set(previous.selected);
+        if (multiSelect) {
+          if (selected.has(label)) selected.delete(label);
+          else selected.add(label);
+        } else {
+          selected.clear();
+          selected.add(label);
+        }
+        next.set(step, {
+          selected,
+          freeText: multiSelect ? previous.freeText : "",
+        });
+        return { ...current, answers: next };
+      });
       if (!multiSelect) {
         editorRef.current?.commands.setContent("");
         setEditorHasContent(false);
@@ -1176,9 +1114,13 @@ const useQuestionnaire = ({
   );
 
   const clearSelections = useCallback((step: number) => {
-    setReducerState((current) =>
-      questionnaireReducer(current, { type: "clear-selections", step }),
-    );
+    setReducerState((current) => {
+      const previous = current.answers.get(step);
+      if (!previous || previous.selected.size === 0) return current;
+      const next = cloneAnswers(current.answers);
+      next.set(step, { selected: new Set(), freeText: previous.freeText });
+      return { ...current, answers: next };
+    });
   }, []);
 
   const continueStep = useCallback(
@@ -1191,12 +1133,18 @@ const useQuestionnaire = ({
       const currentQuestion = activeQuestions[currentStep];
       const multiSelect = !!currentQuestion?.multiSelect;
 
-      const advanced = questionnaireReducer(stateRef.current, {
-        type: "save-and-advance",
-        step: currentStep,
-        text: text.length > 0 ? text : undefined,
-        multiSelect,
-      });
+      const next = cloneAnswers(stateRef.current.answers);
+      if (text.length > 0) {
+        const previous = next.get(currentStep) ?? emptyEntry();
+        next.set(currentStep, {
+          selected: multiSelect ? previous.selected : new Set(),
+          freeText: text,
+        });
+      }
+      const advanced: AskUserState = {
+        step: currentStep + 1,
+        answers: next,
+      };
       setReducerState(advanced);
 
       editorRef.current?.commands.setContent("");
@@ -1218,10 +1166,12 @@ const useQuestionnaire = ({
     if (!activeQuestions || activeQuestions.length === 0) return;
 
     const currentStep = stateRef.current.step;
-    const advanced = questionnaireReducer(stateRef.current, {
-      type: "dismiss-step",
-      step: currentStep,
-    });
+    const next = cloneAnswers(stateRef.current.answers);
+    next.delete(currentStep);
+    const advanced: AskUserState = {
+      step: currentStep + 1,
+      answers: next,
+    };
     setReducerState(advanced);
 
     editorRef.current?.commands.setContent("");
@@ -1242,12 +1192,12 @@ const useQuestionnaire = ({
       if (targetStep === currentStep) return;
 
       const currentText = editorRef.current?.getText()?.trim() ?? "";
-      const navigated = questionnaireReducer(stateRef.current, {
-        type: "save-and-navigate",
-        fromStep: currentStep,
-        text: currentText,
-        targetStep,
-      });
+      const next = cloneAnswers(stateRef.current.answers);
+      if (currentText.length > 0) {
+        const previous = next.get(currentStep) ?? emptyEntry();
+        next.set(currentStep, { ...previous, freeText: currentText });
+      }
+      const navigated: AskUserState = { step: targetStep, answers: next };
       setReducerState(navigated);
 
       const targetEntry = navigated.answers.get(targetStep);
@@ -1281,7 +1231,7 @@ const useQuestionnaire = ({
     [questions],
   );
 
-  const state: ComposerQuestionnaireState = useMemo(
+  const state: ComposerAskUserState = useMemo(
     () => ({
       questions: questions ?? null,
       step: reducerState.step,
@@ -1330,8 +1280,7 @@ const useComposerSnapshot = ({
   const lastAppliedRef = useRef<ComposerSnapshot | null>(null);
   const initializedRef = useRef(false);
 
-  const onValueChangeRef = useRef(onValueChange);
-  onValueChangeRef.current = onValueChange;
+  const onValueChangeRef = useAsRef(onValueChange);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -1402,20 +1351,15 @@ const ComposerRoot = ({
   const formRef = useRef<HTMLFormElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const globalDropRef = useRef(false);
-  const commandListSelectRef = useRef<(() => void) | null>(null);
-  const commandListNavigateRef = useRef<((direction: number) => void) | null>(
-    null,
-  );
-  const questionnaireOptionsRef = useRef<AskUserOptionsHandle | null>(null);
+  const askUserOptionsRef = useRef<AskUserOptionsHandle | null>(null);
   const attachmentConfigRef = useRef<AttachmentStoreConfig>({
     accept: DEFAULT_ATTACHMENT_ACCEPT,
     maxFiles: DEFAULT_ATTACHMENT_MAX_FILES,
     maxFileSize: DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
   });
+  const commandListStore = useLazyRef(() => createCommandListStore()).current;
 
   const [editorHasContent, setEditorHasContent] = useState(false);
-  const [commandListState, setCommandListState] =
-    useState<CommandListSyncState>({ isOpen: false, trigger: null, query: "" });
 
   const attachments = useAttachmentStore(attachmentConfigRef);
 
@@ -1425,16 +1369,15 @@ const ComposerRoot = ({
     onToolsChange,
   });
 
-  const onSubmitRef = useRef(onSubmit);
-  onSubmitRef.current = onSubmit;
+  const onSubmitRef = useAsRef(onSubmit);
 
   const submitAnswers = useCallback((answers: ComposerAnswerEntry[]) => {
     onSubmitRef.current?.({ kind: "answers", answers });
   }, []);
 
-  const questionnaire = useQuestionnaire({
+  const askUser = useAskUser({
     editorRef,
-    optionsRef: questionnaireOptionsRef,
+    optionsRef: askUserOptionsRef,
     setEditorHasContent,
     submitAnswers,
     questions,
@@ -1455,14 +1398,13 @@ const ComposerRoot = ({
     onValueChange,
   });
 
-  const questionnaireRef = useRef(questionnaire);
-  questionnaireRef.current = questionnaire;
+  const askUserRef = useAsRef(askUser);
 
   useEffect(() => {
-    if ((questionnaire.questions?.length ?? 0) === 0) return;
+    if ((askUser.questions?.length ?? 0) === 0) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      const optionsHandle = questionnaireOptionsRef.current;
-      const action = interpretQuestionnaireKey(
+      const optionsHandle = askUserOptionsRef.current;
+      const action = interpretAskUserKey(
         {
           key: event.key,
           ctrlKey: event.ctrlKey,
@@ -1474,7 +1416,7 @@ const ComposerRoot = ({
       );
       if (!action) return;
       event.preventDefault();
-      const current = questionnaireRef.current;
+      const current = askUserRef.current;
       switch (action.type) {
         case "dismiss-step":
           current.dismissStep();
@@ -1513,18 +1455,18 @@ const ComposerRoot = ({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [questionnaire.questions]);
+  }, [askUser.questions]);
 
   const handleFormSubmit = async (
     event: React.SubmitEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
 
-    if (questionnaire.questions?.length) {
+    if (askUser.questions?.length) {
       const text = editorRef.current?.getText()?.trim() ?? "";
       editorRef.current?.commands.setContent("");
       setEditorHasContent(false);
-      questionnaire.continueStep(text);
+      askUser.continueStep(text);
       return;
     }
 
@@ -1612,26 +1554,14 @@ const ComposerRoot = ({
     ],
   );
 
-  const commandsContextValue = useMemo(
-    () => ({
-      open: commandListState.isOpen,
-      currentPrefix: commandListState.trigger,
-      query: commandListState.query,
-      selectRef: commandListSelectRef,
-      navigateRef: commandListNavigateRef,
-    }),
-    [commandListState],
-  );
-
   const contextValue = useMemo<ComposerContextValue>(
     () => ({
       editor: editorState,
       attachments: attachmentsState,
       tools,
-      questionnaire,
-      commands: commandsContextValue,
+      askUser,
     }),
-    [editorState, attachmentsState, tools, questionnaire, commandsContextValue],
+    [editorState, attachmentsState, tools, askUser],
   );
 
   const internalsValue = useMemo<ComposerInternalsValue>(
@@ -1639,11 +1569,11 @@ const ComposerRoot = ({
       editorRef,
       attachmentConfigRef,
       commands,
-      syncCommandListState: setCommandListState,
+      commandListStore,
       getRegisteredPrefixes,
       reportEditorUpdate,
     }),
-    [commands, getRegisteredPrefixes, reportEditorUpdate],
+    [commands, commandListStore, getRegisteredPrefixes, reportEditorUpdate],
   );
 
   return (
@@ -1826,31 +1756,23 @@ const ComposerTextarea = ({
   autoFocus = false,
   children,
 }: ComposerTextareaProps) => {
-  const { editor, attachments, questionnaire, commands } = useComposer();
+  const { editor, attachments, askUser } = useComposer();
   const {
     editorRef,
-    syncCommandListState,
+    commandListStore,
     getRegisteredPrefixes,
     reportEditorUpdate,
   } = useComposerInternals();
 
   const isControlled = value !== undefined;
 
-  const onValueChangeRef = useRef(onValueChange);
-  onValueChangeRef.current = onValueChange;
-
-  const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
-
-  const questionnaireRef = useRef(questionnaire);
-  questionnaireRef.current = questionnaire;
-
-  const commandsRef = useRef(commands);
-  commandsRef.current = commands;
+  const onValueChangeRef = useAsRef(onValueChange);
+  const attachmentsRef = useAsRef(attachments);
+  const askUserRef = useAsRef(askUser);
 
   const clearSelectionsRef = useRef(() => {});
   clearSelectionsRef.current = () => {
-    const current = questionnaireRef.current;
+    const current = askUserRef.current;
     if (!current.questions) return;
     const currentQuestion = current.questions[current.step];
     if (!currentQuestion?.multiSelect) {
@@ -1898,7 +1820,7 @@ const ComposerTextarea = ({
         const editor = editorRef.current;
         if (!editor) return false;
 
-        const paragraphs = buildChipPasteContent(segments);
+        const paragraphs = chipSegmentsToParagraphJSON(segments);
         if (paragraphs.length === 0) return false;
 
         event.preventDefault();
@@ -1911,8 +1833,7 @@ const ComposerTextarea = ({
           { key: event.key, shiftKey: event.shiftKey },
           {
             isCommandListOpen: cmdState?.isOpen ?? false,
-            hasActiveQuestionnaire:
-              (questionnaireRef.current.questions?.length ?? 0) > 0,
+            hasActiveAskUser: (askUserRef.current.questions?.length ?? 0) > 0,
             isEditorEmpty: view.state.doc.textContent === "",
             hasAttachments: attachmentsRef.current.items.length > 0,
           },
@@ -1923,7 +1844,7 @@ const ComposerTextarea = ({
         switch (action.type) {
           case "command-select": {
             event.preventDefault();
-            commandsRef.current.selectRef.current?.();
+            commandListStore.selectRef.current?.();
             return true;
           }
           case "command-close": {
@@ -1935,12 +1856,12 @@ const ComposerTextarea = ({
           }
           case "command-navigate": {
             event.preventDefault();
-            commandsRef.current.navigateRef.current?.(action.direction);
+            commandListStore.navigateRef.current?.(action.direction);
             return true;
           }
-          case "questionnaire-arrow": {
+          case "ask-user-arrow": {
             event.preventDefault();
-            const optionsHandle = questionnaireRef.current.optionsRef.current;
+            const optionsHandle = askUserRef.current.optionsRef.current;
             optionsHandle?.navigate(action.direction);
             view.dom.blur();
             return true;
@@ -1966,7 +1887,7 @@ const ComposerTextarea = ({
       },
     },
     onFocus: () => {
-      questionnaireRef.current.optionsRef.current?.clearHighlight();
+      askUserRef.current.optionsRef.current?.clearHighlight();
     },
     onMount: ({ editor: instance }) => {
       editorRef.current = instance;
@@ -1979,21 +1900,16 @@ const ComposerTextarea = ({
       editor.setHasContent(text.trim().length > 0 || !instance.isEmpty);
       if (text.trim().length > 0) {
         clearSelectionsRef.current();
-        questionnaireRef.current.optionsRef.current?.clearHighlight();
+        askUserRef.current.optionsRef.current?.clearHighlight();
       }
       onValueChangeRef.current?.(text);
       reportEditorUpdate(instance);
       const pluginState = commandListPluginKey.getState(instance.state);
-      const isOpen = pluginState?.isOpen ?? false;
-      const trigger = pluginState?.trigger ?? null;
-      const query = pluginState?.query ?? "";
-      syncCommandListState((prev) =>
-        prev.isOpen === isOpen &&
-        prev.trigger === trigger &&
-        prev.query === query
-          ? prev
-          : { isOpen, trigger, query },
-      );
+      commandListStore.setSnapshot({
+        isOpen: pluginState?.isOpen ?? false,
+        trigger: pluginState?.trigger ?? null,
+        query: pluginState?.query ?? "",
+      });
     },
     editable: !disabled,
     autofocus: autoFocus,
@@ -2178,12 +2094,12 @@ const ComposerPanel = ({
   value,
   ...props
 }: ComposerPanelProps) => {
-  const { commands } = useComposer();
+  const isCommandListOpen = useCommandListSnapshot((s) => s.isOpen);
   const [contentRef, bounds] = useMeasure();
 
   // When a command-list prefix is active, route the panel to its
   // "command-list" item regardless of what the consumer passed.
-  const effectiveValue = commands.open ? "command-list" : value;
+  const effectiveValue = isCommandListOpen ? "command-list" : value;
 
   const matchedChild = effectiveValue
     ? Children.toArray(children).find(
@@ -2257,9 +2173,8 @@ const ComposerPanelItem = ({
 
 type CommandListState = "loading" | "empty" | "ready";
 
+// Nav slice — updates on arrow-key navigation. Consumed by `Composer.CommandItem`.
 type CommandListNavContextValue = {
-  items: CommandItemData[];
-  state: CommandListState;
   highlightedValue: string | null;
   setHighlightedValue: (value: string | null) => void;
   selectByValue: (value: string) => void;
@@ -2268,6 +2183,17 @@ type CommandListNavContextValue = {
 const CommandListNavContext = createContext<CommandListNavContextValue | null>(
   null,
 );
+
+// Items slice — updates on items resolution. Consumed by `Composer.CommandItems`.
+// Split from nav so highlight changes don't re-render the items map, and items
+// mutations don't re-render every CommandItem row.
+type CommandListItemsContextValue = {
+  items: CommandItemData[];
+  state: CommandListState;
+};
+
+const CommandListItemsContext =
+  createContext<CommandListItemsContextValue | null>(null);
 
 const useResolvedItems = (
   itemsProp: ComposerCommandsItems,
@@ -2358,19 +2284,20 @@ const ComposerCommandList = ({
   className,
   children,
 }: ComposerCommandListProps) => {
-  const { commands, tools, attachments } = useComposer();
+  const { tools, attachments } = useComposer();
   const internals = useComposerInternals();
+  const { commandListStore } = internals;
+
+  const isActive = useCommandListSnapshot(
+    (s) => s.isOpen && s.trigger === prefix,
+  );
+  const query = useCommandListSnapshot((s) => s.query);
 
   const config = internals.commands[prefix];
-  const isActive = commands.open && commands.currentPrefix === prefix;
   const itemsProp = config?.items ?? EMPTY_ITEMS;
   const kind = config?.kind ?? "execute";
 
-  const { items, state } = useResolvedItems(
-    itemsProp,
-    commands.query,
-    isActive,
-  );
+  const { items, state } = useResolvedItems(itemsProp, query, isActive);
 
   const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
 
@@ -2451,10 +2378,10 @@ const ComposerCommandList = ({
   );
 
   if (isActive) {
-    commands.selectRef.current = highlightedValue
+    commandListStore.selectRef.current = highlightedValue
       ? () => selectByValue(highlightedValue)
       : null;
-    commands.navigateRef.current = (direction: number) => {
+    commandListStore.navigateRef.current = (direction: number) => {
       const next = computeNextHighlight(
         items,
         highlightedValue,
@@ -2466,30 +2393,35 @@ const ComposerCommandList = ({
 
   const navContext = useMemo<CommandListNavContextValue>(
     () => ({
-      items,
-      state,
       highlightedValue,
       setHighlightedValue,
       selectByValue,
     }),
-    [items, state, highlightedValue, selectByValue],
+    [highlightedValue, selectByValue],
+  );
+
+  const itemsContext = useMemo<CommandListItemsContextValue>(
+    () => ({ items, state }),
+    [items, state],
   );
 
   if (!isActive) return null;
 
   return (
-    <CommandListNavContext.Provider value={navContext}>
-      <div
-        data-slot="composer-command-list"
-        data-state={state}
-        className={cn(
-          "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1",
-          className,
-        )}
-      >
-        {children}
-      </div>
-    </CommandListNavContext.Provider>
+    <CommandListItemsContext.Provider value={itemsContext}>
+      <CommandListNavContext.Provider value={navContext}>
+        <div
+          data-slot="composer-command-list"
+          data-state={state}
+          className={cn(
+            "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1",
+            className,
+          )}
+        >
+          {children}
+        </div>
+      </CommandListNavContext.Provider>
+    </CommandListItemsContext.Provider>
   );
 };
 
@@ -2497,27 +2429,28 @@ const ComposerCommandList = ({
 // Composer.CommandItems / CommandLoading / CommandEmpty
 // ---------------------------------------------------------------------------
 
-const useCommandListNav = (caller: string): CommandListNavContextValue => {
-  const navContext = useContext(CommandListNavContext);
-  if (!navContext) {
+const useCommandListItems = <
+  Item extends CommandItemData = CommandItemData,
+>(): { items: Item[]; state: CommandListState } => {
+  const context = useContext(CommandListItemsContext);
+  if (!context) {
     throw new Error(
-      `<${caller}> must be rendered inside <Composer.CommandList>.`,
+      "<Composer.CommandItems> must be rendered inside <Composer.CommandList>.",
     );
   }
-  return navContext;
+  return context as { items: Item[]; state: CommandListState };
 };
 
-type ComposerCommandItemsProps<TItem extends CommandItemData> = {
+type ComposerCommandItemsProps<Item extends CommandItemData> = {
   className?: string;
-  children: (item: TItem) => ReactNode;
+  children: (item: Item) => ReactNode;
 };
 
-const ComposerCommandItems = <TItem extends CommandItemData>({
+const ComposerCommandItems = <Item extends CommandItemData>({
   className,
   children: renderItem,
-}: ComposerCommandItemsProps<TItem>): ReactNode => {
-  const nav = useCommandListNav("Composer.CommandItems");
-  const items = nav.items as TItem[];
+}: ComposerCommandItemsProps<Item>): ReactNode => {
+  const { items } = useCommandListItems<Item>();
 
   return (
     <div
@@ -2673,15 +2606,15 @@ const ComposerCommandGroupLabel = ({
   </div>
 );
 
-type ComposerCommandCollectionProps<TItem> = {
-  items: TItem[];
-  children: (item: TItem) => ReactNode;
+type ComposerCommandCollectionProps<Item> = {
+  items: Item[];
+  children: (item: Item) => ReactNode;
 };
 
-const ComposerCommandCollection = <TItem,>({
+const ComposerCommandCollection = <Item,>({
   items,
   children: renderItem,
-}: ComposerCommandCollectionProps<TItem>): ReactNode => (
+}: ComposerCommandCollectionProps<Item>): ReactNode => (
   <>
     {items.map((item, index) => (
       <Fragment
@@ -2740,56 +2673,56 @@ const ComposerCommands = ({ className }: ComposerCommandsProps) => {
 };
 
 // ---------------------------------------------------------------------------
-// Composer.Questions (with sub-Parts) — default render for the questionnaire
+// Composer.AskUser (with sub-Parts) — default render for the ask-user flow
 // registered via the `questions` prop on Composer Root.
 // ---------------------------------------------------------------------------
 
-const ComposerQuestionsRoot = () => {
-  const { questionnaire } = useComposer();
+const ComposerAskUser = () => {
+  const { askUser } = useComposer();
 
-  const question = questionnaire.questions?.[questionnaire.step] ?? null;
+  const question = askUser.questions?.[askUser.step] ?? null;
   const lastQuestionRef = useRef(question);
   if (question) lastQuestionRef.current = question;
   const display = question ?? lastQuestionRef.current;
 
   if (!display) return null;
 
-  const entry = questionnaire.answers.get(questionnaire.step) ?? {
+  const entry = askUser.answers.get(askUser.step) ?? {
     selected: new Set<string>(),
     freeText: "",
   };
 
-  const totalQuestions = questionnaire.questions?.length ?? 0;
+  const totalQuestions = askUser.questions?.length ?? 0;
 
   return (
     <AskUser>
       <AskUser.Header>
         <AskUser.Label>{display.question}</AskUser.Label>
-        {!questionnaire.isSingle && totalQuestions > 1 && (
+        {!askUser.isSingle && totalQuestions > 1 && (
           <AskUser.Navigation>
             <AskUser.Previous
-              onClick={questionnaire.goBack}
-              disabled={questionnaire.step === 0}
+              onClick={askUser.goBack}
+              disabled={askUser.step === 0}
             />
             <AskUser.StepLabel
-              current={questionnaire.step + 1}
+              current={askUser.step + 1}
               total={totalQuestions}
             />
             <AskUser.Next
-              onClick={questionnaire.goNext}
-              disabled={questionnaire.step === totalQuestions - 1}
+              onClick={askUser.goNext}
+              disabled={askUser.step === totalQuestions - 1}
             />
           </AskUser.Navigation>
         )}
       </AskUser.Header>
       {display.options && (
         <AskUser.Options
-          ref={questionnaire.optionsRef}
+          ref={askUser.optionsRef}
           multiSelect={!!display.multiSelect}
-          groupName={`q-${questionnaire.step}`}
+          groupName={`q-${askUser.step}`}
           value={[...entry.selected][0] ?? ""}
           onValueChange={(value) =>
-            questionnaire.toggleOption(questionnaire.step, value, false)
+            askUser.toggleOption(askUser.step, value, false)
           }
         >
           {display.options.map((option) => (
@@ -2798,8 +2731,8 @@ const ComposerQuestionsRoot = () => {
               value={option.label}
               selected={entry.selected.has(option.label)}
               onSelect={() =>
-                questionnaire.toggleOption(
-                  questionnaire.step,
+                askUser.toggleOption(
+                  askUser.step,
                   option.label,
                   !!display.multiSelect,
                 )
@@ -2822,12 +2755,12 @@ const ComposerQuestionsRoot = () => {
   );
 };
 
-const ComposerQuestionsHints = ({
+const ComposerAskUserHints = ({
   className,
   ...props
 }: ComponentProps<typeof AskUser.Hints>) => {
-  const { questionnaire } = useComposer();
-  const totalQuestions = questionnaire.questions?.length ?? 0;
+  const { askUser } = useComposer();
+  const totalQuestions = askUser.questions?.length ?? 0;
 
   return (
     <AskUser.Hints className={cn("flex-1", className)} {...props}>
@@ -2838,7 +2771,7 @@ const ComposerQuestionsHints = ({
       <span className="inline-flex items-center gap-1">
         <Kbd size="sm">↵</Kbd> select
       </span>
-      {!questionnaire.isSingle && totalQuestions > 1 && (
+      {!askUser.isSingle && totalQuestions > 1 && (
         <span className="inline-flex items-center gap-1">
           <Kbd size="sm">←</Kbd>
           <Kbd size="sm">→</Kbd> between questions
@@ -2851,20 +2784,20 @@ const ComposerQuestionsHints = ({
   );
 };
 
-type ComposerQuestionsDismissProps = ComponentProps<typeof Button>;
+type ComposerAskUserDismissProps = ComponentProps<typeof Button>;
 
-const ComposerQuestionsDismiss = ({
+const ComposerAskUserDismiss = ({
   className,
   ...props
-}: ComposerQuestionsDismissProps) => {
-  const { questionnaire } = useComposer();
+}: ComposerAskUserDismissProps) => {
+  const { askUser } = useComposer();
   return (
     <Button
       type="button"
       variant="ghost"
-      data-slot="composer-questions-dismiss"
+      data-slot="composer-ask-user-dismiss"
       className={cn("gap-2", className)}
-      onClick={questionnaire.dismissStep}
+      onClick={askUser.dismissStep}
       {...props}
     >
       Dismiss
@@ -2873,22 +2806,22 @@ const ComposerQuestionsDismiss = ({
   );
 };
 
-type ComposerQuestionsContinueProps = ComponentProps<typeof Button>;
+type ComposerAskUserContinueProps = ComponentProps<typeof Button>;
 
-const ComposerQuestionsContinue = ({
+const ComposerAskUserContinue = ({
   className,
   ...props
-}: ComposerQuestionsContinueProps) => {
-  const { questionnaire } = useComposer();
+}: ComposerAskUserContinueProps) => {
+  const { askUser } = useComposer();
   return (
     <Button
       type="submit"
       variant="tertiary"
-      data-slot="composer-questions-continue"
+      data-slot="composer-ask-user-continue"
       className={cn("gap-2", className)}
       {...props}
     >
-      {questionnaire.isLastStep ? "Submit" : "Continue"}
+      {askUser.isLastStep ? "Submit" : "Continue"}
       <Kbd size="sm">↵</Kbd>
     </Button>
   );
@@ -2909,10 +2842,10 @@ export const Composer = Object.assign(ComposerRoot, {
   Panel: ComposerPanel,
   PanelItem: ComposerPanelItem,
   Textarea: ComposerTextarea,
-  Questions: ComposerQuestionsRoot,
-  Hints: ComposerQuestionsHints,
-  Dismiss: ComposerQuestionsDismiss,
-  Continue: ComposerQuestionsContinue,
+  AskUser: ComposerAskUser,
+  AskUserHints: ComposerAskUserHints,
+  AskUserDismiss: ComposerAskUserDismiss,
+  AskUserContinue: ComposerAskUserContinue,
   Commands: ComposerCommands,
   CommandList: ComposerCommandList,
   CommandItems: ComposerCommandItems,

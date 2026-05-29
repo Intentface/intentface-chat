@@ -13,7 +13,7 @@ import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
-import { parseChipSegments } from "@/lib/ai/chip-syntax";
+import { parseChipSegments } from "@/lib/ai/chip-markdown";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";

@@ -29,6 +29,14 @@
         "useKeyWithClickEvents": "off",
         "useSemanticElements": "off"
       },
+      "correctness": {
+        "useExhaustiveDependencies": {
+          "level": "error",
+          "options": {
+            "hooks": [{ "name": "useAsRef", "stableResult": true }]
+          }
+        }
+      },
       "performance": {
         "noImgElement": "off"
       },

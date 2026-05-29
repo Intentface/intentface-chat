@@ -607,7 +607,7 @@ const ChatInput = () => {
           </StepQueue>
         </Composer.PanelItem>
         <Composer.PanelItem value="ask-user">
-          <Composer.Questions />
+          <Composer.AskUser />
         </Composer.PanelItem>
       </Composer.Panel>
 
@@ -639,9 +639,9 @@ const ChatInput = () => {
         </Composer.Textarea>
         {isAskUser ? (
           <Composer.Actions className="flex items-center justify-end">
-            <Composer.Hints />
-            <Composer.Dismiss />
-            <Composer.Continue />
+            <Composer.AskUserHints />
+            <Composer.AskUserDismiss />
+            <Composer.AskUserContinue />
           </Composer.Actions>
         ) : (
           <Composer.Actions className="flex items-center justify-between">

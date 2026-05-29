@@ -23,12 +23,10 @@ import {
   Fragment,
   isValidElement,
   type ReactNode,
-  type Ref,
   type RefObject,
   useCallback,
   useContext,
   useEffect,
-  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -62,6 +60,10 @@ import {
   encodeChipMarkdown,
   parseChipSegments,
 } from "@/lib/ai/chip-markdown";
+import {
+  composerController,
+  registerComposerController,
+} from "@/lib/ai/composer-controller";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 
@@ -120,16 +122,6 @@ export type CommandItemData = {
 export type ComposerSnapshot = {
   readonly __pmDoc: object;
   readonly __brand: "ComposerSnapshot";
-};
-
-export type ComposerHandle = {
-  focus: () => void;
-  blur: () => void;
-  clear: () => void;
-  insertText: (text: string) => void;
-  insertChip: (chip: ChipData) => void;
-  getSnapshot: () => ComposerSnapshot;
-  setSnapshot: (snapshot: ComposerSnapshot) => void;
 };
 
 export type ComposerMessageSubmit = {
@@ -578,11 +570,6 @@ const createDragHandlers = (callbacks: {
 // ---------------------------------------------------------------------------
 // Pure helpers — snapshot
 // ---------------------------------------------------------------------------
-
-const EMPTY_SNAPSHOT: ComposerSnapshot = {
-  __pmDoc: { type: "doc", content: [{ type: "paragraph" }] },
-  __brand: "ComposerSnapshot",
-} as ComposerSnapshot;
 
 const snapshotFromEditor = (editor: Editor): ComposerSnapshot =>
   ({
@@ -1317,7 +1304,10 @@ const useComposerSnapshot = ({
 
 const EMPTY_COMMANDS: ComposerCommandsMap = {};
 
-export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
+export type ComposerRootProps = Omit<
+  ComponentProps<"form">,
+  "onSubmit" | "ref"
+> & {
   onSubmit?: (data: ComposerSubmitData) => void | Promise<void>;
   isSubmitting?: boolean;
   commands?: ComposerCommandsMap;
@@ -1328,7 +1318,6 @@ export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
-  ref?: Ref<ComposerHandle>;
 };
 
 const ComposerRoot = ({
@@ -1344,7 +1333,6 @@ const ComposerRoot = ({
   defaultValue,
   value,
   onValueChange,
-  ref,
   ...formProps
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
@@ -1496,34 +1484,8 @@ const ComposerRoot = ({
     });
   };
 
-  useImperativeHandle(
-    ref,
-    (): ComposerHandle => ({
-      focus: () => editorRef.current?.commands.focus(),
-      blur: () => editorRef.current?.commands.blur(),
-      clear: () => {
-        editorRef.current?.commands.setContent("");
-        setEditorHasContent(false);
-      },
-      insertText: (text) => {
-        editorRef.current?.commands.insertContent(text);
-      },
-      insertChip: (chip) => {
-        editorRef.current?.commands.insertContent({
-          type: "mentionChip",
-          attrs: chip,
-        });
-      },
-      getSnapshot: () => {
-        const editor = editorRef.current;
-        return editor ? snapshotFromEditor(editor) : EMPTY_SNAPSHOT;
-      },
-      setSnapshot: (snapshot) => {
-        editorRef.current?.commands.setContent(snapshot.__pmDoc as never);
-      },
-    }),
-    [],
-  );
+  // Mount-only registration into the shared controller (cleanup on unmount).
+  useLayoutEffect(() => registerComposerController(editorRef), []);
 
   const editorState = useMemo(
     () => ({
@@ -2344,22 +2306,7 @@ const ComposerCommandList = ({
           .deleteRange({ from: triggerStartPosition, to: cursorPosition })
           .run();
         const onSelectContext: PrefixOnSelectContext = {
-          editor: {
-            focus: () => editor.commands.focus(),
-            blur: () => editor.commands.blur(),
-            clear: () => {
-              editor.commands.setContent("");
-            },
-            insertText: (text) => {
-              editor.commands.insertContent(text);
-            },
-            insertChip: (chip) => {
-              editor.commands.insertContent({
-                type: "mentionChip",
-                attrs: chip,
-              });
-            },
-          },
+          editor: composerController,
           tools,
           attachments: {
             add: attachments.add,

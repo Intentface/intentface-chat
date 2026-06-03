@@ -990,6 +990,7 @@ type ComposerState = {
   // hasContent flag: const textarea = useComposer((c) => c.textarea)
   textarea: ComposerEditorState & { hasContent: boolean };
   isSubmitting: boolean;
+  isPanelOpen: boolean;
   attachments: ComposerAttachmentsState;
   askUser: ComposerAskUserState;
 };
@@ -1008,6 +1009,7 @@ type ComposerStore = {
   // Bridges for props and editor/document integrations — not consumer API.
   setHasContent: (value: boolean) => void;
   setIsSubmitting: (value: boolean) => void;
+  setPanelOpen: (value: boolean) => void;
   setQuestions: (questions: AskUserQuestion[] | null) => void;
   setDragging: (active: boolean) => void;
   resetAttachments: () => void;
@@ -1053,6 +1055,12 @@ const createComposerStore = (): ComposerStore => {
   const setIsSubmitting = (value: boolean) => {
     if (snapshot.isSubmitting === value) return;
     snapshot = { ...snapshot, isSubmitting: value };
+    notify();
+  };
+
+  const setPanelOpen = (value: boolean) => {
+    if (snapshot.isPanelOpen === value) return;
+    snapshot = { ...snapshot, isPanelOpen: value };
     notify();
   };
 
@@ -1195,6 +1203,7 @@ const createComposerStore = (): ComposerStore => {
   snapshot = {
     textarea: { ...composerController, hasContent: false },
     isSubmitting: false,
+    isPanelOpen: false,
     attachments: {
       items: attachmentState.items,
       error: attachmentState.error,
@@ -1247,6 +1256,7 @@ const createComposerStore = (): ComposerStore => {
     getSnapshot: () => snapshot,
     setHasContent,
     setIsSubmitting,
+    setPanelOpen,
     setQuestions,
     setDragging,
     resetAttachments: () => dispatchAttachments({ type: "reset" }),
@@ -2024,7 +2034,10 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
 type ComposerContextWindowProps = ComponentProps<"div">;
 
 const ComposerContextWindow = ({ className, children, ...props }: ComposerContextWindowProps) => {
+  const isPanelOpen = useComposer((composer) => composer.isPanelOpen);
   const hasContent = Children.toArray(children).length > 0;
+  // Yield to an open panel — the strip slides back out once it closes.
+  const isVisible = hasContent && !isPanelOpen;
   return (
     <div
       data-slot="composer-context-window"
@@ -2036,7 +2049,7 @@ const ComposerContextWindow = ({ className, children, ...props }: ComposerContex
         // Open: 32px visible band peeking above the container plus 16px
         // submerged beneath it (negative margin pulls the container up over
         // the bottom-padded zone).
-        hasContent ? "h-12 pb-4 -mb-4 opacity-100" : "h-0 opacity-0",
+        isVisible ? "h-12 pb-4 -mb-4 opacity-100" : "h-0 opacity-0",
         className,
       )}
       {...props}
@@ -2101,6 +2114,13 @@ const ComposerPanel = ({ children, className, value, ...props }: ComposerPanelPr
       )
     : null;
   const hasMatch = matchedChild != null;
+
+  // Mirror panel visibility into the store so sibling parts (the context
+  // window) can yield while a panel is open.
+  useEffect(() => {
+    composerStore.setPanelOpen(hasMatch);
+    return () => composerStore.setPanelOpen(false);
+  }, [hasMatch]);
 
   return (
     <div

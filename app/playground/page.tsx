@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleDotIcon, Loader } from "lucide-react";
+import { CircleDotIcon, Loader, TextQuoteIcon, XIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { type CommandItemData, Composer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
@@ -151,6 +151,9 @@ export default function ComponentsPlayground() {
     "idle" | "active" | "ask-user" | "ask-user-multi"
   >("idle");
   const [composerSteps, setComposerSteps] = useState(stepLabels.slice(0, 1));
+  // Independent of the panel states — the context window can be visible at
+  // the same time as any panel.
+  const [showContextWindow, setShowContextWindow] = useState(false);
   const { model, setModel } = useModelStore();
 
   const [toolValues, setToolValues] = useState<Record<string, boolean>>({});
@@ -232,6 +235,17 @@ export default function ComponentsPlayground() {
                       : "Ask Multi"}
               </button>
             ))}
+            <div className="h-4 w-px bg-primary-border" />
+            <button
+              type="button"
+              onClick={() => setShowContextWindow((previous) => !previous)}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs border border-primary-border bg-primary text-ink-secondary hover:bg-primary-hover font-medium transition-colors",
+                showContextWindow && "bg-primary-active text-slate-1",
+              )}
+            >
+              Context
+            </button>
           </div>
         </div>
         <div className="flex min-h-[448px] items-end rounded-lg border border-secondary-border bg-secondary p-4">
@@ -283,6 +297,22 @@ export default function ComponentsPlayground() {
               </Composer.PanelItem>
             </Composer.Panel>
 
+            <Composer.ContextWindow>
+              {showContextWindow && (
+                <div className="flex items-center gap-1.5 text-ink-secondary">
+                  <TextQuoteIcon className="size-3.5" />
+                  <span>2 selections</span>
+                  <button
+                    type="button"
+                    aria-label="Clear selections"
+                    className="cursor-pointer rounded-full p-0.5 hover:bg-primary-hover hover:text-ink-primary"
+                    onClick={() => setShowContextWindow(false)}
+                  >
+                    <XIcon className="size-3" />
+                  </button>
+                </div>
+              )}
+            </Composer.ContextWindow>
             <Composer.Container>
               <Composer.Attachments />
               <Composer.Textarea>

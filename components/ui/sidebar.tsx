@@ -83,10 +83,7 @@ const SidebarProvider = ({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
-      ) {
+      if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         toggleSidebar();
       }
@@ -115,10 +112,7 @@ const SidebarProvider = ({
     <SidebarContext.Provider value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
-        className={cn(
-          "group/sidebar-wrapper flex min-h-svh w-full bg-base",
-          className,
-        )}
+        className={cn("group/sidebar-wrapper flex min-h-svh w-full bg-base", className)}
         data-state={state}
         {...props}
       >
@@ -182,9 +176,7 @@ const SidebarRoot = ({
       >
         <div
           data-sidebar="sidebar"
-          className={cn(
-            "bg-sidebar flex h-full w-full flex-col py-2 pl-2 gap-2",
-          )}
+          className={cn("bg-sidebar flex h-full w-full flex-col py-2 pl-2 gap-2")}
         >
           {children}
         </div>
@@ -193,11 +185,7 @@ const SidebarRoot = ({
   );
 };
 
-const SidebarTrigger = ({
-  className,
-  onClick,
-  ...props
-}: ComponentProps<"button">) => {
+const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button">) => {
   const { toggleSidebar } = useSidebar();
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -243,11 +231,7 @@ const SidebarRail = ({ className, ...props }: ComponentProps<"button">) => {
   );
 };
 
-const SidebarInset = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"main">) => {
+const SidebarInset = ({ className, children, ...props }: ComponentProps<"main">) => {
   const { state } = useSidebar();
 
   return (
@@ -266,11 +250,7 @@ const SidebarInset = ({
   );
 };
 
-const SidebarViewport = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
+const SidebarViewport = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="sidebar-viewport"
     className={cn(
@@ -284,10 +264,7 @@ const SidebarViewport = ({
   </div>
 );
 
-const SidebarInput = ({
-  className,
-  ...props
-}: ComponentProps<typeof Input>) => {
+const SidebarInput = ({ className, ...props }: ComponentProps<typeof Input>) => {
   return (
     <Input
       data-slot="sidebar-input"
@@ -323,10 +300,7 @@ const SidebarFooter = ({ className, ...props }: ComponentProps<"div">) => {
   );
 };
 
-const SidebarSeparator = ({
-  className,
-  ...props
-}: ComponentProps<typeof Separator>) => {
+const SidebarSeparator = ({ className, ...props }: ComponentProps<typeof Separator>) => {
   return (
     <Separator
       data-slot="sidebar-separator"
@@ -342,10 +316,7 @@ const SidebarContent = ({ className, ...props }: ComponentProps<"div">) => {
     <div
       data-slot="sidebar-content"
       data-sidebar="content"
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-2 overflow-auto",
-        className,
-      )}
+      className={cn("flex min-h-0 flex-1 flex-col gap-2 overflow-auto", className)}
       {...props}
     />
   );
@@ -362,11 +333,7 @@ const SidebarGroup = ({ className, ...props }: ComponentProps<"div">) => {
   );
 };
 
-const SidebarGroupLabel = ({
-  className,
-  render,
-  ...props
-}: useRender.ComponentProps<"div">) => {
+const SidebarGroupLabel = ({ className, render, ...props }: useRender.ComponentProps<"div">) => {
   return useRender({
     render,
     defaultTagName: "div",
@@ -404,10 +371,7 @@ const SidebarGroupAction = ({
   });
 };
 
-const SidebarGroupContent = ({
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const SidebarGroupContent = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="sidebar-group-content"
     data-sidebar="group-content"
@@ -490,8 +454,7 @@ const SidebarMenuButton = ({
     return button;
   }
 
-  const tooltipProps =
-    typeof tooltip === "string" ? { children: tooltip } : tooltip;
+  const tooltipProps = typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
   return (
     <Tooltip>

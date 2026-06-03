@@ -11,12 +11,7 @@ const ThemeOverridesApplier = () => {
 
 export const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <ThemeOverridesApplier />
       <Tooltip.Provider>{children}</Tooltip.Provider>
     </ThemeProvider>

@@ -34,10 +34,7 @@ const getStoredMessages = (chatId: string): AppUIMessage[] => {
 const setStoredMessages = (chatId: string, messages: AppUIMessage[]): void => {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(
-      `${MESSAGE_KEY_PREFIX}${chatId}`,
-      JSON.stringify(messages),
-    );
+    localStorage.setItem(`${MESSAGE_KEY_PREFIX}${chatId}`, JSON.stringify(messages));
   } catch {
     // Silent fail on quota exceeded
   }
@@ -66,9 +63,7 @@ export const useChatStore = create<ChatStore>()(
       },
       updateChatTimestamp: (id) =>
         set({
-          chats: get().chats.map((c) =>
-            c.id === id ? { ...c, updatedAt: Date.now() } : c,
-          ),
+          chats: get().chats.map((c) => (c.id === id ? { ...c, updatedAt: Date.now() } : c)),
         }),
       getMessages: getStoredMessages,
       setMessages: setStoredMessages,

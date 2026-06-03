@@ -20,20 +20,18 @@ import {
   Children,
   type ComponentProps,
   createContext,
-  type Dispatch,
   Fragment,
   isValidElement,
   type ReactNode,
-  type Ref,
   type RefObject,
-  type SetStateAction,
   useCallback,
   useContext,
   useEffect,
-  useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { AskUser, type AskUserOptionsHandle } from "@/components/ai/ask-user";
 import {
@@ -57,7 +55,11 @@ import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
-import { escapeMarkdownLink, parseChipSegments } from "@/lib/ai/chip-syntax";
+import {
+  chipSegmentsToParagraphJSON,
+  encodeChipMarkdown,
+  parseChipSegments,
+} from "@/lib/ai/chip-markdown";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
 
@@ -85,12 +87,6 @@ export type ComposerEditorHandle = {
   insertChip: (chip: ChipData) => void;
 };
 
-export type ToolsApi = {
-  values: Record<string, boolean>;
-  set: (name: string, value: boolean) => void;
-  toggle: (name: string) => void;
-};
-
 export type AttachmentsApi = {
   add: (files: File[] | FileList) => void;
   remove: (id: string) => void;
@@ -99,7 +95,6 @@ export type AttachmentsApi = {
 
 export type PrefixOnSelectContext = {
   editor: ComposerEditorHandle;
-  tools: ToolsApi;
   attachments: AttachmentsApi;
 };
 
@@ -118,22 +113,11 @@ export type ComposerSnapshot = {
   readonly __brand: "ComposerSnapshot";
 };
 
-export type ComposerHandle = {
-  focus: () => void;
-  blur: () => void;
-  clear: () => void;
-  insertText: (text: string) => void;
-  insertChip: (chip: ChipData) => void;
-  getSnapshot: () => ComposerSnapshot;
-  setSnapshot: (snapshot: ComposerSnapshot) => void;
-};
-
 export type ComposerMessageSubmit = {
   kind: "message";
   text: string;
   files: FileUIPart[];
   chips: ChipData[];
-  tools: Record<string, boolean>;
 };
 
 export type ComposerAnswerEntry =
@@ -149,17 +133,210 @@ export type ComposerAnswersSubmit = {
 
 export type ComposerSubmitData = ComposerMessageSubmit | ComposerAnswersSubmit;
 
+export type ComposerCommandsItems =
+  | CommandItemData[]
+  | ((
+      query: string,
+      options: { signal: AbortSignal },
+    ) => CommandItemData[] | Promise<CommandItemData[]>);
+
 export type ComposerCommandsConfig = {
   kind: CommandItemKind;
   trigger: TriggerRule;
-  items: CommandItemData[];
-  filter?: ((item: CommandItemData, query: string) => number) | null;
+  items: ComposerCommandsItems;
 };
 
 export type ComposerCommandsMap = Record<string, ComposerCommandsConfig>;
 
+// ===========================================================================
+// Internal engine
+//
+// Everything from here to the Context section is the Composer's own logic —
+// document (de)serialization, the editor controller, the command-list plugin,
+// keyboard interpreters, and the ask-user / attachment state machines. It is
+// inlined (rather than split into modules) so the component ships as a single
+// copy-paste file. None of it is part of the public API.
+// ===========================================================================
+
 // ---------------------------------------------------------------------------
-// Pure helpers — fuzzy filtering
+// Document — conversions between the live TipTap editor and the wire formats:
+// the opaque snapshot (ProseMirror JSON) and the {text, chips} submit payload.
+// ---------------------------------------------------------------------------
+
+const snapshotFromEditor = (editor: Editor): ComposerSnapshot =>
+  ({
+    __pmDoc: editor.getJSON(),
+    __brand: "ComposerSnapshot",
+  }) as ComposerSnapshot;
+
+const applySnapshotToEditor = (editor: Editor, snapshot: ComposerSnapshot): void => {
+  editor.commands.setContent(snapshot.__pmDoc as never);
+};
+
+const serializeEditorContent = (editor: Editor): { text: string; chips: ChipData[] } => {
+  const chipsByKey = new Map<string, ChipData>();
+  const blocks: string[] = [];
+
+  editor.state.doc.forEach((block) => {
+    if (block.type.name !== "paragraph") return;
+    let inline = "";
+    block.forEach((child) => {
+      if (child.isText) {
+        inline += child.text ?? "";
+        return;
+      }
+      if (child.type.name !== "mentionChip") return;
+      const attrs = child.attrs as {
+        prefix?: string;
+        value?: string;
+        label?: string;
+        icon?: ChipIconKey | null;
+        variant?: ChipVariant | null;
+      };
+      const prefix = attrs.prefix ?? "";
+      const value = attrs.value ?? "";
+      const label = attrs.label ?? "";
+      inline += encodeChipMarkdown(prefix, value, label);
+      const key = `${prefix}:${value}`;
+      if (!chipsByKey.has(key)) {
+        chipsByKey.set(key, {
+          prefix,
+          value,
+          label,
+          ...(attrs.icon ? { icon: attrs.icon } : {}),
+          ...(attrs.variant ? { variant: attrs.variant } : {}),
+        });
+      }
+    });
+    blocks.push(inline);
+  });
+
+  return { text: blocks.join("\n"), chips: [...chipsByKey.values()] };
+};
+
+// ---------------------------------------------------------------------------
+// Editor controller — a single registered editor instance (one Composer per
+// page) behind a null-safe port, so callers can drive the editor from anywhere
+// inside or outside the tree.
+// ---------------------------------------------------------------------------
+
+let activeEditor: Editor | null = null;
+
+// Registered by ComposerTextarea when the editor mounts; returns the
+// unregister cleanup (called on unmount).
+const registerComposerController = (instance: Editor) => {
+  activeEditor = instance;
+  return () => {
+    if (activeEditor === instance) activeEditor = null;
+  };
+};
+
+// The single ComposerEditorHandle implementation plus the read/serialize
+// operations internal callers need. Exported so modules outside
+// the <Composer> tree (e.g. thread message actions) can drive the editor;
+// inside the tree it is also reachable as the `textarea` slice on useComposer.
+export type ComposerEditorState = ComposerEditorHandle & {
+  getText: () => string;
+  setText: (text: string) => void;
+  serialize: () => { text: string; chips: ChipData[] };
+  ensureFocus: () => void;
+};
+
+export const composerController: ComposerEditorState = {
+  focus: () => activeEditor?.commands.focus(),
+  blur: () => activeEditor?.commands.blur(),
+  clear: () => activeEditor?.commands.setContent(""),
+  insertText: (text) => activeEditor?.commands.insertContent(text),
+  insertChip: (chip) => activeEditor?.commands.insertContent({ type: "mentionChip", attrs: chip }),
+  getText: () => activeEditor?.getText() ?? "",
+  setText: (text) => activeEditor?.commands.setContent(text),
+  serialize: () => (activeEditor ? serializeEditorContent(activeEditor) : { text: "", chips: [] }),
+  ensureFocus: () => {
+    if (activeEditor && !activeEditor.isFocused) activeEditor.commands.focus();
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Command list — prefix trigger detection
+// ---------------------------------------------------------------------------
+
+type RegisteredPrefix = {
+  prefix: string;
+  triggerRule: TriggerRule;
+};
+
+type CommandListPluginState = {
+  isOpen: boolean;
+  trigger: string | null;
+  query: string;
+  triggerStartPosition: number;
+};
+
+const CLOSED_COMMAND_STATE: CommandListPluginState = {
+  isOpen: false,
+  trigger: null,
+  query: "",
+  triggerStartPosition: 0,
+};
+
+const escapeRegex = (input: string) => input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const detectActivePrefix = (args: {
+  registered: RegisteredPrefix[];
+  blockStart: number;
+  cursorPosition: number;
+  textBeforeCursor: string;
+  fullDocText: string;
+}): CommandListPluginState => {
+  const { registered, blockStart, cursorPosition, textBeforeCursor, fullDocText } = args;
+
+  for (const entry of registered) {
+    if (entry.triggerRule === "doc-start") {
+      if (fullDocText.startsWith(entry.prefix)) {
+        return {
+          isOpen: true,
+          trigger: entry.prefix,
+          query: fullDocText.slice(entry.prefix.length),
+          triggerStartPosition: blockStart,
+        };
+      }
+      continue;
+    }
+
+    const escaped = escapeRegex(entry.prefix);
+    const pattern = new RegExp(`(^|[\\s])${escaped}([^\\s]*)$`);
+    const match = textBeforeCursor.match(pattern);
+    if (match) {
+      const query = match[2];
+      const triggerStartPosition = cursorPosition - query.length - entry.prefix.length;
+      return {
+        isOpen: true,
+        trigger: entry.prefix,
+        query,
+        triggerStartPosition,
+      };
+    }
+  }
+
+  return CLOSED_COMMAND_STATE;
+};
+
+const computeNextHighlight = (
+  rows: Array<{ value: string }>,
+  current: string | null,
+  direction: 1 | -1,
+): string | null => {
+  if (rows.length === 0) return null;
+  const currentIndex = current === null ? -1 : rows.findIndex((row) => row.value === current);
+  const nextIndex =
+    currentIndex === -1 ? 0 : (currentIndex + direction + rows.length) % rows.length;
+  return rows[nextIndex].value;
+};
+
+// ---------------------------------------------------------------------------
+// Command list — fuzzy filtering. A prefix match wins outright (2); otherwise
+// every matched character scores, with bonuses for adjacency and word-boundary
+// hits, normalized by query length. Returns 0 when the query can't be matched.
 // ---------------------------------------------------------------------------
 
 const fuzzyScore = (query: string, target: string): number => {
@@ -190,160 +367,187 @@ const fuzzyScore = (query: string, target: string): number => {
   return queryIndex === lowerQuery.length ? score / lowerQuery.length : 0;
 };
 
-const defaultItemFilter = (item: unknown, query: string): number => {
-  if (!query) return 1;
-  if (item == null || typeof item !== "object") return 0;
-  const record = item as { label?: string; value?: string; keywords?: string };
-  const label = record.label ?? record.value ?? "";
-  const keywords = record.keywords ?? "";
-  const target = `${label} ${keywords}`.trim();
-  return fuzzyScore(query, target);
-};
-
-const filterCommandItems = <TItem,>(
-  items: TItem[],
-  query: string,
-  filter: ((item: TItem, query: string) => number) | null | undefined,
-): TItem[] => {
-  if (filter === null) return items;
+const filterArrayItems = (items: CommandItemData[], query: string): CommandItemData[] => {
   if (!query) return items;
-  const score =
-    filter ?? (defaultItemFilter as (i: TItem, q: string) => number);
   return items
-    .map((item) => ({ item, score: score(item, query) }))
-    .filter(({ score: itemScore }) => itemScore > 0)
+    .map((item) => {
+      const target = `${item.label ?? item.value ?? ""} ${item.keywords ?? ""}`.trim();
+      return { item, score: fuzzyScore(query, target) };
+    })
+    .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score)
     .map(({ item }) => item);
 };
 
 // ---------------------------------------------------------------------------
-// Pure helpers — command-list trigger detection
+// Command list — store bridged to React via useSyncExternalStore
 // ---------------------------------------------------------------------------
 
-type RegisteredPrefix = {
-  prefix: string;
-  triggerRule: TriggerRule;
-};
-
-type CommandListPluginState = {
+type CommandListSnapshot = {
   isOpen: boolean;
   trigger: string | null;
   query: string;
-  triggerStartPosition: number;
 };
 
-const CLOSED_COMMAND_STATE: CommandListPluginState = {
-  isOpen: false,
-  trigger: null,
-  query: "",
-  triggerStartPosition: 0,
+type CommandListStore = {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => CommandListSnapshot;
+  setSnapshot: (next: CommandListSnapshot) => void;
+  // Imperative refs co-located with the store; not reactive.
+  selectRef: RefObject<(() => void) | null>;
+  navigateRef: RefObject<((direction: number) => void) | null>;
 };
 
-const escapeRegex = (input: string) =>
-  input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const detectActivePrefix = (args: {
-  registered: RegisteredPrefix[];
-  blockStart: number;
-  cursorPosition: number;
-  textBeforeCursor: string;
-  fullDocText: string;
-}): CommandListPluginState => {
-  const {
-    registered,
-    blockStart,
-    cursorPosition,
-    textBeforeCursor,
-    fullDocText,
-  } = args;
-
-  for (const entry of registered) {
-    if (entry.triggerRule === "doc-start") {
-      if (fullDocText.startsWith(entry.prefix)) {
-        return {
-          isOpen: true,
-          trigger: entry.prefix,
-          query: fullDocText.slice(entry.prefix.length),
-          triggerStartPosition: blockStart,
-        };
-      }
-      continue;
-    }
-
-    const escaped = escapeRegex(entry.prefix);
-    const pattern = new RegExp(`(^|[\\s])${escaped}([^\\s]*)$`);
-    const match = textBeforeCursor.match(pattern);
-    if (match) {
-      const query = match[2];
-      const triggerStartPosition =
-        cursorPosition - query.length - entry.prefix.length;
-      return {
-        isOpen: true,
-        trigger: entry.prefix,
-        query,
-        triggerStartPosition,
+const createCommandListStore = (): CommandListStore => {
+  let snapshot: CommandListSnapshot = {
+    isOpen: false,
+    trigger: null,
+    query: "",
+  };
+  const listeners = new Set<() => void>();
+  return {
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
       };
-    }
-  }
-
-  return CLOSED_COMMAND_STATE;
+    },
+    getSnapshot: () => snapshot,
+    setSnapshot: (next) => {
+      if (
+        snapshot.isOpen === next.isOpen &&
+        snapshot.trigger === next.trigger &&
+        snapshot.query === next.query
+      ) {
+        return;
+      }
+      snapshot = next;
+      for (const listener of listeners) listener();
+    },
+    selectRef: { current: null },
+    navigateRef: { current: null },
+  };
 };
 
 // ---------------------------------------------------------------------------
-// Pure helpers — keyboard interpreters
+// Command list — ProseMirror plugin: prefix detection + active-trigger badge
+// ---------------------------------------------------------------------------
+
+const commandListPluginKey = new PluginKey<CommandListPluginState>("commandList");
+
+const BADGE_CLASSES =
+  "inline-flex items-center h-6 rounded-sm bg-primary-hover border border-transparent px-0.75 leading-[normal]";
+const PLACEHOLDER_CLASSES =
+  "after:content-['Type_to_filter'] after:text-ink-tertiary after:whitespace-nowrap after:pointer-events-none";
+
+const commandFilterDecorations = (
+  state: Parameters<NonNullable<Plugin["props"]["decorations"]>>[0],
+) => {
+  const pluginState = commandListPluginKey.getState(state);
+  if (!pluginState?.isOpen) return DecorationSet.empty;
+  const triggerStart = pluginState.triggerStartPosition;
+  const cursorPosition = state.selection.$from.pos;
+  const classes = pluginState.query ? BADGE_CLASSES : `${BADGE_CLASSES} ${PLACEHOLDER_CLASSES}`;
+  const inline = Decoration.inline(triggerStart, cursorPosition, {
+    class: classes,
+  });
+  return DecorationSet.create(state.doc, [inline]);
+};
+
+const createCommandListPlugin = (getRegisteredPrefixes: () => RegisteredPrefix[]) =>
+  new Plugin<CommandListPluginState>({
+    key: commandListPluginKey,
+    state: {
+      init: () => CLOSED_COMMAND_STATE,
+      apply(transaction, previousState, _oldEditorState, newEditorState) {
+        const meta = transaction.getMeta(commandListPluginKey);
+        if (meta?.close) return CLOSED_COMMAND_STATE;
+        if (!transaction.docChanged && !transaction.selectionSet) {
+          return previousState;
+        }
+
+        const registered = getRegisteredPrefixes();
+        if (registered.length === 0) return CLOSED_COMMAND_STATE;
+
+        const { selection } = newEditorState;
+        const cursorPosition = selection.$from.pos;
+        const blockStart = selection.$from.start();
+        const textBeforeCursor = newEditorState.doc.textBetween(blockStart, cursorPosition, "\n");
+        const fullDocText = newEditorState.doc.textContent;
+
+        return detectActivePrefix({
+          registered,
+          blockStart,
+          cursorPosition,
+          textBeforeCursor,
+          fullDocText,
+        });
+      },
+    },
+    props: { decorations: commandFilterDecorations },
+  });
+
+// ---------------------------------------------------------------------------
+// Keyboard interpreters — translate a raw key event (reduced to plain data)
+// plus surrounding state into a high-level action. No React or DOM access:
+// the component layer decides what a key means here and keeps the how
+// (preventDefault, focus, dispatch) at the call site.
 // ---------------------------------------------------------------------------
 
 type EditorKeyAction =
   | { type: "command-select" }
   | { type: "command-close" }
   | { type: "command-navigate"; direction: 1 | -1 }
-  | { type: "questionnaire-arrow"; direction: 1 | -1 }
+  | { type: "ask-user-arrow"; direction: 1 | -1 }
   | { type: "remove-last-attachment" }
   | { type: "submit-form" }
   | { type: "soft-break" };
 
-const interpretEditorKey = (
-  event: { key: string; shiftKey: boolean },
-  context: {
-    isCommandListOpen: boolean;
-    hasActiveQuestionnaire: boolean;
-    isEditorEmpty: boolean;
-    hasAttachments: boolean;
-  },
-): EditorKeyAction | null => {
-  if (context.isCommandListOpen) {
-    if (event.key === "Tab") return { type: "command-select" };
-    if (event.key === "Escape") return { type: "command-close" };
-    if (event.key === "ArrowUp")
-      return { type: "command-navigate", direction: -1 };
-    if (event.key === "ArrowDown")
-      return { type: "command-navigate", direction: 1 };
-    if (event.key === "Enter" && !event.shiftKey)
-      return { type: "command-select" };
-  }
-
-  if (context.hasActiveQuestionnaire) {
-    if (event.key === "ArrowUp")
-      return { type: "questionnaire-arrow", direction: -1 };
-    if (event.key === "ArrowDown")
-      return { type: "questionnaire-arrow", direction: 1 };
-  }
-
-  if (
-    event.key === "Backspace" &&
-    context.isEditorEmpty &&
-    context.hasAttachments
-  ) {
-    return { type: "remove-last-attachment" };
-  }
-
-  if (event.key === "Enter" && !event.shiftKey) return { type: "submit-form" };
-  if (event.key === "Enter" && event.shiftKey) return { type: "soft-break" };
-
-  return null;
+type EditorKeyContext = {
+  isCommandListOpen: boolean;
+  hasActiveAskUser: boolean;
+  isEditorEmpty: boolean;
+  hasAttachments: boolean;
 };
 
-type QuestionnaireKeyAction =
+const interpretEditorKey = (
+  event: { key: string; shiftKey: boolean },
+  context: EditorKeyContext,
+): EditorKeyAction | null => {
+  const { key, shiftKey } = event;
+  const { isCommandListOpen, hasActiveAskUser } = context;
+
+  switch (true) {
+    case isCommandListOpen && key === "Tab":
+      return { type: "command-select" };
+    case isCommandListOpen && key === "Escape":
+      return { type: "command-close" };
+    case isCommandListOpen && key === "ArrowUp":
+      return { type: "command-navigate", direction: -1 };
+    case isCommandListOpen && key === "ArrowDown":
+      return { type: "command-navigate", direction: 1 };
+    case isCommandListOpen && key === "Enter" && !shiftKey:
+      return { type: "command-select" };
+
+    case hasActiveAskUser && key === "ArrowUp":
+      return { type: "ask-user-arrow", direction: -1 };
+    case hasActiveAskUser && key === "ArrowDown":
+      return { type: "ask-user-arrow", direction: 1 };
+
+    case key === "Backspace" && context.isEditorEmpty && context.hasAttachments:
+      return { type: "remove-last-attachment" };
+
+    case key === "Enter" && !shiftKey:
+      return { type: "submit-form" };
+    case key === "Enter" && shiftKey:
+      return { type: "soft-break" };
+
+    default:
+      return null;
+  }
+};
+
+type AskUserKeyAction =
   | { type: "dismiss-step" }
   | { type: "navigate-options"; direction: 1 | -1 }
   | { type: "select-option" }
@@ -351,56 +555,286 @@ type QuestionnaireKeyAction =
   | { type: "go-next" }
   | { type: "insert-character"; character: string };
 
-const interpretQuestionnaireKey = (
-  event: {
-    key: string;
-    ctrlKey: boolean;
-    metaKey: boolean;
-    altKey: boolean;
-    defaultPrevented: boolean;
-  },
-  context: { hasHighlight: boolean },
-): QuestionnaireKeyAction | null => {
-  if (event.defaultPrevented) return null;
-  if (event.key === "Escape") return { type: "dismiss-step" };
-  if (!context.hasHighlight) return null;
-
-  if (event.key === "ArrowUp")
-    return { type: "navigate-options", direction: -1 };
-  if (event.key === "ArrowDown")
-    return { type: "navigate-options", direction: 1 };
-  if (event.key === "Enter") return { type: "select-option" };
-  if (event.key === "ArrowLeft") return { type: "go-back" };
-  if (event.key === "ArrowRight") return { type: "go-next" };
-
-  if (
-    event.key.length === 1 &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.altKey
-  ) {
-    return { type: "insert-character", character: event.key };
-  }
-  return null;
+type AskUserKeyEvent = {
+  key: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  defaultPrevented: boolean;
 };
 
-const computeNextHighlight = (
-  rows: Array<{ value: string }>,
-  current: string | null,
-  direction: 1 | -1,
-): string | null => {
-  if (rows.length === 0) return null;
-  const currentIndex =
-    current === null ? -1 : rows.findIndex((row) => row.value === current);
-  const nextIndex =
-    currentIndex === -1
-      ? 0
-      : (currentIndex + direction + rows.length) % rows.length;
-  return rows[nextIndex].value;
+const interpretAskUserKey = (
+  event: AskUserKeyEvent,
+  context: { hasHighlight: boolean },
+): AskUserKeyAction | null => {
+  const { key } = event;
+
+  switch (true) {
+    case event.defaultPrevented:
+      return null;
+    case key === "Escape":
+      return { type: "dismiss-step" };
+    case !context.hasHighlight:
+      return null;
+
+    case key === "ArrowUp":
+      return { type: "navigate-options", direction: -1 };
+    case key === "ArrowDown":
+      return { type: "navigate-options", direction: 1 };
+    case key === "Enter":
+      return { type: "select-option" };
+    case key === "ArrowLeft":
+      return { type: "go-back" };
+    case key === "ArrowRight":
+      return { type: "go-next" };
+
+    default: {
+      const isPrintable = key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey;
+      return isPrintable ? { type: "insert-character", character: key } : null;
+    }
+  }
 };
 
 // ---------------------------------------------------------------------------
-// Pure helpers — attachment store
+// Ask-user — pure state machine for the questionnaire flow. State is a current
+// step plus a map of per-step answers; every transition is an immutable map
+// operation, so the hook only owns the useState cell and the focus side effects.
+// ---------------------------------------------------------------------------
+
+type AnswerEntry = {
+  selected: Set<string>;
+  freeText: string;
+};
+
+type AskUserState = {
+  step: number;
+  answers: Map<number, AnswerEntry>;
+};
+
+const INITIAL_ASK_USER_STATE: AskUserState = {
+  step: 0,
+  answers: new Map(),
+};
+
+const emptyEntry = (): AnswerEntry => ({
+  selected: new Set<string>(),
+  freeText: "",
+});
+
+const cloneAnswers = (source: Map<number, AnswerEntry>) => new Map(source);
+
+// Record `text` as the step's free-text answer. Single-select treats text and
+// a chosen option as mutually exclusive, so any selection is dropped;
+// multi-select keeps existing selections alongside the text. Empty text is a
+// no-op (returns an untouched clone).
+const writeFreeText = (
+  answers: Map<number, AnswerEntry>,
+  step: number,
+  text: string,
+  multiSelect: boolean,
+) => {
+  const next = cloneAnswers(answers);
+  if (text.length === 0) return next;
+  const previous = next.get(step) ?? emptyEntry();
+  next.set(step, {
+    selected: multiSelect ? previous.selected : new Set(),
+    freeText: text,
+  });
+  return next;
+};
+
+// Remove the step's entry entirely (skip / dismiss).
+const skipStep = (answers: Map<number, AnswerEntry>, step: number): Map<number, AnswerEntry> => {
+  const next = cloneAnswers(answers);
+  next.delete(step);
+  return next;
+};
+
+// Project the collected answers onto the public ComposerAnswerEntry union, one
+// entry per question in order. The chosen branch encodes the invariant:
+// single-select carries `option` *or* `text`; multi-select carries both;
+// an unanswered question is bare `{ question }`.
+const compileAnswers = (state: AskUserState, questions: AskUserQuestion[]) =>
+  questions.map(({ question, multiSelect }, index) => {
+    const entry = state.answers.get(index);
+    if (!entry) return { question };
+
+    const selected = [...entry.selected];
+    const text = entry.freeText.trim();
+
+    if (multiSelect) {
+      if (selected.length === 0 && text === "") return { question };
+      return { question, options: selected, text };
+    }
+
+    if (selected.length > 0) return { question, option: selected[0] };
+    if (text !== "") return { question, text };
+    return { question };
+  });
+
+const isLastStep = (state: AskUserState, questions: AskUserQuestion[]) =>
+  state.step >= questions.length - 1;
+
+// Toggle an option on the step's entry. Multi-select toggles membership and
+// keeps free text; single-select replaces both (option and text are mutually
+// exclusive).
+const toggleAnswer = (
+  answers: Map<number, AnswerEntry>,
+  step: number,
+  label: string,
+  multiSelect: boolean,
+) => {
+  const next = cloneAnswers(answers);
+  const previous = next.get(step) ?? emptyEntry();
+  const selected = new Set(previous.selected);
+  if (multiSelect) {
+    if (selected.has(label)) selected.delete(label);
+    else selected.add(label);
+  } else {
+    selected.clear();
+    selected.add(label);
+  }
+  next.set(step, { selected, freeText: multiSelect ? previous.freeText : "" });
+  return next;
+};
+
+// Everything a transition may ask of the outside world. useAskUser executes
+// these against the editor controller, the options handle, and the submit
+// callback — the transitions below only describe them.
+type AskUserEffect =
+  | { type: "clear-input" }
+  | { type: "set-input-text"; text: string }
+  | { type: "focus-input" }
+  | { type: "blur-input" }
+  | { type: "reset-highlight" }
+  | { type: "submit-answers"; answers: ComposerAnswerEntry[] };
+
+type AskUserAction =
+  | { type: "toggle-option"; label: string }
+  | { type: "select-option"; label: string }
+  | { type: "clear-selections" }
+  | { type: "continue-step"; freeText: string }
+  | { type: "dismiss-step" }
+  | { type: "step-back"; currentText: string }
+  | { type: "step-forward"; currentText: string };
+
+type AskUserTransition = {
+  next: AskUserState;
+  effects: AskUserEffect[];
+};
+
+// Commit `nextAnswers`, advance one step, and reset the input — then either
+// arm the next question (blurred, highlight reset) or compile and submit on
+// the last step (input focused for the follow-up message).
+const advanceStep = (
+  state: AskUserState,
+  questions: AskUserQuestion[],
+  nextAnswers: Map<number, AnswerEntry>,
+): AskUserTransition => {
+  const next: AskUserState = { step: state.step + 1, answers: nextAnswers };
+  if (state.step < questions.length - 1) {
+    return {
+      next,
+      effects: [{ type: "clear-input" }, { type: "reset-highlight" }, { type: "blur-input" }],
+    };
+  }
+  return {
+    next,
+    effects: [
+      { type: "clear-input" },
+      { type: "submit-answers", answers: compileAnswers(next, questions) },
+      { type: "focus-input" },
+    ],
+  };
+};
+
+// Navigate to `targetStep`, preserving any in-progress free text on the step
+// being left and restoring the target step's saved text into the input.
+const transitionToStep = (
+  state: AskUserState,
+  targetStep: number,
+  currentText: string,
+): AskUserTransition => {
+  if (targetStep === state.step) return { next: state, effects: [] };
+
+  const trimmed = currentText.trim();
+  const answers = cloneAnswers(state.answers);
+  if (trimmed.length > 0) {
+    const previous = answers.get(state.step) ?? emptyEntry();
+    answers.set(state.step, { ...previous, freeText: trimmed });
+  }
+
+  const next: AskUserState = { step: targetStep, answers };
+  return {
+    next,
+    effects: [
+      { type: "set-input-text", text: answers.get(targetStep)?.freeText ?? "" },
+      { type: "reset-highlight" },
+      { type: "blur-input" },
+    ],
+  };
+};
+
+// The decide half of the ask-user flow, mirroring interpretAskUserKey: map an
+// action onto the next state plus the effects to run. Composed actions
+// (select-option = toggle + advance) resolve atomically here, so no caller
+// ever chains transitions across a stale state snapshot.
+const transitionAskUser = (
+  state: AskUserState,
+  questions: AskUserQuestion[],
+  action: AskUserAction,
+): AskUserTransition => {
+  const multiSelect = !!questions[state.step]?.multiSelect;
+
+  switch (action.type) {
+    case "toggle-option":
+      return {
+        next: {
+          ...state,
+          answers: toggleAnswer(state.answers, state.step, action.label, multiSelect),
+        },
+        effects: multiSelect ? [] : [{ type: "clear-input" }],
+      };
+
+    case "select-option": {
+      const toggled = toggleAnswer(state.answers, state.step, action.label, multiSelect);
+      if (multiSelect) return { next: { ...state, answers: toggled }, effects: [] };
+      return advanceStep(state, questions, toggled);
+    }
+
+    case "clear-selections": {
+      const previous = state.answers.get(state.step);
+      if (!previous || previous.selected.size === 0) return { next: state, effects: [] };
+      const answers = cloneAnswers(state.answers);
+      answers.set(state.step, { selected: new Set(), freeText: previous.freeText });
+      return { next: { ...state, answers }, effects: [] };
+    }
+
+    case "continue-step":
+      return advanceStep(
+        state,
+        questions,
+        writeFreeText(state.answers, state.step, action.freeText.trim(), multiSelect),
+      );
+
+    case "dismiss-step":
+      return advanceStep(state, questions, skipStep(state.answers, state.step));
+
+    case "step-back":
+      return transitionToStep(state, Math.max(0, state.step - 1), action.currentText);
+
+    case "step-forward":
+      return transitionToStep(
+        state,
+        Math.min(questions.length - 1, state.step + 1),
+        action.currentText,
+      );
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Attachments — pure store reducer that validates and accumulates files. The
+// hook owns the useState; this owns the rules.
 // ---------------------------------------------------------------------------
 
 type AttachmentStoreState = {
@@ -434,9 +868,7 @@ const attachmentReducer = (
       const incoming = [...action.files];
       if (!incoming.length) return state;
 
-      const accepted = incoming.filter((file) =>
-        matchesAccept(file, config.accept),
-      );
+      const accepted = incoming.filter((file) => matchesAccept(file, config.accept));
       if (!accepted.length) {
         return { ...state, error: "No files match the accepted types." };
       }
@@ -477,158 +909,19 @@ const attachmentReducer = (
 };
 
 // ---------------------------------------------------------------------------
-// Pure helpers — questionnaire reducer
+// Attachments — drag-and-drop handlers. A depth counter tracks enter/leave so
+// nested elements don't flicker the dragging state.
 // ---------------------------------------------------------------------------
 
-type AnswerEntry = {
-  selected: Set<string>;
-  freeText: string;
-};
-
-type QuestionnaireState = {
-  step: number;
-  answers: Map<number, AnswerEntry>;
-};
-
-const INITIAL_QUESTIONNAIRE_STATE: QuestionnaireState = {
-  step: 0,
-  answers: new Map(),
-};
-
-type QuestionnaireAction =
-  | { type: "reset" }
-  | {
-      type: "toggle-option";
-      step: number;
-      label: string;
-      multiSelect: boolean;
-    }
-  | { type: "clear-selections"; step: number }
-  | {
-      type: "save-and-advance";
-      step: number;
-      text?: string;
-      multiSelect: boolean;
-    }
-  | { type: "dismiss-step"; step: number }
-  | {
-      type: "save-and-navigate";
-      fromStep: number;
-      text: string;
-      targetStep: number;
-    };
-
-const emptyEntry = (): AnswerEntry => ({
-  selected: new Set<string>(),
-  freeText: "",
-});
-
-const cloneAnswers = (
-  source: Map<number, AnswerEntry>,
-): Map<number, AnswerEntry> => new Map(source);
-
-const questionnaireReducer = (
-  state: QuestionnaireState,
-  action: QuestionnaireAction,
-): QuestionnaireState => {
-  switch (action.type) {
-    case "reset":
-      return INITIAL_QUESTIONNAIRE_STATE;
-    case "toggle-option": {
-      const next = cloneAnswers(state.answers);
-      const previous = next.get(action.step) ?? emptyEntry();
-      const selected = new Set(previous.selected);
-      if (action.multiSelect) {
-        if (selected.has(action.label)) selected.delete(action.label);
-        else selected.add(action.label);
-      } else {
-        selected.clear();
-        selected.add(action.label);
-      }
-      next.set(action.step, {
-        selected,
-        freeText: action.multiSelect ? previous.freeText : "",
-      });
-      return { ...state, answers: next };
-    }
-    case "clear-selections": {
-      const previous = state.answers.get(action.step);
-      if (!previous || previous.selected.size === 0) return state;
-      const next = cloneAnswers(state.answers);
-      next.set(action.step, {
-        selected: new Set(),
-        freeText: previous.freeText,
-      });
-      return { ...state, answers: next };
-    }
-    case "save-and-advance": {
-      const next = cloneAnswers(state.answers);
-      if (action.text && action.text.length > 0) {
-        const previous = next.get(action.step) ?? emptyEntry();
-        next.set(action.step, {
-          selected: action.multiSelect ? previous.selected : new Set(),
-          freeText: action.text,
-        });
-      }
-      return { step: state.step + 1, answers: next };
-    }
-    case "dismiss-step": {
-      const next = cloneAnswers(state.answers);
-      next.delete(action.step);
-      return { step: state.step + 1, answers: next };
-    }
-    case "save-and-navigate": {
-      const next = cloneAnswers(state.answers);
-      if (action.text.length > 0) {
-        const previous = next.get(action.fromStep) ?? emptyEntry();
-        next.set(action.fromStep, {
-          ...previous,
-          freeText: action.text,
-        });
-      }
-      return { step: action.targetStep, answers: next };
-    }
-  }
-};
-
-const compileAnswers = (
-  state: QuestionnaireState,
-  questions: AskUserQuestion[],
-): ComposerAnswerEntry[] =>
-  questions.map(({ question, multiSelect }, index) => {
-    const entry = state.answers.get(index);
-    if (!entry) return { question };
-
-    const selected = [...entry.selected];
-    const text = entry.freeText.trim();
-
-    if (multiSelect) {
-      if (selected.length === 0 && text === "") return { question };
-      return { question, options: selected, text };
-    }
-
-    if (selected.length > 0) return { question, option: selected[0] };
-    if (text !== "") return { question, text };
-    return { question };
-  });
-
-const isLastStep = (
-  state: QuestionnaireState,
-  questions: AskUserQuestion[],
-): boolean => state.step >= questions.length - 1;
-
-// ---------------------------------------------------------------------------
-// Pure helpers — drag handlers
-// ---------------------------------------------------------------------------
-
-const createDragHandlers = (callbacks: {
+type DragHandlerCallbacks = {
   isInScope: (event: DragEvent) => boolean;
   onFiles: (files: FileList) => void;
   setDragging: (active: boolean) => void;
-}) => {
+};
+
+const createDragHandlers = (callbacks: DragHandlerCallbacks) => {
   const counter = { current: 0 };
-  const carriesFiles = (event: DragEvent) =>
-    event.dataTransfer?.types?.includes("Files") ?? false;
+  const carriesFiles = (event: DragEvent) => event.dataTransfer?.types?.includes("Files") ?? false;
 
   return {
     onDragOver: (event: Event) => {
@@ -663,123 +956,8 @@ const createDragHandlers = (callbacks: {
 };
 
 // ---------------------------------------------------------------------------
-// Pure helpers — snapshot
-// ---------------------------------------------------------------------------
-
-const EMPTY_SNAPSHOT: ComposerSnapshot = {
-  __pmDoc: { type: "doc", content: [{ type: "paragraph" }] },
-  __brand: "ComposerSnapshot",
-} as ComposerSnapshot;
-
-const snapshotFromEditor = (editor: Editor): ComposerSnapshot =>
-  ({
-    __pmDoc: editor.getJSON(),
-    __brand: "ComposerSnapshot",
-  }) as ComposerSnapshot;
-
-const applySnapshotToEditor = (
-  editor: Editor,
-  snapshot: ComposerSnapshot,
-): void => {
-  editor.commands.setContent(snapshot.__pmDoc as never);
-};
-
-const serializeEditorContent = (
-  editor: Editor,
-  commands: ComposerCommandsMap,
-): { text: string; chips: ChipData[] } => {
-  const chipsByKey = new Map<string, ChipData>();
-  const blocks: string[] = [];
-
-  editor.state.doc.forEach((block) => {
-    if (block.type.name !== "paragraph") return;
-    let inline = "";
-    block.forEach((child) => {
-      if (child.isText) {
-        inline += child.text ?? "";
-        return;
-      }
-      if (child.type.name !== "mentionChip") return;
-      const attrs = child.attrs as {
-        prefix?: string;
-        value?: string;
-        label?: string;
-      };
-      const prefix = attrs.prefix ?? "";
-      const value = attrs.value ?? "";
-      const label = attrs.label ?? "";
-      inline += `[${escapeMarkdownLink(label)}](chip:${prefix}:${value})`;
-      const key = `${prefix}:${value}`;
-      if (!chipsByKey.has(key)) {
-        const item = commands[prefix]?.items.find((i) => i.value === value);
-        chipsByKey.set(key, {
-          prefix,
-          value,
-          label,
-          ...(item?.icon ? { icon: item.icon } : {}),
-          ...(item?.variant ? { variant: item.variant } : {}),
-        });
-      }
-    });
-    blocks.push(inline);
-  });
-
-  return { text: blocks.join("\n"), chips: [...chipsByKey.values()] };
-};
-
-type InlineNodeJSON =
-  | { type: "text"; text: string }
-  | {
-      type: "mentionChip";
-      attrs: { prefix: string; value: string; label: string };
-    };
-
-type ParagraphNodeJSON = {
-  type: "paragraph";
-  content?: InlineNodeJSON[];
-};
-
-const buildChipPasteContent = (
-  segments: ReturnType<typeof parseChipSegments>,
-): ParagraphNodeJSON[] => {
-  const paragraphs: ParagraphNodeJSON[] = [{ type: "paragraph", content: [] }];
-  const pushInline = (node: InlineNodeJSON) => {
-    const target = paragraphs[paragraphs.length - 1];
-    target.content = target.content ?? [];
-    target.content.push(node);
-  };
-
-  for (const segment of segments) {
-    if (segment.type === "text") {
-      const lines = segment.text.split("\n");
-      lines.forEach((line, lineIndex) => {
-        if (lineIndex > 0) paragraphs.push({ type: "paragraph", content: [] });
-        if (line.length > 0) pushInline({ type: "text", text: line });
-      });
-      continue;
-    }
-    pushInline({
-      type: "mentionChip",
-      attrs: {
-        prefix: segment.prefix,
-        value: segment.value,
-        label: segment.label,
-      },
-    });
-  }
-
-  return paragraphs.filter((p) => (p.content?.length ?? 0) > 0);
-};
-
-// ---------------------------------------------------------------------------
 // Context
 // ---------------------------------------------------------------------------
-
-type ComposerEditorState = {
-  hasContent: boolean;
-  setHasContent: (value: boolean) => void;
-  isSubmitting: boolean;
-};
 
 type ComposerAttachmentsState = {
   items: AttachmentItem[];
@@ -792,176 +970,374 @@ type ComposerAttachmentsState = {
   globalDropRef: RefObject<boolean>;
 };
 
-type ComposerToolsState = {
-  values: Record<string, boolean>;
-  set: (name: string, value: boolean) => void;
-  toggle: (name: string) => void;
-};
-
-type ComposerQuestionnaireState = {
+type ComposerAskUserState = {
   questions: AskUserQuestion[] | null;
   step: number;
   answers: Map<number, AnswerEntry>;
-  toggleOption: (step: number, label: string, multiSelect: boolean) => void;
+  toggleOption: (label: string) => void;
   continueStep: (freeText?: string) => void;
   dismissStep: () => void;
   isLastStep: boolean;
   isSingle: boolean;
-  clearSelections: (step: number) => void;
+  clearSelections: () => void;
   goBack: () => void;
   goNext: () => void;
   optionsRef: RefObject<AskUserOptionsHandle | null>;
 };
 
-type ComposerCommandsState = {
-  open: boolean;
-  currentPrefix: string | null;
-  query: string;
-  selectRef: RefObject<(() => void) | null>;
-  navigateRef: RefObject<((direction: number) => void) | null>;
-};
-
-type ComposerContextValue = {
-  editor: ComposerEditorState;
+type ComposerState = {
+  // The editor controller methods (stable identities) plus the reactive
+  // hasContent flag: const textarea = useComposer((c) => c.textarea)
+  textarea: ComposerEditorState & { hasContent: boolean };
+  isSubmitting: boolean;
+  isPanelOpen: boolean;
   attachments: ComposerAttachmentsState;
-  tools: ComposerToolsState;
-  questionnaire: ComposerQuestionnaireState;
-  commands: ComposerCommandsState;
+  askUser: ComposerAskUserState;
 };
 
-const ComposerContext = createContext<ComposerContextValue | null>(null);
+// ---------------------------------------------------------------------------
+// Composer store — all reactive composer state in one store (same shape as the
+// command-list store), so useComposer can offer Zustand-style selectors and
+// components re-render only for the slice they read. Actions and refs are
+// created once and survive every update; a slice's identity changes only when
+// that slice's data changes.
+// ---------------------------------------------------------------------------
 
-export const useComposer = (): ComposerContextValue => {
-  const context = useContext(ComposerContext);
-  if (!context) {
-    throw new Error("useComposer must be called inside a <Composer> subtree.");
-  }
-  return context;
+type ComposerStore = {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => ComposerState;
+  // Bridges for props and editor/document integrations — not consumer API.
+  setHasContent: (value: boolean) => void;
+  setIsSubmitting: (value: boolean) => void;
+  setPanelOpen: (value: boolean) => void;
+  setQuestions: (questions: AskUserQuestion[] | null) => void;
+  setDragging: (active: boolean) => void;
+  resetAttachments: () => void;
+  activateAskUser: () => () => void;
+  reset: () => void;
+  // Co-located refs the mounted Composer wires up at runtime.
+  attachmentConfigRef: RefObject<AttachmentStoreConfig>;
+  submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
 };
 
-type CommandListSyncState = {
-  isOpen: boolean;
-  trigger: string | null;
-  query: string;
+const createComposerStore = (): ComposerStore => {
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of listeners) listener();
+  };
+
+  // Imperative refs co-located with the store; not reactive.
+  const optionsRef: RefObject<AskUserOptionsHandle | null> = { current: null };
+  const fileInputRef: RefObject<HTMLInputElement | null> = { current: null };
+  const globalDropRef: RefObject<boolean> = { current: false };
+  const attachmentConfigRef: RefObject<AttachmentStoreConfig> = {
+    current: {
+      accept: DEFAULT_ATTACHMENT_ACCEPT,
+      maxFiles: DEFAULT_ATTACHMENT_MAX_FILES,
+      maxFileSize: DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
+    },
+  };
+  const submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null> = {
+    current: null,
+  };
+
+  // Canonical machine states; the snapshot mirrors them on every update.
+  let attachmentState = INITIAL_ATTACHMENT_STATE;
+  let askUserMachine = INITIAL_ASK_USER_STATE;
+  let snapshot: ComposerState;
+
+  const setHasContent = (value: boolean) => {
+    if (snapshot.textarea.hasContent === value) return;
+    snapshot = { ...snapshot, textarea: { ...snapshot.textarea, hasContent: value } };
+    notify();
+  };
+
+  const setIsSubmitting = (value: boolean) => {
+    if (snapshot.isSubmitting === value) return;
+    snapshot = { ...snapshot, isSubmitting: value };
+    notify();
+  };
+
+  const setPanelOpen = (value: boolean) => {
+    if (snapshot.isPanelOpen === value) return;
+    snapshot = { ...snapshot, isPanelOpen: value };
+    notify();
+  };
+
+  const dispatchAttachments = (action: AttachmentStoreAction) => {
+    const next = attachmentReducer(attachmentState, action, attachmentConfigRef.current);
+    if (next === attachmentState) return;
+    attachmentState = next;
+    snapshot = {
+      ...snapshot,
+      attachments: { ...snapshot.attachments, items: next.items, error: next.error },
+    };
+    notify();
+  };
+
+  const setDragging = (active: boolean) => {
+    if (snapshot.attachments.isDragging === active) return;
+    snapshot = { ...snapshot, attachments: { ...snapshot.attachments, isDragging: active } };
+    notify();
+  };
+
+  // The execute half of the ask-user flow: replay a transition's effects
+  // against the editor controller, the options handle, and the submit
+  // callback. Input-content state is the editor's own job — tiptap v3 emits
+  // update events for programmatic setContent/clearContent.
+  const executeAskUserEffects = (effects: AskUserEffect[]) => {
+    for (const effect of effects) {
+      switch (effect.type) {
+        case "clear-input":
+          composerController.clear();
+          break;
+        case "set-input-text":
+          composerController.setText(effect.text);
+          break;
+        case "focus-input":
+          composerController.focus();
+          break;
+        case "blur-input":
+          composerController.blur();
+          break;
+        case "reset-highlight":
+          optionsRef.current?.resetHighlight();
+          break;
+        case "submit-answers":
+          submitAnswersRef.current?.(effect.answers);
+          break;
+      }
+    }
+  };
+
+  const dispatchAskUser = (action: AskUserAction) => {
+    const questions = snapshot.askUser.questions;
+    if (!questions || questions.length === 0) return;
+    const { next, effects } = transitionAskUser(askUserMachine, questions, action);
+    if (next !== askUserMachine) {
+      askUserMachine = next;
+      snapshot = {
+        ...snapshot,
+        askUser: {
+          ...snapshot.askUser,
+          step: next.step,
+          answers: next.answers,
+          isLastStep: isLastStep(next, questions),
+        },
+      };
+      notify();
+    }
+    executeAskUserEffects(effects);
+  };
+
+  const setQuestions = (questions: AskUserQuestion[] | null) => {
+    if (snapshot.askUser.questions === questions) return;
+    askUserMachine = INITIAL_ASK_USER_STATE;
+    snapshot = {
+      ...snapshot,
+      askUser: {
+        ...snapshot.askUser,
+        questions,
+        step: askUserMachine.step,
+        answers: askUserMachine.answers,
+        isLastStep: questions ? isLastStep(askUserMachine, questions) : false,
+        isSingle: questions ? questions.length === 1 : false,
+      },
+    };
+    notify();
+  };
+
+  // Ask-user mode: while questions are active the options own the keyboard.
+  // Entering blurs the editor; document-level keys are interpreted (pure) and
+  // dispatched here, so custom AskUser renders keep the behavior for free.
+  const activateAskUser = () => {
+    composerController.blur();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const optionsHandle = optionsRef.current;
+      const action = interpretAskUserKey(
+        {
+          key: event.key,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          altKey: event.altKey,
+          defaultPrevented: event.defaultPrevented,
+        },
+        { hasHighlight: optionsHandle?.highlightedValue != null },
+      );
+      if (!action) return;
+      event.preventDefault();
+
+      switch (action.type) {
+        case "dismiss-step":
+          dispatchAskUser({ type: "dismiss-step" });
+          return;
+        case "navigate-options": {
+          const newValue = optionsHandle?.navigate(action.direction);
+          if (newValue === null) composerController.focus();
+          return;
+        }
+        case "select-option": {
+          const item = optionsHandle?.select();
+          if (item) dispatchAskUser({ type: "select-option", label: item.value });
+          return;
+        }
+        case "go-back":
+          dispatchAskUser({ type: "step-back", currentText: composerController.getText() });
+          return;
+        case "go-next":
+          dispatchAskUser({ type: "step-forward", currentText: composerController.getText() });
+          return;
+        case "insert-character":
+          optionsHandle?.clearHighlight();
+          composerController.focus();
+          composerController.insertText(action.character);
+          return;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  };
+
+  snapshot = {
+    textarea: { ...composerController, hasContent: false },
+    isSubmitting: false,
+    isPanelOpen: false,
+    attachments: {
+      items: attachmentState.items,
+      error: attachmentState.error,
+      isDragging: false,
+      add: (files) => dispatchAttachments({ type: "add", files }),
+      remove: (id) => dispatchAttachments({ type: "remove", id }),
+      openFileDialog: () => fileInputRef.current?.click(),
+      fileInputRef,
+      globalDropRef,
+    },
+    askUser: {
+      questions: null,
+      step: askUserMachine.step,
+      answers: askUserMachine.answers,
+      isLastStep: false,
+      isSingle: false,
+      toggleOption: (label) => dispatchAskUser({ type: "toggle-option", label }),
+      continueStep: (freeText) =>
+        dispatchAskUser({ type: "continue-step", freeText: freeText ?? "" }),
+      dismissStep: () => dispatchAskUser({ type: "dismiss-step" }),
+      clearSelections: () => dispatchAskUser({ type: "clear-selections" }),
+      goBack: () =>
+        dispatchAskUser({ type: "step-back", currentText: composerController.getText() }),
+      goNext: () =>
+        dispatchAskUser({ type: "step-forward", currentText: composerController.getText() }),
+      optionsRef,
+    },
+  };
+
+  // Pristine state for reset() — slice actions and refs are reused, so action
+  // identities stay stable across resets.
+  const initialSnapshot = snapshot;
+
+  // Drop everything mount-scoped when the Composer unmounts (route change):
+  // revoke attachment object URLs, then restore the pristine snapshot.
+  const reset = () => {
+    dispatchAttachments({ type: "reset" });
+    askUserMachine = INITIAL_ASK_USER_STATE;
+    snapshot = initialSnapshot;
+    notify();
+  };
+
+  return {
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    getSnapshot: () => snapshot,
+    setHasContent,
+    setIsSubmitting,
+    setPanelOpen,
+    setQuestions,
+    setDragging,
+    resetAttachments: () => dispatchAttachments({ type: "reset" }),
+    activateAskUser,
+    reset,
+    attachmentConfigRef,
+    submitAnswersRef,
+  };
+};
+
+// One composer per page — the same contract composerController already
+// encodes. The store is a module singleton, so useComposer works from anywhere
+// (thread, toolbars, panels) without a provider. SSR-safe by invariant: every
+// write happens in an effect or event handler (client-only), so server renders
+// only ever read the pristine initial snapshot.
+const composerStore = createComposerStore();
+
+// Subscribe to composer state — from anywhere, no provider needed. With a
+// selector, the component re-renders only when the selected value changes
+// identity (slices are identity-stable):
+//   const askUser = useComposer((composer) => composer.askUser);
+// Without one, it returns the full snapshot and re-renders on any change.
+export const useComposer = <Selected = ComposerState>(
+  selector?: (composer: ComposerState) => Selected,
+): Selected => {
+  const getValue = () => {
+    const state = composerStore.getSnapshot();
+    // Safe: without a selector, Selected defaults to ComposerState.
+    return selector ? selector(state) : (state as Selected);
+  };
+  return useSyncExternalStore(composerStore.subscribe, getValue, getValue);
 };
 
 type ComposerInternalsValue = {
   editorRef: RefObject<Editor | null>;
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   commands: ComposerCommandsMap;
-  syncCommandListState: Dispatch<SetStateAction<CommandListSyncState>>;
+  commandListStore: CommandListStore;
   getRegisteredPrefixes: () => RegisteredPrefix[];
   reportEditorUpdate: (editor: Editor) => void;
-  reportCommandQueryChange: (next: CommandListSyncState) => void;
 };
 
-const ComposerInternalsContext = createContext<ComposerInternalsValue | null>(
-  null,
-);
+const ComposerInternalsContext = createContext<ComposerInternalsValue | null>(null);
 
 const useComposerInternals = (): ComposerInternalsValue => {
   const context = useContext(ComposerInternalsContext);
   if (!context) {
-    throw new Error(
-      "useComposerInternals must be called inside a <Composer> subtree.",
-    );
+    throw new Error("useComposerInternals must be called inside a <Composer> subtree.");
   }
   return context;
+};
+
+const useCommandListSnapshot = <T,>(selector: (snapshot: CommandListSnapshot) => T): T => {
+  const { commandListStore } = useComposerInternals();
+  const getValue = useCallback(
+    () => selector(commandListStore.getSnapshot()),
+    [commandListStore, selector],
+  );
+  return useSyncExternalStore(commandListStore.subscribe, getValue, getValue);
 };
 
 // ---------------------------------------------------------------------------
 // TipTap mention-chip extension
 // ---------------------------------------------------------------------------
 
-const commandListPluginKey = new PluginKey<CommandListPluginState>(
-  "commandList",
-);
-
-const BADGE_CLASSES =
-  "inline-flex items-center h-6 rounded-sm bg-primary-hover border border-transparent px-0.75 leading-[normal]";
-const PLACEHOLDER_CLASSES =
-  "after:content-['Type_to_filter'] after:text-ink-tertiary after:whitespace-nowrap after:pointer-events-none";
-
-const commandFilterDecorations = (
-  state: Parameters<NonNullable<Plugin["props"]["decorations"]>>[0],
-) => {
-  const pluginState = commandListPluginKey.getState(state);
-  if (!pluginState?.isOpen) return DecorationSet.empty;
-  const triggerStart = pluginState.triggerStartPosition;
-  const cursorPosition = state.selection.$from.pos;
-  const classes = pluginState.query
-    ? BADGE_CLASSES
-    : `${BADGE_CLASSES} ${PLACEHOLDER_CLASSES}`;
-  const inline = Decoration.inline(triggerStart, cursorPosition, {
-    class: classes,
-  });
-  return DecorationSet.create(state.doc, [inline]);
-};
-
-const createCommandListPlugin = (
-  getRegisteredPrefixes: () => RegisteredPrefix[],
-) =>
-  new Plugin<CommandListPluginState>({
-    key: commandListPluginKey,
-    state: {
-      init: () => CLOSED_COMMAND_STATE,
-      apply(transaction, previousState, _oldEditorState, newEditorState) {
-        const meta = transaction.getMeta(commandListPluginKey);
-        if (meta?.close) return CLOSED_COMMAND_STATE;
-        if (!transaction.docChanged && !transaction.selectionSet) {
-          return previousState;
-        }
-
-        const registered = getRegisteredPrefixes();
-        if (registered.length === 0) return CLOSED_COMMAND_STATE;
-
-        const { selection } = newEditorState;
-        const cursorPosition = selection.$from.pos;
-        const blockStart = selection.$from.start();
-        const textBeforeCursor = newEditorState.doc.textBetween(
-          blockStart,
-          cursorPosition,
-          "\n",
-        );
-        const fullDocText = newEditorState.doc.textContent;
-
-        return detectActivePrefix({
-          registered,
-          blockStart,
-          cursorPosition,
-          textBeforeCursor,
-          fullDocText,
-        });
-      },
-    },
-    props: { decorations: commandFilterDecorations },
-  });
-
-const MentionChipNodeView = ({
-  node,
-}: {
-  node: { attrs: Record<string, unknown> };
-}) => {
-  const { commands } = useComposerInternals();
-  const prefix = node.attrs.prefix as string;
-  const value = node.attrs.value as string;
+const MentionChipNodeView = ({ node }: { node: { attrs: Record<string, unknown> } }) => {
   const label = node.attrs.label as string;
-
-  const item = commands[prefix]?.items.find((entry) => entry.value === value);
+  const icon = node.attrs.icon as ChipIconKey | null;
+  const variant = node.attrs.variant as ChipVariant | null;
 
   return (
     <NodeViewWrapper as="span" data-mention-chip>
-      <Chip variant={item?.variant}>
-        {item?.icon && <Chip.Icon>{CHIP_ICONS[item.icon]}</Chip.Icon>}
+      <Chip variant={variant ?? undefined}>
+        {icon && <Chip.Icon>{CHIP_ICONS[icon]}</Chip.Icon>}
         <Chip.Label>{label}</Chip.Label>
       </Chip>
     </NodeViewWrapper>
   );
 };
 
-const createMentionChipExtension = (
-  getRegisteredPrefixes: () => RegisteredPrefix[],
-) =>
+const createMentionChipExtension = (getRegisteredPrefixes: () => RegisteredPrefix[]) =>
   TiptapNode.create({
     name: "mentionChip",
     group: "inline",
@@ -973,6 +1349,8 @@ const createMentionChipExtension = (
         prefix: { default: "" },
         label: { default: "" },
         value: { default: "" },
+        icon: { default: null },
+        variant: { default: null },
       };
     },
 
@@ -981,11 +1359,7 @@ const createMentionChipExtension = (
     },
 
     renderHTML({ HTMLAttributes }) {
-      return [
-        "span",
-        mergeAttributes({ "data-mention-chip": "" }, HTMLAttributes),
-        0,
-      ];
+      return ["span", mergeAttributes({ "data-mention-chip": "" }, HTMLAttributes), 0];
     },
 
     addNodeView() {
@@ -1001,83 +1375,30 @@ const createMentionChipExtension = (
 // Hooks
 // ---------------------------------------------------------------------------
 
-const useAttachmentStore = (configRef: RefObject<AttachmentStoreConfig>) => {
-  const [state, setState] = useState<AttachmentStoreState>(
-    INITIAL_ATTACHMENT_STATE,
-  );
+// SSR-safe layout effect — same shape as cmdk's. useLayoutEffect runs before
+// paint; useEffect is a no-op fallback when window is undefined (SSR pass).
+const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-  const add = useCallback(
-    (files: File[] | FileList) => {
-      setState((current) =>
-        attachmentReducer(current, { type: "add", files }, configRef.current),
-      );
-    },
-    [configRef],
-  );
-
-  const remove = useCallback(
-    (id: string) => {
-      setState((current) =>
-        attachmentReducer(current, { type: "remove", id }, configRef.current),
-      );
-    },
-    [configRef],
-  );
-
-  const reset = useCallback(() => {
-    setState((current) =>
-      attachmentReducer(current, { type: "reset" }, configRef.current),
-    );
-  }, [configRef]);
-
-  return useMemo(
-    () => ({ items: state.items, error: state.error, add, remove, reset }),
-    [state.items, state.error, add, remove, reset],
-  );
+// Mirror a prop into a ref so closures always see the latest value without
+// having to add the prop to dep arrays. Layout effect ensures `.current` is
+// updated before any sibling layout effect or sync user event observes it.
+const useAsRef = <T,>(value: T) => {
+  const ref = useRef(value);
+  useIsomorphicLayoutEffect(() => {
+    ref.current = value;
+  });
+  return ref;
 };
 
-const useToolsState = (options: {
-  defaultTools?: Record<string, boolean>;
-  tools?: Record<string, boolean>;
-  onToolsChange?: (values: Record<string, boolean>) => void;
-}): ComposerToolsState => {
-  const isControlled = options.tools !== undefined;
-  const [internal, setInternal] = useState<Record<string, boolean>>(
-    options.defaultTools ?? {},
-  );
-
-  const values = isControlled ? (options.tools ?? {}) : internal;
-  const valuesRef = useRef(values);
-  valuesRef.current = values;
-
-  const onToolsChangeRef = useRef(options.onToolsChange);
-  onToolsChangeRef.current = options.onToolsChange;
-
-  const set = useCallback(
-    (name: string, value: boolean) => {
-      const next = { ...valuesRef.current, [name]: value };
-      onToolsChangeRef.current?.(next);
-      if (!isControlled) setInternal(next);
-    },
-    [isControlled],
-  );
-
-  const toggle = useCallback(
-    (name: string) => {
-      const current = valuesRef.current[name] ?? false;
-      const next = { ...valuesRef.current, [name]: !current };
-      onToolsChangeRef.current?.(next);
-      if (!isControlled) setInternal(next);
-    },
-    [isControlled],
-  );
-
-  return useMemo(() => ({ values, set, toggle }), [values, set, toggle]);
+// Like useRef, but the initializer runs at most once. Used for stable stores.
+const useLazyRef = <T,>(initializer: () => T) => {
+  const ref = useRef<T | undefined>(undefined);
+  if (ref.current === undefined) ref.current = initializer();
+  return ref as { current: T };
 };
 
 const useCommandRegistry = (commands: ComposerCommandsMap) => {
-  const registryRef = useRef(commands);
-  registryRef.current = commands;
+  const registryRef = useAsRef(commands);
 
   const getRegisteredPrefixes = useCallback((): RegisteredPrefix[] => {
     const result: RegisteredPrefix[] = [];
@@ -1094,25 +1415,23 @@ const useDragDropFiles = ({
   rootRef,
   globalDropRef,
   onFiles,
+  setDragging,
 }: {
   rootRef: RefObject<HTMLElement | null>;
   globalDropRef: RefObject<boolean>;
   onFiles: (files: FileList) => void;
-}): { isDragging: boolean } => {
-  const [isDragging, setIsDragging] = useState(false);
-
-  const onFilesRef = useRef(onFiles);
-  onFilesRef.current = onFiles;
+  setDragging: (active: boolean) => void;
+}) => {
+  const onFilesRef = useAsRef(onFiles);
 
   useEffect(() => {
     const isInScope = (event: DragEvent) =>
-      globalDropRef.current ||
-      (rootRef.current?.contains(event.target as Node) ?? false);
+      globalDropRef.current || (rootRef.current?.contains(event.target as Node) ?? false);
 
     const handlers = createDragHandlers({
       isInScope,
       onFiles: (files) => onFilesRef.current(files),
-      setDragging: setIsDragging,
+      setDragging,
     });
 
     document.addEventListener("dragover", handlers.onDragOver);
@@ -1125,200 +1444,7 @@ const useDragDropFiles = ({
       document.removeEventListener("dragleave", handlers.onDragLeave);
       document.removeEventListener("drop", handlers.onDrop);
     };
-  }, [rootRef, globalDropRef]);
-
-  return { isDragging };
-};
-
-const useQuestionnaire = ({
-  editorRef,
-  optionsRef,
-  setEditorHasContent,
-  submitAnswers,
-  questions,
-}: {
-  editorRef: RefObject<Editor | null>;
-  optionsRef: RefObject<AskUserOptionsHandle | null>;
-  setEditorHasContent: (value: boolean) => void;
-  submitAnswers: (answers: ComposerAnswerEntry[]) => void;
-  questions: AskUserQuestion[] | undefined;
-}) => {
-  const [reducerState, setReducerState] = useState<QuestionnaireState>(
-    INITIAL_QUESTIONNAIRE_STATE,
-  );
-
-  const stateRef = useRef(reducerState);
-  stateRef.current = reducerState;
-  const questionsRef = useRef<AskUserQuestion[] | null>(questions ?? null);
-  questionsRef.current = questions ?? null;
-
-  const submitAnswersRef = useRef(submitAnswers);
-  submitAnswersRef.current = submitAnswers;
-
-  // Reset reducer state and blur editor when the questions identity changes.
-  const previousQuestionsRef = useRef(questions);
-  if (previousQuestionsRef.current !== questions) {
-    previousQuestionsRef.current = questions;
-    setReducerState(INITIAL_QUESTIONNAIRE_STATE);
-    if (questions && questions.length > 0) editorRef.current?.commands.blur();
-  }
-
-  const toggleOption = useCallback(
-    (step: number, label: string, multiSelect: boolean) => {
-      setReducerState((current) =>
-        questionnaireReducer(current, {
-          type: "toggle-option",
-          step,
-          label,
-          multiSelect,
-        }),
-      );
-      if (!multiSelect) {
-        editorRef.current?.commands.setContent("");
-        setEditorHasContent(false);
-      }
-    },
-    [editorRef, setEditorHasContent],
-  );
-
-  const clearSelections = useCallback((step: number) => {
-    setReducerState((current) =>
-      questionnaireReducer(current, { type: "clear-selections", step }),
-    );
-  }, []);
-
-  const continueStep = useCallback(
-    (freeText?: string) => {
-      const activeQuestions = questionsRef.current;
-      if (!activeQuestions || activeQuestions.length === 0) return;
-
-      const text = freeText?.trim() ?? "";
-      const currentStep = stateRef.current.step;
-      const currentQuestion = activeQuestions[currentStep];
-      const multiSelect = !!currentQuestion?.multiSelect;
-
-      const advanced = questionnaireReducer(stateRef.current, {
-        type: "save-and-advance",
-        step: currentStep,
-        text: text.length > 0 ? text : undefined,
-        multiSelect,
-      });
-      setReducerState(advanced);
-
-      editorRef.current?.commands.setContent("");
-      setEditorHasContent(false);
-
-      if (currentStep < activeQuestions.length - 1) {
-        optionsRef.current?.resetHighlight();
-        editorRef.current?.commands.blur();
-      } else {
-        submitAnswersRef.current(compileAnswers(advanced, activeQuestions));
-        editorRef.current?.commands.focus();
-      }
-    },
-    [editorRef, optionsRef, setEditorHasContent],
-  );
-
-  const dismissStep = useCallback(() => {
-    const activeQuestions = questionsRef.current;
-    if (!activeQuestions || activeQuestions.length === 0) return;
-
-    const currentStep = stateRef.current.step;
-    const advanced = questionnaireReducer(stateRef.current, {
-      type: "dismiss-step",
-      step: currentStep,
-    });
-    setReducerState(advanced);
-
-    editorRef.current?.commands.setContent("");
-    setEditorHasContent(false);
-
-    if (currentStep < activeQuestions.length - 1) {
-      optionsRef.current?.resetHighlight();
-      editorRef.current?.commands.blur();
-    } else {
-      submitAnswersRef.current(compileAnswers(advanced, activeQuestions));
-      editorRef.current?.commands.focus();
-    }
-  }, [editorRef, optionsRef, setEditorHasContent]);
-
-  const transitionStep = useCallback(
-    (targetStep: number) => {
-      const currentStep = stateRef.current.step;
-      if (targetStep === currentStep) return;
-
-      const currentText = editorRef.current?.getText()?.trim() ?? "";
-      const navigated = questionnaireReducer(stateRef.current, {
-        type: "save-and-navigate",
-        fromStep: currentStep,
-        text: currentText,
-        targetStep,
-      });
-      setReducerState(navigated);
-
-      const targetEntry = navigated.answers.get(targetStep);
-      const targetFreeText = targetEntry?.freeText ?? "";
-      editorRef.current?.commands.setContent(targetFreeText);
-      setEditorHasContent(targetFreeText.length > 0);
-      optionsRef.current?.resetHighlight();
-      editorRef.current?.commands.blur();
-    },
-    [editorRef, optionsRef, setEditorHasContent],
-  );
-
-  const goBack = useCallback(() => {
-    transitionStep(Math.max(0, stateRef.current.step - 1));
-  }, [transitionStep]);
-
-  const goNext = useCallback(() => {
-    const activeQuestions = questionsRef.current;
-    if (!activeQuestions) return;
-    transitionStep(
-      Math.min(activeQuestions.length - 1, stateRef.current.step + 1),
-    );
-  }, [transitionStep]);
-
-  const isLast = useMemo(
-    () => (questions ? isLastStep(reducerState, questions) : false),
-    [reducerState, questions],
-  );
-  const isSingle = useMemo(
-    () => (questions ? questions.length === 1 : false),
-    [questions],
-  );
-
-  const state: ComposerQuestionnaireState = useMemo(
-    () => ({
-      questions: questions ?? null,
-      step: reducerState.step,
-      answers: reducerState.answers,
-      toggleOption,
-      continueStep,
-      dismissStep,
-      isLastStep: isLast,
-      isSingle,
-      clearSelections,
-      goBack,
-      goNext,
-      optionsRef,
-    }),
-    [
-      questions,
-      reducerState.step,
-      reducerState.answers,
-      toggleOption,
-      continueStep,
-      dismissStep,
-      isLast,
-      isSingle,
-      clearSelections,
-      goBack,
-      goNext,
-      optionsRef,
-    ],
-  );
-
-  return state;
+  }, [rootRef, globalDropRef, setDragging]);
 };
 
 const useComposerSnapshot = ({
@@ -1331,13 +1457,12 @@ const useComposerSnapshot = ({
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
-}): { reportUpdate: (editor: Editor) => void } => {
+}): { reportEditorUpdate: (editor: Editor) => void } => {
   const isControlled = value !== undefined;
   const lastAppliedRef = useRef<ComposerSnapshot | null>(null);
   const initializedRef = useRef(false);
 
-  const onValueChangeRef = useRef(onValueChange);
-  onValueChangeRef.current = onValueChange;
+  const onValueChangeRef = useAsRef(onValueChange);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -1358,14 +1483,14 @@ const useComposerSnapshot = ({
     lastAppliedRef.current = value;
   }, [editorRef, isControlled, value]);
 
-  const reportUpdate = useCallback((editor: Editor) => {
+  const reportEditorUpdate = useCallback((editor: Editor) => {
     if (!onValueChangeRef.current) return;
     const snapshot = snapshotFromEditor(editor);
     lastAppliedRef.current = snapshot;
     onValueChangeRef.current(snapshot);
   }, []);
 
-  return { reportUpdate };
+  return { reportEditorUpdate };
 };
 
 // ---------------------------------------------------------------------------
@@ -1374,19 +1499,14 @@ const useComposerSnapshot = ({
 
 const EMPTY_COMMANDS: ComposerCommandsMap = {};
 
-export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit"> & {
+export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit" | "ref"> & {
   onSubmit?: (data: ComposerSubmitData) => void | Promise<void>;
   isSubmitting?: boolean;
   commands?: ComposerCommandsMap;
   questions?: AskUserQuestion[];
-  defaultTools?: Record<string, boolean>;
-  tools?: Record<string, boolean>;
-  onToolsChange?: (values: Record<string, boolean>) => void;
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
-  onCommandQueryChange?: (query: string, prefix: string | null) => void;
-  ref?: Ref<ComposerHandle>;
 };
 
 const ComposerRoot = ({
@@ -1396,300 +1516,114 @@ const ComposerRoot = ({
   isSubmitting = false,
   commands = EMPTY_COMMANDS,
   questions,
-  defaultTools,
-  tools: controlledTools,
-  onToolsChange,
   defaultValue,
   value,
   onValueChange,
-  onCommandQueryChange,
-  ref,
   ...formProps
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const globalDropRef = useRef(false);
-  const commandListSelectRef = useRef<(() => void) | null>(null);
-  const commandListNavigateRef = useRef<((direction: number) => void) | null>(
-    null,
-  );
-  const questionnaireOptionsRef = useRef<AskUserOptionsHandle | null>(null);
-  const attachmentConfigRef = useRef<AttachmentStoreConfig>({
-    accept: DEFAULT_ATTACHMENT_ACCEPT,
-    maxFiles: DEFAULT_ATTACHMENT_MAX_FILES,
-    maxFileSize: DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
-  });
+  const commandListStore = useLazyRef(() => createCommandListStore()).current;
 
-  const [editorHasContent, setEditorHasContent] = useState(false);
-  const [commandListState, setCommandListState] =
-    useState<CommandListSyncState>({ isOpen: false, trigger: null, query: "" });
+  const onSubmitRef = useAsRef(onSubmit);
 
-  const attachments = useAttachmentStore(attachmentConfigRef);
-
-  const tools = useToolsState({
-    defaultTools,
-    tools: controlledTools,
-    onToolsChange,
-  });
-
-  const onSubmitRef = useRef(onSubmit);
-  onSubmitRef.current = onSubmit;
-
-  const submitAnswers = useCallback((answers: ComposerAnswerEntry[]) => {
-    onSubmitRef.current?.({ kind: "answers", answers });
+  // Register this mount on the singleton store: answers submit through this
+  // mount's onSubmit, and unmounting resets all mount-scoped state so nothing
+  // leaks across route changes.
+  useEffect(() => {
+    composerStore.submitAnswersRef.current = (answers) =>
+      onSubmitRef.current?.({ kind: "answers", answers });
+    return () => {
+      composerStore.submitAnswersRef.current = null;
+      composerStore.reset();
+    };
   }, []);
 
-  const onCommandQueryChangeRef = useRef(onCommandQueryChange);
-  onCommandQueryChangeRef.current = onCommandQueryChange;
+  // Prop → store bridges. Actions and refs on the snapshot are identity-stable,
+  // so reading them here without subscribing is safe.
+  const { add: addAttachments, globalDropRef } = composerStore.getSnapshot().attachments;
 
-  const previousCommandListRef = useRef<CommandListSyncState>({
-    isOpen: false,
-    trigger: null,
-    query: "",
-  });
-  const reportCommandQueryChange = useCallback((next: CommandListSyncState) => {
-    const previous = previousCommandListRef.current;
-    if (previous.trigger === next.trigger && previous.query === next.query) {
-      return;
-    }
-    previousCommandListRef.current = next;
-    onCommandQueryChangeRef.current?.(next.query, next.trigger);
-  }, []);
+  useEffect(() => {
+    composerStore.setIsSubmitting(isSubmitting);
+  }, [isSubmitting]);
 
-  const questionnaire = useQuestionnaire({
-    editorRef,
-    optionsRef: questionnaireOptionsRef,
-    setEditorHasContent,
-    submitAnswers,
-    questions,
-  });
+  // Sync the questions prop into the store and arm ask-user mode (editor blur
+  // + document-level keyboard handling) while questions are active.
+  useEffect(() => {
+    composerStore.setQuestions(questions ?? null);
+    if (!questions?.length) return;
+    return composerStore.activateAskUser();
+  }, [questions]);
 
   const { getRegisteredPrefixes } = useCommandRegistry(commands);
 
-  const { isDragging } = useDragDropFiles({
+  useDragDropFiles({
     rootRef: formRef,
     globalDropRef,
-    onFiles: attachments.add,
+    onFiles: addAttachments,
+    setDragging: composerStore.setDragging,
   });
 
-  const { reportUpdate: reportEditorUpdate } = useComposerSnapshot({
+  const { reportEditorUpdate } = useComposerSnapshot({
     editorRef,
     defaultValue,
     value,
     onValueChange,
   });
 
-  const questionnaireRef = useRef(questionnaire);
-  questionnaireRef.current = questionnaire;
-
-  useEffect(() => {
-    if ((questionnaire.questions?.length ?? 0) === 0) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const optionsHandle = questionnaireOptionsRef.current;
-      const action = interpretQuestionnaireKey(
-        {
-          key: event.key,
-          ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey,
-          altKey: event.altKey,
-          defaultPrevented: event.defaultPrevented,
-        },
-        { hasHighlight: optionsHandle?.highlightedValue != null },
-      );
-      if (!action) return;
-      event.preventDefault();
-      const current = questionnaireRef.current;
-      switch (action.type) {
-        case "dismiss-step":
-          current.dismissStep();
-          return;
-        case "navigate-options": {
-          const newValue = optionsHandle?.navigate(action.direction);
-          if (newValue === null) editorRef.current?.commands.focus();
-          return;
-        }
-        case "select-option": {
-          const item = optionsHandle?.select();
-          if (!item) return;
-          const currentQuestion = current.questions?.[current.step];
-          if (currentQuestion?.multiSelect) {
-            current.toggleOption(current.step, item.value, true);
-          } else {
-            current.toggleOption(current.step, item.value, false);
-            current.continueStep();
-          }
-          return;
-        }
-        case "go-back":
-          current.goBack();
-          return;
-        case "go-next":
-          current.goNext();
-          return;
-        case "insert-character": {
-          optionsHandle?.clearHighlight();
-          const editorInstance = editorRef.current;
-          editorInstance?.commands.focus();
-          editorInstance?.commands.insertContent(action.character);
-          return;
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [questionnaire.questions]);
-
-  const handleFormSubmit = async (
-    event: React.SubmitEvent<HTMLFormElement>,
-  ) => {
+  const handleFormSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const { askUser, attachments } = composerStore.getSnapshot();
 
-    if (questionnaire.questions?.length) {
-      const text = editorRef.current?.getText()?.trim() ?? "";
-      editorRef.current?.commands.setContent("");
-      setEditorHasContent(false);
-      questionnaire.continueStep(text);
+    if (askUser.questions?.length) {
+      askUser.continueStep(composerController.getText());
       return;
     }
 
     if (isSubmitting) return;
 
-    const serialized = editorRef.current
-      ? serializeEditorContent(editorRef.current, commands)
-      : { text: "", chips: [] as ChipData[] };
+    const serialized = composerController.serialize();
     const trimmedText = serialized.text.trim();
     if (!trimmedText && !attachments.items.length) return;
 
     const submitText = trimmedText || "Sent with attachments";
     const fileItems: AttachmentItem[] = attachments.items;
-    const fileParts =
-      fileItems.length > 0 ? await prepareAttachmentsForSend(fileItems) : [];
+    const fileParts = fileItems.length > 0 ? await prepareAttachmentsForSend(fileItems) : [];
 
-    attachments.reset();
-    editorRef.current?.commands.setContent("");
-    setEditorHasContent(false);
+    composerStore.resetAttachments();
+    composerController.clear();
 
     await onSubmitRef.current?.({
       kind: "message",
       text: submitText,
       files: fileParts,
       chips: serialized.chips,
-      tools: tools.values,
     });
   };
-
-  useImperativeHandle(
-    ref,
-    (): ComposerHandle => ({
-      focus: () => editorRef.current?.commands.focus(),
-      blur: () => editorRef.current?.commands.blur(),
-      clear: () => {
-        editorRef.current?.commands.setContent("");
-        setEditorHasContent(false);
-      },
-      insertText: (text) => {
-        editorRef.current?.commands.insertContent(text);
-      },
-      insertChip: (chip) => {
-        editorRef.current?.commands.insertContent({
-          type: "mentionChip",
-          attrs: chip,
-        });
-      },
-      getSnapshot: () => {
-        const editor = editorRef.current;
-        return editor ? snapshotFromEditor(editor) : EMPTY_SNAPSHOT;
-      },
-      setSnapshot: (snapshot) => {
-        editorRef.current?.commands.setContent(snapshot.__pmDoc as never);
-      },
-    }),
-    [],
-  );
-
-  const editorState = useMemo(
-    () => ({
-      hasContent: editorHasContent,
-      setHasContent: setEditorHasContent,
-      isSubmitting,
-    }),
-    [editorHasContent, isSubmitting],
-  );
-
-  const attachmentsState = useMemo(
-    () => ({
-      items: attachments.items,
-      add: attachments.add,
-      remove: attachments.remove,
-      openFileDialog: () => fileInputRef.current?.click(),
-      error: attachments.error,
-      isDragging,
-      fileInputRef,
-      globalDropRef,
-    }),
-    [
-      attachments.items,
-      attachments.add,
-      attachments.remove,
-      attachments.error,
-      isDragging,
-    ],
-  );
-
-  const commandsContextValue = useMemo(
-    () => ({
-      open: commandListState.isOpen,
-      currentPrefix: commandListState.trigger,
-      query: commandListState.query,
-      selectRef: commandListSelectRef,
-      navigateRef: commandListNavigateRef,
-    }),
-    [commandListState],
-  );
-
-  const contextValue = useMemo<ComposerContextValue>(
-    () => ({
-      editor: editorState,
-      attachments: attachmentsState,
-      tools,
-      questionnaire,
-      commands: commandsContextValue,
-    }),
-    [editorState, attachmentsState, tools, questionnaire, commandsContextValue],
-  );
 
   const internalsValue = useMemo<ComposerInternalsValue>(
     () => ({
       editorRef,
-      attachmentConfigRef,
+      attachmentConfigRef: composerStore.attachmentConfigRef,
       commands,
-      syncCommandListState: setCommandListState,
+      commandListStore,
       getRegisteredPrefixes,
       reportEditorUpdate,
-      reportCommandQueryChange,
     }),
-    [
-      commands,
-      getRegisteredPrefixes,
-      reportEditorUpdate,
-      reportCommandQueryChange,
-    ],
+    [commands, commandListStore, getRegisteredPrefixes, reportEditorUpdate],
   );
 
   return (
-    <ComposerContext.Provider value={contextValue}>
-      <ComposerInternalsContext.Provider value={internalsValue}>
-        <form
-          onSubmit={handleFormSubmit}
-          ref={formRef}
-          className={cn("relative w-full flex flex-col", className)}
-          {...formProps}
-        >
-          {children}
-        </form>
-      </ComposerInternalsContext.Provider>
-    </ComposerContext.Provider>
+    <ComposerInternalsContext.Provider value={internalsValue}>
+      <form
+        onSubmit={handleFormSubmit}
+        ref={formRef}
+        className={cn("relative w-full flex flex-col", className)}
+        {...formProps}
+      >
+        {children}
+      </form>
+    </ComposerInternalsContext.Provider>
   );
 };
 
@@ -1699,13 +1633,7 @@ const ComposerRoot = ({
 
 type ComposerContainerProps = ComponentProps<"div">;
 
-const ComposerContainer = ({
-  className,
-  children,
-  ...props
-}: ComposerContainerProps) => {
-  const { editorRef } = useComposerInternals();
-
+const ComposerContainer = ({ className, children, ...props }: ComposerContainerProps) => {
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
     if (
@@ -1718,8 +1646,7 @@ const ComposerContainer = ({
     }
 
     event.preventDefault();
-    const editor = editorRef.current;
-    if (editor && !editor.isFocused) editor.commands.focus();
+    composerController.ensureFocus();
   };
 
   return (
@@ -1729,7 +1656,9 @@ const ComposerContainer = ({
       data-slot="composer-container"
       onMouseDown={handleMouseDown}
       className={cn(
-        "border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle] cursor-text transition-colors",
+        // Positioned so it paints above the context window peeking out from
+        // behind its top edge.
+        "relative border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle] cursor-text transition-colors",
         className,
       )}
       {...props}
@@ -1760,7 +1689,7 @@ const ComposerAttachments = ({
   multiple = true,
   globalDrop = false,
 }: ComposerAttachmentsProps) => {
-  const { attachments } = useComposer();
+  const attachments = useComposer((composer) => composer.attachments);
   const { attachmentConfigRef } = useComposerInternals();
 
   attachmentConfigRef.current = { accept, maxFiles, maxFileSize };
@@ -1799,9 +1728,7 @@ const ComposerAttachments = ({
                   <AnimatePresence initial={false}>
                     {attachments.items.map((attachment) => (
                       <Attachments.Item key={attachment.id} item={attachment}>
-                        <Attachments.Remove
-                          onRemove={() => attachments.remove(attachment.id)}
-                        />
+                        <Attachments.Remove onRemove={() => attachments.remove(attachment.id)} />
                       </Attachments.Item>
                     ))}
                   </AnimatePresence>
@@ -1809,10 +1736,7 @@ const ComposerAttachments = ({
               ) : (
                 <div className="h-14" />
               )}
-              <Attachments.Dropzone
-                visible={attachments.isDragging}
-                variant="inline"
-              />
+              <Attachments.Dropzone visible={attachments.isDragging} variant="inline" />
             </div>
           </motion.div>
         )}
@@ -1825,7 +1749,7 @@ const ComposerAttachments = ({
 type ComposerAttachmentTriggerProps = ComponentProps<typeof IconButton>;
 
 const ComposerAttachmentTrigger = (props: ComposerAttachmentTriggerProps) => {
-  const { attachments } = useComposer();
+  const attachments = useComposer((composer) => composer.attachments);
 
   return (
     <Attachments.Trigger
@@ -1857,38 +1781,25 @@ const ComposerTextarea = ({
   autoFocus = false,
   children,
 }: ComposerTextareaProps) => {
-  const { editor, attachments, questionnaire, commands } = useComposer();
-  const {
-    editorRef,
-    syncCommandListState,
-    getRegisteredPrefixes,
-    reportEditorUpdate,
-    reportCommandQueryChange,
-  } = useComposerInternals();
+  const hasContent = useComposer((composer) => composer.textarea.hasContent);
+  const { editorRef, commandListStore, getRegisteredPrefixes, reportEditorUpdate } =
+    useComposerInternals();
 
   const isControlled = value !== undefined;
 
-  const onValueChangeRef = useRef(onValueChange);
-  onValueChangeRef.current = onValueChange;
+  const onValueChangeRef = useAsRef(onValueChange);
 
-  const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
-
-  const questionnaireRef = useRef(questionnaire);
-  questionnaireRef.current = questionnaire;
-
-  const commandsRef = useRef(commands);
-  commandsRef.current = commands;
-
-  const clearSelectionsRef = useRef(() => {});
-  clearSelectionsRef.current = () => {
-    const current = questionnaireRef.current;
-    if (!current.questions) return;
-    const currentQuestion = current.questions[current.step];
+  // Single-select questions clear their selection once the user starts typing
+  // a free-text answer. Stable across renders — event-time reads go through
+  // the store, so no subscription is needed.
+  const clearSelectionsIfSingle = useCallback(() => {
+    const { askUser } = composerStore.getSnapshot();
+    if (!askUser.questions) return;
+    const currentQuestion = askUser.questions[askUser.step];
     if (!currentQuestion?.multiSelect) {
-      current.clearSelections(current.step);
+      askUser.clearSelections();
     }
-  };
+  }, []);
 
   const mentionExtension = useMemo(
     () => createMentionChipExtension(getRegisteredPrefixes),
@@ -1901,9 +1812,7 @@ const ComposerTextarea = ({
     content: isControlled ? value : "",
     editorProps: {
       attributes: {
-        class: cn(
-          "max-w-none focus:outline-none w-full font-[450] leading-[1.7]",
-        ),
+        class: cn("max-w-none focus:outline-none w-full font-[450] leading-[1.7]"),
         spellcheck: "false",
       },
       handlePaste: (_view, event) => {
@@ -1916,7 +1825,7 @@ const ComposerTextarea = ({
 
           if (files.length) {
             event.preventDefault();
-            attachmentsRef.current.add(files);
+            composerStore.getSnapshot().attachments.add(files);
             return true;
           }
         }
@@ -1930,7 +1839,7 @@ const ComposerTextarea = ({
         const editor = editorRef.current;
         if (!editor) return false;
 
-        const paragraphs = buildChipPasteContent(segments);
+        const paragraphs = chipSegmentsToParagraphJSON(segments);
         if (paragraphs.length === 0) return false;
 
         event.preventDefault();
@@ -1938,15 +1847,14 @@ const ComposerTextarea = ({
         return true;
       },
       handleKeyDown: (view, event) => {
-        const cmdState = commandListPluginKey.getState(view.state);
+        const commandState = commandListPluginKey.getState(view.state);
         const action = interpretEditorKey(
           { key: event.key, shiftKey: event.shiftKey },
           {
-            isCommandListOpen: cmdState?.isOpen ?? false,
-            hasActiveQuestionnaire:
-              (questionnaireRef.current.questions?.length ?? 0) > 0,
+            isCommandListOpen: commandState?.isOpen ?? false,
+            hasActiveAskUser: (composerStore.getSnapshot().askUser.questions?.length ?? 0) > 0,
             isEditorEmpty: view.state.doc.textContent === "",
-            hasAttachments: attachmentsRef.current.items.length > 0,
+            hasAttachments: composerStore.getSnapshot().attachments.items.length > 0,
           },
         );
 
@@ -1955,32 +1863,31 @@ const ComposerTextarea = ({
         switch (action.type) {
           case "command-select": {
             event.preventDefault();
-            commandsRef.current.selectRef.current?.();
+            commandListStore.selectRef.current?.();
             return true;
           }
           case "command-close": {
             event.preventDefault();
-            view.dispatch(
-              view.state.tr.setMeta(commandListPluginKey, { close: true }),
-            );
+            view.dispatch(view.state.tr.setMeta(commandListPluginKey, { close: true }));
             return true;
           }
           case "command-navigate": {
             event.preventDefault();
-            commandsRef.current.navigateRef.current?.(action.direction);
+            commandListStore.navigateRef.current?.(action.direction);
             return true;
           }
-          case "questionnaire-arrow": {
+          case "ask-user-arrow": {
             event.preventDefault();
-            const optionsHandle = questionnaireRef.current.optionsRef.current;
+            const optionsHandle = composerStore.getSnapshot().askUser.optionsRef.current;
             optionsHandle?.navigate(action.direction);
             view.dom.blur();
             return true;
           }
           case "remove-last-attachment": {
             event.preventDefault();
-            const lastItem = attachmentsRef.current.items.at(-1);
-            if (lastItem) attachmentsRef.current.remove(lastItem.id);
+            const { items, remove } = composerStore.getSnapshot().attachments;
+            const lastItem = items.at(-1);
+            if (lastItem) remove(lastItem.id);
             return true;
           }
           case "submit-form": {
@@ -1998,7 +1905,7 @@ const ComposerTextarea = ({
       },
     },
     onFocus: () => {
-      questionnaireRef.current.optionsRef.current?.clearHighlight();
+      composerStore.getSnapshot().askUser.optionsRef.current?.clearHighlight();
     },
     onMount: ({ editor: instance }) => {
       editorRef.current = instance;
@@ -2008,36 +1915,37 @@ const ComposerTextarea = ({
     },
     onUpdate: ({ editor: instance }) => {
       const text = instance.getText();
-      editor.setHasContent(text.trim().length > 0 || !instance.isEmpty);
+      composerStore.setHasContent(text.trim().length > 0 || !instance.isEmpty);
       if (text.trim().length > 0) {
-        clearSelectionsRef.current();
-        questionnaireRef.current.optionsRef.current?.clearHighlight();
+        clearSelectionsIfSingle();
+        composerStore.getSnapshot().askUser.optionsRef.current?.clearHighlight();
       }
       onValueChangeRef.current?.(text);
       reportEditorUpdate(instance);
       const pluginState = commandListPluginKey.getState(instance.state);
-      const isOpen = pluginState?.isOpen ?? false;
-      const trigger = pluginState?.trigger ?? null;
-      const query = pluginState?.query ?? "";
-      syncCommandListState((prev) =>
-        prev.isOpen === isOpen &&
-        prev.trigger === trigger &&
-        prev.query === query
-          ? prev
-          : { isOpen, trigger, query },
-      );
-      reportCommandQueryChange({ isOpen, trigger, query });
+      commandListStore.setSnapshot({
+        isOpen: pluginState?.isOpen ?? false,
+        trigger: pluginState?.trigger ?? null,
+        query: pluginState?.query ?? "",
+      });
     },
     editable: !disabled,
     autofocus: autoFocus,
   });
 
+  // setContent emits an update (tiptap v3 default), so onUpdate keeps
+  // hasContent in sync — no manual write needed.
   useEffect(() => {
     if (isControlled && tiptapEditor && value !== tiptapEditor.getText()) {
       tiptapEditor.commands.setContent(value);
-      editor.setHasContent(value.trim().length > 0);
     }
-  }, [value, tiptapEditor, isControlled, editor]);
+  }, [value, tiptapEditor, isControlled]);
+
+  // Register the live editor with the shared controller (cleanup on unmount).
+  useLayoutEffect(() => {
+    if (!tiptapEditor) return;
+    return registerComposerController(tiptapEditor);
+  }, [tiptapEditor]);
 
   const placeholder = useMemo(() => {
     return Children.toArray(children).find(
@@ -2057,7 +1965,7 @@ const ComposerTextarea = ({
     >
       {tiptapEditor !== null ? (
         <EditorContent editor={tiptapEditor} className="relative">
-          {!editor.hasContent && placeholder && (
+          {!hasContent && placeholder && (
             <div
               data-slot="composer-placeholder"
               className="absolute inset-0 min-h-lh pointer-events-none"
@@ -2076,11 +1984,7 @@ type ComposerPlaceholderProps =
   | { placeholder: string | string[]; children?: never; className?: string }
   | { placeholder?: never; children: ReactNode; className?: string };
 
-const ComposerPlaceholder = ({
-  placeholder,
-  children,
-  className,
-}: ComposerPlaceholderProps) => {
+const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlaceholderProps) => {
   const items = useMemo(() => {
     if (placeholder !== undefined) {
       return Array.isArray(placeholder) ? placeholder : [placeholder];
@@ -2099,11 +2003,7 @@ const ComposerPlaceholder = ({
 
   if (!isLooping && items.length === 1) {
     return (
-      <div
-        className={cn("text-ink-tertiary font-[450] leading-[1.7]", className)}
-      >
-        {items[0]}
-      </div>
+      <div className={cn("text-ink-tertiary font-[450] leading-[1.7]", className)}>{items[0]}</div>
     );
   }
 
@@ -2118,14 +2018,9 @@ const ComposerPlaceholder = ({
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className={cn(
-            "text-ink-tertiary font-[450] leading-[1.7]",
-            className,
-          )}
+          className={cn("text-ink-tertiary font-[450] leading-[1.7]", className)}
         >
-          {typeof items[0] === "string"
-            ? currentItem
-            : items[key % items.length]}
+          {typeof items[0] === "string" ? currentItem : items[key % items.length]}
         </motion.span>
       </AnimatePresence>
     </div>
@@ -2135,6 +2030,34 @@ const ComposerPlaceholder = ({
 // ---------------------------------------------------------------------------
 // Composer.Actions / Composer.Submit
 // ---------------------------------------------------------------------------
+
+type ComposerContextWindowProps = ComponentProps<"div">;
+
+const ComposerContextWindow = ({ className, children, ...props }: ComposerContextWindowProps) => {
+  const isPanelOpen = useComposer((composer) => composer.isPanelOpen);
+  const hasContent = Children.toArray(children).length > 0;
+  // Yield to an open panel — the strip slides back out once it closes.
+  const isVisible = hasContent && !isPanelOpen;
+  return (
+    <div
+      data-slot="composer-context-window"
+      className={cn(
+        "relative z-0 overflow-hidden flex items-center transition-all duration-200 px-3 text-xs",
+        // Background drawn by ::before so only the top corners round — the
+        // bottom edge stays square and hides behind the container below.
+        'before:content-[""] before:absolute before:inset-0 before:-z-10 before:rounded-t-2xl before:bg-base before:pointer-events-none',
+        // Open: 32px visible band peeking above the container plus 16px
+        // submerged beneath it (negative margin pulls the container up over
+        // the bottom-padded zone).
+        isVisible ? "h-12 pb-4 -mb-4 opacity-100" : "h-0 opacity-0",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
 
 const ComposerActions = ({ className, ...props }: ComponentProps<"div">) => (
   <div
@@ -2146,18 +2069,13 @@ const ComposerActions = ({ className, ...props }: ComponentProps<"div">) => (
 
 type ComposerSubmitProps = ComponentProps<typeof IconButton>;
 
-const ComposerSubmit = ({
-  children,
-  className,
-  disabled,
-  ...props
-}: ComposerSubmitProps) => {
-  const { editor, attachments } = useComposer();
+const ComposerSubmit = ({ children, className, disabled, ...props }: ComposerSubmitProps) => {
+  const hasContent = useComposer((composer) => composer.textarea.hasContent);
+  const isSubmitting = useComposer((composer) => composer.isSubmitting);
+  const attachments = useComposer((composer) => composer.attachments);
 
   const autoDisabled =
-    disabled ??
-    ((!editor.hasContent && attachments.items.length === 0) ||
-      editor.isSubmitting);
+    disabled ?? ((!hasContent && attachments.items.length === 0) || isSubmitting);
 
   return (
     <IconButton
@@ -2181,36 +2099,33 @@ type ComposerPanelProps = ComponentProps<"div"> & {
   value?: string;
 };
 
-const ComposerPanel = ({
-  children,
-  className,
-  value,
-  ...props
-}: ComposerPanelProps) => {
-  const { commands } = useComposer();
+const ComposerPanel = ({ children, className, value, ...props }: ComposerPanelProps) => {
+  const isCommandListOpen = useCommandListSnapshot((snapshot) => snapshot.isOpen);
   const [contentRef, bounds] = useMeasure();
 
   // When a command-list prefix is active, route the panel to its
   // "command-list" item regardless of what the consumer passed.
-  const effectiveValue = commands.open ? "command-list" : value;
+  const effectiveValue = isCommandListOpen ? "command-list" : value;
 
   const matchedChild = effectiveValue
     ? Children.toArray(children).find(
         (child) =>
-          isValidElement(child) &&
-          (child.props as { value?: string }).value === effectiveValue,
+          isValidElement(child) && (child.props as { value?: string }).value === effectiveValue,
       )
     : null;
   const hasMatch = matchedChild != null;
 
+  // Mirror panel visibility into the store so sibling parts (the context
+  // window) can yield while a panel is open.
+  useEffect(() => {
+    composerStore.setPanelOpen(hasMatch);
+    return () => composerStore.setPanelOpen(false);
+  }, [hasMatch]);
+
   return (
     <div
       data-slot="composer-panel"
-      className={cn(
-        "overflow-hidden transition-transform",
-        hasMatch && "pb-2",
-        className,
-      )}
+      className={cn("overflow-hidden transition-transform", hasMatch && "pb-2", className)}
       {...props}
     >
       <MotionConfig transition={{ duration: 0.3, type: "spring", bounce: 0 }}>
@@ -2235,19 +2150,12 @@ const ComposerPanel = ({
   );
 };
 
-type ComposerPanelItemProps = Omit<
-  ComponentProps<typeof motion.div>,
-  "value"
-> & {
+type ComposerPanelItemProps = Omit<ComponentProps<typeof motion.div>, "value"> & {
   value: string;
   children: ReactNode;
 };
 
-const ComposerPanelItem = ({
-  value,
-  children,
-  ...props
-}: ComposerPanelItemProps) => (
+const ComposerPanelItem = ({ value, children, ...props }: ComposerPanelItemProps) => (
   <motion.div
     key={value}
     data-slot="composer-panel-item"
@@ -2264,60 +2172,138 @@ const ComposerPanelItem = ({
 // Composer.CommandList / CommandItem / CommandItemIcon / CommandGroup / etc.
 // ---------------------------------------------------------------------------
 
-type CommandListRowHandle = { value: string };
+type CommandListState = "loading" | "empty" | "ready";
 
+// Nav slice — updates on arrow-key navigation. Consumed by `Composer.CommandItem`.
 type CommandListNavContextValue = {
   highlightedValue: string | null;
   setHighlightedValue: (value: string | null) => void;
   selectByValue: (value: string) => void;
 };
 
-const CommandListNavContext = createContext<CommandListNavContextValue | null>(
-  null,
-);
+const CommandListNavContext = createContext<CommandListNavContextValue | null>(null);
 
-type ComposerCommandListProps<TItem extends CommandItemData> = {
-  prefix: string;
-  className?: string;
-  children: (item: TItem) => ReactNode;
+// Items slice — updates on items resolution. Consumed by `Composer.CommandItems`.
+// Split from nav so highlight changes don't re-render the items map, and items
+// mutations don't re-render every CommandItem row.
+type CommandListItemsContextValue = {
+  items: CommandItemData[];
+  state: CommandListState;
 };
 
-const ComposerCommandList = <TItem extends CommandItemData>({
-  prefix,
-  className,
-  children: renderItem,
-}: ComposerCommandListProps<TItem>): ReactNode => {
-  const { commands, tools, attachments } = useComposer();
+const CommandListItemsContext = createContext<CommandListItemsContextValue | null>(null);
+
+const useResolvedItems = (
+  itemsProp: ComposerCommandsItems,
+  query: string,
+  isActive: boolean,
+): { items: CommandItemData[]; state: CommandListState } => {
+  const isCallback = typeof itemsProp === "function";
+
+  const [asyncState, setAsyncState] = useState<{
+    items: CommandItemData[];
+    loading: boolean;
+  }>(() => ({ items: [], loading: isCallback }));
+
+  useEffect(() => {
+    if (typeof itemsProp !== "function") return;
+    if (!isActive) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    let result: CommandItemData[] | Promise<CommandItemData[]>;
+    try {
+      result = itemsProp(query, { signal: controller.signal });
+    } catch (error) {
+      console.warn("Composer.commands items callback threw:", error);
+      setAsyncState({ items: [], loading: false });
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
+    }
+
+    if (result instanceof Promise) {
+      setAsyncState((previous) => ({ ...previous, loading: true }));
+      result.then(
+        (resolved) => {
+          if (cancelled) return;
+          setAsyncState({ items: resolved, loading: false });
+        },
+        (error) => {
+          if (cancelled) return;
+          if ((error as { name?: string })?.name === "AbortError") return;
+          console.warn("Composer.commands items callback rejected:", error);
+          setAsyncState((previous) => ({ ...previous, loading: false }));
+        },
+      );
+    } else {
+      setAsyncState({ items: result, loading: false });
+    }
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [itemsProp, query, isActive]);
+
+  if (Array.isArray(itemsProp)) {
+    const items = filterArrayItems(itemsProp, query);
+    return { items, state: items.length === 0 ? "empty" : "ready" };
+  }
+
+  if (asyncState.loading) {
+    // Locally filter the most-recent resolved set so typing feels instant
+    // while the new fetch is in flight. The server result replaces this once
+    // it lands.
+    return {
+      items: filterArrayItems(asyncState.items, query),
+      state: "loading",
+    };
+  }
+
+  return {
+    items: asyncState.items,
+    state: asyncState.items.length === 0 ? "empty" : "ready",
+  };
+};
+
+const EMPTY_ITEMS: CommandItemData[] = [];
+
+type ComposerCommandListProps = {
+  prefix: string;
+  className?: string;
+  children?: ReactNode;
+};
+
+const ComposerCommandList = ({ prefix, className, children }: ComposerCommandListProps) => {
+  const attachments = useComposer((composer) => composer.attachments);
   const internals = useComposerInternals();
+  const { commandListStore } = internals;
+
+  const isActive = useCommandListSnapshot(
+    (snapshot) => snapshot.isOpen && snapshot.trigger === prefix,
+  );
+  const query = useCommandListSnapshot((snapshot) => snapshot.query);
 
   const config = internals.commands[prefix];
-  const isActive = commands.open && commands.currentPrefix === prefix;
-  const items = (config?.items ?? []) as TItem[];
-  const filter = config?.filter as
-    | ((item: TItem, query: string) => number)
-    | null
-    | undefined;
+  const itemsProp = config?.items ?? EMPTY_ITEMS;
   const kind = config?.kind ?? "execute";
 
-  const filteredItems = useMemo(
-    () => filterCommandItems(items, commands.query, filter),
-    [items, commands.query, filter],
-  );
+  const { items, state } = useResolvedItems(itemsProp, query, isActive);
 
-  const rows = useMemo<CommandListRowHandle[]>(
-    () => filteredItems.map((item) => ({ value: item.value })),
-    [filteredItems],
-  );
-  const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
+  // Only the user's explicit choice (hover / arrow keys) is stored. The active
+  // highlight is *derived* every render: honor the override while it still
+  // points at a present item, otherwise fall back to the first row (or nothing
+  // when the list is empty). The override may go stale as items change and the
+  // derivation silently corrects it — so there is no setState during render.
+  const [highlightOverride, setHighlightOverride] = useState<string | null>(null);
 
-  const validHighlight =
-    highlightedValue !== null &&
-    rows.some((row) => row.value === highlightedValue);
-  if (!validHighlight && rows.length > 0) {
-    queueMicrotask(() => setHighlightedValue(rows[0].value));
-  } else if (rows.length === 0 && highlightedValue !== null) {
-    queueMicrotask(() => setHighlightedValue(null));
-  }
+  const effectiveHighlight =
+    highlightOverride !== null && items.some((item) => item.value === highlightOverride)
+      ? highlightOverride
+      : (items[0]?.value ?? null);
 
   const selectByValue = useCallback(
     (value: string) => {
@@ -2341,6 +2327,8 @@ const ComposerCommandList = <TItem extends CommandItemData>({
               prefix,
               label: dataItem.label ?? dataItem.value,
               value: dataItem.value,
+              icon: dataItem.icon ?? null,
+              variant: dataItem.variant ?? null,
             },
           })
           .run();
@@ -2351,23 +2339,7 @@ const ComposerCommandList = <TItem extends CommandItemData>({
           .deleteRange({ from: triggerStartPosition, to: cursorPosition })
           .run();
         const onSelectContext: PrefixOnSelectContext = {
-          editor: {
-            focus: () => editor.commands.focus(),
-            blur: () => editor.commands.blur(),
-            clear: () => {
-              editor.commands.setContent("");
-            },
-            insertText: (text) => {
-              editor.commands.insertContent(text);
-            },
-            insertChip: (chip) => {
-              editor.commands.insertContent({
-                type: "mentionChip",
-                attrs: chip,
-              });
-            },
-          },
-          tools,
+          editor: composerController,
           attachments: {
             add: attachments.add,
             remove: attachments.remove,
@@ -2377,58 +2349,128 @@ const ComposerCommandList = <TItem extends CommandItemData>({
         dataItem.onSelect?.(onSelectContext);
       }
 
-      editor.view.dispatch(
-        editor.state.tr.setMeta(commandListPluginKey, { close: true }),
-      );
+      editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
     },
-    [internals, items, kind, prefix, tools, attachments],
+    [internals, items, kind, prefix, attachments],
   );
 
   if (isActive) {
-    commands.selectRef.current = highlightedValue
-      ? () => selectByValue(highlightedValue)
+    commandListStore.selectRef.current = effectiveHighlight
+      ? () => selectByValue(effectiveHighlight)
       : null;
-    commands.navigateRef.current = (direction: number) => {
-      const next = computeNextHighlight(
-        rows,
-        highlightedValue,
-        direction === -1 ? -1 : 1,
-      );
-      setHighlightedValue(next);
+    commandListStore.navigateRef.current = (direction: number) => {
+      const next = computeNextHighlight(items, effectiveHighlight, direction === -1 ? -1 : 1);
+      setHighlightOverride(next);
     };
   }
 
   const navContext = useMemo<CommandListNavContextValue>(
     () => ({
-      highlightedValue,
-      setHighlightedValue,
+      highlightedValue: effectiveHighlight,
+      setHighlightedValue: setHighlightOverride,
       selectByValue,
     }),
-    [highlightedValue, selectByValue],
+    [effectiveHighlight, selectByValue],
+  );
+
+  const itemsContext = useMemo<CommandListItemsContextValue>(
+    () => ({ items, state }),
+    [items, state],
   );
 
   if (!isActive) return null;
 
-  if (filteredItems.length === 0) {
-    return (
-      <Commands className={className}>
-        <Commands.Empty>No results</Commands.Empty>
-      </Commands>
-    );
-  }
-
   return (
-    <CommandListNavContext.Provider value={navContext}>
-      <Commands className={className}>
-        {filteredItems.map((item, index) => (
-          <Fragment key={item.value ?? `__cmd_${index}`}>
-            {renderItem(item)}
-          </Fragment>
-        ))}
-      </Commands>
-    </CommandListNavContext.Provider>
+    <CommandListItemsContext.Provider value={itemsContext}>
+      <CommandListNavContext.Provider value={navContext}>
+        <div
+          data-slot="composer-command-list"
+          data-state={state}
+          className={cn(
+            "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1",
+            className,
+          )}
+        >
+          {children}
+        </div>
+      </CommandListNavContext.Provider>
+    </CommandListItemsContext.Provider>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Composer.CommandItems / CommandLoading / CommandEmpty
+// ---------------------------------------------------------------------------
+
+const useCommandListItems = <Item extends CommandItemData = CommandItemData>(): {
+  items: Item[];
+  state: CommandListState;
+} => {
+  const context = useContext(CommandListItemsContext);
+  if (!context) {
+    throw new Error("<Composer.CommandItems> must be rendered inside <Composer.CommandList>.");
+  }
+  return context as { items: Item[]; state: CommandListState };
+};
+
+type ComposerCommandItemsProps<Item extends CommandItemData> = {
+  className?: string;
+  children: (item: Item) => ReactNode;
+};
+
+const ComposerCommandItems = <Item extends CommandItemData>({
+  className,
+  children: renderItem,
+}: ComposerCommandItemsProps<Item>): ReactNode => {
+  const { items } = useCommandListItems<Item>();
+
+  return (
+    <div
+      data-slot="composer-command-items"
+      className={cn(
+        "flex flex-col",
+        "group-data-[state=empty]/composer-command-list:hidden",
+        className,
+      )}
+    >
+      {items.map((item, index) => (
+        <Fragment key={item.value ?? `__cmd_${index}`}>{renderItem(item)}</Fragment>
+      ))}
+    </div>
+  );
+};
+
+type ComposerCommandLoadingProps = ComponentProps<"div">;
+
+const ComposerCommandLoading = ({ className, children, ...props }: ComposerCommandLoadingProps) => (
+  <div
+    data-slot="composer-command-loading"
+    className={cn(
+      "hidden group-data-[state=loading]/composer-command-list:flex",
+      "items-center px-3 h-8 text-sm text-ink-tertiary",
+      className,
+    )}
+    {...props}
+  >
+    {children ?? "Loading…"}
+  </div>
+);
+
+type ComposerCommandEmptyProps = ComponentProps<"div">;
+
+const ComposerCommandEmpty = ({ className, children, ...props }: ComposerCommandEmptyProps) => (
+  <div
+    data-slot="composer-command-empty"
+    className={cn(
+      "hidden group-data-[state=empty]/composer-command-list:flex",
+      "items-center px-3 h-8 text-sm text-ink-tertiary",
+      className,
+    )}
+    {...props}
+  >
+    {children ?? "No results"}
+  </div>
+);
 
 type ComposerCommandItemProps = {
   value: string;
@@ -2438,9 +2480,7 @@ type ComposerCommandItemProps = {
 const ComposerCommandItem = ({ value, children }: ComposerCommandItemProps) => {
   const navContext = useContext(CommandListNavContext);
   if (!navContext) {
-    throw new Error(
-      "<Composer.CommandItem> must be rendered inside <Composer.CommandList>.",
-    );
+    throw new Error("<Composer.CommandItem> must be rendered inside <Composer.CommandList>.");
   }
 
   const isHighlighted = navContext.highlightedValue === value;
@@ -2460,11 +2500,7 @@ const ComposerCommandItem = ({ value, children }: ComposerCommandItemProps) => {
   );
 };
 
-const ComposerCommandItemIcon = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"span">) => (
+const ComposerCommandItemIcon = ({ children, className, ...props }: ComponentProps<"span">) => (
   <span
     data-slot="composer-command-item-icon"
     className={cn(
@@ -2477,21 +2513,11 @@ const ComposerCommandItemIcon = ({
   </span>
 );
 
-const ComposerCommandItemLabel = ({
-  className,
-  ...props
-}: ComponentProps<"span">) => (
-  <span
-    data-slot="composer-command-item-label"
-    className={cn("text-sm", className)}
-    {...props}
-  />
+const ComposerCommandItemLabel = ({ className, ...props }: ComponentProps<"span">) => (
+  <span data-slot="composer-command-item-label" className={cn("text-sm", className)} {...props} />
 );
 
-const ComposerCommandItemDescription = ({
-  className,
-  ...props
-}: ComponentProps<"span">) => (
+const ComposerCommandItemDescription = ({ className, ...props }: ComponentProps<"span">) => (
   <span
     data-slot="composer-command-item-description"
     className={cn("text-xs text-ink-tertiary truncate", className)}
@@ -2499,47 +2525,34 @@ const ComposerCommandItemDescription = ({
   />
 );
 
-const ComposerCommandGroup = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
+const ComposerCommandGroup = ({ className, children, ...props }: ComponentProps<"div">) => (
   <Commands.Group className={className} {...props}>
     {children}
   </Commands.Group>
 );
 
-const ComposerCommandGroupLabel = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
+const ComposerCommandGroupLabel = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="composer-command-group-label"
-    className={cn(
-      "px-2 pt-2 pb-1 text-xs font-medium text-ink-tertiary",
-      className,
-    )}
+    className={cn("px-2 pt-2 pb-1 text-xs font-medium text-ink-tertiary", className)}
     {...props}
   >
     {children}
   </div>
 );
 
-type ComposerCommandCollectionProps<TItem> = {
-  items: TItem[];
-  children: (item: TItem) => ReactNode;
+type ComposerCommandCollectionProps<Item> = {
+  items: Item[];
+  children: (item: Item) => ReactNode;
 };
 
-const ComposerCommandCollection = <TItem,>({
+const ComposerCommandCollection = <Item,>({
   items,
   children: renderItem,
-}: ComposerCommandCollectionProps<TItem>): ReactNode => (
+}: ComposerCommandCollectionProps<Item>): ReactNode => (
   <>
     {items.map((item, index) => (
-      <Fragment
-        key={(item as { value?: string } | null)?.value ?? `__col_${index}`}
-      >
+      <Fragment key={(item as { value?: string } | null)?.value ?? `__col_${index}`}>
         {renderItem(item)}
       </Fragment>
     ))}
@@ -2565,21 +2578,23 @@ const ComposerCommands = ({ className }: ComposerCommandsProps) => {
     <>
       {prefixes.map((prefix) => (
         <ComposerCommandList key={prefix} prefix={prefix} className={className}>
-          {(item) => (
-            <ComposerCommandItem value={item.value}>
-              {item.icon && (
-                <ComposerCommandItemIcon>
-                  {CHIP_ICONS[item.icon]}
-                </ComposerCommandItemIcon>
-              )}
-              <ComposerCommandItemLabel>{item.label}</ComposerCommandItemLabel>
-              {item.description && (
-                <ComposerCommandItemDescription>
-                  {item.description}
-                </ComposerCommandItemDescription>
-              )}
-            </ComposerCommandItem>
-          )}
+          <ComposerCommandLoading />
+          <ComposerCommandEmpty />
+          <ComposerCommandItems>
+            {(item) => (
+              <ComposerCommandItem value={item.value}>
+                {item.icon && (
+                  <ComposerCommandItemIcon>{CHIP_ICONS[item.icon]}</ComposerCommandItemIcon>
+                )}
+                <ComposerCommandItemLabel>{item.label}</ComposerCommandItemLabel>
+                {item.description && (
+                  <ComposerCommandItemDescription>
+                    {item.description}
+                  </ComposerCommandItemDescription>
+                )}
+              </ComposerCommandItem>
+            )}
+          </ComposerCommandItems>
         </ComposerCommandList>
       ))}
     </>
@@ -2587,78 +2602,59 @@ const ComposerCommands = ({ className }: ComposerCommandsProps) => {
 };
 
 // ---------------------------------------------------------------------------
-// Composer.Questions (with sub-Parts) — default render for the questionnaire
+// Composer.AskUser (with sub-Parts) — default render for the ask-user flow
 // registered via the `questions` prop on Composer Root.
 // ---------------------------------------------------------------------------
 
-const ComposerQuestionsRoot = () => {
-  const { questionnaire } = useComposer();
+const ComposerAskUser = () => {
+  const askUser = useComposer((composer) => composer.askUser);
 
-  const question = questionnaire.questions?.[questionnaire.step] ?? null;
+  const question = askUser.questions?.[askUser.step] ?? null;
   const lastQuestionRef = useRef(question);
   if (question) lastQuestionRef.current = question;
   const display = question ?? lastQuestionRef.current;
 
   if (!display) return null;
 
-  const entry = questionnaire.answers.get(questionnaire.step) ?? {
+  const entry = askUser.answers.get(askUser.step) ?? {
     selected: new Set<string>(),
     freeText: "",
   };
 
-  const totalQuestions = questionnaire.questions?.length ?? 0;
+  const totalQuestions = askUser.questions?.length ?? 0;
 
   return (
     <AskUser>
       <AskUser.Header>
         <AskUser.Label>{display.question}</AskUser.Label>
-        {!questionnaire.isSingle && totalQuestions > 1 && (
+        {!askUser.isSingle && totalQuestions > 1 && (
           <AskUser.Navigation>
-            <AskUser.Previous
-              onClick={questionnaire.goBack}
-              disabled={questionnaire.step === 0}
-            />
-            <AskUser.StepLabel
-              current={questionnaire.step + 1}
-              total={totalQuestions}
-            />
-            <AskUser.Next
-              onClick={questionnaire.goNext}
-              disabled={questionnaire.step === totalQuestions - 1}
-            />
+            <AskUser.Previous onClick={askUser.goBack} disabled={askUser.step === 0} />
+            <AskUser.StepLabel current={askUser.step + 1} total={totalQuestions} />
+            <AskUser.Next onClick={askUser.goNext} disabled={askUser.step === totalQuestions - 1} />
           </AskUser.Navigation>
         )}
       </AskUser.Header>
       {display.options && (
         <AskUser.Options
-          ref={questionnaire.optionsRef}
+          ref={askUser.optionsRef}
           multiSelect={!!display.multiSelect}
-          groupName={`q-${questionnaire.step}`}
+          groupName={`q-${askUser.step}`}
           value={[...entry.selected][0] ?? ""}
-          onValueChange={(value) =>
-            questionnaire.toggleOption(questionnaire.step, value, false)
-          }
+          onValueChange={askUser.toggleOption}
         >
           {display.options.map((option) => (
             <AskUser.Option
               key={option.label}
               value={option.label}
               selected={entry.selected.has(option.label)}
-              onSelect={() =>
-                questionnaire.toggleOption(
-                  questionnaire.step,
-                  option.label,
-                  !!display.multiSelect,
-                )
-              }
+              onSelect={() => askUser.toggleOption(option.label)}
             >
               <AskUser.OptionInput />
               <AskUser.OptionContent>
                 <AskUser.OptionLabel>{option.label}</AskUser.OptionLabel>
                 {option.description && (
-                  <AskUser.OptionDescription>
-                    {option.description}
-                  </AskUser.OptionDescription>
+                  <AskUser.OptionDescription>{option.description}</AskUser.OptionDescription>
                 )}
               </AskUser.OptionContent>
             </AskUser.Option>
@@ -2669,12 +2665,9 @@ const ComposerQuestionsRoot = () => {
   );
 };
 
-const ComposerQuestionsHints = ({
-  className,
-  ...props
-}: ComponentProps<typeof AskUser.Hints>) => {
-  const { questionnaire } = useComposer();
-  const totalQuestions = questionnaire.questions?.length ?? 0;
+const ComposerAskUserHints = ({ className, ...props }: ComponentProps<typeof AskUser.Hints>) => {
+  const askUser = useComposer((composer) => composer.askUser);
+  const totalQuestions = askUser.questions?.length ?? 0;
 
   return (
     <AskUser.Hints className={cn("flex-1", className)} {...props}>
@@ -2685,7 +2678,7 @@ const ComposerQuestionsHints = ({
       <span className="inline-flex items-center gap-1">
         <Kbd size="sm">↵</Kbd> select
       </span>
-      {!questionnaire.isSingle && totalQuestions > 1 && (
+      {!askUser.isSingle && totalQuestions > 1 && (
         <span className="inline-flex items-center gap-1">
           <Kbd size="sm">←</Kbd>
           <Kbd size="sm">→</Kbd> between questions
@@ -2698,20 +2691,17 @@ const ComposerQuestionsHints = ({
   );
 };
 
-type ComposerQuestionsDismissProps = ComponentProps<typeof Button>;
+type ComposerAskUserDismissProps = ComponentProps<typeof Button>;
 
-const ComposerQuestionsDismiss = ({
-  className,
-  ...props
-}: ComposerQuestionsDismissProps) => {
-  const { questionnaire } = useComposer();
+const ComposerAskUserDismiss = ({ className, ...props }: ComposerAskUserDismissProps) => {
+  const askUser = useComposer((composer) => composer.askUser);
   return (
     <Button
       type="button"
       variant="ghost"
-      data-slot="composer-questions-dismiss"
+      data-slot="composer-ask-user-dismiss"
       className={cn("gap-2", className)}
-      onClick={questionnaire.dismissStep}
+      onClick={askUser.dismissStep}
       {...props}
     >
       Dismiss
@@ -2720,22 +2710,19 @@ const ComposerQuestionsDismiss = ({
   );
 };
 
-type ComposerQuestionsContinueProps = ComponentProps<typeof Button>;
+type ComposerAskUserContinueProps = ComponentProps<typeof Button>;
 
-const ComposerQuestionsContinue = ({
-  className,
-  ...props
-}: ComposerQuestionsContinueProps) => {
-  const { questionnaire } = useComposer();
+const ComposerAskUserContinue = ({ className, ...props }: ComposerAskUserContinueProps) => {
+  const askUser = useComposer((composer) => composer.askUser);
   return (
     <Button
       type="submit"
       variant="tertiary"
-      data-slot="composer-questions-continue"
+      data-slot="composer-ask-user-continue"
       className={cn("gap-2", className)}
       {...props}
     >
-      {questionnaire.isLastStep ? "Submit" : "Continue"}
+      {askUser.isLastStep ? "Submit" : "Continue"}
       <Kbd size="sm">↵</Kbd>
     </Button>
   );
@@ -2749,18 +2736,22 @@ export const Composer = Object.assign(ComposerRoot, {
   Container: ComposerContainer,
   Attachments: ComposerAttachments,
   AttachmentTrigger: ComposerAttachmentTrigger,
+  ContextWindow: ComposerContextWindow,
   Actions: ComposerActions,
   Placeholder: ComposerPlaceholder,
   Submit: ComposerSubmit,
   Panel: ComposerPanel,
   PanelItem: ComposerPanelItem,
   Textarea: ComposerTextarea,
-  Questions: ComposerQuestionsRoot,
-  Hints: ComposerQuestionsHints,
-  Dismiss: ComposerQuestionsDismiss,
-  Continue: ComposerQuestionsContinue,
+  AskUser: ComposerAskUser,
+  AskUserHints: ComposerAskUserHints,
+  AskUserDismiss: ComposerAskUserDismiss,
+  AskUserContinue: ComposerAskUserContinue,
   Commands: ComposerCommands,
   CommandList: ComposerCommandList,
+  CommandItems: ComposerCommandItems,
+  CommandLoading: ComposerCommandLoading,
+  CommandEmpty: ComposerCommandEmpty,
   CommandItem: ComposerCommandItem,
   CommandItemIcon: ComposerCommandItemIcon,
   CommandItemLabel: ComposerCommandItemLabel,

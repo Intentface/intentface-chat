@@ -1,19 +1,21 @@
 "use client";
 
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { FileUIPart, UIMessage } from "ai";
-import { FileIcon, PaperclipIcon } from "lucide-react";
+import { FileIcon, MessageCircleIcon, PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { type ComponentProps, Fragment } from "react";
+import { type ComponentProps, Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Chip } from "@/components/ai/chip";
 import type { ChipData } from "@/components/ai/composer";
+import Button from "@/components/ui/button";
 import HoverCard from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
-import { parseChipSegments } from "@/lib/ai/chip-syntax";
+import { parseChipSegments } from "@/lib/ai/chip-markdown";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
@@ -24,13 +26,7 @@ type MessageRootProps = {
   isError: boolean;
 } & ComponentProps<typeof motion.div>;
 // Message wrapper with entrance animation
-const MessageRoot = ({
-  role,
-  isLast,
-  isError,
-  className,
-  ...props
-}: MessageRootProps) => {
+const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRootProps) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -69,11 +65,7 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
 );
 
 // Actions container (for copy, regenerate, etc.)
-const MessageActions = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const MessageActions = ({ children, className, ...props }: ComponentProps<"div">) => (
   <Tooltip.Provider>
     <div
       data-slot="message-actions"
@@ -122,10 +114,7 @@ const MessageAction = ({
   );
 };
 
-const MessageMarkdown = ({
-  className,
-  ...props
-}: ComponentProps<typeof Markdown>) => (
+const MessageMarkdown = ({ className, ...props }: ComponentProps<typeof Markdown>) => (
   <Markdown className={cn("size-full", className)} {...props} />
 );
 
@@ -150,9 +139,7 @@ type MessageTextProps = {
 
 const MessageText = ({ text, chips, className }: MessageTextProps) => {
   const segments = parseChipSegments(text);
-  const chipByKey = new Map(
-    (chips ?? []).map((c) => [`${c.prefix}:${c.value}`, c]),
-  );
+  const chipByKey = new Map((chips ?? []).map((c) => [`${c.prefix}:${c.value}`, c]));
 
   return (
     <span className={cn("whitespace-pre-wrap text-md", className)}>
@@ -172,11 +159,7 @@ const MessageText = ({ text, chips, className }: MessageTextProps) => {
 };
 
 // Error message display
-const MessageError = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const MessageError = ({ children, className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-error"
     className={cn("flex items-start gap-2 text-sm text-destructive", className)}
@@ -203,10 +186,7 @@ const MessageError = ({
 const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-loading"
-    className={cn(
-      "flex items-start gap-1 text-sm text-muted-foreground",
-      className,
-    )}
+    className={cn("flex items-start gap-1 text-sm text-muted-foreground", className)}
     {...props}
   >
     <span>Loading...</span>
@@ -266,11 +246,7 @@ const MessageCopy = ({
 };
 
 // Attachments container for message history (read-only)
-const MessageAttachments = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const MessageAttachments = ({ children, className, ...props }: ComponentProps<"div">) => (
   <div className={cn("flex flex-wrap gap-2", className)} {...props}>
     {children}
   </div>
@@ -283,11 +259,7 @@ type MessageAttachmentProps = {
   attachment: FileUIPart;
 } & ComponentProps<"div">;
 
-const MessageAttachment = ({
-  attachment,
-  className,
-  ...props
-}: MessageAttachmentProps) => {
+const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmentProps) => {
   const mediaType = attachment.mediaType ?? "";
   const filename = attachment.filename ?? "Attachment";
   const Icon = mediaType === "application/pdf" ? FileIcon : PaperclipIcon;
@@ -336,17 +308,152 @@ const MessageAttachment = ({
   );
 };
 
+// ---------------------------------------------------------------------------
+// Message.SelectionToolbar — floating "Add to chat" bar above a text selection
+// within this message. An invisible anchor span resolves the owning
+// [data-slot="message"] element, so the listeners are scoped per message.
+// ---------------------------------------------------------------------------
+
+type MessageSelection = {
+  text: string;
+  range: Range;
+};
+
+const readMessageSelection = (scope: HTMLElement): MessageSelection | null => {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+
+  const text = selection.toString();
+  if (text.trim().length === 0) return null;
+
+  // Both endpoints must sit inside this message — a cross-message selection
+  // has its common ancestor outside the scope and resolves to null.
+  const range = selection.getRangeAt(0);
+  if (!scope.contains(range.commonAncestorContainer)) return null;
+
+  // Clone so later mutations of the live selection don't move our anchor.
+  return { text, range: range.cloneRange() };
+};
+
+// Subscribe to the document selection, scoped to `scope`. Samples when the
+// gesture settles (mouseup / keyup) instead of on every selectionchange drag
+// tick; selectionchange only clears the value once the selection collapses.
+const useMessageSelection = (scope: HTMLElement | null): MessageSelection | null => {
+  const [selection, setSelection] = useState<MessageSelection | null>(null);
+
+  useEffect(() => {
+    if (!scope) return;
+
+    const readSelection = () => setSelection(readMessageSelection(scope));
+    const hideWhenCollapsed = () => {
+      const current = window.getSelection();
+      if (!current || current.isCollapsed) setSelection(null);
+    };
+
+    document.addEventListener("mouseup", readSelection);
+    document.addEventListener("keyup", readSelection);
+    document.addEventListener("selectionchange", hideWhenCollapsed);
+    return () => {
+      document.removeEventListener("mouseup", readSelection);
+      document.removeEventListener("keyup", readSelection);
+      document.removeEventListener("selectionchange", hideWhenCollapsed);
+    };
+  }, [scope]);
+
+  return selection;
+};
+
+type MessageSelectionToolbarProps = {
+  onAdd: (text: string) => void;
+  className?: string;
+};
+
+const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarProps) => {
+  const [messageElement, setMessageElement] = useState<HTMLElement | null>(null);
+  const selection = useMessageSelection(messageElement);
+
+  // Resolve the owning message root from the anchor's DOM position.
+  const anchorRef = useCallback((node: HTMLSpanElement | null) => {
+    setMessageElement(node?.closest<HTMLElement>('[data-slot="message"]') ?? null);
+  }, []);
+
+  // Virtual anchor over the live Range — Floating UI's auto-update re-reads
+  // the rect, so the toolbar tracks the selection through scrolls and
+  // reflows. contextElement supplies the scroll ancestors to observe.
+  const anchor = useMemo(
+    () =>
+      selection && messageElement
+        ? {
+            getBoundingClientRect: () => selection.range.getBoundingClientRect(),
+            contextElement: messageElement,
+          }
+        : null,
+    [selection, messageElement],
+  );
+
+  return (
+    <>
+      <span ref={anchorRef} data-slot="message-selection-anchor" hidden />
+      <PopoverPrimitive.Root
+        open={selection !== null}
+        onOpenChange={(open, eventDetails) => {
+          // Only honor Escape. The select-drag's trailing click registers as
+          // an outside press and must not dismiss — and a genuine outside
+          // click collapses the selection natively, which already closes the
+          // toolbar through the selectionchange listener.
+          if (!open && eventDetails.reason === "escape-key") {
+            window.getSelection()?.removeAllRanges();
+          }
+        }}
+        modal={false}
+      >
+        <PopoverPrimitive.Portal>
+          <PopoverPrimitive.Positioner
+            className="isolate z-50 outline-none"
+            anchor={anchor}
+            side="top"
+            sideOffset={8}
+          >
+            <PopoverPrimitive.Popup
+              data-slot="message-selection-toolbar"
+              role="toolbar"
+              aria-label="Selection actions"
+              initialFocus={false}
+              finalFocus={false}
+              className={cn(
+                "flex items-center gap-1 rounded-full border border-primary-border bg-primary p-0.5 shadow-md outline-none",
+                "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+                "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                "duration-100",
+                className,
+              )}
+              // Keep the selection alive while clicking inside the toolbar.
+              onMouseDown={(event) => event.preventDefault()}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 rounded-full"
+                onClick={() => {
+                  if (selection) onAdd(selection.text);
+                  window.getSelection()?.removeAllRanges();
+                }}
+              >
+                <MessageCircleIcon className="size-3.5" />
+                Add to chat
+              </Button>
+            </PopoverPrimitive.Popup>
+          </PopoverPrimitive.Positioner>
+        </PopoverPrimitive.Portal>
+      </PopoverPrimitive.Root>
+    </>
+  );
+};
+
 // Source pills container
-const MessageSources = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
-  <div
-    data-slot="message-sources"
-    className={cn("flex flex-wrap gap-1.5", className)}
-    {...props}
-  >
+const MessageSources = ({ children, className, ...props }: ComponentProps<"div">) => (
+  <div data-slot="message-sources" className={cn("flex flex-wrap gap-1.5", className)} {...props}>
     {children}
   </div>
 );
@@ -395,4 +502,5 @@ export const Message = Object.assign(MessageRoot, {
   Timestamp: MessageTimestamp,
   Sources: MessageSources,
   Source: MessageSource,
+  SelectionToolbar: MessageSelectionToolbar,
 });

@@ -9,12 +9,7 @@ import { InceptionIcon } from "@/components/icons/inception";
 import { OpenAIIcon } from "@/components/icons/openai";
 import Button from "@/components/ui/button";
 import DropdownMenu from "@/components/ui/dropdown-menu";
-import {
-  ALL_MODELS,
-  INCEPTION_MODELS,
-  type ModelId,
-  OPENAI_MODELS,
-} from "@/lib/models";
+import { ALL_MODELS, INCEPTION_MODELS, type ModelId, OPENAI_MODELS } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -57,23 +52,14 @@ const getProviderIcon = (
 export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
   const currentModel = ALL_MODELS.find((model) => model.id === value);
   const currentLabel = currentModel?.label ?? "Select model";
-  const CurrentProviderIcon = currentModel
-    ? getProviderIcon(currentModel.provider)
-    : null;
+  const CurrentProviderIcon = currentModel ? getProviderIcon(currentModel.provider) : null;
 
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger
         render={
-          <Button
-            variant="ghost"
-            size="md"
-            type="button"
-            className="rounded-full gap-1.5"
-          >
-            {CurrentProviderIcon ? (
-              <CurrentProviderIcon className="text-ink-secondary" />
-            ) : null}
+          <Button variant="ghost" size="md" type="button" className="rounded-full gap-1.5">
+            {CurrentProviderIcon ? <CurrentProviderIcon className="text-ink-secondary" /> : null}
             <span>{currentLabel}</span>
             <ChevronGrabberVerticalIcon className="text-ink-tertiary" />
           </Button>
@@ -86,21 +72,14 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
           return (
             <DropdownMenu.Sub key={group.provider}>
               <DropdownMenu.SubTrigger>
-                {GroupProviderIcon ? (
-                  <GroupProviderIcon className="text-ink-secondary" />
-                ) : null}
+                {GroupProviderIcon ? <GroupProviderIcon className="text-ink-secondary" /> : null}
                 <span>{group.label}</span>
               </DropdownMenu.SubTrigger>
               <DropdownMenu.SubContent>
                 {group.models.map((model) => {
                   return (
-                    <DropdownMenu.Item
-                      key={model.id}
-                      onClick={() => onValueChange(model.id)}
-                    >
-                      <CheckMarkMediumIcon
-                        className={cn(value !== model.id && "opacity-0")}
-                      />
+                    <DropdownMenu.Item key={model.id} onClick={() => onValueChange(model.id)}>
+                      <CheckMarkMediumIcon className={cn(value !== model.id && "opacity-0")} />
                       <span>{model.label}</span>
                     </DropdownMenu.Item>
                   );
@@ -116,9 +95,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
           return (
             <DropdownMenu.Sub key={provider.provider}>
               <DropdownMenu.SubTrigger disabled>
-                {ProviderIcon ? (
-                  <ProviderIcon className="text-ink-secondary" />
-                ) : null}
+                {ProviderIcon ? <ProviderIcon className="text-ink-secondary" /> : null}
                 <span>{provider.label}</span>
               </DropdownMenu.SubTrigger>
             </DropdownMenu.Sub>

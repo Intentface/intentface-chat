@@ -6,14 +6,10 @@ export const queryData = tool({
   description:
     "Run a query against a connected data source. Returns columns and rows. Use a connectionId from connectDataSource.",
   inputSchema: z.object({
-    connectionId: z
-      .string()
-      .describe("The connection ID from connectDataSource"),
+    connectionId: z.string().describe("The connection ID from connectDataSource"),
     query: z
       .string()
-      .describe(
-        "Natural language or SQL-like query describing what data to retrieve",
-      ),
+      .describe("Natural language or SQL-like query describing what data to retrieve"),
   }),
   execute: async ({ connectionId }) => {
     await delay(350);

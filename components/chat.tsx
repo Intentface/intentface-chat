@@ -2,17 +2,10 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { ChatStatus } from "ai";
-import { CircleDotIcon, Loader } from "lucide-react";
+import { CircleDotIcon, Loader, TextQuoteIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
-import {
-  createContext,
-  use,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
 import {
   type ChipData,
@@ -59,6 +52,11 @@ export type Artifact = {
   content: string;
 };
 
+type ChatSelection = {
+  id: string;
+  text: string;
+};
+
 type ChatContextValue = {
   chatId: string;
   messages: AppUIMessage[];
@@ -73,6 +71,9 @@ type ChatContextValue = {
   openArtifact: (artifact: Artifact) => void;
   toggleArtifact: (artifact: Artifact) => void;
   closeArtifact: () => void;
+  selections: ChatSelection[];
+  addSelection: (text: string) => void;
+  clearSelections: () => void;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -128,12 +129,9 @@ const InterleavedSteps = ({
   }, [isStreaming]);
 
   const suffixes: string[] = [];
-  if (toolCount > 0)
-    suffixes.push(`used ${toolCount} tool${toolCount !== 1 ? "s" : ""}`);
+  if (toolCount > 0) suffixes.push(`used ${toolCount} tool${toolCount !== 1 ? "s" : ""}`);
   if (questionCount > 0)
-    suffixes.push(
-      `asked ${questionCount} question${questionCount !== 1 ? "s" : ""}`,
-    );
+    suffixes.push(`asked ${questionCount} question${questionCount !== 1 ? "s" : ""}`);
   const suffix = suffixes.length > 0 ? `, ${suffixes.join(", ")}` : "";
 
   const header = isStreaming ? (
@@ -160,9 +158,7 @@ const InterleavedSteps = ({
               <Steps.Step
                 key={`r-${i}-${j}`}
                 label={section.header ?? "Thinking"}
-                status={
-                  streaming && j === sections.length - 1 ? "active" : "complete"
-                }
+                status={streaming && j === sections.length - 1 ? "active" : "complete"}
                 icon={BrainIcon}
               >
                 {section.body && <Steps.Body>{section.body}</Steps.Body>}
@@ -186,7 +182,7 @@ const InterleavedSteps = ({
 };
 
 const ChatMessages = () => {
-  const { messages, status, regenerate, toggleArtifact } = useChatContext();
+  const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
   const model = useModelStore((state) => state.model);
   const isDiffusionModel = model === "mercury-2-diffusing";
   const isError = status === "error";
@@ -230,10 +226,7 @@ const ChatMessages = () => {
           !askUser.isAwaitingInput;
 
         const shouldShowInterleavedReasoning =
-          isAssistant &&
-          chain.hasTools &&
-          !isMessageStreaming &&
-          !askUser.isAwaitingInput;
+          isAssistant && chain.hasTools && !isMessageStreaming && !askUser.isAwaitingInput;
 
         return (
           <Message
@@ -262,10 +255,7 @@ const ChatMessages = () => {
 
             {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
             {shouldShowInterleavedReasoning && (
-              <InterleavedSteps
-                segments={chain.segments}
-                isStreaming={isMessageStreaming}
-              />
+              <InterleavedSteps segments={chain.segments} isStreaming={isMessageStreaming} />
             )}
 
             {/* Message content */}
@@ -285,25 +275,14 @@ const ChatMessages = () => {
                         const lastChainIdx = parts.findLastIndex(
                           (p) =>
                             p.type === "reasoning" ||
-                            (p.type.startsWith("tool-") &&
-                              p.type !== "tool-askUser"),
+                            (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
                         );
                         if (index <= lastChainIdx) return null;
                       }
                       if (isUser) {
-                        return (
-                          <Message.Text
-                            key={index}
-                            text={part.text}
-                            chips={userChips}
-                          />
-                        );
+                        return <Message.Text key={index} text={part.text} chips={userChips} />;
                       }
-                      return (
-                        <Message.Markdown key={index}>
-                          {part.text}
-                        </Message.Markdown>
-                      );
+                      return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
                     }
                     case "data-chip":
                       return null;
@@ -334,15 +313,14 @@ const ChatMessages = () => {
               )}
             </Message.Content>
 
+            {/* Selection → context affordance (assistant text only) */}
+            {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
+
             {/* Source URL pills */}
             {sourcesInfo?.hasSources && (
               <Message.Sources>
                 {sourcesInfo.sources.map((source) => (
-                  <Message.Source
-                    key={source.domain}
-                    url={source.url}
-                    domain={source.domain}
-                  />
+                  <Message.Source key={source.domain} url={source.url} domain={source.domain} />
                 ))}
               </Message.Sources>
             )}
@@ -414,41 +392,8 @@ const MENTION_ITEMS: CommandItemData[] = [
   },
 ];
 
-const COMMAND_ITEMS: CommandItemData[] = [
-  {
-    value: "webSearch",
-    label: "Search the web",
-    description: "Enable web search for this message",
-    icon: "globe",
-    keywords: "search web",
-    onSelect: ({ tools }) => tools.set("webSearch", true),
-  },
-  {
-    value: "codeExecution",
-    label: "Code Execution",
-    description: "Run code snippets",
-    icon: "code",
-    keywords: "code run execute",
-  },
-  {
-    value: "thinking",
-    label: "Think deeply",
-    description: "Enable extended thinking",
-    icon: "brain",
-    keywords: "think reasoning",
-    onSelect: ({ tools }) => tools.set("thinking", true),
-  },
-  {
-    value: "summarize",
-    label: "Summarize",
-    description: "Summarize the conversation",
-    icon: "bubbleWideSparkle",
-    keywords: "summarize summary",
-  },
-];
-
 const ChatInput = () => {
-  const { chatId, messages, sendMessage, status, addToolOutput } =
+  const { chatId, messages, sendMessage, status, addToolOutput, selections, clearSelections } =
     useChatContext();
   const router = useRouter();
   const createChat = useChatStore((state) => state.createChat);
@@ -457,11 +402,53 @@ const ChatInput = () => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const isNewChat = !messages.length;
 
+  // Tool toggles (web search, thinking) are app state, not the composer's —
+  // we own them here and feed them into the request body at submit time.
+  const [toolValues, setToolValues] = useState<Record<string, boolean>>({});
+  const setTool = useCallback((name: string, value: boolean) => {
+    setToolValues((previous) => ({ ...previous, [name]: value }));
+  }, []);
+
+  const commandItems = useMemo<CommandItemData[]>(
+    () => [
+      {
+        value: "webSearch",
+        label: "Search the web",
+        description: "Enable web search for this message",
+        icon: "globe",
+        keywords: "search web",
+        onSelect: () => setTool("webSearch", true),
+      },
+      {
+        value: "codeExecution",
+        label: "Code Execution",
+        description: "Run code snippets",
+        icon: "code",
+        keywords: "code run execute",
+      },
+      {
+        value: "thinking",
+        label: "Think deeply",
+        description: "Enable extended thinking",
+        icon: "brain",
+        keywords: "think reasoning",
+        onSelect: () => setTool("thinking", true),
+      },
+      {
+        value: "summarize",
+        label: "Summarize",
+        description: "Summarize the conversation",
+        icon: "bubbleWideSparkle",
+        keywords: "summarize summary",
+      },
+    ],
+    [setTool],
+  );
+
   const panelState = useActiveComposerState(messages, status);
   const isAskUser = panelState.type === "ask-user";
   const activeSteps = panelState.type === "active" ? panelState.steps : [];
-  const askUserQuestions =
-    panelState.type === "ask-user" ? panelState.questions : null;
+  const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;
 
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
@@ -486,23 +473,33 @@ const ChatInput = () => {
           router.replace(`/chat/${chatId}`);
         }
 
+        // Fold thread selections in as blockquote context above the question.
+        const quoted = selections
+          .map((selection) =>
+            selection.text
+              .split("\n")
+              .map((line) => `> ${line}`)
+              .join("\n"),
+          )
+          .join("\n\n");
+        const text = quoted ? `${quoted}\n\n${data.text}` : data.text;
+
         await sendMessage(
           {
             parts: [
               ...data.files,
-              { type: "text", text: data.text },
-              ...(data.chips.length > 0
-                ? [{ type: "data-chip" as const, data: data.chips }]
-                : []),
+              { type: "text", text },
+              ...(data.chips.length > 0 ? [{ type: "data-chip" as const, data: data.chips }] : []),
             ],
           },
           {
             body: {
-              webSearch: data.tools.webSearch ?? false,
-              thinking: data.tools.thinking ?? false,
+              webSearch: toolValues.webSearch ?? false,
+              thinking: toolValues.thinking ?? false,
             },
           },
         );
+        clearSelections();
       } finally {
         setIsSending(false);
       }
@@ -515,6 +512,9 @@ const ChatInput = () => {
       sendMessage,
       addToolOutput,
       panelState,
+      toolValues,
+      selections,
+      clearSelections,
     ],
   );
 
@@ -531,7 +531,7 @@ const ChatInput = () => {
         "/": {
           kind: "execute",
           trigger: "doc-start",
-          items: COMMAND_ITEMS,
+          items: commandItems,
         },
       }}
       questions={askUserQuestions ?? undefined}
@@ -539,38 +539,38 @@ const ChatInput = () => {
       <Composer.Panel value={panelState.type}>
         <Composer.PanelItem value="command-list">
           <Composer.CommandList prefix="@">
-            {(item: CommandItemData) => (
-              <Composer.CommandItem value={item.value}>
-                {item.icon && (
-                  <Composer.CommandItemIcon>
-                    {CHIP_ICONS[item.icon]}
-                  </Composer.CommandItemIcon>
-                )}
-                <Composer.CommandItemLabel>
-                  {item.label}
-                </Composer.CommandItemLabel>
-              </Composer.CommandItem>
-            )}
+            <Composer.CommandLoading />
+            <Composer.CommandEmpty />
+            <Composer.CommandItems>
+              {(item) => (
+                <Composer.CommandItem value={item.value}>
+                  {item.icon && (
+                    <Composer.CommandItemIcon>{CHIP_ICONS[item.icon]}</Composer.CommandItemIcon>
+                  )}
+                  <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                </Composer.CommandItem>
+              )}
+            </Composer.CommandItems>
           </Composer.CommandList>
 
           <Composer.CommandList prefix="/">
-            {(item: CommandItemData) => (
-              <Composer.CommandItem value={item.value}>
-                {item.icon && (
-                  <Composer.CommandItemIcon>
-                    {CHIP_ICONS[item.icon]}
-                  </Composer.CommandItemIcon>
-                )}
-                <Composer.CommandItemLabel>
-                  {item.label}
-                </Composer.CommandItemLabel>
-                {item.description && (
-                  <Composer.CommandItemDescription>
-                    {item.description}
-                  </Composer.CommandItemDescription>
-                )}
-              </Composer.CommandItem>
-            )}
+            <Composer.CommandLoading />
+            <Composer.CommandEmpty />
+            <Composer.CommandItems>
+              {(item) => (
+                <Composer.CommandItem value={item.value}>
+                  {item.icon && (
+                    <Composer.CommandItemIcon>{CHIP_ICONS[item.icon]}</Composer.CommandItemIcon>
+                  )}
+                  <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                  {item.description && (
+                    <Composer.CommandItemDescription>
+                      {item.description}
+                    </Composer.CommandItemDescription>
+                  )}
+                </Composer.CommandItem>
+              )}
+            </Composer.CommandItems>
           </Composer.CommandList>
         </Composer.PanelItem>
         <Composer.PanelItem value="active">
@@ -581,28 +581,42 @@ const ChatInput = () => {
                 <StepQueue.Item key={step.key}>
                   <StepQueue.Icon>
                     {step.kind === "thinking" ? (
-                      <BrainIcon
-                        className={cn("size-3.5", active && "animate-pulse")}
-                      />
+                      <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
                     ) : active ? (
                       <Loader className="size-3.5 animate-spin" />
                     ) : (
                       <CircleDotIcon className="size-3.5" />
                     )}
                   </StepQueue.Icon>
-                  <StepQueue.Label active={active}>
-                    {step.label}
-                  </StepQueue.Label>
+                  <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
                 </StepQueue.Item>
               );
             })}
           </StepQueue>
         </Composer.PanelItem>
         <Composer.PanelItem value="ask-user">
-          <Composer.Questions />
+          <Composer.AskUser />
         </Composer.PanelItem>
       </Composer.Panel>
 
+      <Composer.ContextWindow>
+        {selections.length > 0 && (
+          <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
+            <TextQuoteIcon className="size-3.5" />
+            <span>
+              {selections.length} selection{selections.length === 1 ? "" : "s"}
+            </span>
+            <button
+              type="button"
+              aria-label="Clear selections"
+              className="cursor-pointer rounded-full p-0.5 hover:bg-primary-hover hover:text-ink-primary"
+              onClick={clearSelections}
+            >
+              <XIcon className="size-3" />
+            </button>
+          </div>
+        )}
+      </Composer.ContextWindow>
       <Composer.Container>
         <Composer.Attachments />
         <Composer.Textarea autoFocus>
@@ -631,16 +645,16 @@ const ChatInput = () => {
         </Composer.Textarea>
         {isAskUser ? (
           <Composer.Actions className="flex items-center justify-end">
-            <Composer.Hints />
-            <Composer.Dismiss />
-            <Composer.Continue />
+            <Composer.AskUserHints />
+            <Composer.AskUserDismiss />
+            <Composer.AskUserContinue />
           </Composer.Actions>
         ) : (
           <Composer.Actions className="flex items-center justify-between">
             <div className="flex items-center">
-              <ToolsMenu />
+              <ToolsMenu tools={toolValues} onToolsChange={setToolValues} />
               <ModelSelector value={model} onValueChange={setModel} />
-              <ActiveTools />
+              <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
             </div>
             <Composer.Submit />
           </Composer.Actions>
@@ -677,10 +691,7 @@ const ChatPlaceholder = () => {
           <motion.span variants={variants} className="text-lg font-semibold">
             Intentface Chat
           </motion.span>
-          <motion.span
-            variants={variants}
-            className="text-sm text-ink-secondary"
-          >
+          <motion.span variants={variants} className="text-sm text-ink-secondary">
             Start a conversation
           </motion.span>
         </div>
@@ -724,15 +735,8 @@ type ChatProps = {
 };
 
 const ChatRoot = ({ chatId, children }: ChatProps) => {
-  const {
-    messages,
-    status,
-    sendMessage,
-    regenerate,
-    stop,
-    setMessages,
-    addToolOutput,
-  } = useChatInstance(chatId);
+  const { messages, status, sendMessage, regenerate, stop, setMessages, addToolOutput } =
+    useChatInstance(chatId);
 
   // Artifact panel state — local to this chat, resets on remount
   const [activeArtifact, setActiveArtifact] = useState<Artifact | null>(null);
@@ -759,6 +763,16 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
     setIsArtifactOpen(false);
   }, []);
 
+  // Thread selections (Message.SelectionToolbar) — chat-level state: written
+  // from the messages, read by the composer input at submit time.
+  const [selections, setSelections] = useState<ChatSelection[]>([]);
+  const addSelection = useCallback((text: string) => {
+    setSelections((previous) => [...previous, { id: crypto.randomUUID(), text }]);
+  }, []);
+  const clearSelections = useCallback(() => {
+    setSelections([]);
+  }, []);
+
   const value: ChatContextValue = {
     chatId,
     messages,
@@ -773,11 +787,12 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
     openArtifact,
     toggleArtifact,
     closeArtifact,
+    selections,
+    addSelection,
+    clearSelections,
   };
 
-  return (
-    <ChatContext value={value}>{children ?? <ChatDefaultLayout />}</ChatContext>
-  );
+  return <ChatContext value={value}>{children ?? <ChatDefaultLayout />}</ChatContext>;
 };
 
 export const Chat = Object.assign(ChatRoot, {

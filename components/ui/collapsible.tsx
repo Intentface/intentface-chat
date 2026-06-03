@@ -12,10 +12,7 @@ const CollapsibleRoot = ({ className, ...props }: CollapsibleRootProps) => (
 
 type CollapsibleTriggerProps = ComponentProps<typeof BaseCollapsible.Trigger>;
 
-const CollapsibleTrigger = ({
-  className,
-  ...props
-}: CollapsibleTriggerProps) => (
+const CollapsibleTrigger = ({ className, ...props }: CollapsibleTriggerProps) => (
   <BaseCollapsible.Trigger className={cn(className)} {...props} />
 );
 

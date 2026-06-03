@@ -46,8 +46,7 @@ export type Provider = (typeof ALL_MODELS)[number]["provider"];
 
 export const DEFAULT_MODEL: ModelId = "gpt-5.4-mini";
 
-export const getModelConfig = (id: ModelId) =>
-  ALL_MODELS.find((model) => model.id === id);
+export const getModelConfig = (id: ModelId) => ALL_MODELS.find((model) => model.id === id);
 
 export const isValidModelId = (id: unknown): id is ModelId => {
   return typeof id === "string" && ALL_MODELS.some((model) => model.id === id);

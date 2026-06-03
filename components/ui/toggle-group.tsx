@@ -52,9 +52,7 @@ const ToggleGroupRoot = <Value extends string>({
     value={value !== undefined ? [value] : undefined}
     defaultValue={defaultValue !== undefined ? [defaultValue] : undefined}
     onValueChange={
-      onValueChange
-        ? (next) => onValueChange((next[0] as Value | undefined) ?? null)
-        : undefined
+      onValueChange ? (next) => onValueChange((next[0] as Value | undefined) ?? null) : undefined
     }
     {...props}
   />
@@ -64,8 +62,7 @@ const ToggleGroupItem = ({
   className,
   size,
   ...props
-}: TogglePrimitive.Props<string> &
-  VariantProps<typeof toggleGroupItemVariants>) => (
+}: TogglePrimitive.Props<string> & VariantProps<typeof toggleGroupItemVariants>) => (
   <TogglePrimitive
     data-slot="toggle-group-item"
     className={cn(toggleGroupItemVariants({ size, className }))}

@@ -3,8 +3,7 @@ import { z } from "zod";
 import { delay, QUERY_ROWS } from "@/tools/analytics-data";
 
 export const filterData = tool({
-  description:
-    "Filter query results by column conditions. Use a queryId from queryData.",
+  description: "Filter query results by column conditions. Use a queryId from queryData.",
   inputSchema: z.object({
     queryId: z.string().describe("The query ID from queryData"),
     filters: z
@@ -25,8 +24,7 @@ export const filterData = tool({
         if (f.operator === "eq") return val === f.value;
         if (f.operator === "gt") return Number(val) > Number(f.value);
         if (f.operator === "lt") return Number(val) < Number(f.value);
-        if (f.operator === "contains")
-          return String(val).includes(String(f.value));
+        if (f.operator === "contains") return String(val).includes(String(f.value));
         return true;
       }),
     );

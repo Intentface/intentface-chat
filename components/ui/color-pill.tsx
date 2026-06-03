@@ -16,13 +16,7 @@ type ColorPillProps = {
   className?: string;
 };
 
-export const ColorPill = ({
-  id,
-  value,
-  onValueChange,
-  disabled,
-  className,
-}: ColorPillProps) => {
+export const ColorPill = ({ id, value, onValueChange, disabled, className }: ColorPillProps) => {
   const [draft, setDraft] = useState<string | null>(null);
 
   const handleBlur = useCallback(() => {
@@ -60,11 +54,7 @@ export const ColorPill = ({
           spellCheck={false}
           className="flex-1 bg-transparent font-mono text-xs uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
         />
-        <ChevronDownIcon
-          size={12}
-          aria-hidden="true"
-          className="shrink-0 opacity-70"
-        />
+        <ChevronDownIcon size={12} aria-hidden="true" className="shrink-0 opacity-70" />
       </div>
       <Popover.Content align="end" className="w-auto p-2">
         <HexColorPicker color={value} onChange={onValueChange} />

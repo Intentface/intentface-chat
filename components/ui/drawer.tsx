@@ -14,13 +14,8 @@ const swipeDirectionMap: Record<Side, "up" | "right" | "down" | "left"> = {
   left: "left",
 };
 
-const DrawerRoot = ({
-  side = "right",
-  ...props
-}: DrawerPrimitive.Root.Props & { side?: Side }) => {
-  return (
-    <DrawerPrimitive.Root swipeDirection={swipeDirectionMap[side]} {...props} />
-  );
+const DrawerRoot = ({ side = "right", ...props }: DrawerPrimitive.Root.Props & { side?: Side }) => {
+  return <DrawerPrimitive.Root swipeDirection={swipeDirectionMap[side]} {...props} />;
 };
 
 const DrawerContent = ({
@@ -41,10 +36,8 @@ const DrawerContent = ({
             "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm data-closed:translate-x-full",
           side === "left" &&
             "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm data-closed:-translate-x-full",
-          side === "top" &&
-            "inset-x-0 top-0 border-b data-closed:-translate-y-full",
-          side === "bottom" &&
-            "inset-x-0 bottom-0 border-t data-closed:translate-y-full",
+          side === "top" && "inset-x-0 top-0 border-b data-closed:-translate-y-full",
+          side === "bottom" && "inset-x-0 bottom-0 border-t data-closed:translate-y-full",
           className,
         )}
         {...props}
@@ -56,11 +49,7 @@ const DrawerContent = ({
 };
 
 const DrawerHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
-  <div
-    data-slot="sheet-header"
-    className={cn("flex flex-col gap-1.5 p-4", className)}
-    {...props}
-  />
+  <div data-slot="sheet-header" className={cn("flex flex-col gap-1.5 p-4", className)} {...props} />
 );
 
 const DrawerTitle = ({

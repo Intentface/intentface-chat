@@ -27,9 +27,7 @@ const chipVariants = cva(
   },
 );
 
-export type ChipVariant = NonNullable<
-  VariantProps<typeof chipVariants>["variant"]
->;
+export type ChipVariant = NonNullable<VariantProps<typeof chipVariants>["variant"]>;
 
 const CHIP_ICON_WRAPPER_CLASSES =
   "relative w-4 h-[1em] text-ink-tertiary [&>svg]:absolute [&>svg]:top-1/2 [&>svg]:left-0 [&>svg]:size-4 [&>svg]:-translate-y-1/2";
@@ -46,12 +44,7 @@ type ChipRootProps = {
   children?: ReactNode;
 } & Omit<ComponentProps<"span">, "children" | "className">;
 
-const ChipRoot = ({
-  variant,
-  className,
-  children,
-  ...props
-}: ChipRootProps) => {
+const ChipRoot = ({ variant, className, children, ...props }: ChipRootProps) => {
   const childArray = Children.toArray(children);
   const previewChild = childArray.find(
     (child) => isValidElement(child) && child.type === ChipPreview,
@@ -61,11 +54,7 @@ const ChipRoot = ({
   );
 
   const badge = (
-    <span
-      data-slot="chip"
-      className={cn(chipVariants({ variant }), className)}
-      {...props}
-    >
+    <span data-slot="chip" className={cn(chipVariants({ variant }), className)} {...props}>
       {inlineChildren}
     </span>
   );

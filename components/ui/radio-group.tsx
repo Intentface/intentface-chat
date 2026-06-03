@@ -13,11 +13,7 @@ const RadioGroupRoot = ({ className, ...props }: RadioGroupPrimitive.Props) => (
   />
 );
 
-const RadioGroupItem = ({
-  className,
-  children,
-  ...props
-}: RadioPrimitive.Root.Props) => (
+const RadioGroupItem = ({ className, children, ...props }: RadioPrimitive.Root.Props) => (
   <RadioPrimitive.Root
     data-slot="radio-group-item"
     className={cn(

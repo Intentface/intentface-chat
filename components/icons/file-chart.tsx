@@ -23,24 +23,9 @@ export const FileChartIcon = (props: SVGProps<SVGSVGElement>) => {
           stroke="currentColor"
           strokeWidth="1.5"
         />
-        <path
-          d="M8.5 17.25V15.75"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M12 17.25V12.75"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M15.5 17.25V14.75"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
+        <path d="M8.5 17.25V15.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M12 17.25V12.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M15.5 17.25V14.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </g>
     </svg>
   );

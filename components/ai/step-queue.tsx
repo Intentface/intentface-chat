@@ -89,11 +89,7 @@ StepQueueRoot.displayName = "StepQueue";
 
 type StepQueueItemProps = ComponentProps<typeof motion.div>;
 
-const StepQueueItem = ({
-  className,
-  children,
-  ...props
-}: StepQueueItemProps) => {
+const StepQueueItem = ({ className, children, ...props }: StepQueueItemProps) => {
   return (
     <motion.div
       data-slot="step-queue-item"
@@ -105,10 +101,7 @@ const StepQueueItem = ({
         type: "spring",
         bounce: 0,
       }}
-      className={cn(
-        "flex shrink-0 items-center text-sm font-medium text-ink-secondary",
-        className,
-      )}
+      className={cn("flex shrink-0 items-center text-sm font-medium text-ink-secondary", className)}
       {...props}
     >
       <motion.div
@@ -132,11 +125,7 @@ StepQueueItem.displayName = "StepQueueItem";
 
 type StepQueueIconProps = ComponentProps<"span">;
 
-const StepQueueIcon = ({
-  className,
-  children,
-  ...props
-}: StepQueueIconProps) => {
+const StepQueueIcon = ({ className, children, ...props }: StepQueueIconProps) => {
   return (
     <span
       data-slot="step-queue-icon"
@@ -158,12 +147,7 @@ type StepQueueLabelProps = ComponentProps<"span"> & {
   active?: boolean;
 };
 
-const StepQueueLabel = ({
-  active = false,
-  className,
-  children,
-  ...props
-}: StepQueueLabelProps) => {
+const StepQueueLabel = ({ active = false, className, children, ...props }: StepQueueLabelProps) => {
   return (
     <span
       data-slot="step-queue-label"

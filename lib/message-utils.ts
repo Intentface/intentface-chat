@@ -15,10 +15,7 @@ export type ToolLabels = Record<
 // ---------------------------------------------------------------------------
 
 /** A tool-call part extracted from a UIMessage (any `tool-*` typed part). */
-export type ToolPart = Extract<
-  UIMessage["parts"][number],
-  { type: `tool-${string}` }
->;
+export type ToolPart = Extract<UIMessage["parts"][number], { type: `tool-${string}` }>;
 
 /** Classifies message parts into coarse groups for chronological rendering. */
 export type SegmentType = "reasoning" | "tool" | "text" | "file";
@@ -41,9 +38,7 @@ export type MessageSegment =
  * Maps a single message part to its segment type.
  * Returns `null` for parts that are rendered separately (e.g. askUser).
  */
-export const partSegmentType = (
-  part: UIMessage["parts"][number],
-): SegmentType | null => {
+export const partSegmentType = (part: UIMessage["parts"][number]): SegmentType | null => {
   if (part.type === "reasoning") return "reasoning";
   if (part.type === "text") return "text";
   if (part.type === "file") return "file";
@@ -58,9 +53,7 @@ export const partSegmentType = (
  * preserves chronological order for interleaved rendering (e.g. reasoning
  * interspersed with tool calls).
  */
-export const getSegmentedParts = (
-  parts: UIMessage["parts"],
-): MessageSegment[] => {
+export const getSegmentedParts = (parts: UIMessage["parts"]): MessageSegment[] => {
   const segments: MessageSegment[] = [];
   for (const part of parts) {
     const segType = partSegmentType(part);
@@ -100,9 +93,7 @@ export const getTextInfo = (segments: MessageSegment[]): TextInfo => {
     .flatMap((s) => s.parts);
   const isDiffusing = parts.length > 1;
   const lastPart = parts.at(-1);
-  const text = isDiffusing
-    ? (lastPart?.text ?? "")
-    : parts.map((p) => p.text).join("");
+  const text = isDiffusing ? (lastPart?.text ?? "") : parts.map((p) => p.text).join("");
   return { parts, isDiffusing, lastPart, text };
 };
 
@@ -126,9 +117,7 @@ export type ChainInfo = {
  * classifies whether tools are present.
  */
 export const getChainInfo = (segments: MessageSegment[]): ChainInfo => {
-  const chainSegments = segments.filter(
-    (s) => s.type === "reasoning" || s.type === "tool",
-  );
+  const chainSegments = segments.filter((s) => s.type === "reasoning" || s.type === "tool");
   const hasTools = chainSegments.some((s) => s.type === "tool");
   const hasReasoning = chainSegments.some((s) => s.type === "reasoning");
   return {
@@ -156,14 +145,10 @@ export const getReasoningInfo = (
   isMessageStreaming: boolean,
 ): ReasoningInfo => {
   const parts = segments
-    .filter(
-      (s): s is MessageSegment & { type: "reasoning" } =>
-        s.type === "reasoning",
-    )
+    .filter((s): s is MessageSegment & { type: "reasoning" } => s.type === "reasoning")
     .flatMap((s) => s.parts);
   const texts = parts.map((p) => p.text);
-  const isStreaming =
-    isMessageStreaming && segments.at(-1)?.type === "reasoning";
+  const isStreaming = isMessageStreaming && segments.at(-1)?.type === "reasoning";
   const headers = texts
     .join("\n\n")
     .match(/\*\*(.+?)\*\*/g)
@@ -205,7 +190,12 @@ export const getAskUserInfo = (allParts: UIMessage["parts"]): AskUserInfo => {
       let answers: Record<string, string> = {};
       try {
         answers = JSON.parse(p.output as string) as Record<string, string>;
-      } catch {}
+      } catch (error) {
+        console.error("Failed to parse askUser output", {
+          output: p.output,
+          error,
+        });
+      }
       return {
         toolCallId: p.toolCallId,
         questions: input?.questions ?? [],
@@ -270,9 +260,7 @@ export type ReasoningSection = { header: string | null; body: string };
  * Splits reasoning text into sections by standalone bold `**Header**` lines.
  * Each header and its following body become a separate section.
  */
-export const splitReasoningByHeaders = (
-  texts: string[],
-): ReasoningSection[] => {
+export const splitReasoningByHeaders = (texts: string[]): ReasoningSection[] => {
   const combined = texts.join("\n\n");
   const parts = combined.split(/(?=^\*\*[^*]+\*\*$)/m);
 

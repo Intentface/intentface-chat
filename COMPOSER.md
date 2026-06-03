@@ -1,0 +1,329 @@
+# Composer
+
+The chat composer — a form-shaped, headless-ish input surface that handles text, attachments, slash commands, mention chips, tools, and questionnaires. It's a single component (`components/ai/composer.tsx`) exposed as a compound API via `Composer.X` parts.
+
+Import from `@/components/ai/composer`.
+
+## Minimal usage
+
+The smallest working composer: an editor and a submit button, inside a container.
+
+```tsx
+import { Composer, type ComposerSubmitData } from "@/components/ai/composer";
+
+const onSubmit = (data: ComposerSubmitData) => {
+  if (data.kind !== "message") return;
+  console.log(data.text, data.files, data.chips, data.tools);
+};
+
+<Composer onSubmit={onSubmit}>
+  <Composer.Container>
+    <Composer.Textarea>
+      <Composer.Placeholder placeholder="Ask anything..." />
+    </Composer.Textarea>
+    <Composer.Actions className="flex justify-end">
+      <Composer.Submit />
+    </Composer.Actions>
+  </Composer.Container>
+</Composer>;
+```
+
+That's it. `<Composer>` is a `<form>`, so submit on **Enter** and soft-break on **Shift+Enter** are wired automatically. `Composer.Submit` auto-disables when the editor is empty and there are no attachments.
+
+## Submit data
+
+`onSubmit` receives a discriminated union:
+
+```tsx
+type ComposerSubmitData =
+  | {
+      kind: "message";
+      text: string;                    // serialized editor text (chip markdown stripped)
+      files: FileUIPart[];             // attachments, blob URLs converted to data URLs
+      chips: ChipData[];               // inline mention chips
+      tools: Record<string, boolean>;  // tool toggle state at submit time
+    }
+  | {
+      kind: "answers";
+      answers: ComposerAnswerEntry[]; // produced by the questionnaire flow
+    };
+
+type ComposerAnswerEntry =
+  | { question: string; option: string }                      // single-select, picked an option
+  | { question: string; text: string }                        // single-select, typed free text
+  | { question: string; options: string[]; text: string }     // multi-select (either field may be empty)
+  | { question: string };                                     // skipped or unanswered
+```
+
+Each entry's shape encodes the invariant: single-select picks have `option` *or* `text`, never both. Multi-select always has both fields and may carry options + free text together. A skipped or unanswered question is `{ question }` with no payload. The branches are discriminated by which fields are present (no `kind` tag).
+
+If the editor is empty but attachments exist, `text` is set to `"Sent with attachments"`. If both are empty, the form does not submit.
+
+## Root props
+
+`<Composer>` extends `<form>` and accepts:
+
+| Prop | Type | Description |
+|---|---|---|
+| `onSubmit` | `(data: ComposerSubmitData) => void \| Promise<void>` | Submit handler. |
+| `isSubmitting` | `boolean` | Disables `Composer.Submit` while truthy. Default `false`. |
+| `commands` | `ComposerCommandsMap` | Prefix → command-list config. See [Commands & chips](#commands--chips). |
+| `questions` | `AskUserQuestion[]` | When present, the composer enters questionnaire mode. See [Questionnaire](#questionnaire). |
+| `defaultTools` | `Record<string, boolean>` | Initial uncontrolled tool state. |
+| `tools` | `Record<string, boolean>` | Controlled tool state. |
+| `onToolsChange` | `(values) => void` | Fires on tool toggle. |
+| `defaultValue` | `ComposerSnapshot` | Initial uncontrolled editor content. |
+| `value` | `ComposerSnapshot` | Controlled editor content. |
+| `onValueChange` | `(snapshot) => void` | Fires on editor change. |
+| `onCommandQueryChange` | `(query, prefix) => void` | Fires when the command-list filter query changes. Useful for async lookups. |
+| `ref` | `Ref<ComposerHandle>` | Imperative handle (see below). |
+
+`ComposerHandle`: `focus`, `blur`, `clear`, `insertText`, `insertChip`, `getSnapshot`, `setSnapshot`.
+
+## Compound parts
+
+Every part below is rendered inside the `<Composer>` subtree and reads context via `useComposer()`. Parts marked _add-on_ are optional — the minimal example above doesn't use them.
+
+### Core layout
+
+#### `Composer.Container`
+Visual wrapper that focuses the editor on click. Standard `div` props.
+
+#### `Composer.Textarea`
+The TipTap editor surface. Handles paste (files + chip markdown), keyboard shortcuts (Enter/Shift+Enter/Backspace), and command-list trigger detection.
+
+| Prop | Type | Default | Notes |
+|---|---|---|---|
+| `value` | `string` | — | Controlled text. |
+| `onValueChange` | `(text) => void` | — | Pair with `value`. |
+| `disabled` | `boolean` | `false` | Read-only when true. |
+| `autoFocus` | `boolean` | `false` | Focus on mount. |
+| `children` | `ReactNode` | — | Typically `<Composer.Placeholder>`. |
+
+#### `Composer.Placeholder`
+Empty-state placeholder. Three forms:
+
+```tsx
+<Composer.Placeholder placeholder="Ask anything..." />
+<Composer.Placeholder placeholder={["Ask...", "Search...", "Generate..."]} />
+<Composer.Placeholder><CustomNode /></Composer.Placeholder>
+```
+
+The array form rotates every ~3s with a fade animation.
+
+#### `Composer.Actions`
+Action-row container. Standard `div` props.
+
+#### `Composer.Submit`
+Send button. Auto-disables when there is nothing to send or `isSubmitting` is `true`. Defaults to a send icon; pass `children` to override. Standard `IconButton` props.
+
+### Add-on: attachments
+
+#### `Composer.Attachments`
+Renders attachment thumbnails, the hidden file input, and the drag-drop overlay.
+
+| Prop | Default |
+|---|---|
+| `accept` | `"image/*,application/pdf,text/*"` |
+| `maxFiles` | `5` |
+| `maxFileSize` | `10 * 1024 * 1024` (10 MB) |
+| `multiple` | `true` |
+| `globalDrop` | `false` — when true, drops anywhere on the page are accepted. |
+
+Validation errors surface in `useComposer().attachments.error` and render inline.
+
+#### `Composer.AttachmentTrigger`
+Button that opens the native file picker. Accepts `IconButton` props.
+
+```tsx
+<Composer.Container>
+  <Composer.Attachments accept="image/*" maxFiles={3} />
+  <Composer.Textarea><Composer.Placeholder placeholder="..." /></Composer.Textarea>
+  <Composer.Actions className="flex justify-between">
+    <Composer.AttachmentTrigger><PaperClipIcon /></Composer.AttachmentTrigger>
+    <Composer.Submit />
+  </Composer.Actions>
+</Composer.Container>
+```
+
+### Add-on: panel
+
+The panel is the area above the editor that shows command lists, active tool progress, or a questionnaire. It auto-switches to `"command-list"` whenever a command list is open, regardless of the `value` you pass.
+
+#### `Composer.Panel` / `Composer.PanelItem`
+
+```tsx
+<Composer.Panel value={panelState}>
+  <Composer.PanelItem value="command-list">
+    <Composer.Commands />
+  </Composer.PanelItem>
+  <Composer.PanelItem value="active">
+    <ActiveSteps />
+  </Composer.PanelItem>
+  <Composer.PanelItem value="ask-user">
+    <Composer.Questions />
+  </Composer.PanelItem>
+</Composer.Panel>
+```
+
+Each `PanelItem` is a `motion.div`; pass `initial`/`animate`/`exit` to customize transitions.
+
+The hook `useActiveComposerState(messages, status)` from `@/hooks/use-active-composer-state` derives the right panel value from chat state.
+
+### Add-on: commands & chips
+
+Configure prefixes via the root `commands` prop:
+
+```tsx
+const commands: ComposerCommandsMap = {
+  "@": {
+    kind: "insert",              // selecting an item inserts an inline chip
+    trigger: "after-whitespace", // active when "@" follows whitespace or starts a word
+    items: mentionItems,
+  },
+  "/": {
+    kind: "execute",             // selecting an item runs onSelect; prefix is removed
+    trigger: "doc-start",        // active only at document start
+    items: slashCommands,
+  },
+};
+```
+
+#### `ComposerCommandsConfig`
+
+| Field | Type | Notes |
+|---|---|---|
+| `kind` | `CommandItemKind` (`"insert" \| "execute"`) | `insert` → selecting inserts a `Chip` into the editor. `execute` → selecting runs the item's `onSelect`. |
+| `trigger` | `"doc-start" \| "after-whitespace"` | When the prefix activates. |
+| `items` | `CommandItemData[]` | Selectable rows. |
+| `filter` | `(item, query) => number \| null` | Custom scorer; return `> 0` to keep, higher ranks higher. Pass `null` to disable filtering. Defaults to fuzzy match on `label`/`value`/`keywords`. |
+
+#### `CommandItemData`
+
+```tsx
+type CommandItemData = {
+  value: string;
+  label: string;
+  description?: string;
+  icon?: ChipIconKey;             // see lib/ai/chip-icons
+  variant?: ChipVariant;          // "primary" | "accent" | "warning"
+  keywords?: string;              // extra search terms
+  onSelect?: (ctx: PrefixOnSelectContext) => void;
+};
+
+type PrefixOnSelectContext = {
+  editor: ComposerEditorHandle;   // focus, blur, clear, insertText, insertChip
+  tools: ToolsApi;                // values, set, toggle
+  attachments: AttachmentsApi;    // add, remove, openFileDialog
+};
+```
+
+#### Rendering
+
+Easiest: drop in the default renderer.
+
+```tsx
+<Composer.PanelItem value="command-list">
+  <Composer.Commands />
+</Composer.PanelItem>
+```
+
+Custom: render per-prefix lists.
+
+```tsx
+<Composer.CommandList prefix="@">
+  {(item) => (
+    <Composer.CommandItem value={item.value}>
+      {item.icon && <Composer.CommandItemIcon>{CHIP_ICONS[item.icon]}</Composer.CommandItemIcon>}
+      <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+      {item.description && (
+        <Composer.CommandItemDescription>{item.description}</Composer.CommandItemDescription>
+      )}
+    </Composer.CommandItem>
+  )}
+</Composer.CommandList>
+```
+
+Sub-parts: `Composer.CommandItem`, `Composer.CommandItemIcon`, `Composer.CommandItemLabel`, `Composer.CommandItemDescription`, `Composer.CommandGroup`, `Composer.CommandGroupLabel`, `Composer.CommandCollection` (renders an array with a render prop).
+
+Keyboard inside an open command list: **↑/↓** navigate, **Enter/Tab** select, **Esc** close.
+
+### Add-on: tools
+
+Tool state is a flat `Record<string, boolean>` — define your own keys (`webSearch`, `thinking`, etc.). The composer doesn't render a tools UI; build your own using `useComposer().tools`.
+
+```tsx
+const { tools } = useComposer();
+tools.values.webSearch;       // boolean | undefined
+tools.set("webSearch", true);
+tools.toggle("thinking");
+```
+
+Submitted state appears in `data.tools` on `kind: "message"`.
+
+The repo ships two reference components in `components/composer-tools.tsx`:
+- `ToolsMenu` — `+` dropdown with file attach + tool switches.
+- `ActiveTools` — pill row showing currently-enabled tools.
+
+### Add-on: questionnaire
+
+Pass `questions` to switch the composer into structured-question mode. The default renderer covers the flow:
+
+```tsx
+<Composer onSubmit={handleSubmit} questions={askUserQuestions}>
+  <Composer.Panel value="ask-user">
+    <Composer.PanelItem value="ask-user">
+      <Composer.Questions />
+    </Composer.PanelItem>
+  </Composer.Panel>
+  <Composer.Container>
+    <Composer.Textarea>
+      <Composer.Placeholder placeholder="Type an answer..." />
+    </Composer.Textarea>
+    <Composer.Actions className="flex justify-end gap-2">
+      <Composer.Hints />
+      <Composer.Dismiss />
+      <Composer.Continue />
+    </Composer.Actions>
+  </Composer.Container>
+</Composer>
+```
+
+Parts:
+- `Composer.Questions` — full default UI (question text, options, step counter, nav arrows).
+- `Composer.Hints` — keyboard-hint footer (↑↓ ↵ ← → Esc).
+- `Composer.Dismiss` — skip the current question (`Esc`).
+- `Composer.Continue` — advance / submit (`Enter`). Auto-toggles label between "Continue" and "Submit".
+
+Keyboard: **↑/↓** navigate options, **Enter** select/advance, **←/→** between questions, **Esc** dismiss, printable keys type free-text.
+
+On completion, `onSubmit` fires with `{ kind: "answers", answers }` where `answers` is a `ComposerAnswerEntry[]` (one entry per question, in order). See [Submit data](#submit-data) for the entry shape.
+
+## Imperative API
+
+```tsx
+const ref = useRef<ComposerHandle>(null);
+
+<Composer ref={ref} onSubmit={...}>...</Composer>;
+
+ref.current?.focus();
+ref.current?.insertChip({ prefix: "@", value: "alice", label: "Alice" });
+const snap = ref.current?.getSnapshot();   // serialize
+ref.current?.setSnapshot(snap);            // restore
+```
+
+Inside the subtree, `useComposer()` returns the same APIs scoped to context:
+
+```tsx
+const { editor, attachments, tools, questionnaire, commands } = useComposer();
+```
+
+`commands` here is the open command-list state (`open`, `currentPrefix`, `query`, plus imperative `selectRef`/`navigateRef`) — not the registered `ComposerCommandsMap` you passed to the root prop.
+
+## Reference: types
+
+All re-exported from `@/components/ai/composer`:
+
+`ComposerHandle`, `ComposerEditorHandle`, `ComposerSnapshot`, `ComposerSubmitData`, `ComposerMessageSubmit`, `ComposerAnswersSubmit`, `ComposerAnswerEntry`, `ComposerCommandsMap`, `ComposerCommandsConfig`, `CommandItemData`, `CommandItemKind`, `PrefixOnSelectContext`, `TriggerRule`, `ChipData`, `ChipVariant`, `ToolsApi`, `AttachmentsApi`.
+
+Defaults (from `components/ai/attachments`): `DEFAULT_ATTACHMENT_ACCEPT`, `DEFAULT_ATTACHMENT_MAX_FILES`, `DEFAULT_ATTACHMENT_MAX_FILE_SIZE`.

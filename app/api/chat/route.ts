@@ -47,9 +47,7 @@ const toOpenAIMessages = (messages: UIMessage[]) =>
     role: m.role,
     content:
       m.parts
-        .filter(
-          (p): p is Extract<typeof p, { type: "text" }> => p.type === "text",
-        )
+        .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
         .map((p) => p.text)
         .join("") || "",
   }));
@@ -69,29 +67,24 @@ const handleDiffusionStream = (messages: UIMessage[]) => {
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
-      const response = await fetch(
-        "https://api.inceptionlabs.ai/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: "mercury-2",
-            messages: toOpenAIMessages(messages),
-            stream: true,
-            diffusing: true,
-            stream_options: { include_usage: true },
-          }),
+      const response = await fetch("https://api.inceptionlabs.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
-      );
+        body: JSON.stringify({
+          model: "mercury-2",
+          messages: toOpenAIMessages(messages),
+          stream: true,
+          diffusing: true,
+          stream_options: { include_usage: true },
+        }),
+      });
 
       if (!response.ok) {
         const errorBody = await response.text();
-        throw new Error(
-          `Inception API error (${response.status}): ${errorBody}`,
-        );
+        throw new Error(`Inception API error (${response.status}): ${errorBody}`);
       }
 
       if (!response.body) {
@@ -125,9 +118,7 @@ const handleDiffusionStream = (messages: UIMessage[]) => {
             continue;
           }
 
-          const choices = chunk.choices as
-            | Array<Record<string, unknown>>
-            | undefined;
+          const choices = chunk.choices as Array<Record<string, unknown>> | undefined;
           const choice = choices?.[0];
 
           if (choice) {

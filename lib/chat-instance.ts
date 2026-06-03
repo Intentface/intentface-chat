@@ -1,8 +1,5 @@
 import { Chat } from "@ai-sdk/react";
-import {
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from "ai";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import type { AppUIMessage } from "@/lib/ai/types";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";

@@ -107,9 +107,7 @@ export class InceptionEditModel {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(
-        `Inception FIM API error (${response.status}): ${errorBody}`,
-      );
+      throw new Error(`Inception FIM API error (${response.status}): ${errorBody}`);
     }
 
     return response.json();
@@ -149,9 +147,7 @@ export class InceptionEditModel {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(
-        `Inception Apply Edit API error (${response.status}): ${errorBody}`,
-      );
+      throw new Error(`Inception Apply Edit API error (${response.status}): ${errorBody}`);
     }
 
     return response.json();
@@ -163,8 +159,7 @@ export class InceptionEditModel {
    */
   async nextEdit(request: NextEditRequest): Promise<NextEditResponse> {
     // Build recently viewed snippets section
-    let snippetsSection =
-      "<|recently_viewed_code_snippets|>\n\n<|/recently_viewed_code_snippets|>";
+    let snippetsSection = "<|recently_viewed_code_snippets|>\n\n<|/recently_viewed_code_snippets|>";
     if (request.recentSnippets && request.recentSnippets.length > 0) {
       const snippets = request.recentSnippets
         .map(
@@ -176,8 +171,7 @@ export class InceptionEditModel {
     }
 
     // Build current file content section
-    const { filePath, codeAbove, editableRegion, codeBelow } =
-      request.currentFile;
+    const { filePath, codeAbove, editableRegion, codeBelow } = request.currentFile;
     const currentFileSection = [
       "<|current_file_content|>",
       `current_file_path: ${filePath}`,
@@ -198,13 +192,7 @@ export class InceptionEditModel {
       historySection = `<|edit_diff_history|>\n${diffs}\n<|/edit_diff_history|>`;
     }
 
-    const prompt = [
-      snippetsSection,
-      "",
-      currentFileSection,
-      "",
-      historySection,
-    ].join("\n");
+    const prompt = [snippetsSection, "", currentFileSection, "", historySection].join("\n");
 
     const body = {
       model: "mercury-edit",
@@ -229,9 +217,7 @@ export class InceptionEditModel {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      throw new Error(
-        `Inception Next Edit API error (${response.status}): ${errorBody}`,
-      );
+      throw new Error(`Inception Next Edit API error (${response.status}): ${errorBody}`);
     }
 
     return response.json();

@@ -40,10 +40,7 @@ export const useReasoning = () => {
   return context;
 };
 
-export type ReasoningRootProps = Omit<
-  ComponentProps<typeof Collapsible>,
-  "onOpenChange"
-> & {
+export type ReasoningRootProps = Omit<ComponentProps<typeof Collapsible>, "onOpenChange"> & {
   isStreaming?: boolean;
   duration?: number;
   onOpenChange?: (open: boolean) => void;
@@ -117,9 +114,7 @@ const ReasoningRoot = memo(
 
 ReasoningRoot.displayName = "Reasoning";
 
-export type ReasoningTriggerProps = ComponentProps<
-  typeof Collapsible.Trigger
-> & {
+export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger> & {
   label?: string[];
   getThinkingMessage?: (
     isStreaming: boolean,
@@ -163,11 +158,7 @@ const ReasoningTrigger = memo(
     const { isStreaming, isOpen, duration } = useReasoning();
     const activeLabel = label?.at(-1);
 
-    const { key, component } = getThinkingMessage(
-      isStreaming,
-      duration,
-      activeLabel,
-    );
+    const { key, component } = getThinkingMessage(isStreaming, duration, activeLabel);
     return (
       <Collapsible.Trigger
         className={cn(
@@ -194,10 +185,7 @@ const ReasoningTrigger = memo(
               </AnimatePresence>
             </div>
             <ChevronDownIcon
-              className={cn(
-                "size-5 transition-transform",
-                isOpen ? "rotate-180" : "rotate-0",
-              )}
+              className={cn("size-5 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
             />
           </>
         )}
@@ -208,18 +196,11 @@ const ReasoningTrigger = memo(
 
 ReasoningTrigger.displayName = "ReasoningTrigger";
 
-export type ReasoningContentProps = Omit<
-  ComponentProps<typeof Collapsible.Panel>,
-  "children"
-> & {
+export type ReasoningContentProps = Omit<ComponentProps<typeof Collapsible.Panel>, "children"> & {
   children: string | string[];
 };
 
-const ReasoningContent = ({
-  children,
-  className,
-  ...props
-}: ReasoningContentProps) => {
+const ReasoningContent = ({ children, className, ...props }: ReasoningContentProps) => {
   const texts = Array.isArray(children) ? children : [children];
   const sections = splitReasoningByHeaders(texts);
 
@@ -229,14 +210,10 @@ const ReasoningContent = ({
         {sections.map((section, i) => (
           <div key={i} className="flex flex-col gap-1">
             {section.header && (
-              <span className="text-sm font-medium text-ink-primary">
-                {section.header}
-              </span>
+              <span className="text-sm font-medium text-ink-primary">{section.header}</span>
             )}
             {section.body && (
-              <Markdown className="text-ink-secondary text-sm [&_p]:mb-0">
-                {section.body}
-              </Markdown>
+              <Markdown className="text-ink-secondary text-sm [&_p]:mb-0">{section.body}</Markdown>
             )}
           </div>
         ))}

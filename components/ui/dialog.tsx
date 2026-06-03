@@ -5,9 +5,7 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const DialogRoot = (props: DialogPrimitive.Root.Props) => (
-  <DialogPrimitive.Root {...props} />
-);
+const DialogRoot = (props: DialogPrimitive.Root.Props) => <DialogPrimitive.Root {...props} />;
 
 const DialogTrigger = ({
   className,
@@ -59,10 +57,7 @@ const DialogDescription = ({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Description>) => (
-  <DialogPrimitive.Description
-    className={cn("text-sm text-ink-secondary", className)}
-    {...props}
-  />
+  <DialogPrimitive.Description className={cn("text-sm text-ink-secondary", className)} {...props} />
 );
 
 const DialogClose = ({

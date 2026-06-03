@@ -15,11 +15,7 @@ import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
-import {
-  DEFAULT_TOOL_LABELS,
-  type ToolLabels,
-  type ToolPart,
-} from "@/lib/message-utils";
+import { DEFAULT_TOOL_LABELS, type ToolLabels, type ToolPart } from "@/lib/message-utils";
 import { cn } from "@/lib/utils";
 import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
 
@@ -116,10 +112,7 @@ const StepsHeader = ({ children, className, ...props }: StepsHeaderProps) => {
     >
       {children ?? "Steps"}
       <ChevronDownIcon
-        className={cn(
-          "size-4 shrink-0 transition-transform",
-          isOpen ? "rotate-180" : "rotate-0",
-        )}
+        className={cn("size-4 shrink-0 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
       />
     </Collapsible.Trigger>
   );
@@ -169,13 +162,7 @@ type StepsStepProps = {
   children?: ReactNode;
 };
 
-const StepsStep = ({
-  label,
-  status = "complete",
-  icon,
-  className,
-  children,
-}: StepsStepProps) => {
+const StepsStep = ({ label, status = "complete", icon, className, children }: StepsStepProps) => {
   const Icon = icon ?? statusIcons[status];
   const hasContent = Children.toArray(children).length > 0;
 
@@ -205,15 +192,8 @@ const StepsStep = ({
     return (
       <div data-slot="steps-step" data-status={status} className={className}>
         <div className="flex items-center gap-2 py-0.5">
-          <div
-            className={cn(
-              "flex size-4 shrink-0 items-center justify-center",
-              iconClasses,
-            )}
-          >
-            <Icon
-              className={cn("size-3.5", status === "active" && "animate-pulse")}
-            />
+          <div className={cn("flex size-4 shrink-0 items-center justify-center", iconClasses)}>
+            <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
           </div>
           <span className={labelClasses}>{label}</span>
         </div>
@@ -232,16 +212,11 @@ const StepsStep = ({
     >
       <Collapsible.Trigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-0.5 transition-colors hover:text-ink-primary">
         <div
-          className={cn(
-            "relative flex size-4 shrink-0 items-center justify-center",
-            iconClasses,
-          )}
+          className={cn("relative flex size-4 shrink-0 items-center justify-center", iconClasses)}
         >
           {/* Status icon — hides on hover and when panel is open */}
           <span className="transition-opacity group-hover/trigger:opacity-0 group-data-[panel-open]/trigger:opacity-0">
-            <Icon
-              className={cn("size-3.5", status === "active" && "animate-pulse")}
-            />
+            <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
           </span>
           {/* Chevron — appears on hover, stays visible when open, rotates 180° */}
           <ChevronDownIcon
@@ -280,10 +255,7 @@ type StepsBodyProps = ComponentProps<typeof Markdown>;
 
 const StepsBody = ({ className, children, ...props }: StepsBodyProps) => (
   <Markdown
-    className={cn(
-      "text-sm leading-tight text-ink-secondary [&_p]:mb-0",
-      className,
-    )}
+    className={cn("text-sm leading-tight text-ink-secondary [&_p]:mb-0", className)}
     {...props}
   >
     {children}
@@ -316,11 +288,7 @@ StepsSummary.displayName = "StepsSummary";
 
 type StepsSearchResultsProps = ComponentProps<"div">;
 
-const StepsSearchResults = ({
-  className,
-  children,
-  ...props
-}: StepsSearchResultsProps) => (
+const StepsSearchResults = ({ className, children, ...props }: StepsSearchResultsProps) => (
   <div
     data-slot="steps-search-results"
     className={cn("flex flex-wrap gap-1.5", className)}
@@ -334,11 +302,7 @@ StepsSearchResults.displayName = "StepsSearchResults";
 
 type StepsSearchResultProps = ComponentProps<"span">;
 
-const StepsSearchResult = ({
-  className,
-  children,
-  ...props
-}: StepsSearchResultProps) => (
+const StepsSearchResult = ({ className, children, ...props }: StepsSearchResultProps) => (
   <span
     data-slot="steps-search-result"
     className={cn(
@@ -370,8 +334,7 @@ type StepsToolCallProps = {
 const StepsToolCall = ({ part, className }: StepsToolCallProps) => {
   const { toolLabels } = useSteps();
   const input = (part.input as Record<string, unknown>) ?? {};
-  const isActive =
-    part.state === "input-streaming" || part.state === "input-available";
+  const isActive = part.state === "input-streaming" || part.state === "input-available";
   const isComplete = part.state === "output-available";
   const name = part.type.replace("tool-", "");
 
@@ -384,22 +347,15 @@ const StepsToolCall = ({ part, className }: StepsToolCallProps) => {
       ? `Running ${name}`
       : `Ran ${name}`;
 
-  const status: StepStatus = isActive
-    ? "active"
-    : isComplete
-      ? "complete"
-      : "pending";
+  const status: StepStatus = isActive ? "active" : isComplete ? "complete" : "pending";
 
   // Extract summary from tool output
   const output = isComplete ? (part.output as Record<string, unknown>) : null;
   const summary = typeof output?.summary === "string" ? output.summary : null;
 
   // Flatten sources from web search findings
-  const rawOutput =
-    isComplete && part.type === "tool-webSearch" ? part.output : null;
-  const findings = Array.isArray(rawOutput)
-    ? (rawOutput as WebSearchFinding[])
-    : [];
+  const rawOutput = isComplete && part.type === "tool-webSearch" ? part.output : null;
+  const findings = Array.isArray(rawOutput) ? (rawOutput as WebSearchFinding[]) : [];
   const sources = findings
     .flatMap((f) => f.sources)
     .map((s) => {
@@ -444,7 +400,12 @@ const StepsAskUser = ({ part, className }: StepsAskUserProps) => {
   if (isComplete) {
     try {
       answers = JSON.parse(part.output as string) as Record<string, string>;
-    } catch {}
+    } catch (error) {
+      console.error("Failed to parse askUser output", {
+        output: part.output,
+        error,
+      });
+    }
   }
 
   const count = questions.length;
@@ -460,9 +421,7 @@ const StepsAskUser = ({ part, className }: StepsAskUserProps) => {
       <div className="flex flex-col gap-1.5">
         {questions.map((q) => (
           <div key={q.question} className="flex flex-col gap-0.5">
-            <span className="text-xs font-medium leading-tight text-ink-primary">
-              {q.question}
-            </span>
+            <span className="text-xs font-medium leading-tight text-ink-primary">{q.question}</span>
             {isComplete && (
               <span className="text-xs leading-tight text-ink-secondary">
                 {answers[q.question] ?? "—"}

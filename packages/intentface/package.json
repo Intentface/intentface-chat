@@ -1,0 +1,25 @@
+{
+  "name": "intentface",
+  "version": "0.1.0",
+  "description": "Install Intentface UI and AI primitives into Next.js projects.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "intentface": "./bin/intentface.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "registry",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:registry": "node scripts/build-registry.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "prepack": "npm run build:registry"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

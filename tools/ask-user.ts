@@ -13,9 +13,7 @@ const questionSchema = z.object({
     .array(
       z.object({
         label: z.string().describe("Short display label (1-5 words)"),
-        description: z
-          .string()
-          .describe("One sentence explaining what this option means"),
+        description: z.string().describe("One sentence explaining what this option means"),
       }),
     )
     .describe("2-5 concrete options for the user to choose from"),

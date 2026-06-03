@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CircleHelpIcon,
-} from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, CircleHelpIcon } from "lucide-react";
 import {
   type ComponentProps,
   createContext,
@@ -36,10 +32,7 @@ type AskUserLabelProps = ComponentProps<"p">;
 
 const AskUserLabel = ({ className, ...props }: AskUserLabelProps) => (
   <p
-    className={cn(
-      "min-w-0 flex-1 px-2 text-sm font-medium leading-tight",
-      className,
-    )}
+    className={cn("min-w-0 flex-1 px-2 text-sm font-medium leading-tight", className)}
     {...props}
   />
 );
@@ -55,10 +48,7 @@ const AskUserHeader = ({ className, ...props }: AskUserHeaderProps) => (
 type AskUserNavigationProps = ComponentProps<"div">;
 
 const AskUserNavigation = ({ className, ...props }: AskUserNavigationProps) => (
-  <div
-    className={cn("flex items-center gap-1 shrink-0", className)}
-    {...props}
-  />
+  <div className={cn("flex items-center gap-1 shrink-0", className)} {...props} />
 );
 
 /** Navigate to the previous step. */
@@ -106,10 +96,7 @@ const AskUserStepLabel = ({
   children,
   ...props
 }: AskUserStepLabelProps) => (
-  <span
-    className={cn("text-2xs tabular-nums text-ink-tertiary", className)}
-    {...props}
-  >
+  <span className={cn("text-2xs tabular-nums text-ink-tertiary", className)} {...props}>
     {children ?? `${current} of ${total}`}
   </span>
 );
@@ -184,9 +171,7 @@ const AskUserOptions = ({
       setHighlightedValue(itemValue);
     }
     return () => {
-      registeredItems.current = registeredItems.current.filter(
-        (v) => v !== itemValue,
-      );
+      registeredItems.current = registeredItems.current.filter((v) => v !== itemValue);
       // Clear highlight when the highlighted item deregisters — allows auto-highlight
       // to fire for the next set of items (e.g. on step change)
       if (highlightedValueRef.current === itemValue) {
@@ -226,6 +211,7 @@ const AskUserOptions = ({
         return { value: current };
       },
       clearHighlight: () => {
+        highlightedValueRef.current = null;
         setHighlightedValue(null);
       },
       resetHighlight: () => {
@@ -261,11 +247,7 @@ const AskUserOptions = ({
       {multiSelect ? (
         content
       ) : (
-        <RadioGroup
-          value={value}
-          onValueChange={onValueChange}
-          className="gap-0"
-        >
+        <RadioGroup value={value} onValueChange={onValueChange} className="gap-0">
           {content}
         </RadioGroup>
       )}
@@ -359,13 +341,7 @@ const AskUserOptionCheckbox = (
   props: Omit<Parameters<typeof Checkbox>[0], "checked" | "onCheckedChange">,
 ) => {
   const option = use(OptionContext);
-  return (
-    <Checkbox
-      checked={option.selected}
-      onCheckedChange={option.onSelect}
-      {...props}
-    />
-  );
+  return <Checkbox checked={option.selected} onCheckedChange={option.onSelect} {...props} />;
 };
 
 /** Numbered radio indicator for single-select options. Shows the item's 1-based index instead of a dot. */
@@ -395,37 +371,22 @@ const AskUserOptionRadio = ({
 /** Flex column wrapper for `OptionLabel` and `OptionDescription`. */
 type AskUserOptionContentProps = ComponentProps<"span">;
 
-const AskUserOptionContent = ({
-  className,
-  ...props
-}: AskUserOptionContentProps) => (
-  <span
-    className={cn("flex min-w-0 flex-1 gap-1 flex-col", className)}
-    {...props}
-  />
+const AskUserOptionContent = ({ className, ...props }: AskUserOptionContentProps) => (
+  <span className={cn("flex min-w-0 flex-1 gap-1 flex-col", className)} {...props} />
 );
 
 /** Option title text. */
 type AskUserOptionLabelProps = ComponentProps<"span">;
 
-const AskUserOptionLabel = ({
-  className,
-  ...props
-}: AskUserOptionLabelProps) => (
+const AskUserOptionLabel = ({ className, ...props }: AskUserOptionLabelProps) => (
   <span className={cn("text-sm leading-[normal]", className)} {...props} />
 );
 
 /** Option subtitle/description text. */
 type AskUserOptionDescriptionProps = ComponentProps<"span">;
 
-const AskUserOptionDescription = ({
-  className,
-  ...props
-}: AskUserOptionDescriptionProps) => (
-  <span
-    className={cn("text-ink-secondary text-xs leading-tight", className)}
-    {...props}
-  />
+const AskUserOptionDescription = ({ className, ...props }: AskUserOptionDescriptionProps) => (
+  <span className={cn("text-ink-secondary text-xs leading-tight", className)} {...props} />
 );
 
 /** Collapsible read-only summary of answered questions. Used for completed tool calls. */
@@ -434,12 +395,7 @@ type AskUserSummaryProps = ComponentProps<typeof Collapsible> & {
   answers: Record<string, string>;
 };
 
-const AskUserSummary = ({
-  questions,
-  answers,
-  className,
-  ...props
-}: AskUserSummaryProps) => {
+const AskUserSummary = ({ questions, answers, className, ...props }: AskUserSummaryProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const count = questions.length;
 
@@ -468,9 +424,7 @@ const AskUserSummary = ({
               <CircleHelpIcon className="size-4" />
             </div>
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium leading-tight">
-                {q.question}
-              </span>
+              <span className="text-sm font-medium leading-tight">{q.question}</span>
               <span className="text-sm leading-tight text-ink-secondary">
                 {answers[q.question] ?? "—"}
               </span>
@@ -488,10 +442,7 @@ type AskUserHintsProps = ComponentProps<"div">;
 const AskUserHints = ({ className, ...props }: AskUserHintsProps) => (
   <div
     data-slot="ask-user-hints"
-    className={cn(
-      "flex items-center gap-3 px-2 pt-1 text-2xs text-ink-tertiary",
-      className,
-    )}
+    className={cn("flex items-center gap-3 px-2 pt-1 text-2xs text-ink-tertiary", className)}
     {...props}
   />
 );

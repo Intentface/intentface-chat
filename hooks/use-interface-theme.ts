@@ -28,12 +28,8 @@ export const useInterfaceTheme = (): UseInterfaceThemeResult => {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const themeOverrides = useSettingsStore((state) => state.themeOverrides);
   const setThemeOverride = useSettingsStore((state) => state.setThemeOverride);
-  const setThemeOverrides = useSettingsStore(
-    (state) => state.setThemeOverrides,
-  );
-  const resetThemeOverrides = useSettingsStore(
-    (state) => state.resetThemeOverrides,
-  );
+  const setThemeOverrides = useSettingsStore((state) => state.setThemeOverrides);
+  const resetThemeOverrides = useSettingsStore((state) => state.resetThemeOverrides);
 
   const mode = (theme ?? "system") as InterfaceThemeMode;
   const resolvedMode: ThemeMode = resolvedTheme === "dark" ? "dark" : "light";
@@ -49,10 +45,7 @@ export const useInterfaceTheme = (): UseInterfaceThemeResult => {
 
   const preset = findMatchingPreset(resolvedMode, seeds);
 
-  const setMode = useCallback(
-    (next: InterfaceThemeMode) => setTheme(next),
-    [setTheme],
-  );
+  const setMode = useCallback((next: InterfaceThemeMode) => setTheme(next), [setTheme]);
 
   const setSeed = useCallback(
     <K extends keyof CustomSeeds>(key: K, value: CustomSeeds[K]) => {

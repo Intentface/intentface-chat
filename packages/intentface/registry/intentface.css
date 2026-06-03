@@ -1,0 +1,117 @@
+@source "../node_modules/streamdown/dist/*.js";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  font-feature-settings:
+    "liga" 1,
+    "calt" 1;
+
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --acc: #0169cc;
+  --con: 0.35;
+
+  --mix-hover: calc(16% * var(--con));
+  --mix-active: calc(20% * var(--con));
+  --mix-border: calc(24% * var(--con));
+
+  --base: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--con)));
+  --base-hover: color-mix(in oklch, var(--base), var(--fg) var(--mix-hover));
+  --base-active: color-mix(in oklch, var(--base), var(--fg) var(--mix-active));
+  --base-border: color-mix(in oklch, var(--base), var(--fg) var(--mix-border));
+
+  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(4% * var(--con)));
+  --secondary-hover: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-hover));
+  --secondary-active: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-active));
+  --secondary-border: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-border));
+
+  --primary: var(--bg);
+  --primary-hover: color-mix(in oklch, var(--primary), var(--fg) var(--mix-hover));
+  --primary-active: color-mix(in oklch, var(--primary), var(--fg) var(--mix-active));
+  --primary-border: color-mix(in oklch, var(--primary), var(--fg) var(--mix-border));
+
+  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(2% * var(--con)));
+  --tertiary-hover: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-hover));
+  --tertiary-active: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-active));
+  --tertiary-border: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-border));
+
+  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(24% * var(--con)));
+  --quaternary-hover: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-hover));
+  --quaternary-active: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-active));
+  --quaternary-border: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-border));
+
+  --accent: color-mix(in oklch, var(--acc), var(--fg) calc(28% * var(--con)));
+  --accent-hover: color-mix(in oklch, var(--acc), var(--fg) var(--mix-hover));
+  --accent-active: color-mix(in oklch, var(--acc), var(--fg) var(--mix-active));
+  --accent-border: color-mix(in oklch, var(--acc), var(--fg) var(--mix-border));
+
+  --text-primary: color-mix(in oklch, var(--bg), var(--fg) 85%);
+  --text-secondary: color-mix(in oklch, var(--bg), var(--fg) 58%);
+  --text-tertiary: color-mix(in oklch, var(--bg), var(--fg) 40%);
+
+  --radius: 8px;
+  --sidebar-width: 224px;
+  --thread-width: 672px;
+  --artifacts-panel-width: 512px;
+}
+
+.dark {
+  --bg: #111111;
+  --fg: #fcfcfc;
+  --acc: #4a9eed;
+
+  --base: var(--bg);
+  --primary: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));
+  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));
+  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));
+  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(56% * var(--con)));
+
+  --mix-hover: calc(16% * var(--con));
+  --mix-active: calc(18% * var(--con));
+  --mix-border: calc(20% * var(--con));
+}
+
+@theme inline {
+  --color-base: var(--base);
+  --color-base-hover: var(--base-hover);
+  --color-base-active: var(--base-active);
+  --color-base-border: var(--base-border);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-active: var(--secondary-active);
+  --color-secondary-border: var(--secondary-border);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-border: var(--primary-border);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-hover: var(--tertiary-hover);
+  --color-tertiary-active: var(--tertiary-active);
+  --color-tertiary-border: var(--tertiary-border);
+  --color-quaternary: var(--quaternary);
+  --color-quaternary-hover: var(--quaternary-hover);
+  --color-quaternary-active: var(--quaternary-active);
+  --color-quaternary-border: var(--quaternary-border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-border: var(--accent-border);
+  --color-ink-primary: var(--text-primary);
+  --color-ink-secondary: var(--text-secondary);
+  --color-ink-tertiary: var(--text-tertiary);
+  --radius-xs: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 16px;
+}

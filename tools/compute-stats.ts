@@ -11,14 +11,11 @@ export const computeStats = tool({
   }),
   execute: async ({ queryId, column }) => {
     await delay(250);
-    const values = QUERY_ROWS.map((r) =>
-      Number(r[column as keyof typeof r] ?? 0),
-    );
+    const values = QUERY_ROWS.map((r) => Number(r[column as keyof typeof r] ?? 0));
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
     const sorted = [...values].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)] ?? 0;
-    const variance =
-      values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
+    const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
     return {
       queryId,
       column,

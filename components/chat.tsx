@@ -5,14 +5,7 @@ import type { ChatStatus } from "ai";
 import { CircleDotIcon, Loader } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
-import {
-  createContext,
-  use,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
 import {
   type ChipData,
@@ -128,12 +121,9 @@ const InterleavedSteps = ({
   }, [isStreaming]);
 
   const suffixes: string[] = [];
-  if (toolCount > 0)
-    suffixes.push(`used ${toolCount} tool${toolCount !== 1 ? "s" : ""}`);
+  if (toolCount > 0) suffixes.push(`used ${toolCount} tool${toolCount !== 1 ? "s" : ""}`);
   if (questionCount > 0)
-    suffixes.push(
-      `asked ${questionCount} question${questionCount !== 1 ? "s" : ""}`,
-    );
+    suffixes.push(`asked ${questionCount} question${questionCount !== 1 ? "s" : ""}`);
   const suffix = suffixes.length > 0 ? `, ${suffixes.join(", ")}` : "";
 
   const header = isStreaming ? (
@@ -160,9 +150,7 @@ const InterleavedSteps = ({
               <Steps.Step
                 key={`r-${i}-${j}`}
                 label={section.header ?? "Thinking"}
-                status={
-                  streaming && j === sections.length - 1 ? "active" : "complete"
-                }
+                status={streaming && j === sections.length - 1 ? "active" : "complete"}
                 icon={BrainIcon}
               >
                 {section.body && <Steps.Body>{section.body}</Steps.Body>}
@@ -230,10 +218,7 @@ const ChatMessages = () => {
           !askUser.isAwaitingInput;
 
         const shouldShowInterleavedReasoning =
-          isAssistant &&
-          chain.hasTools &&
-          !isMessageStreaming &&
-          !askUser.isAwaitingInput;
+          isAssistant && chain.hasTools && !isMessageStreaming && !askUser.isAwaitingInput;
 
         return (
           <Message
@@ -262,10 +247,7 @@ const ChatMessages = () => {
 
             {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
             {shouldShowInterleavedReasoning && (
-              <InterleavedSteps
-                segments={chain.segments}
-                isStreaming={isMessageStreaming}
-              />
+              <InterleavedSteps segments={chain.segments} isStreaming={isMessageStreaming} />
             )}
 
             {/* Message content */}
@@ -285,25 +267,14 @@ const ChatMessages = () => {
                         const lastChainIdx = parts.findLastIndex(
                           (p) =>
                             p.type === "reasoning" ||
-                            (p.type.startsWith("tool-") &&
-                              p.type !== "tool-askUser"),
+                            (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
                         );
                         if (index <= lastChainIdx) return null;
                       }
                       if (isUser) {
-                        return (
-                          <Message.Text
-                            key={index}
-                            text={part.text}
-                            chips={userChips}
-                          />
-                        );
+                        return <Message.Text key={index} text={part.text} chips={userChips} />;
                       }
-                      return (
-                        <Message.Markdown key={index}>
-                          {part.text}
-                        </Message.Markdown>
-                      );
+                      return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
                     }
                     case "data-chip":
                       return null;
@@ -338,11 +309,7 @@ const ChatMessages = () => {
             {sourcesInfo?.hasSources && (
               <Message.Sources>
                 {sourcesInfo.sources.map((source) => (
-                  <Message.Source
-                    key={source.domain}
-                    url={source.url}
-                    domain={source.domain}
-                  />
+                  <Message.Source key={source.domain} url={source.url} domain={source.domain} />
                 ))}
               </Message.Sources>
             )}
@@ -414,42 +381,8 @@ const MENTION_ITEMS: CommandItemData[] = [
   },
 ];
 
-const COMMAND_ITEMS: CommandItemData[] = [
-  {
-    value: "webSearch",
-    label: "Search the web",
-    description: "Enable web search for this message",
-    icon: "globe",
-    keywords: "search web",
-    onSelect: ({ tools }) => tools.set("webSearch", true),
-  },
-  {
-    value: "codeExecution",
-    label: "Code Execution",
-    description: "Run code snippets",
-    icon: "code",
-    keywords: "code run execute",
-  },
-  {
-    value: "thinking",
-    label: "Think deeply",
-    description: "Enable extended thinking",
-    icon: "brain",
-    keywords: "think reasoning",
-    onSelect: ({ tools }) => tools.set("thinking", true),
-  },
-  {
-    value: "summarize",
-    label: "Summarize",
-    description: "Summarize the conversation",
-    icon: "bubbleWideSparkle",
-    keywords: "summarize summary",
-  },
-];
-
 const ChatInput = () => {
-  const { chatId, messages, sendMessage, status, addToolOutput } =
-    useChatContext();
+  const { chatId, messages, sendMessage, status, addToolOutput } = useChatContext();
   const router = useRouter();
   const createChat = useChatStore((state) => state.createChat);
   const { model, setModel } = useModelStore();
@@ -457,11 +390,53 @@ const ChatInput = () => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const isNewChat = !messages.length;
 
+  // Tool toggles (web search, thinking) are app state, not the composer's —
+  // we own them here and feed them into the request body at submit time.
+  const [toolValues, setToolValues] = useState<Record<string, boolean>>({});
+  const setTool = useCallback((name: string, value: boolean) => {
+    setToolValues((previous) => ({ ...previous, [name]: value }));
+  }, []);
+
+  const commandItems = useMemo<CommandItemData[]>(
+    () => [
+      {
+        value: "webSearch",
+        label: "Search the web",
+        description: "Enable web search for this message",
+        icon: "globe",
+        keywords: "search web",
+        onSelect: () => setTool("webSearch", true),
+      },
+      {
+        value: "codeExecution",
+        label: "Code Execution",
+        description: "Run code snippets",
+        icon: "code",
+        keywords: "code run execute",
+      },
+      {
+        value: "thinking",
+        label: "Think deeply",
+        description: "Enable extended thinking",
+        icon: "brain",
+        keywords: "think reasoning",
+        onSelect: () => setTool("thinking", true),
+      },
+      {
+        value: "summarize",
+        label: "Summarize",
+        description: "Summarize the conversation",
+        icon: "bubbleWideSparkle",
+        keywords: "summarize summary",
+      },
+    ],
+    [setTool],
+  );
+
   const panelState = useActiveComposerState(messages, status);
   const isAskUser = panelState.type === "ask-user";
   const activeSteps = panelState.type === "active" ? panelState.steps : [];
-  const askUserQuestions =
-    panelState.type === "ask-user" ? panelState.questions : null;
+  const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;
 
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
@@ -491,15 +466,13 @@ const ChatInput = () => {
             parts: [
               ...data.files,
               { type: "text", text: data.text },
-              ...(data.chips.length > 0
-                ? [{ type: "data-chip" as const, data: data.chips }]
-                : []),
+              ...(data.chips.length > 0 ? [{ type: "data-chip" as const, data: data.chips }] : []),
             ],
           },
           {
             body: {
-              webSearch: data.tools.webSearch ?? false,
-              thinking: data.tools.thinking ?? false,
+              webSearch: toolValues.webSearch ?? false,
+              thinking: toolValues.thinking ?? false,
             },
           },
         );
@@ -507,15 +480,7 @@ const ChatInput = () => {
         setIsSending(false);
       }
     },
-    [
-      chatId,
-      createChat,
-      isNewChat,
-      router,
-      sendMessage,
-      addToolOutput,
-      panelState,
-    ],
+    [chatId, createChat, isNewChat, router, sendMessage, addToolOutput, panelState, toolValues],
   );
 
   return (
@@ -531,7 +496,7 @@ const ChatInput = () => {
         "/": {
           kind: "execute",
           trigger: "doc-start",
-          items: COMMAND_ITEMS,
+          items: commandItems,
         },
       }}
       questions={askUserQuestions ?? undefined}
@@ -545,13 +510,9 @@ const ChatInput = () => {
               {(item) => (
                 <Composer.CommandItem value={item.value}>
                   {item.icon && (
-                    <Composer.CommandItemIcon>
-                      {CHIP_ICONS[item.icon]}
-                    </Composer.CommandItemIcon>
+                    <Composer.CommandItemIcon>{CHIP_ICONS[item.icon]}</Composer.CommandItemIcon>
                   )}
-                  <Composer.CommandItemLabel>
-                    {item.label}
-                  </Composer.CommandItemLabel>
+                  <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
                 </Composer.CommandItem>
               )}
             </Composer.CommandItems>
@@ -564,13 +525,9 @@ const ChatInput = () => {
               {(item) => (
                 <Composer.CommandItem value={item.value}>
                   {item.icon && (
-                    <Composer.CommandItemIcon>
-                      {CHIP_ICONS[item.icon]}
-                    </Composer.CommandItemIcon>
+                    <Composer.CommandItemIcon>{CHIP_ICONS[item.icon]}</Composer.CommandItemIcon>
                   )}
-                  <Composer.CommandItemLabel>
-                    {item.label}
-                  </Composer.CommandItemLabel>
+                  <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
                   {item.description && (
                     <Composer.CommandItemDescription>
                       {item.description}
@@ -589,18 +546,14 @@ const ChatInput = () => {
                 <StepQueue.Item key={step.key}>
                   <StepQueue.Icon>
                     {step.kind === "thinking" ? (
-                      <BrainIcon
-                        className={cn("size-3.5", active && "animate-pulse")}
-                      />
+                      <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
                     ) : active ? (
                       <Loader className="size-3.5 animate-spin" />
                     ) : (
                       <CircleDotIcon className="size-3.5" />
                     )}
                   </StepQueue.Icon>
-                  <StepQueue.Label active={active}>
-                    {step.label}
-                  </StepQueue.Label>
+                  <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
                 </StepQueue.Item>
               );
             })}
@@ -646,9 +599,9 @@ const ChatInput = () => {
         ) : (
           <Composer.Actions className="flex items-center justify-between">
             <div className="flex items-center">
-              <ToolsMenu />
+              <ToolsMenu tools={toolValues} onToolsChange={setToolValues} />
               <ModelSelector value={model} onValueChange={setModel} />
-              <ActiveTools />
+              <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
             </div>
             <Composer.Submit />
           </Composer.Actions>
@@ -685,10 +638,7 @@ const ChatPlaceholder = () => {
           <motion.span variants={variants} className="text-lg font-semibold">
             Intentface Chat
           </motion.span>
-          <motion.span
-            variants={variants}
-            className="text-sm text-ink-secondary"
-          >
+          <motion.span variants={variants} className="text-sm text-ink-secondary">
             Start a conversation
           </motion.span>
         </div>
@@ -732,15 +682,8 @@ type ChatProps = {
 };
 
 const ChatRoot = ({ chatId, children }: ChatProps) => {
-  const {
-    messages,
-    status,
-    sendMessage,
-    regenerate,
-    stop,
-    setMessages,
-    addToolOutput,
-  } = useChatInstance(chatId);
+  const { messages, status, sendMessage, regenerate, stop, setMessages, addToolOutput } =
+    useChatInstance(chatId);
 
   // Artifact panel state — local to this chat, resets on remount
   const [activeArtifact, setActiveArtifact] = useState<Artifact | null>(null);
@@ -783,9 +726,7 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
     closeArtifact,
   };
 
-  return (
-    <ChatContext value={value}>{children ?? <ChatDefaultLayout />}</ChatContext>
-  );
+  return <ChatContext value={value}>{children ?? <ChatDefaultLayout />}</ChatContext>;
 };
 
 export const Chat = Object.assign(ChatRoot, {

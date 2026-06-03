@@ -38,8 +38,7 @@ const selectTriggerVariants = cva(
       variant: {
         primary:
           "border-border bg-primary hover:bg-primary-hover aria-expanded:bg-muted aria-expanded:text-foreground",
-        ghost:
-          "border-transparent hover:bg-primary-hover aria-expanded:bg-primary-hover",
+        ghost: "border-transparent hover:bg-primary-hover aria-expanded:bg-primary-hover",
       },
       size: {
         sm: "h-8 pr-2 pl-2.5 text-sm *:data-[slot=select-value]:text-sm *:data-[slot=select-icon]:size-3.5",
@@ -80,10 +79,7 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon
-        data-slot="select-icon"
-        render={<ChevronGrabberVerticalIcon />}
-      />
+      <SelectPrimitive.Icon data-slot="select-icon" render={<ChevronGrabberVerticalIcon />} />
     </SelectPrimitive.Trigger>
   );
 }
@@ -163,10 +159,7 @@ const SelectGroup = ({ className, ...props }: SelectPrimitive.Group.Props) => {
   );
 };
 
-const SelectLabel = ({
-  className,
-  ...props
-}: SelectPrimitive.GroupLabel.Props) => {
+const SelectLabel = ({ className, ...props }: SelectPrimitive.GroupLabel.Props) => {
   return (
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
@@ -176,11 +169,7 @@ const SelectLabel = ({
   );
 };
 
-const SelectItem = ({
-  className,
-  children,
-  ...props
-}: SelectPrimitive.Item.Props) => {
+const SelectItem = ({ className, children, ...props }: SelectPrimitive.Item.Props) => {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -200,17 +189,11 @@ const SelectItem = ({
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText
-        className={cn(["flex flex-1 shrink-0 gap-1.5 whitespace-nowrap"])}
-      >
+      <SelectPrimitive.ItemText className={cn(["flex flex-1 shrink-0 gap-1.5 whitespace-nowrap"])}>
         {children}
       </SelectPrimitive.ItemText>
 
-      <div
-        className={cn([
-          "pointer-events-none flex size-4 shrink-0 items-center justify-center",
-        ])}
-      >
+      <div className={cn(["pointer-events-none flex size-4 shrink-0 items-center justify-center"])}>
         <SelectPrimitive.ItemIndicator>
           <CheckMarkMediumIcon className="pointer-events-none" />
         </SelectPrimitive.ItemIndicator>
@@ -219,17 +202,11 @@ const SelectItem = ({
   );
 };
 
-const SelectSeparator = ({
-  className,
-  ...props
-}: SelectPrimitive.Separator.Props) => {
+const SelectSeparator = ({ className, ...props }: SelectPrimitive.Separator.Props) => {
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn(
-        ["-mx-1 my-1 h-px pointer-events-none bg-border"],
-        className,
-      )}
+      className={cn(["-mx-1 my-1 h-px pointer-events-none bg-border"], className)}
       {...props}
     />
   );

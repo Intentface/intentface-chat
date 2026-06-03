@@ -20,134 +20,112 @@ type DiffusionMarkdownProps = {
   className?: string;
 };
 
-const DiffusionMarkdown = memo(
-  ({ content, isStreaming, className }: DiffusionMarkdownProps) => {
-    const [phase, setPhase] = useState<Phase>(
-      isStreaming ? "streaming" : "final",
-    );
-    const wasStreamingRef = useRef(isStreaming);
-    const firstContentTimeRef = useRef<number | null>(null);
-    const sweepContainerRef = useRef<HTMLDivElement>(null);
-    // Counter to force fresh CSS animations on each sweep
-    const [sweepKey, setSweepKey] = useState(0);
+const DiffusionMarkdown = memo(({ content, isStreaming, className }: DiffusionMarkdownProps) => {
+  const [phase, setPhase] = useState<Phase>(isStreaming ? "streaming" : "final");
+  const wasStreamingRef = useRef(isStreaming);
+  const firstContentTimeRef = useRef<number | null>(null);
+  const sweepContainerRef = useRef<HTMLDivElement>(null);
+  // Counter to force fresh CSS animations on each sweep
+  const [sweepKey, setSweepKey] = useState(0);
 
-    // Track when content first appeared during streaming
-    if (
-      isStreaming &&
-      content.length > 0 &&
-      firstContentTimeRef.current === null
-    ) {
-      firstContentTimeRef.current = Date.now();
+  // Track when content first appeared during streaming
+  if (isStreaming && content.length > 0 && firstContentTimeRef.current === null) {
+    firstContentTimeRef.current = Date.now();
+  }
+  if (!isStreaming && phase === "final") {
+    firstContentTimeRef.current = null;
+  }
+
+  // Phase transitions driven by isStreaming changes
+  useEffect(() => {
+    if (isStreaming) {
+      setPhase("streaming");
+      wasStreamingRef.current = true;
+      return;
     }
-    if (!isStreaming && phase === "final") {
-      firstContentTimeRef.current = null;
-    }
 
-    // Phase transitions driven by isStreaming changes
-    useEffect(() => {
-      if (isStreaming) {
-        setPhase("streaming");
-        wasStreamingRef.current = true;
-        return;
-      }
-
-      // streaming → stopped
-      if (wasStreamingRef.current && content.length > 0) {
-        wasStreamingRef.current = false;
-        const elapsed = firstContentTimeRef.current
-          ? Date.now() - firstContentTimeRef.current
-          : 0;
-
-        if (elapsed > MIN_STREAM_DURATION) {
-          // Long enough stream — scanline reveal, then sweep, then final
-          setPhase("revealing");
-          const revealTimer = setTimeout(() => {
-            setSweepKey((k) => k + 1);
-            setPhase("sweep");
-          }, REVEAL_DURATION);
-          return () => clearTimeout(revealTimer);
-        }
-
-        // Fast response — skip scanline, go straight to sweep
-        setSweepKey((k) => k + 1);
-        setPhase("sweep");
-        return;
-      }
-
+    // streaming → stopped
+    if (wasStreamingRef.current && content.length > 0) {
       wasStreamingRef.current = false;
-    }, [isStreaming, content.length]);
+      const elapsed = firstContentTimeRef.current ? Date.now() - firstContentTimeRef.current : 0;
 
-    // Measure height and schedule sweep → final transition
-    useEffect(() => {
-      if (phase !== "sweep") return;
+      if (elapsed > MIN_STREAM_DURATION) {
+        // Long enough stream — scanline reveal, then sweep, then final
+        setPhase("revealing");
+        const revealTimer = setTimeout(() => {
+          setSweepKey((k) => k + 1);
+          setPhase("sweep");
+        }, REVEAL_DURATION);
+        return () => clearTimeout(revealTimer);
+      }
 
-      const node = sweepContainerRef.current;
-      if (!node) return;
-
-      const height = node.offsetHeight;
-      const duration = Math.min(
-        SWEEP_MAX,
-        Math.max(SWEEP_MIN, (height / 100) * SWEEP_MS_PER_100PX),
-      );
-      node.style.setProperty("--sweep-duration", `${duration}ms`);
-
-      const timer = setTimeout(() => setPhase("final"), duration + 50);
-      return () => clearTimeout(timer);
-    }, [phase]);
-
-    // Final state — clean markdown, no wrappers
-    if (phase === "final") {
-      return (
-        <Markdown className={cn("size-full", className)}>{content}</Markdown>
-      );
+      // Fast response — skip scanline, go straight to sweep
+      setSweepKey((k) => k + 1);
+      setPhase("sweep");
+      return;
     }
 
-    // Sweep: full-opacity content with decorative sweep line
-    if (phase === "sweep") {
-      return (
-        <div
-          ref={sweepContainerRef}
-          className={cn(
-            "diffusion-sweep-container relative overflow-hidden",
-            className,
-          )}
-        >
-          <Markdown className="size-full">{content}</Markdown>
-          <div
-            key={sweepKey}
-            className="diffusion-sweep-line"
-            aria-hidden="true"
-          />
-        </div>
-      );
-    }
+    wasStreamingRef.current = false;
+  }, [isStreaming, content.length]);
 
-    // Scanline reveal transition
-    if (phase === "revealing") {
-      return (
-        <div className={cn("diffusion-scanline-container relative", className)}>
-          {/* Bottom layer: diffusion-styled text that fades out */}
-          <div className="diffusion-bottom-layer" aria-hidden="true">
-            <Markdown className="size-full">{content}</Markdown>
-          </div>
-          {/* Top layer: clean markdown revealed by scanline */}
-          <div className="diffusion-scanline-mask absolute inset-0">
-            <Markdown className="size-full">{content}</Markdown>
-          </div>
-          {/* Scanline glow beam */}
-          <div className="diffusion-scanline-beam" aria-hidden="true" />
-        </div>
-      );
-    }
+  // Measure height and schedule sweep → final transition
+  useEffect(() => {
+    if (phase !== "sweep") return;
 
-    // Streaming: formatted markdown with diffusion visual effect
+    const node = sweepContainerRef.current;
+    if (!node) return;
+
+    const height = node.offsetHeight;
+    const duration = Math.min(SWEEP_MAX, Math.max(SWEEP_MIN, (height / 100) * SWEEP_MS_PER_100PX));
+    node.style.setProperty("--sweep-duration", `${duration}ms`);
+
+    const timer = setTimeout(() => setPhase("final"), duration + 50);
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  // Final state — clean markdown, no wrappers
+  if (phase === "final") {
+    return <Markdown className={cn("size-full", className)}>{content}</Markdown>;
+  }
+
+  // Sweep: full-opacity content with decorative sweep line
+  if (phase === "sweep") {
     return (
-      <div className={cn("diffusion-streaming", className)}>
+      <div
+        ref={sweepContainerRef}
+        className={cn("diffusion-sweep-container relative overflow-hidden", className)}
+      >
         <Markdown className="size-full">{content}</Markdown>
+        <div key={sweepKey} className="diffusion-sweep-line" aria-hidden="true" />
       </div>
     );
-  },
-);
+  }
+
+  // Scanline reveal transition
+  if (phase === "revealing") {
+    return (
+      <div className={cn("diffusion-scanline-container relative", className)}>
+        {/* Bottom layer: diffusion-styled text that fades out */}
+        <div className="diffusion-bottom-layer" aria-hidden="true">
+          <Markdown className="size-full">{content}</Markdown>
+        </div>
+        {/* Top layer: clean markdown revealed by scanline */}
+        <div className="diffusion-scanline-mask absolute inset-0">
+          <Markdown className="size-full">{content}</Markdown>
+        </div>
+        {/* Scanline glow beam */}
+        <div className="diffusion-scanline-beam" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  // Streaming: formatted markdown with diffusion visual effect
+  return (
+    <div className={cn("diffusion-streaming", className)}>
+      <Markdown className="size-full">{content}</Markdown>
+    </div>
+  );
+});
 DiffusionMarkdown.displayName = "DiffusionMarkdown";
 
 export { DiffusionMarkdown };

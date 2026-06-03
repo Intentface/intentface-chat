@@ -19,9 +19,7 @@ export const webSearch = tool({
             .array(
               z.object({
                 url: z.string().describe("Source URL"),
-                title: z
-                  .string()
-                  .describe("Short source label, e.g. domain name"),
+                title: z.string().describe("Short source label, e.g. domain name"),
               }),
             )
             .describe("Sources that support this claim"),

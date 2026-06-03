@@ -24,13 +24,7 @@ type MessageRootProps = {
   isError: boolean;
 } & ComponentProps<typeof motion.div>;
 // Message wrapper with entrance animation
-const MessageRoot = ({
-  role,
-  isLast,
-  isError,
-  className,
-  ...props
-}: MessageRootProps) => {
+const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRootProps) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -69,11 +63,7 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
 );
 
 // Actions container (for copy, regenerate, etc.)
-const MessageActions = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const MessageActions = ({ children, className, ...props }: ComponentProps<"div">) => (
   <Tooltip.Provider>
     <div
       data-slot="message-actions"
@@ -122,10 +112,7 @@ const MessageAction = ({
   );
 };
 
-const MessageMarkdown = ({
-  className,
-  ...props
-}: ComponentProps<typeof Markdown>) => (
+const MessageMarkdown = ({ className, ...props }: ComponentProps<typeof Markdown>) => (
   <Markdown className={cn("size-full", className)} {...props} />
 );
 
@@ -150,9 +137,7 @@ type MessageTextProps = {
 
 const MessageText = ({ text, chips, className }: MessageTextProps) => {
   const segments = parseChipSegments(text);
-  const chipByKey = new Map(
-    (chips ?? []).map((c) => [`${c.prefix}:${c.value}`, c]),
-  );
+  const chipByKey = new Map((chips ?? []).map((c) => [`${c.prefix}:${c.value}`, c]));
 
   return (
     <span className={cn("whitespace-pre-wrap text-md", className)}>
@@ -172,11 +157,7 @@ const MessageText = ({ text, chips, className }: MessageTextProps) => {
 };
 
 // Error message display
-const MessageError = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const MessageError = ({ children, className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-error"
     className={cn("flex items-start gap-2 text-sm text-destructive", className)}
@@ -203,10 +184,7 @@ const MessageError = ({
 const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-loading"
-    className={cn(
-      "flex items-start gap-1 text-sm text-muted-foreground",
-      className,
-    )}
+    className={cn("flex items-start gap-1 text-sm text-muted-foreground", className)}
     {...props}
   >
     <span>Loading...</span>
@@ -266,11 +244,7 @@ const MessageCopy = ({
 };
 
 // Attachments container for message history (read-only)
-const MessageAttachments = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const MessageAttachments = ({ children, className, ...props }: ComponentProps<"div">) => (
   <div className={cn("flex flex-wrap gap-2", className)} {...props}>
     {children}
   </div>
@@ -283,11 +257,7 @@ type MessageAttachmentProps = {
   attachment: FileUIPart;
 } & ComponentProps<"div">;
 
-const MessageAttachment = ({
-  attachment,
-  className,
-  ...props
-}: MessageAttachmentProps) => {
+const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmentProps) => {
   const mediaType = attachment.mediaType ?? "";
   const filename = attachment.filename ?? "Attachment";
   const Icon = mediaType === "application/pdf" ? FileIcon : PaperclipIcon;
@@ -337,16 +307,8 @@ const MessageAttachment = ({
 };
 
 // Source pills container
-const MessageSources = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<"div">) => (
-  <div
-    data-slot="message-sources"
-    className={cn("flex flex-wrap gap-1.5", className)}
-    {...props}
-  >
+const MessageSources = ({ children, className, ...props }: ComponentProps<"div">) => (
+  <div data-slot="message-sources" className={cn("flex flex-wrap gap-1.5", className)} {...props}>
     {children}
   </div>
 );

@@ -9,10 +9,7 @@ import { Scaler } from "@/components/ui/scaler";
 import Select from "@/components/ui/select";
 import { Settings } from "@/components/ui/settings";
 import { ToggleGroup } from "@/components/ui/toggle-group";
-import {
-  type InterfaceThemeMode,
-  useInterfaceTheme,
-} from "@/hooks/use-interface-theme";
+import { type InterfaceThemeMode, useInterfaceTheme } from "@/hooks/use-interface-theme";
 import {
   CONTRAST_MAX,
   CONTRAST_MIN,
@@ -37,12 +34,8 @@ type ThemeConfiguratorProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export const ThemeConfigurator = ({
-  open,
-  onOpenChange,
-}: ThemeConfiguratorProps) => {
-  const { mode, resolvedMode, setMode, seeds, setSeed, preset, setPreset } =
-    useInterfaceTheme();
+export const ThemeConfigurator = ({ open, onOpenChange }: ThemeConfiguratorProps) => {
+  const { mode, resolvedMode, setMode, seeds, setSeed, preset, setPreset } = useInterfaceTheme();
 
   const presets = getPresetsForMode(resolvedMode);
   const selectedValue = preset ? preset.label : CUSTOM_VALUE;
@@ -63,9 +56,7 @@ export const ThemeConfigurator = ({
         <Settings>
           <Settings.Header>
             <Settings.Title>Theme</Settings.Title>
-            <Settings.Subtitle>
-              Customize the appearance of the workspace
-            </Settings.Subtitle>
+            <Settings.Subtitle>Customize the appearance of the workspace</Settings.Subtitle>
           </Settings.Header>
 
           <Settings.Card>
@@ -95,15 +86,10 @@ export const ThemeConfigurator = ({
             <Settings.Row>
               <Settings.LabelGroup>
                 <Settings.Label>Preset</Settings.Label>
-                <Settings.Description>
-                  Pick a starter palette
-                </Settings.Description>
+                <Settings.Description>Pick a starter palette</Settings.Description>
               </Settings.LabelGroup>
               <Settings.Control>
-                <Select
-                  value={selectedValue}
-                  onValueChange={handlePresetChange}
-                >
+                <Select value={selectedValue} onValueChange={handlePresetChange}>
                   <Select.Trigger className="w-full" size="md">
                     <Select.Value>
                       <div className="flex items-center gap-2">
@@ -133,54 +119,37 @@ export const ThemeConfigurator = ({
             <Settings.Row>
               <Settings.LabelGroup>
                 <Settings.Label>Accent</Settings.Label>
-                <Settings.Description>
-                  Buttons, links, and focus rings
-                </Settings.Description>
+                <Settings.Description>Buttons, links, and focus rings</Settings.Description>
               </Settings.LabelGroup>
               <Settings.Control>
-                <ColorPill
-                  value={seeds.acc}
-                  onValueChange={(value) => setSeed("acc", value)}
-                />
+                <ColorPill value={seeds.acc} onValueChange={(value) => setSeed("acc", value)} />
               </Settings.Control>
             </Settings.Row>
 
             <Settings.Row>
               <Settings.LabelGroup>
                 <Settings.Label>Background</Settings.Label>
-                <Settings.Description>
-                  Workspace base color
-                </Settings.Description>
+                <Settings.Description>Workspace base color</Settings.Description>
               </Settings.LabelGroup>
               <Settings.Control>
-                <ColorPill
-                  value={seeds.bg}
-                  onValueChange={(value) => setSeed("bg", value)}
-                />
+                <ColorPill value={seeds.bg} onValueChange={(value) => setSeed("bg", value)} />
               </Settings.Control>
             </Settings.Row>
 
             <Settings.Row>
               <Settings.LabelGroup>
                 <Settings.Label>Foreground</Settings.Label>
-                <Settings.Description>
-                  Workspace text color
-                </Settings.Description>
+                <Settings.Description>Workspace text color</Settings.Description>
               </Settings.LabelGroup>
               <Settings.Control>
-                <ColorPill
-                  value={seeds.fg}
-                  onValueChange={(value) => setSeed("fg", value)}
-                />
+                <ColorPill value={seeds.fg} onValueChange={(value) => setSeed("fg", value)} />
               </Settings.Control>
             </Settings.Row>
 
             <Settings.Row>
               <Settings.LabelGroup>
                 <Settings.Label>Contrast</Settings.Label>
-                <Settings.Description>
-                  Surface elevation strength
-                </Settings.Description>
+                <Settings.Description>Surface elevation strength</Settings.Description>
               </Settings.LabelGroup>
               <Settings.Control>
                 <Scaler

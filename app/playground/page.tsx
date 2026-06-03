@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleDotIcon, Loader } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { type CommandItemData, Composer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
@@ -38,8 +38,7 @@ const singleQuestion: AskUserQuestion[] = [
       },
       {
         label: "MongoDB",
-        description:
-          "Document store, flexible schema, good for rapid prototyping",
+        description: "Document store, flexible schema, good for rapid prototyping",
       },
       {
         label: "SQLite",
@@ -102,23 +101,6 @@ const PLAYGROUND_MENTIONS: CommandItemData[] = [
   { value: "release-notes", label: "Release Notes", icon: "fileText" },
 ];
 
-const PLAYGROUND_COMMANDS: CommandItemData[] = [
-  {
-    value: "webSearch",
-    label: "Search the web",
-    icon: "globe",
-    keywords: "search web",
-    onSelect: ({ tools }) => tools.set("webSearch", true),
-  },
-  {
-    value: "thinking",
-    label: "Think deeply",
-    icon: "brain",
-    keywords: "think reasoning",
-    onSelect: ({ tools }) => tools.set("thinking", true),
-  },
-];
-
 // Async-callback exercise: a fake "issues" list fetched with simulated latency.
 // Typing `#` opens the list; typing fast aborts in-flight calls via AbortSignal.
 const PLAYGROUND_ISSUES: CommandItemData[] = [
@@ -157,9 +139,7 @@ const fetchPlaygroundIssues = async (
   await abortableDelay(latency, signal);
   const lowered = query.toLowerCase();
   if (!lowered) return PLAYGROUND_ISSUES;
-  return PLAYGROUND_ISSUES.filter((item) =>
-    item.label.toLowerCase().includes(lowered),
-  );
+  return PLAYGROUND_ISSUES.filter((item) => item.label.toLowerCase().includes(lowered));
 };
 
 // ---------------------------------------------------------------------------
@@ -172,6 +152,31 @@ export default function ComponentsPlayground() {
   >("idle");
   const [composerSteps, setComposerSteps] = useState(stepLabels.slice(0, 1));
   const { model, setModel } = useModelStore();
+
+  const [toolValues, setToolValues] = useState<Record<string, boolean>>({});
+  const setTool = useCallback((name: string, value: boolean) => {
+    setToolValues((previous) => ({ ...previous, [name]: value }));
+  }, []);
+
+  const playgroundCommands = useMemo<CommandItemData[]>(
+    () => [
+      {
+        value: "webSearch",
+        label: "Search the web",
+        icon: "globe",
+        keywords: "search web",
+        onSelect: () => setTool("webSearch", true),
+      },
+      {
+        value: "thinking",
+        label: "Think deeply",
+        icon: "brain",
+        keywords: "think reasoning",
+        onSelect: () => setTool("thinking", true),
+      },
+    ],
+    [setTool],
+  );
 
   const panelValue =
     composerState === "active"
@@ -190,50 +195,43 @@ export default function ComponentsPlayground() {
   return (
     <main className="mx-auto max-w-3xl space-y-8 px-6 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-sm font-semibold text-ink-primary">
-          Component Playground
-        </h1>
+        <h1 className="text-sm font-semibold text-ink-primary">Component Playground</h1>
         <ThemeButton />
       </div>
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-ink-tertiary">
-            Composer
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wider text-ink-tertiary">Composer</p>
           <div className="flex items-center gap-2">
-            {(["idle", "active", "ask-user", "ask-user-multi"] as const).map(
-              (state) => (
-                <button
-                  key={state}
-                  type="button"
-                  onClick={() => {
-                    if (state === "active") {
-                      if (composerState === "active") {
-                        const next =
-                          stepLabels[composerSteps.length % stepLabels.length];
-                        setComposerSteps((prev) => [...prev, next]);
-                        return;
-                      }
-                      setComposerSteps(stepLabels.slice(0, 1));
+            {(["idle", "active", "ask-user", "ask-user-multi"] as const).map((state) => (
+              <button
+                key={state}
+                type="button"
+                onClick={() => {
+                  if (state === "active") {
+                    if (composerState === "active") {
+                      const next = stepLabels[composerSteps.length % stepLabels.length];
+                      setComposerSteps((prev) => [...prev, next]);
+                      return;
                     }
-                    setComposerState(state);
-                  }}
-                  className={cn(
-                    "rounded-md px-3 py-1 text-xs border border-primary-border bg-primary text-ink-secondary hover:bg-primary-hover font-medium transition-colors",
-                    composerState === state && "bg-primary-active text-slate-1",
-                  )}
-                >
-                  {state === "idle"
-                    ? "Idle"
-                    : state === "active"
-                      ? "Active"
-                      : state === "ask-user"
-                        ? "Ask User"
-                        : "Ask Multi"}
-                </button>
-              ),
-            )}
+                    setComposerSteps(stepLabels.slice(0, 1));
+                  }
+                  setComposerState(state);
+                }}
+                className={cn(
+                  "rounded-md px-3 py-1 text-xs border border-primary-border bg-primary text-ink-secondary hover:bg-primary-hover font-medium transition-colors",
+                  composerState === state && "bg-primary-active text-slate-1",
+                )}
+              >
+                {state === "idle"
+                  ? "Idle"
+                  : state === "active"
+                    ? "Active"
+                    : state === "ask-user"
+                      ? "Ask User"
+                      : "Ask Multi"}
+              </button>
+            ))}
           </div>
         </div>
         <div className="flex min-h-[448px] items-end rounded-lg border border-secondary-border bg-secondary p-4">
@@ -250,7 +248,7 @@ export default function ComponentsPlayground() {
               "/": {
                 kind: "execute",
                 trigger: "doc-start",
-                items: PLAYGROUND_COMMANDS,
+                items: playgroundCommands,
               },
               "#": {
                 kind: "insert",
@@ -275,9 +273,7 @@ export default function ComponentsPlayground() {
                           <CircleDotIcon className="size-3.5" />
                         )}
                       </StepQueue.Icon>
-                      <StepQueue.Label active={i === arr.length - 1}>
-                        {step}
-                      </StepQueue.Label>
+                      <StepQueue.Label active={i === arr.length - 1}>{step}</StepQueue.Label>
                     </StepQueue.Item>
                   ))}
                 </StepQueue>
@@ -292,19 +288,13 @@ export default function ComponentsPlayground() {
               <Composer.Textarea>
                 <Composer.Placeholder
                   placeholder={
-                    composerState === "ask-user" ||
-                    composerState === "ask-user-multi"
+                    composerState === "ask-user" || composerState === "ask-user-multi"
                       ? "Or type your own answer..."
-                      : [
-                          "Ask me anything...",
-                          "Search the web...",
-                          "Generate a report...",
-                        ]
+                      : ["Ask me anything...", "Search the web...", "Generate a report..."]
                   }
                 />
               </Composer.Textarea>
-              {composerState === "ask-user" ||
-              composerState === "ask-user-multi" ? (
+              {composerState === "ask-user" || composerState === "ask-user-multi" ? (
                 <Composer.Actions className="flex items-center justify-end">
                   <Composer.AskUserHints />
                   <Composer.AskUserDismiss />
@@ -313,9 +303,9 @@ export default function ComponentsPlayground() {
               ) : (
                 <Composer.Actions className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <ToolsMenu />
+                    <ToolsMenu tools={toolValues} onToolsChange={setToolValues} />
                     <ModelSelector value={model} onValueChange={setModel} />
-                    <ActiveTools />
+                    <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
                   </div>
                   <Composer.Submit />
                 </Composer.Actions>

@@ -27,9 +27,7 @@ type ThreadScrollContextValue = {
   scrollRef: RefObject<HTMLDivElement | null>;
 };
 
-const ThreadScrollContext = createContext<ThreadScrollContextValue | null>(
-  null,
-);
+const ThreadScrollContext = createContext<ThreadScrollContextValue | null>(null);
 
 const useThreadScroll = () => {
   const ctx = use(ThreadScrollContext);
@@ -74,9 +72,7 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
       //   return;
       // }
       const threshold = 50;
-      setIsAtBottom(
-        el.scrollHeight - el.scrollTop - el.clientHeight < threshold,
-      );
+      setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < threshold);
     };
 
     let rafId: number;
@@ -123,31 +119,29 @@ export type ThreadOverlayProps = ComponentProps<typeof ProgressiveBlur> & {
   direction: "top" | "bottom";
 };
 
-const ThreadOverlay = memo(
-  ({ className, direction, ...props }: ThreadOverlayProps) => (
-    <div
-      data-slot={`thread-overlay-${direction}`}
-      data-thread-overlay={direction}
-      className={cn(
-        "group/thread-overlay absolute right-0 left-0 z-1 mx-auto w-full max-w-(--thread-width)",
-        'data-[thread-overlay="top"]:h-(--thread-overlay-top-height) data-[thread-overlay="top"]:top-0',
-        'data-[thread-overlay="bottom"]:h-(--thread-overlay-bottom-height) data-[thread-overlay="bottom"]:bottom-0',
+const ThreadOverlay = memo(({ className, direction, ...props }: ThreadOverlayProps) => (
+  <div
+    data-slot={`thread-overlay-${direction}`}
+    data-thread-overlay={direction}
+    className={cn(
+      "group/thread-overlay absolute right-0 left-0 z-1 mx-auto w-full max-w-(--thread-width)",
+      'data-[thread-overlay="top"]:h-(--thread-overlay-top-height) data-[thread-overlay="top"]:top-0',
+      'data-[thread-overlay="bottom"]:h-(--thread-overlay-bottom-height) data-[thread-overlay="bottom"]:bottom-0',
 
-        className,
+      className,
+    )}
+  >
+    <ProgressiveBlur
+      direction={direction}
+      className={cn(
+        "h-full w-full bg-linear-to-b from-secondary to-transparent",
+        "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
+        "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
       )}
-    >
-      <ProgressiveBlur
-        direction={direction}
-        className={cn(
-          "h-full w-full bg-linear-to-b from-secondary to-transparent",
-          "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
-          "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
-        )}
-        {...props}
-      />
-    </div>
-  ),
-);
+      {...props}
+    />
+  </div>
+));
 
 ThreadOverlay.displayName = "ThreadOverlay";
 
@@ -159,11 +153,7 @@ export type ThreadViewportProps = ComponentProps<"div"> & {
   children?: ReactNode;
 };
 
-const ThreadViewport = ({
-  children,
-  className,
-  ...props
-}: ThreadViewportProps) => {
+const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => {
   const { scrollRef } = useThreadScroll();
 
   return (
@@ -203,11 +193,7 @@ export type ThreadComposerProps = ComponentProps<"div"> & {
   children?: ReactNode;
 };
 
-const ThreadComposer = ({
-  className,
-  children,
-  ...props
-}: ThreadComposerProps) => (
+const ThreadComposer = ({ className, children, ...props }: ThreadComposerProps) => (
   <div
     data-slot="thread-composer"
     className={cn(
@@ -228,10 +214,7 @@ const ThreadComposer = ({
 
 export type ThreadScrollButtonProps = ComponentProps<typeof motion.div>;
 
-const ThreadScrollButton = ({
-  className,
-  ...props
-}: ThreadScrollButtonProps) => {
+const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) => {
   const { isAtBottom, scrollToBottom } = useThreadScroll();
 
   const handleScrollToBottom = useCallback(() => {
@@ -251,11 +234,7 @@ const ThreadScrollButton = ({
               transition={{ duration: 0.2, ease: "easeOut" }}
               {...props}
             >
-              <IconButton
-                size="lg"
-                onClick={handleScrollToBottom}
-                className="rounded-full"
-              >
+              <IconButton size="lg" onClick={handleScrollToBottom} className="rounded-full">
                 <ArrowDownIcon />
               </IconButton>
             </motion.div>
@@ -278,17 +257,10 @@ export type ThreadEmptyStateProps = ComponentProps<"div"> & {
 
 export type ThreadPlaceholderProps = ComponentProps<"div">;
 
-const ThreadPlaceholder = ({
-  children,
-  className,
-  ...props
-}: ThreadPlaceholderProps) => (
+const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderProps) => (
   <div
     data-slot="thread-placeholder"
-    className={cn(
-      "flex flex-1 flex-col items-center justify-center gap-4",
-      className,
-    )}
+    className={cn("flex flex-1 flex-col items-center justify-center gap-4", className)}
     {...props}
   >
     {children}
@@ -318,11 +290,7 @@ type DynamicSpacerProps = {
   minHeight?: number;
 };
 
-const ThreadSpacer = ({
-  targetRef,
-  topOffset,
-  minHeight,
-}: DynamicSpacerProps) => {
+const ThreadSpacer = ({ targetRef, topOffset, minHeight }: DynamicSpacerProps) => {
   const { isAtBottom } = useThreadScroll();
   const spacerRef = useRef<HTMLDivElement>(null);
   const scrollParentRef = useRef<HTMLElement | null>(null);
@@ -338,19 +306,13 @@ const ThreadSpacer = ({
   const resolveOverlays = useCallback(
     (threadRoot: HTMLElement | null) => {
       if (overlayCache.current) return overlayCache.current;
-      const remSize = Number.parseFloat(
-        getComputedStyle(document.documentElement).fontSize,
-      );
+      const remSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
       const rootStyles = threadRoot ? getComputedStyle(threadRoot) : null;
       const top = rootStyles
-        ? Number.parseFloat(
-            rootStyles.getPropertyValue("--thread-overlay-top-height"),
-          ) * remSize
+        ? Number.parseFloat(rootStyles.getPropertyValue("--thread-overlay-top-height")) * remSize
         : 0;
       const bottom = rootStyles
-        ? Number.parseFloat(
-            rootStyles.getPropertyValue("--thread-overlay-bottom-height"),
-          ) * remSize
+        ? Number.parseFloat(rootStyles.getPropertyValue("--thread-overlay-bottom-height")) * remSize
         : 0;
       overlayCache.current = {
         topOffset: topOffset ?? top,
@@ -373,16 +335,11 @@ const ThreadSpacer = ({
     const userMessages = scrollContainer.querySelectorAll<HTMLElement>(
       '[data-slot="message"][data-role="user"]',
     );
-    const messages = scrollContainer.querySelectorAll<HTMLElement>(
-      '[data-slot="message"]',
-    );
-    const target =
-      targetRef?.current ?? userMessages[userMessages.length - 1] ?? null;
+    const messages = scrollContainer.querySelectorAll<HTMLElement>('[data-slot="message"]');
+    const target = targetRef?.current ?? userMessages[userMessages.length - 1] ?? null;
     if (!target) return;
 
-    const threadRoot = scrollContainer.closest<HTMLElement>(
-      '[data-slot="thread-root"]',
-    );
+    const threadRoot = scrollContainer.closest<HTMLElement>('[data-slot="thread-root"]');
     const rootHeight = threadRoot?.clientHeight ?? scrollContainer.clientHeight;
     const overlays = resolveOverlays(threadRoot);
     const effectiveMinHeight = minHeight ?? 0;
@@ -393,8 +350,7 @@ const ThreadSpacer = ({
     if (parent) {
       const children = Array.from(parent.children) as HTMLElement[];
       const spacerIndex = children.indexOf(spacerRef.current);
-      const targetChild =
-        children.find((child) => child.contains(target)) ?? target;
+      const targetChild = children.find((child) => child.contains(target)) ?? target;
       const targetIndex = children.indexOf(targetChild);
       const gap = Number.parseFloat(getComputedStyle(parent).gap) || 0;
 
@@ -426,12 +382,8 @@ const ThreadSpacer = ({
       } else {
         const containerRect = scrollContainer.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();
-        const targetAbsoluteTop =
-          scrollContainer.scrollTop + (targetRect.top - containerRect.top);
-        pendingScrollRef.current = Math.max(
-          0,
-          targetAbsoluteTop - overlays.topOffset,
-        );
+        const targetAbsoluteTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top);
+        pendingScrollRef.current = Math.max(0, targetAbsoluteTop - overlays.topOffset);
       }
     } else if (calculatedHeight <= 0 && isAtBottom) {
       scrollContainer.scrollTo({

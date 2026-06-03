@@ -8,21 +8,14 @@ export const detectAnomalies = tool({
   inputSchema: z.object({
     queryId: z.string().describe("The query ID to analyze"),
     column: z.string().describe("Numeric column to check for anomalies"),
-    sensitivity: z
-      .enum(["low", "medium", "high"])
-      .describe("Detection sensitivity"),
+    sensitivity: z.enum(["low", "medium", "high"]).describe("Detection sensitivity"),
   }),
   execute: async ({ queryId, column, sensitivity }) => {
     await delay(400);
-    const values = QUERY_ROWS.map((r) =>
-      Number(r[column as keyof typeof r] ?? 0),
-    );
+    const values = QUERY_ROWS.map((r) => Number(r[column as keyof typeof r] ?? 0));
     const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const threshold =
-      sensitivity === "high" ? 0.8 : sensitivity === "medium" ? 1.2 : 1.5;
-    const stddev = Math.sqrt(
-      values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length,
-    );
+    const threshold = sensitivity === "high" ? 0.8 : sensitivity === "medium" ? 1.2 : 1.5;
+    const stddev = Math.sqrt(values.reduce((s, v) => s + (v - mean) ** 2, 0) / values.length);
 
     const anomalies = values
       .map((value, index) => ({

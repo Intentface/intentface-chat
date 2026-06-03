@@ -2,25 +2,13 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
 
-const SettingsRoot = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"section">) => (
-  <section
-    data-slot="settings"
-    className={cn("flex flex-col gap-2", className)}
-    {...props}
-  >
+const SettingsRoot = ({ className, children, ...props }: ComponentProps<"section">) => (
+  <section data-slot="settings" className={cn("flex flex-col gap-2", className)} {...props}>
     {children}
   </section>
 );
 
-const SettingsHeader = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
+const SettingsHeader = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="settings-header"
     className={cn("flex flex-col gap-0.5 px-2.5", className)}
@@ -30,11 +18,7 @@ const SettingsHeader = ({
   </div>
 );
 
-const SettingsTitle = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"h2">) => (
+const SettingsTitle = ({ className, children, ...props }: ComponentProps<"h2">) => (
   <h2
     data-slot="settings-title"
     className={cn("text-md font-medium text-ink-primary", className)}
@@ -44,11 +28,7 @@ const SettingsTitle = ({
   </h2>
 );
 
-const SettingsSubtitle = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"p">) => (
+const SettingsSubtitle = ({ className, children, ...props }: ComponentProps<"p">) => (
   <p
     data-slot="settings-subtitle"
     className={cn("text-sm text-ink-secondary", className)}
@@ -58,28 +38,17 @@ const SettingsSubtitle = ({
   </p>
 );
 
-const SettingsCard = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
+const SettingsCard = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="settings-card"
-    className={cn(
-      "flex flex-col rounded-lg border border-primary-border bg-primary",
-      className,
-    )}
+    className={cn("flex flex-col rounded-lg border border-primary-border bg-primary", className)}
     {...props}
   >
     {children}
   </div>
 );
 
-const SettingsRow = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
+const SettingsRow = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="settings-row"
     className={cn(
@@ -92,11 +61,7 @@ const SettingsRow = ({
   </div>
 );
 
-const SettingsLabel = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"span">) => (
+const SettingsLabel = ({ className, children, ...props }: ComponentProps<"span">) => (
   <span
     data-slot="settings-label"
     className={cn("text-sm text-ink-primary font-[450]", className)}
@@ -106,11 +71,7 @@ const SettingsLabel = ({
   </span>
 );
 
-const SettingsDescription = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"span">) => (
+const SettingsDescription = ({ className, children, ...props }: ComponentProps<"span">) => (
   <span
     data-slot="settings-description"
     className={cn("text-xs text-ink-secondary", className)}
@@ -120,11 +81,7 @@ const SettingsDescription = ({
   </span>
 );
 
-const SettingsLabelGroup = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
+const SettingsLabelGroup = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="settings-label-group"
     className={cn("flex flex-1 flex-col gap-0.5", className)}
@@ -134,16 +91,8 @@ const SettingsLabelGroup = ({
   </div>
 );
 
-const SettingsControl = ({
-  className,
-  children,
-  ...props
-}: ComponentProps<"div">) => (
-  <div
-    data-slot="settings-control"
-    className={cn("flex w-60 justify-end", className)}
-    {...props}
-  >
+const SettingsControl = ({ className, children, ...props }: ComponentProps<"div">) => (
+  <div data-slot="settings-control" className={cn("flex w-60 justify-end", className)} {...props}>
     {children}
   </div>
 );

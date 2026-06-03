@@ -34,9 +34,7 @@ const stateEqual = (a: ComposerPanelState, b: ComposerPanelState): boolean => {
     return a.toolCallId === b.toolCallId && a.isAnswered === b.isAnswered;
   if (a.type === "active" && b.type === "active") {
     if (a.steps.length !== b.steps.length) return false;
-    return a.steps.every(
-      (s, i) => s.key === b.steps[i].key && s.label === b.steps[i].label,
-    );
+    return a.steps.every((s, i) => s.key === b.steps[i].key && s.label === b.steps[i].label);
   }
   return false;
 };
@@ -45,22 +43,15 @@ const stateEqual = (a: ComposerPanelState, b: ComposerPanelState): boolean => {
 // Pure derivation — no hooks
 // ---------------------------------------------------------------------------
 
-const deriveComposerState = (
-  messages: UIMessage[],
-  status: ChatStatus,
-): ComposerPanelState => {
-  const lastAssistant = [...messages]
-    .reverse()
-    .find((m) => m.role === "assistant");
+const deriveComposerState = (messages: UIMessage[], status: ChatStatus): ComposerPanelState => {
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
 
   // Check for ask-user awaiting input regardless of status — the chat goes
   // "ready" while the tool waits for user input, so we must detect it early.
   if ((status === "ready" || status === "streaming") && lastAssistant) {
     const askUserPart = lastAssistant.parts.find(
       (p): p is ToolPart =>
-        p.type === "tool-askUser" &&
-        "state" in p &&
-        p.state === "input-available",
+        p.type === "tool-askUser" && "state" in p && p.state === "input-available",
     );
     if (askUserPart) {
       const input = askUserPart.input as AskUserInput;
@@ -138,9 +129,7 @@ const deriveComposerState = (
         const name = part.type.replace("tool-", "");
 
         const labelConfig = toolLabels[name];
-        const label = labelConfig
-          ? labelConfig.active(input)
-          : `Running ${name}`;
+        const label = labelConfig ? labelConfig.active(input) : `Running ${name}`;
 
         steps.push({
           key: part.toolCallId,
@@ -158,9 +147,7 @@ const deriveComposerState = (
   if (lastPart?.type === "reasoning") {
     // Extract label from reasoning headers
     const text = "text" in lastPart ? lastPart.text : "";
-    const headers = text
-      .match(/\*\*(.+?)\*\*/g)
-      ?.map((h) => h.replace(/\*\*/g, ""));
+    const headers = text.match(/\*\*(.+?)\*\*/g)?.map((h) => h.replace(/\*\*/g, ""));
     const label = headers?.at(-1) ?? "Thinking...";
 
     return {

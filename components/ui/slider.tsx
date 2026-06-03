@@ -5,10 +5,7 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const SliderRoot = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof SliderPrimitive.Root>) => (
+const SliderRoot = ({ className, ...props }: React.ComponentProps<typeof SliderPrimitive.Root>) => (
   <SliderPrimitive.Root
     className={cn("flex w-full touch-none items-center gap-3", className)}
     {...props}
@@ -19,10 +16,7 @@ const SliderControl = ({
   className,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Control>) => (
-  <SliderPrimitive.Control
-    className={cn("flex h-5 w-full items-center", className)}
-    {...props}
-  />
+  <SliderPrimitive.Control className={cn("flex h-5 w-full items-center", className)} {...props} />
 );
 
 const SliderTrack = ({
@@ -39,10 +33,7 @@ const SliderIndicator = ({
   className,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Indicator>) => (
-  <SliderPrimitive.Indicator
-    className={cn("rounded-full bg-accent", className)}
-    {...props}
-  />
+  <SliderPrimitive.Indicator className={cn("rounded-full bg-accent", className)} {...props} />
 );
 
 const SliderThumb = ({

@@ -25,9 +25,7 @@ export const Scaler = ({
   disabled,
   className,
 }: ScalerProps) => {
-  const tickCount = tickStep
-    ? Math.max(0, Math.floor((max - min) / tickStep) - 1)
-    : 0;
+  const tickCount = tickStep ? Math.max(0, Math.floor((max - min) / tickStep) - 1) : 0;
 
   const handleValueChange = (next: number | readonly number[]) => {
     const value = typeof next === "number" ? next : next[0];
@@ -58,9 +56,7 @@ export const Scaler = ({
         </SliderPrimitive.Track>
       </SliderPrimitive.Control>
       <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-end px-3">
-        <span className="text-sm tabular-nums text-ink-secondary">
-          {value.toFixed(2)}
-        </span>
+        <span className="text-sm tabular-nums text-ink-secondary">{value.toFixed(2)}</span>
       </div>
     </SliderPrimitive.Root>
   );

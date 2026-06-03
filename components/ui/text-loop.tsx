@@ -14,10 +14,7 @@ const TextLoop = ({
 
   return (
     <div
-      className={cn(
-        "pointer-events-none flex items-center justify-center",
-        className,
-      )}
+      className={cn("pointer-events-none flex items-center justify-center", className)}
       {...props}
     >
       <AnimatePresence mode="popLayout" initial={false}>

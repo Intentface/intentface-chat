@@ -9,17 +9,22 @@ import Button from "@/components/ui/button";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/ui/icon-button";
 
-export const ActiveTools = () => {
-  const { tools } = useComposer();
+// Tool toggle state, owned by the consumer (see ChatInput) and passed in as a
+// controlled tools/onToolsChange pair.
+type ToolToggleProps = {
+  tools: Record<string, boolean>;
+  onToolsChange: (tools: Record<string, boolean>) => void;
+};
 
+export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
   return (
     <div className="flex items-center gap-px">
-      {tools.values.webSearch && (
+      {tools.webSearch && (
         <Button
           type="button"
           variant="ghost"
           className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.set("webSearch", false)}
+          onClick={() => onToolsChange({ ...tools, webSearch: false })}
         >
           <span className="relative size-4">
             <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
@@ -29,12 +34,12 @@ export const ActiveTools = () => {
         </Button>
       )}
 
-      {tools.values.thinking && (
+      {tools.thinking && (
         <Button
           type="button"
           variant="ghost"
           className="group/pill cursor-pointer rounded-full font-normal"
-          onClick={() => tools.set("thinking", false)}
+          onClick={() => onToolsChange({ ...tools, thinking: false })}
         >
           <span className="relative size-4">
             <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
@@ -47,8 +52,8 @@ export const ActiveTools = () => {
   );
 };
 
-export const ToolsMenu = () => {
-  const { attachments, tools } = useComposer();
+export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
+  const { attachments } = useComposer();
 
   return (
     <DropdownMenu>
@@ -59,26 +64,21 @@ export const ToolsMenu = () => {
           </IconButton>
         }
       />
-      <DropdownMenu.Content
-        side="top"
-        align="start"
-        sideOffset={8}
-        className="w-auto"
-      >
+      <DropdownMenu.Content side="top" align="start" sideOffset={8} className="w-auto">
         <DropdownMenu.Item onClick={() => attachments.openFileDialog()}>
           <PaperClipIcon />
           <span className="flex-1">Attach files</span>
         </DropdownMenu.Item>
         <DropdownMenu.Separator />
         <DropdownMenu.SwitchItem
-          checked={tools.values.webSearch ?? false}
-          onCheckedChange={(value) => tools.set("webSearch", value)}
+          checked={tools.webSearch ?? false}
+          onCheckedChange={(checked) => onToolsChange({ ...tools, webSearch: checked })}
         >
           <GlobeIcon /> <span className="flex-1">Web Search</span>
         </DropdownMenu.SwitchItem>
         <DropdownMenu.SwitchItem
-          checked={tools.values.thinking ?? false}
-          onCheckedChange={(value) => tools.set("thinking", value)}
+          checked={tools.thinking ?? false}
+          onCheckedChange={(checked) => onToolsChange({ ...tools, thinking: checked })}
         >
           <BrainIcon /> <span className="flex-1">Thinking</span>
         </DropdownMenu.SwitchItem>

@@ -37,20 +37,14 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
   private readonly settings: InceptionChatSettings;
   private readonly config: InceptionChatConfig;
 
-  constructor(
-    modelId: string,
-    settings: InceptionChatSettings,
-    config: InceptionChatConfig,
-  ) {
+  constructor(modelId: string, settings: InceptionChatSettings, config: InceptionChatConfig) {
     this.modelId = modelId;
     this.settings = settings;
     this.config = config;
     this.provider = config.provider;
   }
 
-  private convertPrompt(
-    prompt: LanguageModelV3CallOptions["prompt"],
-  ): OpenAIMessage[] {
+  private convertPrompt(prompt: LanguageModelV3CallOptions["prompt"]): OpenAIMessage[] {
     const messages: OpenAIMessage[] = [];
 
     for (const message of prompt) {
@@ -64,8 +58,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
             role: "user",
             content: message.content
               .filter(
-                (part): part is Extract<typeof part, { type: "text" }> =>
-                  part.type === "text",
+                (part): part is Extract<typeof part, { type: "text" }> => part.type === "text",
               )
               .map((part) => part.text)
               .join(""),
@@ -85,9 +78,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
                 function: {
                   name: part.toolName,
                   arguments:
-                    typeof part.input === "string"
-                      ? part.input
-                      : JSON.stringify(part.input),
+                    typeof part.input === "string" ? part.input : JSON.stringify(part.input),
                 },
               });
             }
@@ -148,10 +139,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
       })
       .filter(Boolean);
 
-    let toolChoice:
-      | string
-      | { type: string; function?: { name: string } }
-      | undefined;
+    let toolChoice: string | { type: string; function?: { name: string } } | undefined;
     if (options.toolChoice) {
       if (options.toolChoice.type === "tool") {
         toolChoice = {
@@ -225,9 +213,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
     };
   }
 
-  async doGenerate(
-    options: LanguageModelV3CallOptions,
-  ): Promise<LanguageModelV3GenerateResult> {
+  async doGenerate(options: LanguageModelV3CallOptions): Promise<LanguageModelV3GenerateResult> {
     const { body, warnings } = this.buildRequestBody(options);
 
     const response = await fetch(`${this.config.baseURL}/chat/completions`, {
@@ -274,9 +260,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
     };
   }
 
-  async doStream(
-    options: LanguageModelV3CallOptions,
-  ): Promise<LanguageModelV3StreamResult> {
+  async doStream(options: LanguageModelV3CallOptions): Promise<LanguageModelV3StreamResult> {
     const { body, warnings } = this.buildRequestBody(options);
     const isDiffusing = this.settings.diffusing === true;
 
@@ -303,12 +287,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
     }
 
     const textId = generateId();
-    const stream = this.createSSEStream(
-      response,
-      warnings,
-      isDiffusing,
-      textId,
-    );
+    const stream = this.createSSEStream(response, warnings, isDiffusing, textId);
 
     return { stream, request: { body: requestBody } };
   }
@@ -371,9 +350,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
               isFirstChunk = false;
             }
 
-            const choices = chunk.choices as
-              | Array<Record<string, unknown>>
-              | undefined;
+            const choices = chunk.choices as Array<Record<string, unknown>> | undefined;
             const choice = choices?.[0];
 
             if (!choice) {
@@ -444,11 +421,7 @@ export class InceptionChatLanguageModel implements LanguageModelV3 {
 
             if (toolCalls) {
               for (const tc of toolCalls) {
-                if (
-                  !toolCallStarted.has(tc.index) &&
-                  tc.id &&
-                  tc.function?.name
-                ) {
+                if (!toolCallStarted.has(tc.index) && tc.id && tc.function?.name) {
                   toolCallStarted.add(tc.index);
                   if (textStarted) {
                     controller.enqueue({ type: "text-end", id: textId });

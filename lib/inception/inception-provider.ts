@@ -23,22 +23,13 @@ export type InceptionProviderSettings = {
 };
 
 export type InceptionProvider = ProviderV3 & {
-  (
-    modelId: string,
-    settings?: InceptionChatSettings,
-  ): InceptionChatLanguageModel;
-  chat(
-    modelId: string,
-    settings?: InceptionChatSettings,
-  ): InceptionChatLanguageModel;
+  (modelId: string, settings?: InceptionChatSettings): InceptionChatLanguageModel;
+  chat(modelId: string, settings?: InceptionChatSettings): InceptionChatLanguageModel;
   edit: InceptionEditModel;
 };
 
-export const createInception = (
-  options: InceptionProviderSettings = {},
-): InceptionProvider => {
-  const baseURL =
-    options.baseURL?.replace(/\/+$/, "") ?? "https://api.inceptionlabs.ai/v1";
+export const createInception = (options: InceptionProviderSettings = {}): InceptionProvider => {
+  const baseURL = options.baseURL?.replace(/\/+$/, "") ?? "https://api.inceptionlabs.ai/v1";
 
   const getHeaders = () => {
     const apiKey = options.apiKey ?? process.env.INCEPTION_API_KEY;
@@ -53,10 +44,7 @@ export const createInception = (
     };
   };
 
-  const createChatModel = (
-    modelId: string,
-    settings: InceptionChatSettings = {},
-  ) =>
+  const createChatModel = (modelId: string, settings: InceptionChatSettings = {}) =>
     new InceptionChatLanguageModel(modelId, settings, {
       provider: "inception",
       baseURL,

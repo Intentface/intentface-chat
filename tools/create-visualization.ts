@@ -7,9 +7,7 @@ export const createVisualization = tool({
     "Create a visualization from query results or aggregations. Use a sourceId from queryData, aggregateData, sortData, etc.",
   inputSchema: z.object({
     sourceId: z.string().describe("The query/aggregation/sort ID to visualize"),
-    chartType: z
-      .enum(["bar", "line", "pie", "scatter", "area"])
-      .describe("Type of chart"),
+    chartType: z.enum(["bar", "line", "pie", "scatter", "area"]).describe("Type of chart"),
     title: z.string().describe("Chart title"),
   }),
   execute: async ({ sourceId, chartType, title }) => {

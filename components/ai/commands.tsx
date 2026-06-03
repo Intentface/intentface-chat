@@ -11,11 +11,7 @@ import { cn } from "@/lib/utils";
 type CommandsRootProps = ComponentProps<"div">;
 
 const CommandsRoot = ({ className, ...props }: CommandsRootProps) => (
-  <div
-    data-slot="command-list"
-    className={cn("flex flex-col p-1", className)}
-    {...props}
-  />
+  <div data-slot="command-list" className={cn("flex flex-col p-1", className)} {...props} />
 );
 
 // ---------------------------------------------------------------------------
@@ -25,11 +21,7 @@ const CommandsRoot = ({ className, ...props }: CommandsRootProps) => (
 type CommandsGroupProps = ComponentProps<"div">;
 
 const CommandsGroup = ({ className, ...props }: CommandsGroupProps) => (
-  <div
-    data-slot="command-group"
-    className={cn("flex flex-col", className)}
-    {...props}
-  />
+  <div data-slot="command-group" className={cn("flex flex-col", className)} {...props} />
 );
 
 // ---------------------------------------------------------------------------
@@ -38,10 +30,7 @@ const CommandsGroup = ({ className, ...props }: CommandsGroupProps) => (
 
 type CommandsGroupLabelProps = ComponentProps<"div">;
 
-const CommandsGroupLabel = ({
-  className,
-  ...props
-}: CommandsGroupLabelProps) => (
+const CommandsGroupLabel = ({ className, ...props }: CommandsGroupLabelProps) => (
   <div
     data-slot="command-group-label"
     className={cn(
@@ -99,14 +88,8 @@ const CommandsItemLabel = ({ className, ...props }: CommandsItemLabelProps) => (
 
 type CommandsItemDescriptionProps = ComponentProps<"span">;
 
-const CommandsItemDescription = ({
-  className,
-  ...props
-}: CommandsItemDescriptionProps) => (
-  <span
-    className={cn("text-xs text-ink-tertiary truncate", className)}
-    {...props}
-  />
+const CommandsItemDescription = ({ className, ...props }: CommandsItemDescriptionProps) => (
+  <span className={cn("text-xs text-ink-tertiary truncate", className)} {...props} />
 );
 
 // ---------------------------------------------------------------------------
@@ -115,17 +98,10 @@ const CommandsItemDescription = ({
 
 type CommandsEmptyProps = ComponentProps<"div">;
 
-const CommandsEmpty = ({
-  className,
-  children,
-  ...props
-}: CommandsEmptyProps) => (
+const CommandsEmpty = ({ className, children, ...props }: CommandsEmptyProps) => (
   <div
     data-slot="command-empty"
-    className={cn(
-      "flex items-center px-3 h-8 text-sm text-ink-tertiary",
-      className,
-    )}
+    className={cn("flex items-center px-3 h-8 text-sm text-ink-tertiary", className)}
     {...props}
   >
     {children ?? "No results"}

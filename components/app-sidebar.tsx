@@ -69,10 +69,7 @@ export const AppSidebar = () => {
                     render={
                       <Link href={`/chat/${chat.id}`}>
                         <span className="flex-1 truncate">{chat.title}</span>
-                        <Sidebar.MenuAction
-                          showOnHover
-                          onClick={() => handleDelete(chat.id)}
-                        >
+                        <Sidebar.MenuAction showOnHover onClick={() => handleDelete(chat.id)}>
                           <Trash2Icon />
                           <span className="sr-only">Delete</span>
                         </Sidebar.MenuAction>
@@ -98,9 +95,7 @@ export const AppSidebar = () => {
                 }
               />
               <DropdownMenu.Content side="top" align="start">
-                <DropdownMenu.Item
-                  onClick={() => setThemeConfiguratorOpen(true)}
-                >
+                <DropdownMenu.Item onClick={() => setThemeConfiguratorOpen(true)}>
                   <PaletteIcon />
                   Appearance
                 </DropdownMenu.Item>
@@ -118,10 +113,7 @@ export const AppSidebar = () => {
                     Theme
                   </DropdownMenu.SubTrigger>
                   <DropdownMenu.SubContent>
-                    <DropdownMenu.RadioGroup
-                      value={theme}
-                      onValueChange={setTheme}
-                    >
+                    <DropdownMenu.RadioGroup value={theme} onValueChange={setTheme}>
                       <DropdownMenu.RadioItem value="system">
                         <MonitorIcon />
                         System

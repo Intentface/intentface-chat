@@ -50,33 +50,17 @@
   --primary-active: oklch(from var(--primary) calc(l + var(--state-active)) c h);
   --primary-border: oklch(from var(--primary) calc(l + var(--state-border)) c h);
 
-  --secondary-hover: oklch(
-    from var(--secondary) calc(l + var(--state-hover)) c h
-  );
-  --secondary-active: oklch(
-    from var(--secondary) calc(l + var(--state-active)) c h
-  );
-  --secondary-border: oklch(
-    from var(--secondary) calc(l + var(--state-border)) c h
-  );
+  --secondary-hover: oklch(from var(--secondary) calc(l + var(--state-hover)) c h);
+  --secondary-active: oklch(from var(--secondary) calc(l + var(--state-active)) c h);
+  --secondary-border: oklch(from var(--secondary) calc(l + var(--state-border)) c h);
 
   --tertiary-hover: oklch(from var(--tertiary) calc(l + var(--state-hover)) c h);
-  --tertiary-active: oklch(
-    from var(--tertiary) calc(l + var(--state-active)) c h
-  );
-  --tertiary-border: oklch(
-    from var(--tertiary) calc(l + var(--state-border)) c h
-  );
+  --tertiary-active: oklch(from var(--tertiary) calc(l + var(--state-active)) c h);
+  --tertiary-border: oklch(from var(--tertiary) calc(l + var(--state-border)) c h);
 
-  --quaternary-hover: oklch(
-    from var(--quaternary) calc(l + var(--state-hover)) c h
-  );
-  --quaternary-active: oklch(
-    from var(--quaternary) calc(l + var(--state-active)) c h
-  );
-  --quaternary-border: oklch(
-    from var(--quaternary) calc(l + var(--state-border)) c h
-  );
+  --quaternary-hover: oklch(from var(--quaternary) calc(l + var(--state-hover)) c h);
+  --quaternary-active: oklch(from var(--quaternary) calc(l + var(--state-active)) c h);
+  --quaternary-border: oklch(from var(--quaternary) calc(l + var(--state-border)) c h);
 
   --base-hover: oklch(from var(--base) calc(l + var(--state-hover)) c h);
   --base-active: oklch(from var(--base) calc(l + var(--state-active)) c h);
@@ -113,7 +97,7 @@
      white, so states lift toward white instead of sinking. */
   --state-hover: calc(0.16 * var(--con));
   --state-active: calc(0.18 * var(--con));
-  --state-border: calc(0.20 * var(--con));
+  --state-border: calc(0.2 * var(--con));
 
   /* Lightness steps in dark. Most tiers lift (positive) to be
      visible above the dark canvas; base sinks slightly. */
@@ -129,18 +113,13 @@
   --tertiary-floor: calc(0.142 + 0.075 * var(--con));
   --quaternary-floor: calc(0.194 + 0.063 * var(--con));
 
-  --primary: oklch(
-    from var(--bg) max(var(--primary-floor), calc(l + var(--primary-lightness)))
-      c h
-  );
+  --primary: oklch(from var(--bg) max(var(--primary-floor), calc(l + var(--primary-lightness))) c h);
   --secondary: var(--bg);
   --tertiary: oklch(
-    from var(--bg)
-      max(var(--tertiary-floor), calc(l + var(--tertiary-lightness))) c h
+    from var(--bg) max(var(--tertiary-floor), calc(l + var(--tertiary-lightness))) c h
   );
   --quaternary: oklch(
-    from var(--bg)
-      max(var(--quaternary-floor), calc(l + var(--quaternary-lightness))) c h
+    from var(--bg) max(var(--quaternary-floor), calc(l + var(--quaternary-lightness))) c h
   );
   --base: oklch(from var(--bg) max(0, calc(l + var(--base-lightness))) c h);
 

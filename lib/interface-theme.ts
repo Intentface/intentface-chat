@@ -8,18 +8,13 @@ export const CONTRAST_STEP = 0.01;
 export const HexSchema = z
   .string()
   .trim()
-  .transform((value) =>
-    (value.startsWith("#") ? value : `#${value}`).toLowerCase(),
-  )
+  .transform((value) => (value.startsWith("#") ? value : `#${value}`).toLowerCase())
   .pipe(z.string().regex(/^#[0-9a-f]{6}$/));
 
 export const ContrastSchema = z
   .number()
   .transform((value) =>
-    Math.min(
-      CONTRAST_MAX,
-      Math.max(CONTRAST_MIN, Number.isNaN(value) ? CONTRAST_DEFAULT : value),
-    ),
+    Math.min(CONTRAST_MAX, Math.max(CONTRAST_MIN, Number.isNaN(value) ? CONTRAST_DEFAULT : value)),
   );
 
 const SeedsSchema = z.object({
@@ -227,9 +222,7 @@ export const DARK_PRESETS: readonly PresetDefinition[] = [
   },
 ];
 
-export const getPresetsForMode = (
-  mode: ThemeMode,
-): readonly PresetDefinition[] =>
+export const getPresetsForMode = (mode: ThemeMode): readonly PresetDefinition[] =>
   mode === "light" ? LIGHT_PRESETS : DARK_PRESETS;
 
 export const findMatchingPreset = (

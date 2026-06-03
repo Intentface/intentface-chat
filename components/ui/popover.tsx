@@ -5,26 +5,17 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const PopoverRoot = (props: PopoverPrimitive.Root.Props) => (
-  <PopoverPrimitive.Root {...props} />
-);
+const PopoverRoot = (props: PopoverPrimitive.Root.Props) => <PopoverPrimitive.Root {...props} />;
 
 const PopoverTrigger = ({
   className,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Trigger>) => (
-  <PopoverPrimitive.Trigger
-    data-slot="popover-trigger"
-    className={cn(className)}
-    {...props}
-  />
+  <PopoverPrimitive.Trigger data-slot="popover-trigger" className={cn(className)} {...props} />
 );
 
 type PopoverContentProps = React.ComponentProps<typeof PopoverPrimitive.Popup> &
-  Pick<
-    PopoverPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
-  >;
+  Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">;
 
 const PopoverContent = ({
   className,

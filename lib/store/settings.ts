@@ -12,11 +12,7 @@ type ThemeMode = "light" | "dark";
 
 type SettingsStore = {
   themeOverrides: Record<ThemeMode, ThemeOverrides>;
-  setThemeOverride: (
-    mode: ThemeMode,
-    key: keyof ThemeOverrides,
-    value: string | number,
-  ) => void;
+  setThemeOverride: (mode: ThemeMode, key: keyof ThemeOverrides, value: string | number) => void;
   setThemeOverrides: (mode: ThemeMode, overrides: ThemeOverrides) => void;
   resetThemeOverrides: (mode: ThemeMode) => void;
 };

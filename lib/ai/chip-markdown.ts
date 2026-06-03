@@ -10,11 +10,8 @@ export type ChipSegment =
 export const escapeMarkdownLink = (input: string): string =>
   input.replace(/[[\]()\\]/g, (match) => `\\${match}`);
 
-export const encodeChipMarkdown = (
-  prefix: string,
-  value: string,
-  label: string,
-): string => `[${escapeMarkdownLink(label)}](chip:${prefix}:${value})`;
+export const encodeChipMarkdown = (prefix: string, value: string, label: string): string =>
+  `[${escapeMarkdownLink(label)}](chip:${prefix}:${value})`;
 
 export const parseChipSegments = (text: string): ChipSegment[] => {
   const segments: ChipSegment[] = [];
@@ -50,9 +47,7 @@ export type ParagraphNodeJSON = {
   content?: InlineNodeJSON[];
 };
 
-export const chipSegmentsToParagraphJSON = (
-  segments: ChipSegment[],
-): ParagraphNodeJSON[] => {
+export const chipSegmentsToParagraphJSON = (segments: ChipSegment[]): ParagraphNodeJSON[] => {
   const paragraphs: ParagraphNodeJSON[] = [{ type: "paragraph", content: [] }];
   const pushInline = (node: InlineNodeJSON) => {
     const target = paragraphs[paragraphs.length - 1];

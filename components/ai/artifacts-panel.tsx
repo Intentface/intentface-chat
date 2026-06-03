@@ -17,12 +17,7 @@ type ArtifactsPanelRootProps = {
   className?: string;
 };
 
-const ArtifactsPanelRoot = ({
-  open,
-  children,
-  className,
-  ...props
-}: ArtifactsPanelRootProps) => (
+const ArtifactsPanelRoot = ({ open, children, className, ...props }: ArtifactsPanelRootProps) => (
   <AnimatePresence>
     {open && (
       <motion.aside
@@ -37,18 +32,13 @@ const ArtifactsPanelRoot = ({
         )}
         {...props}
       >
-        <div className="flex h-full w-(--artifacts-panel-width) flex-col">
-          {children}
-        </div>
+        <div className="flex h-full w-(--artifacts-panel-width) flex-col">{children}</div>
       </motion.aside>
     )}
   </AnimatePresence>
 );
 
-const ArtifactsPanelContent = ({
-  className,
-  ...props
-}: ComponentProps<typeof Markdown>) => (
+const ArtifactsPanelContent = ({ className, ...props }: ComponentProps<typeof Markdown>) => (
   <Markdown className={cn("size-full", className)} {...props} />
 );
 
@@ -63,10 +53,7 @@ const ArtifactsPanelHeader = ({
 }) => (
   <div
     data-slot="artifacts-panel-header"
-    className={cn(
-      "flex items-center justify-between border-b border-border px-4 py-3",
-      className,
-    )}
+    className={cn("flex items-center justify-between border-b border-border px-4 py-3", className)}
     {...props}
   >
     <h2 className="truncate text-sm font-semibold">{title}</h2>
@@ -86,38 +73,26 @@ const ArtifactsPanelFooter = ({
   return (
     <div
       data-slot="artifacts-panel-footer"
-      className={cn(
-        "flex items-center justify-end border-t border-border px-4 py-2",
-        className,
-      )}
+      className={cn("flex items-center justify-end border-t border-border px-4 py-2", className)}
       {...props}
     >
       <Tooltip.Provider>
         <Tooltip>
           <Tooltip.Trigger
             render={
-              <IconButton
-                variant="ghost"
-                size="sm"
-                onClick={() => copy(content)}
-              >
+              <IconButton variant="ghost" size="sm" onClick={() => copy(content)}>
                 {isCopied ? <CheckMarkMediumIcon /> : <CopyIcon />}
               </IconButton>
             }
           />
-          <Tooltip.Content>
-            {isCopied ? "Copied!" : "Copy markdown"}
-          </Tooltip.Content>
+          <Tooltip.Content>{isCopied ? "Copied!" : "Copy markdown"}</Tooltip.Content>
         </Tooltip>
       </Tooltip.Provider>
     </div>
   );
 };
 
-const ArtifactsPanelViewport = ({
-  className,
-  ...props
-}: ComponentProps<"div">) => (
+const ArtifactsPanelViewport = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="artifacts-panel-viewport"
     className={cn("flex-1 overflow-y-auto p-4", className)}

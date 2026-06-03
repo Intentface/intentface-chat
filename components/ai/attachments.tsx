@@ -120,11 +120,7 @@ type AttachmentsRootProps = {
   show?: boolean;
 };
 
-const AttachmentsRoot = ({
-  children,
-  className,
-  show = true,
-}: AttachmentsRootProps) => (
+const AttachmentsRoot = ({ children, className, show = true }: AttachmentsRootProps) => (
   <AnimatePresence initial={false}>
     {show && (
       <motion.div
@@ -154,11 +150,7 @@ const getFileIcon = (mediaType: string) => {
   return PaperclipIcon;
 };
 
-const AttachmentsItem = ({
-  item,
-  children,
-  className,
-}: AttachmentsItemProps) => {
+const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) => {
   const mediaType = item.mediaType ?? "";
   const filename = item.filename ?? "Attachment";
   const Icon = getFileIcon(mediaType);
@@ -196,9 +188,7 @@ const AttachmentsItem = ({
           <span className="shrink-0">{filename.slice(-7)}</span>
         </span>
         {item.fileSize != null && (
-          <span className="text-2xs text-muted-foreground">
-            {formatFileSize(item.fileSize)}
-          </span>
+          <span className="text-2xs text-muted-foreground">{formatFileSize(item.fileSize)}</span>
         )}
       </div>
       {children}
@@ -265,9 +255,7 @@ const AttachmentsDropzone = ({
           transition={{ duration: 0.15, ease: "easeOut" }}
           className={cn(dropzoneVariants[variant], className)}
         >
-          {children ?? (
-            <span className="text-sm font-medium">Drop files here</span>
-          )}
+          {children ?? <span className="text-sm font-medium">Drop files here</span>}
         </motion.div>
       )}
     </AnimatePresence>
@@ -287,11 +275,7 @@ const AttachmentsError = ({ className, ...props }: AttachmentsErrorProps) => (
 
 type AttachmentsTriggerProps = ComponentProps<typeof IconButton>;
 
-const AttachmentsTrigger = ({
-  children,
-  className,
-  ...props
-}: AttachmentsTriggerProps) => {
+const AttachmentsTrigger = ({ children, className, ...props }: AttachmentsTriggerProps) => {
   return (
     <IconButton type="button" variant="ghost" {...props}>
       {children ?? <PaperClipIcon />}

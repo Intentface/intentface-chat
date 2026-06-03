@@ -36,24 +36,13 @@ const kbdVariants = cva(
 
 type KbdProps = React.ComponentProps<"kbd"> & VariantProps<typeof kbdVariants>;
 
-const Kbd = ({
-  children,
-  className,
-  square,
-  size,
-  variant,
-  ...props
-}: KbdProps) => {
-  const isSquare =
-    square ?? (typeof children === "string" && children.length === 1);
+const Kbd = ({ children, className, square, size, variant, ...props }: KbdProps) => {
+  const isSquare = square ?? (typeof children === "string" && children.length === 1);
 
   return (
     <kbd
       data-slot="kbd"
-      className={cn(
-        kbdVariants({ size, square: isSquare, variant }),
-        className,
-      )}
+      className={cn(kbdVariants({ size, square: isSquare, variant }), className)}
       {...props}
     >
       {children}

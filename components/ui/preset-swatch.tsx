@@ -7,12 +7,7 @@ type PresetSwatchProps = {
   seeds: CustomSeeds;
 } & ComponentProps<"div">;
 
-export const PresetSwatch = ({
-  seeds,
-  className,
-  style,
-  ...props
-}: PresetSwatchProps) => (
+export const PresetSwatch = ({ seeds, className, style, ...props }: PresetSwatchProps) => (
   <div
     className={cn(
       "flex size-6 shrink-0 items-center justify-center rounded-md text-2xs font-[550] leading-none",

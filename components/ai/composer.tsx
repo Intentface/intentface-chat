@@ -231,16 +231,18 @@ const registerComposerController = (instance: Editor) => {
   };
 };
 
-// The editor port: the single ComposerEditorHandle implementation plus the
-// read/serialize operations internal callers need.
-type ComposerEditorPort = ComposerEditorHandle & {
+// The single ComposerEditorHandle implementation plus the read/serialize
+// operations internal callers need. Exported so modules outside
+// the <Composer> tree (e.g. thread message actions) can drive the editor;
+// inside the tree it is also reachable as the `textarea` slice on useComposer.
+export type ComposerEditorState = ComposerEditorHandle & {
   getText: () => string;
   setText: (text: string) => void;
   serialize: () => { text: string; chips: ChipData[] };
   ensureFocus: () => void;
 };
 
-const composerController: ComposerEditorPort = {
+export const composerController: ComposerEditorState = {
   focus: () => activeEditor?.commands.focus(),
   blur: () => activeEditor?.commands.blur(),
   clear: () => activeEditor?.commands.setContent(""),
@@ -673,6 +675,163 @@ const compileAnswers = (state: AskUserState, questions: AskUserQuestion[]) =>
 const isLastStep = (state: AskUserState, questions: AskUserQuestion[]) =>
   state.step >= questions.length - 1;
 
+// Toggle an option on the step's entry. Multi-select toggles membership and
+// keeps free text; single-select replaces both (option and text are mutually
+// exclusive).
+const toggleAnswer = (
+  answers: Map<number, AnswerEntry>,
+  step: number,
+  label: string,
+  multiSelect: boolean,
+) => {
+  const next = cloneAnswers(answers);
+  const previous = next.get(step) ?? emptyEntry();
+  const selected = new Set(previous.selected);
+  if (multiSelect) {
+    if (selected.has(label)) selected.delete(label);
+    else selected.add(label);
+  } else {
+    selected.clear();
+    selected.add(label);
+  }
+  next.set(step, { selected, freeText: multiSelect ? previous.freeText : "" });
+  return next;
+};
+
+// Everything a transition may ask of the outside world. useAskUser executes
+// these against the editor controller, the options handle, and the submit
+// callback — the transitions below only describe them.
+type AskUserEffect =
+  | { type: "clear-input" }
+  | { type: "set-input-text"; text: string }
+  | { type: "focus-input" }
+  | { type: "blur-input" }
+  | { type: "reset-highlight" }
+  | { type: "submit-answers"; answers: ComposerAnswerEntry[] };
+
+type AskUserAction =
+  | { type: "toggle-option"; label: string }
+  | { type: "select-option"; label: string }
+  | { type: "clear-selections" }
+  | { type: "continue-step"; freeText: string }
+  | { type: "dismiss-step" }
+  | { type: "step-back"; currentText: string }
+  | { type: "step-forward"; currentText: string };
+
+type AskUserTransition = {
+  next: AskUserState;
+  effects: AskUserEffect[];
+};
+
+// Commit `nextAnswers`, advance one step, and reset the input — then either
+// arm the next question (blurred, highlight reset) or compile and submit on
+// the last step (input focused for the follow-up message).
+const advanceStep = (
+  state: AskUserState,
+  questions: AskUserQuestion[],
+  nextAnswers: Map<number, AnswerEntry>,
+): AskUserTransition => {
+  const next: AskUserState = { step: state.step + 1, answers: nextAnswers };
+  if (state.step < questions.length - 1) {
+    return {
+      next,
+      effects: [{ type: "clear-input" }, { type: "reset-highlight" }, { type: "blur-input" }],
+    };
+  }
+  return {
+    next,
+    effects: [
+      { type: "clear-input" },
+      { type: "submit-answers", answers: compileAnswers(next, questions) },
+      { type: "focus-input" },
+    ],
+  };
+};
+
+// Navigate to `targetStep`, preserving any in-progress free text on the step
+// being left and restoring the target step's saved text into the input.
+const transitionToStep = (
+  state: AskUserState,
+  targetStep: number,
+  currentText: string,
+): AskUserTransition => {
+  if (targetStep === state.step) return { next: state, effects: [] };
+
+  const trimmed = currentText.trim();
+  const answers = cloneAnswers(state.answers);
+  if (trimmed.length > 0) {
+    const previous = answers.get(state.step) ?? emptyEntry();
+    answers.set(state.step, { ...previous, freeText: trimmed });
+  }
+
+  const next: AskUserState = { step: targetStep, answers };
+  return {
+    next,
+    effects: [
+      { type: "set-input-text", text: answers.get(targetStep)?.freeText ?? "" },
+      { type: "reset-highlight" },
+      { type: "blur-input" },
+    ],
+  };
+};
+
+// The decide half of the ask-user flow, mirroring interpretAskUserKey: map an
+// action onto the next state plus the effects to run. Composed actions
+// (select-option = toggle + advance) resolve atomically here, so no caller
+// ever chains transitions across a stale state snapshot.
+const transitionAskUser = (
+  state: AskUserState,
+  questions: AskUserQuestion[],
+  action: AskUserAction,
+): AskUserTransition => {
+  const multiSelect = !!questions[state.step]?.multiSelect;
+
+  switch (action.type) {
+    case "toggle-option":
+      return {
+        next: {
+          ...state,
+          answers: toggleAnswer(state.answers, state.step, action.label, multiSelect),
+        },
+        effects: multiSelect ? [] : [{ type: "clear-input" }],
+      };
+
+    case "select-option": {
+      const toggled = toggleAnswer(state.answers, state.step, action.label, multiSelect);
+      if (multiSelect) return { next: { ...state, answers: toggled }, effects: [] };
+      return advanceStep(state, questions, toggled);
+    }
+
+    case "clear-selections": {
+      const previous = state.answers.get(state.step);
+      if (!previous || previous.selected.size === 0) return { next: state, effects: [] };
+      const answers = cloneAnswers(state.answers);
+      answers.set(state.step, { selected: new Set(), freeText: previous.freeText });
+      return { next: { ...state, answers }, effects: [] };
+    }
+
+    case "continue-step":
+      return advanceStep(
+        state,
+        questions,
+        writeFreeText(state.answers, state.step, action.freeText.trim(), multiSelect),
+      );
+
+    case "dismiss-step":
+      return advanceStep(state, questions, skipStep(state.answers, state.step));
+
+    case "step-back":
+      return transitionToStep(state, Math.max(0, state.step - 1), action.currentText);
+
+    case "step-forward":
+      return transitionToStep(
+        state,
+        Math.min(questions.length - 1, state.step + 1),
+        action.currentText,
+      );
+  }
+};
+
 // ---------------------------------------------------------------------------
 // Attachments — pure store reducer that validates and accumulates files. The
 // hook owns the useState; this owns the rules.
@@ -800,12 +959,6 @@ const createDragHandlers = (callbacks: DragHandlerCallbacks) => {
 // Context
 // ---------------------------------------------------------------------------
 
-type ComposerEditorState = {
-  hasContent: boolean;
-  setHasContent: (value: boolean) => void;
-  isSubmitting: boolean;
-};
-
 type ComposerAttachmentsState = {
   items: AttachmentItem[];
   add: (files: File[] | FileList) => void;
@@ -821,31 +974,310 @@ type ComposerAskUserState = {
   questions: AskUserQuestion[] | null;
   step: number;
   answers: Map<number, AnswerEntry>;
-  toggleOption: (step: number, label: string, multiSelect: boolean) => void;
+  toggleOption: (label: string) => void;
   continueStep: (freeText?: string) => void;
   dismissStep: () => void;
   isLastStep: boolean;
   isSingle: boolean;
-  clearSelections: (step: number) => void;
+  clearSelections: () => void;
   goBack: () => void;
   goNext: () => void;
   optionsRef: RefObject<AskUserOptionsHandle | null>;
 };
 
-type ComposerContextValue = {
-  editor: ComposerEditorState;
+type ComposerState = {
+  // The editor controller methods (stable identities) plus the reactive
+  // hasContent flag: const textarea = useComposer((c) => c.textarea)
+  textarea: ComposerEditorState & { hasContent: boolean };
+  isSubmitting: boolean;
   attachments: ComposerAttachmentsState;
   askUser: ComposerAskUserState;
 };
 
-const ComposerContext = createContext<ComposerContextValue | null>(null);
+// ---------------------------------------------------------------------------
+// Composer store — all reactive composer state in one store (same shape as the
+// command-list store), so useComposer can offer Zustand-style selectors and
+// components re-render only for the slice they read. Actions and refs are
+// created once and survive every update; a slice's identity changes only when
+// that slice's data changes.
+// ---------------------------------------------------------------------------
 
-export const useComposer = (): ComposerContextValue => {
-  const context = useContext(ComposerContext);
-  if (!context) {
-    throw new Error("useComposer must be called inside a <Composer> subtree.");
-  }
-  return context;
+type ComposerStore = {
+  subscribe: (listener: () => void) => () => void;
+  getSnapshot: () => ComposerState;
+  // Bridges for props and editor/document integrations — not consumer API.
+  setHasContent: (value: boolean) => void;
+  setIsSubmitting: (value: boolean) => void;
+  setQuestions: (questions: AskUserQuestion[] | null) => void;
+  setDragging: (active: boolean) => void;
+  resetAttachments: () => void;
+  activateAskUser: () => () => void;
+  reset: () => void;
+  // Co-located refs the mounted Composer wires up at runtime.
+  attachmentConfigRef: RefObject<AttachmentStoreConfig>;
+  submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
+};
+
+const createComposerStore = (): ComposerStore => {
+  const listeners = new Set<() => void>();
+  const notify = () => {
+    for (const listener of listeners) listener();
+  };
+
+  // Imperative refs co-located with the store; not reactive.
+  const optionsRef: RefObject<AskUserOptionsHandle | null> = { current: null };
+  const fileInputRef: RefObject<HTMLInputElement | null> = { current: null };
+  const globalDropRef: RefObject<boolean> = { current: false };
+  const attachmentConfigRef: RefObject<AttachmentStoreConfig> = {
+    current: {
+      accept: DEFAULT_ATTACHMENT_ACCEPT,
+      maxFiles: DEFAULT_ATTACHMENT_MAX_FILES,
+      maxFileSize: DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
+    },
+  };
+  const submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null> = {
+    current: null,
+  };
+
+  // Canonical machine states; the snapshot mirrors them on every update.
+  let attachmentState = INITIAL_ATTACHMENT_STATE;
+  let askUserMachine = INITIAL_ASK_USER_STATE;
+  let snapshot: ComposerState;
+
+  const setHasContent = (value: boolean) => {
+    if (snapshot.textarea.hasContent === value) return;
+    snapshot = { ...snapshot, textarea: { ...snapshot.textarea, hasContent: value } };
+    notify();
+  };
+
+  const setIsSubmitting = (value: boolean) => {
+    if (snapshot.isSubmitting === value) return;
+    snapshot = { ...snapshot, isSubmitting: value };
+    notify();
+  };
+
+  const dispatchAttachments = (action: AttachmentStoreAction) => {
+    const next = attachmentReducer(attachmentState, action, attachmentConfigRef.current);
+    if (next === attachmentState) return;
+    attachmentState = next;
+    snapshot = {
+      ...snapshot,
+      attachments: { ...snapshot.attachments, items: next.items, error: next.error },
+    };
+    notify();
+  };
+
+  const setDragging = (active: boolean) => {
+    if (snapshot.attachments.isDragging === active) return;
+    snapshot = { ...snapshot, attachments: { ...snapshot.attachments, isDragging: active } };
+    notify();
+  };
+
+  // The execute half of the ask-user flow: replay a transition's effects
+  // against the editor controller, the options handle, and the submit
+  // callback. Input-content state is the editor's own job — tiptap v3 emits
+  // update events for programmatic setContent/clearContent.
+  const executeAskUserEffects = (effects: AskUserEffect[]) => {
+    for (const effect of effects) {
+      switch (effect.type) {
+        case "clear-input":
+          composerController.clear();
+          break;
+        case "set-input-text":
+          composerController.setText(effect.text);
+          break;
+        case "focus-input":
+          composerController.focus();
+          break;
+        case "blur-input":
+          composerController.blur();
+          break;
+        case "reset-highlight":
+          optionsRef.current?.resetHighlight();
+          break;
+        case "submit-answers":
+          submitAnswersRef.current?.(effect.answers);
+          break;
+      }
+    }
+  };
+
+  const dispatchAskUser = (action: AskUserAction) => {
+    const questions = snapshot.askUser.questions;
+    if (!questions || questions.length === 0) return;
+    const { next, effects } = transitionAskUser(askUserMachine, questions, action);
+    if (next !== askUserMachine) {
+      askUserMachine = next;
+      snapshot = {
+        ...snapshot,
+        askUser: {
+          ...snapshot.askUser,
+          step: next.step,
+          answers: next.answers,
+          isLastStep: isLastStep(next, questions),
+        },
+      };
+      notify();
+    }
+    executeAskUserEffects(effects);
+  };
+
+  const setQuestions = (questions: AskUserQuestion[] | null) => {
+    if (snapshot.askUser.questions === questions) return;
+    askUserMachine = INITIAL_ASK_USER_STATE;
+    snapshot = {
+      ...snapshot,
+      askUser: {
+        ...snapshot.askUser,
+        questions,
+        step: askUserMachine.step,
+        answers: askUserMachine.answers,
+        isLastStep: questions ? isLastStep(askUserMachine, questions) : false,
+        isSingle: questions ? questions.length === 1 : false,
+      },
+    };
+    notify();
+  };
+
+  // Ask-user mode: while questions are active the options own the keyboard.
+  // Entering blurs the editor; document-level keys are interpreted (pure) and
+  // dispatched here, so custom AskUser renders keep the behavior for free.
+  const activateAskUser = () => {
+    composerController.blur();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const optionsHandle = optionsRef.current;
+      const action = interpretAskUserKey(
+        {
+          key: event.key,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          altKey: event.altKey,
+          defaultPrevented: event.defaultPrevented,
+        },
+        { hasHighlight: optionsHandle?.highlightedValue != null },
+      );
+      if (!action) return;
+      event.preventDefault();
+
+      switch (action.type) {
+        case "dismiss-step":
+          dispatchAskUser({ type: "dismiss-step" });
+          return;
+        case "navigate-options": {
+          const newValue = optionsHandle?.navigate(action.direction);
+          if (newValue === null) composerController.focus();
+          return;
+        }
+        case "select-option": {
+          const item = optionsHandle?.select();
+          if (item) dispatchAskUser({ type: "select-option", label: item.value });
+          return;
+        }
+        case "go-back":
+          dispatchAskUser({ type: "step-back", currentText: composerController.getText() });
+          return;
+        case "go-next":
+          dispatchAskUser({ type: "step-forward", currentText: composerController.getText() });
+          return;
+        case "insert-character":
+          optionsHandle?.clearHighlight();
+          composerController.focus();
+          composerController.insertText(action.character);
+          return;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  };
+
+  snapshot = {
+    textarea: { ...composerController, hasContent: false },
+    isSubmitting: false,
+    attachments: {
+      items: attachmentState.items,
+      error: attachmentState.error,
+      isDragging: false,
+      add: (files) => dispatchAttachments({ type: "add", files }),
+      remove: (id) => dispatchAttachments({ type: "remove", id }),
+      openFileDialog: () => fileInputRef.current?.click(),
+      fileInputRef,
+      globalDropRef,
+    },
+    askUser: {
+      questions: null,
+      step: askUserMachine.step,
+      answers: askUserMachine.answers,
+      isLastStep: false,
+      isSingle: false,
+      toggleOption: (label) => dispatchAskUser({ type: "toggle-option", label }),
+      continueStep: (freeText) =>
+        dispatchAskUser({ type: "continue-step", freeText: freeText ?? "" }),
+      dismissStep: () => dispatchAskUser({ type: "dismiss-step" }),
+      clearSelections: () => dispatchAskUser({ type: "clear-selections" }),
+      goBack: () =>
+        dispatchAskUser({ type: "step-back", currentText: composerController.getText() }),
+      goNext: () =>
+        dispatchAskUser({ type: "step-forward", currentText: composerController.getText() }),
+      optionsRef,
+    },
+  };
+
+  // Pristine state for reset() — slice actions and refs are reused, so action
+  // identities stay stable across resets.
+  const initialSnapshot = snapshot;
+
+  // Drop everything mount-scoped when the Composer unmounts (route change):
+  // revoke attachment object URLs, then restore the pristine snapshot.
+  const reset = () => {
+    dispatchAttachments({ type: "reset" });
+    askUserMachine = INITIAL_ASK_USER_STATE;
+    snapshot = initialSnapshot;
+    notify();
+  };
+
+  return {
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    getSnapshot: () => snapshot,
+    setHasContent,
+    setIsSubmitting,
+    setQuestions,
+    setDragging,
+    resetAttachments: () => dispatchAttachments({ type: "reset" }),
+    activateAskUser,
+    reset,
+    attachmentConfigRef,
+    submitAnswersRef,
+  };
+};
+
+// One composer per page — the same contract composerController already
+// encodes. The store is a module singleton, so useComposer works from anywhere
+// (thread, toolbars, panels) without a provider. SSR-safe by invariant: every
+// write happens in an effect or event handler (client-only), so server renders
+// only ever read the pristine initial snapshot.
+const composerStore = createComposerStore();
+
+// Subscribe to composer state — from anywhere, no provider needed. With a
+// selector, the component re-renders only when the selected value changes
+// identity (slices are identity-stable):
+//   const askUser = useComposer((composer) => composer.askUser);
+// Without one, it returns the full snapshot and re-renders on any change.
+export const useComposer = <Selected = ComposerState>(
+  selector?: (composer: ComposerState) => Selected,
+): Selected => {
+  const getValue = () => {
+    const state = composerStore.getSnapshot();
+    // Safe: without a selector, Selected defaults to ComposerState.
+    return selector ? selector(state) : (state as Selected);
+  };
+  return useSyncExternalStore(composerStore.subscribe, getValue, getValue);
 };
 
 type ComposerInternalsValue = {
@@ -955,33 +1387,6 @@ const useLazyRef = <T,>(initializer: () => T) => {
   return ref as { current: T };
 };
 
-const useAttachmentStore = (configRef: RefObject<AttachmentStoreConfig>) => {
-  const [state, setState] = useState<AttachmentStoreState>(INITIAL_ATTACHMENT_STATE);
-
-  const add = useCallback(
-    (files: File[] | FileList) => {
-      setState((current) => attachmentReducer(current, { type: "add", files }, configRef.current));
-    },
-    [configRef],
-  );
-
-  const remove = useCallback(
-    (id: string) => {
-      setState((current) => attachmentReducer(current, { type: "remove", id }, configRef.current));
-    },
-    [configRef],
-  );
-
-  const reset = useCallback(() => {
-    setState((current) => attachmentReducer(current, { type: "reset" }, configRef.current));
-  }, [configRef]);
-
-  return useMemo(
-    () => ({ items: state.items, error: state.error, add, remove, reset }),
-    [state.items, state.error, add, remove, reset],
-  );
-};
-
 const useCommandRegistry = (commands: ComposerCommandsMap) => {
   const registryRef = useAsRef(commands);
 
@@ -1000,13 +1405,13 @@ const useDragDropFiles = ({
   rootRef,
   globalDropRef,
   onFiles,
+  setDragging,
 }: {
   rootRef: RefObject<HTMLElement | null>;
   globalDropRef: RefObject<boolean>;
   onFiles: (files: FileList) => void;
-}): { isDragging: boolean } => {
-  const [isDragging, setIsDragging] = useState(false);
-
+  setDragging: (active: boolean) => void;
+}) => {
   const onFilesRef = useAsRef(onFiles);
 
   useEffect(() => {
@@ -1016,7 +1421,7 @@ const useDragDropFiles = ({
     const handlers = createDragHandlers({
       isInScope,
       onFiles: (files) => onFilesRef.current(files),
-      setDragging: setIsDragging,
+      setDragging,
     });
 
     document.addEventListener("dragover", handlers.onDragOver);
@@ -1029,196 +1434,7 @@ const useDragDropFiles = ({
       document.removeEventListener("dragleave", handlers.onDragLeave);
       document.removeEventListener("drop", handlers.onDrop);
     };
-  }, [rootRef, globalDropRef]);
-
-  return { isDragging };
-};
-
-type AnswerInput = Pick<ComposerEditorPort, "getText" | "setText" | "clear" | "focus" | "blur">;
-
-const useAskUser = ({
-  answerInput,
-  optionsRef,
-  setEditorHasContent,
-  submitAnswers,
-  questions,
-}: {
-  answerInput: AnswerInput;
-  optionsRef: RefObject<AskUserOptionsHandle | null>;
-  setEditorHasContent: (value: boolean) => void;
-  submitAnswers: (answers: ComposerAnswerEntry[]) => void;
-  questions: AskUserQuestion[] | undefined;
-}) => {
-  const [reducerState, setReducerState] = useState<AskUserState>(INITIAL_ASK_USER_STATE);
-
-  const stateRef = useAsRef(reducerState);
-  const questionsRef = useAsRef<AskUserQuestion[] | null>(questions ?? null);
-  const submitAnswersRef = useAsRef(submitAnswers);
-
-  // Reset reducer state and blur editor when the questions identity changes.
-  const previousQuestionsRef = useRef(questions);
-  if (previousQuestionsRef.current !== questions) {
-    previousQuestionsRef.current = questions;
-    setReducerState(INITIAL_ASK_USER_STATE);
-    if (questions && questions.length > 0) answerInput.blur();
-  }
-
-  const toggleOption = useCallback(
-    (step: number, label: string, multiSelect: boolean) => {
-      setReducerState((current) => {
-        const next = cloneAnswers(current.answers);
-        const previous = next.get(step) ?? emptyEntry();
-        const selected = new Set(previous.selected);
-        if (multiSelect) {
-          if (selected.has(label)) selected.delete(label);
-          else selected.add(label);
-        } else {
-          selected.clear();
-          selected.add(label);
-        }
-        next.set(step, {
-          selected,
-          freeText: multiSelect ? previous.freeText : "",
-        });
-        return { ...current, answers: next };
-      });
-      if (!multiSelect) {
-        answerInput.clear();
-        setEditorHasContent(false);
-      }
-    },
-    [answerInput, setEditorHasContent],
-  );
-
-  const clearSelections = useCallback((step: number) => {
-    setReducerState((current) => {
-      const previous = current.answers.get(step);
-      if (!previous || previous.selected.size === 0) return current;
-      const next = cloneAnswers(current.answers);
-      next.set(step, { selected: new Set(), freeText: previous.freeText });
-      return { ...current, answers: next };
-    });
-  }, []);
-
-  // Shared tail for continue/dismiss: commit the next answers, advance one
-  // step, reset the editor, then either move to the next question or submit on
-  // the last step. The two callers differ only in how they build `nextAnswers`.
-  const advance = useCallback(
-    (nextAnswers: Map<number, AnswerEntry>) => {
-      const activeQuestions = questionsRef.current;
-      if (!activeQuestions || activeQuestions.length === 0) return;
-
-      const currentStep = stateRef.current.step;
-      const advanced: AskUserState = {
-        step: currentStep + 1,
-        answers: nextAnswers,
-      };
-      setReducerState(advanced);
-
-      answerInput.clear();
-      setEditorHasContent(false);
-
-      if (currentStep < activeQuestions.length - 1) {
-        optionsRef.current?.resetHighlight();
-        answerInput.blur();
-      } else {
-        submitAnswersRef.current(compileAnswers(advanced, activeQuestions));
-        answerInput.focus();
-      }
-    },
-    [answerInput, optionsRef, setEditorHasContent],
-  );
-
-  const continueStep = useCallback(
-    (freeText?: string) => {
-      const activeQuestions = questionsRef.current;
-      if (!activeQuestions || activeQuestions.length === 0) return;
-
-      const currentStep = stateRef.current.step;
-      const multiSelect = !!activeQuestions[currentStep]?.multiSelect;
-      advance(
-        writeFreeText(stateRef.current.answers, currentStep, freeText?.trim() ?? "", multiSelect),
-      );
-    },
-    [advance],
-  );
-
-  const dismissStep = useCallback(() => {
-    advance(skipStep(stateRef.current.answers, stateRef.current.step));
-  }, [advance]);
-
-  const transitionStep = useCallback(
-    (targetStep: number) => {
-      const currentStep = stateRef.current.step;
-      if (targetStep === currentStep) return;
-
-      const currentText = answerInput.getText().trim();
-      const next = cloneAnswers(stateRef.current.answers);
-      if (currentText.length > 0) {
-        const previous = next.get(currentStep) ?? emptyEntry();
-        next.set(currentStep, { ...previous, freeText: currentText });
-      }
-      const navigated: AskUserState = { step: targetStep, answers: next };
-      setReducerState(navigated);
-
-      const targetEntry = navigated.answers.get(targetStep);
-      const targetFreeText = targetEntry?.freeText ?? "";
-      answerInput.setText(targetFreeText);
-      setEditorHasContent(targetFreeText.length > 0);
-      optionsRef.current?.resetHighlight();
-      answerInput.blur();
-    },
-    [answerInput, optionsRef, setEditorHasContent],
-  );
-
-  const goBack = useCallback(() => {
-    transitionStep(Math.max(0, stateRef.current.step - 1));
-  }, [transitionStep]);
-
-  const goNext = useCallback(() => {
-    const activeQuestions = questionsRef.current;
-    if (!activeQuestions) return;
-    transitionStep(Math.min(activeQuestions.length - 1, stateRef.current.step + 1));
-  }, [transitionStep]);
-
-  const isLast = useMemo(
-    () => (questions ? isLastStep(reducerState, questions) : false),
-    [reducerState, questions],
-  );
-  const isSingle = useMemo(() => (questions ? questions.length === 1 : false), [questions]);
-
-  const state: ComposerAskUserState = useMemo(
-    () => ({
-      questions: questions ?? null,
-      step: reducerState.step,
-      answers: reducerState.answers,
-      toggleOption,
-      continueStep,
-      dismissStep,
-      isLastStep: isLast,
-      isSingle,
-      clearSelections,
-      goBack,
-      goNext,
-      optionsRef,
-    }),
-    [
-      questions,
-      reducerState.step,
-      reducerState.answers,
-      toggleOption,
-      continueStep,
-      dismissStep,
-      isLast,
-      isSingle,
-      clearSelections,
-      goBack,
-      goNext,
-      optionsRef,
-    ],
-  );
-
-  return state;
+  }, [rootRef, globalDropRef, setDragging]);
 };
 
 const useComposerSnapshot = ({
@@ -1297,40 +1513,45 @@ const ComposerRoot = ({
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const globalDropRef = useRef(false);
-  const askUserOptionsRef = useRef<AskUserOptionsHandle | null>(null);
-  const attachmentConfigRef = useRef<AttachmentStoreConfig>({
-    accept: DEFAULT_ATTACHMENT_ACCEPT,
-    maxFiles: DEFAULT_ATTACHMENT_MAX_FILES,
-    maxFileSize: DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
-  });
   const commandListStore = useLazyRef(() => createCommandListStore()).current;
-
-  const [editorHasContent, setEditorHasContent] = useState(false);
-
-  const attachments = useAttachmentStore(attachmentConfigRef);
 
   const onSubmitRef = useAsRef(onSubmit);
 
-  const submitAnswers = useCallback((answers: ComposerAnswerEntry[]) => {
-    onSubmitRef.current?.({ kind: "answers", answers });
+  // Register this mount on the singleton store: answers submit through this
+  // mount's onSubmit, and unmounting resets all mount-scoped state so nothing
+  // leaks across route changes.
+  useEffect(() => {
+    composerStore.submitAnswersRef.current = (answers) =>
+      onSubmitRef.current?.({ kind: "answers", answers });
+    return () => {
+      composerStore.submitAnswersRef.current = null;
+      composerStore.reset();
+    };
   }, []);
 
-  const askUser = useAskUser({
-    answerInput: composerController,
-    optionsRef: askUserOptionsRef,
-    setEditorHasContent,
-    submitAnswers,
-    questions,
-  });
+  // Prop → store bridges. Actions and refs on the snapshot are identity-stable,
+  // so reading them here without subscribing is safe.
+  const { add: addAttachments, globalDropRef } = composerStore.getSnapshot().attachments;
+
+  useEffect(() => {
+    composerStore.setIsSubmitting(isSubmitting);
+  }, [isSubmitting]);
+
+  // Sync the questions prop into the store and arm ask-user mode (editor blur
+  // + document-level keyboard handling) while questions are active.
+  useEffect(() => {
+    composerStore.setQuestions(questions ?? null);
+    if (!questions?.length) return;
+    return composerStore.activateAskUser();
+  }, [questions]);
 
   const { getRegisteredPrefixes } = useCommandRegistry(commands);
 
-  const { isDragging } = useDragDropFiles({
+  useDragDropFiles({
     rootRef: formRef,
     globalDropRef,
-    onFiles: attachments.add,
+    onFiles: addAttachments,
+    setDragging: composerStore.setDragging,
   });
 
   const { reportEditorUpdate } = useComposerSnapshot({
@@ -1340,72 +1561,12 @@ const ComposerRoot = ({
     onValueChange,
   });
 
-  const askUserRef = useAsRef(askUser);
-
-  useEffect(() => {
-    if ((askUser.questions?.length ?? 0) === 0) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const optionsHandle = askUserOptionsRef.current;
-      const action = interpretAskUserKey(
-        {
-          key: event.key,
-          ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey,
-          altKey: event.altKey,
-          defaultPrevented: event.defaultPrevented,
-        },
-        { hasHighlight: optionsHandle?.highlightedValue != null },
-      );
-      if (!action) return;
-      event.preventDefault();
-      const current = askUserRef.current;
-      switch (action.type) {
-        case "dismiss-step":
-          current.dismissStep();
-          return;
-        case "navigate-options": {
-          const newValue = optionsHandle?.navigate(action.direction);
-          if (newValue === null) composerController.focus();
-          return;
-        }
-        case "select-option": {
-          const item = optionsHandle?.select();
-          if (!item) return;
-          const currentQuestion = current.questions?.[current.step];
-          if (currentQuestion?.multiSelect) {
-            current.toggleOption(current.step, item.value, true);
-          } else {
-            current.toggleOption(current.step, item.value, false);
-            current.continueStep();
-          }
-          return;
-        }
-        case "go-back":
-          current.goBack();
-          return;
-        case "go-next":
-          current.goNext();
-          return;
-        case "insert-character": {
-          optionsHandle?.clearHighlight();
-          composerController.focus();
-          composerController.insertText(action.character);
-          return;
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [askUser.questions]);
-
   const handleFormSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const { askUser, attachments } = composerStore.getSnapshot();
 
     if (askUser.questions?.length) {
-      const text = composerController.getText().trim();
-      composerController.clear();
-      setEditorHasContent(false);
-      askUser.continueStep(text);
+      askUser.continueStep(composerController.getText());
       return;
     }
 
@@ -1419,9 +1580,8 @@ const ComposerRoot = ({
     const fileItems: AttachmentItem[] = attachments.items;
     const fileParts = fileItems.length > 0 ? await prepareAttachmentsForSend(fileItems) : [];
 
-    attachments.reset();
+    composerStore.resetAttachments();
     composerController.clear();
-    setEditorHasContent(false);
 
     await onSubmitRef.current?.({
       kind: "message",
@@ -1431,42 +1591,10 @@ const ComposerRoot = ({
     });
   };
 
-  const editorState = useMemo(
-    () => ({
-      hasContent: editorHasContent,
-      setHasContent: setEditorHasContent,
-      isSubmitting,
-    }),
-    [editorHasContent, isSubmitting],
-  );
-
-  const attachmentsState = useMemo(
-    () => ({
-      items: attachments.items,
-      add: attachments.add,
-      remove: attachments.remove,
-      openFileDialog: () => fileInputRef.current?.click(),
-      error: attachments.error,
-      isDragging,
-      fileInputRef,
-      globalDropRef,
-    }),
-    [attachments.items, attachments.add, attachments.remove, attachments.error, isDragging],
-  );
-
-  const contextValue = useMemo<ComposerContextValue>(
-    () => ({
-      editor: editorState,
-      attachments: attachmentsState,
-      askUser,
-    }),
-    [editorState, attachmentsState, askUser],
-  );
-
   const internalsValue = useMemo<ComposerInternalsValue>(
     () => ({
       editorRef,
-      attachmentConfigRef,
+      attachmentConfigRef: composerStore.attachmentConfigRef,
       commands,
       commandListStore,
       getRegisteredPrefixes,
@@ -1476,18 +1604,16 @@ const ComposerRoot = ({
   );
 
   return (
-    <ComposerContext.Provider value={contextValue}>
-      <ComposerInternalsContext.Provider value={internalsValue}>
-        <form
-          onSubmit={handleFormSubmit}
-          ref={formRef}
-          className={cn("relative w-full flex flex-col", className)}
-          {...formProps}
-        >
-          {children}
-        </form>
-      </ComposerInternalsContext.Provider>
-    </ComposerContext.Provider>
+    <ComposerInternalsContext.Provider value={internalsValue}>
+      <form
+        onSubmit={handleFormSubmit}
+        ref={formRef}
+        className={cn("relative w-full flex flex-col", className)}
+        {...formProps}
+      >
+        {children}
+      </form>
+    </ComposerInternalsContext.Provider>
   );
 };
 
@@ -1551,7 +1677,7 @@ const ComposerAttachments = ({
   multiple = true,
   globalDrop = false,
 }: ComposerAttachmentsProps) => {
-  const { attachments } = useComposer();
+  const attachments = useComposer((composer) => composer.attachments);
   const { attachmentConfigRef } = useComposerInternals();
 
   attachmentConfigRef.current = { accept, maxFiles, maxFileSize };
@@ -1611,7 +1737,7 @@ const ComposerAttachments = ({
 type ComposerAttachmentTriggerProps = ComponentProps<typeof IconButton>;
 
 const ComposerAttachmentTrigger = (props: ComposerAttachmentTriggerProps) => {
-  const { attachments } = useComposer();
+  const attachments = useComposer((composer) => composer.attachments);
 
   return (
     <Attachments.Trigger
@@ -1643,25 +1769,23 @@ const ComposerTextarea = ({
   autoFocus = false,
   children,
 }: ComposerTextareaProps) => {
-  const { editor, attachments, askUser } = useComposer();
+  const hasContent = useComposer((composer) => composer.textarea.hasContent);
   const { editorRef, commandListStore, getRegisteredPrefixes, reportEditorUpdate } =
     useComposerInternals();
 
   const isControlled = value !== undefined;
 
   const onValueChangeRef = useAsRef(onValueChange);
-  const attachmentsRef = useAsRef(attachments);
-  const askUserRef = useAsRef(askUser);
 
   // Single-select questions clear their selection once the user starts typing
-  // a free-text answer. Stable across renders — it only reads the live askUser
-  // value through its ref.
+  // a free-text answer. Stable across renders — event-time reads go through
+  // the store, so no subscription is needed.
   const clearSelectionsIfSingle = useCallback(() => {
-    const current = askUserRef.current;
-    if (!current.questions) return;
-    const currentQuestion = current.questions[current.step];
+    const { askUser } = composerStore.getSnapshot();
+    if (!askUser.questions) return;
+    const currentQuestion = askUser.questions[askUser.step];
     if (!currentQuestion?.multiSelect) {
-      current.clearSelections(current.step);
+      askUser.clearSelections();
     }
   }, []);
 
@@ -1689,7 +1813,7 @@ const ComposerTextarea = ({
 
           if (files.length) {
             event.preventDefault();
-            attachmentsRef.current.add(files);
+            composerStore.getSnapshot().attachments.add(files);
             return true;
           }
         }
@@ -1716,9 +1840,9 @@ const ComposerTextarea = ({
           { key: event.key, shiftKey: event.shiftKey },
           {
             isCommandListOpen: commandState?.isOpen ?? false,
-            hasActiveAskUser: (askUserRef.current.questions?.length ?? 0) > 0,
+            hasActiveAskUser: (composerStore.getSnapshot().askUser.questions?.length ?? 0) > 0,
             isEditorEmpty: view.state.doc.textContent === "",
-            hasAttachments: attachmentsRef.current.items.length > 0,
+            hasAttachments: composerStore.getSnapshot().attachments.items.length > 0,
           },
         );
 
@@ -1742,15 +1866,16 @@ const ComposerTextarea = ({
           }
           case "ask-user-arrow": {
             event.preventDefault();
-            const optionsHandle = askUserRef.current.optionsRef.current;
+            const optionsHandle = composerStore.getSnapshot().askUser.optionsRef.current;
             optionsHandle?.navigate(action.direction);
             view.dom.blur();
             return true;
           }
           case "remove-last-attachment": {
             event.preventDefault();
-            const lastItem = attachmentsRef.current.items.at(-1);
-            if (lastItem) attachmentsRef.current.remove(lastItem.id);
+            const { items, remove } = composerStore.getSnapshot().attachments;
+            const lastItem = items.at(-1);
+            if (lastItem) remove(lastItem.id);
             return true;
           }
           case "submit-form": {
@@ -1768,7 +1893,7 @@ const ComposerTextarea = ({
       },
     },
     onFocus: () => {
-      askUserRef.current.optionsRef.current?.clearHighlight();
+      composerStore.getSnapshot().askUser.optionsRef.current?.clearHighlight();
     },
     onMount: ({ editor: instance }) => {
       editorRef.current = instance;
@@ -1778,10 +1903,10 @@ const ComposerTextarea = ({
     },
     onUpdate: ({ editor: instance }) => {
       const text = instance.getText();
-      editor.setHasContent(text.trim().length > 0 || !instance.isEmpty);
+      composerStore.setHasContent(text.trim().length > 0 || !instance.isEmpty);
       if (text.trim().length > 0) {
         clearSelectionsIfSingle();
-        askUserRef.current.optionsRef.current?.clearHighlight();
+        composerStore.getSnapshot().askUser.optionsRef.current?.clearHighlight();
       }
       onValueChangeRef.current?.(text);
       reportEditorUpdate(instance);
@@ -1796,12 +1921,13 @@ const ComposerTextarea = ({
     autofocus: autoFocus,
   });
 
+  // setContent emits an update (tiptap v3 default), so onUpdate keeps
+  // hasContent in sync — no manual write needed.
   useEffect(() => {
     if (isControlled && tiptapEditor && value !== tiptapEditor.getText()) {
       tiptapEditor.commands.setContent(value);
-      editor.setHasContent(value.trim().length > 0);
     }
-  }, [value, tiptapEditor, isControlled, editor]);
+  }, [value, tiptapEditor, isControlled]);
 
   // Register the live editor with the shared controller (cleanup on unmount).
   useLayoutEffect(() => {
@@ -1827,7 +1953,7 @@ const ComposerTextarea = ({
     >
       {tiptapEditor !== null ? (
         <EditorContent editor={tiptapEditor} className="relative">
-          {!editor.hasContent && placeholder && (
+          {!hasContent && placeholder && (
             <div
               data-slot="composer-placeholder"
               className="absolute inset-0 min-h-lh pointer-events-none"
@@ -1901,9 +2027,9 @@ const ComposerContextWindow = ({ className, children, ...props }: ComposerContex
     <div
       data-slot="composer-context-window"
       className={cn(
-        "relative overflow-hidden transition-all duration-200 px-3 text-xs",
+        "relative overflow-hidden flex items-center transition-all duration-200 px-3 text-xs",
         'before:content-[""] before:absolute before:inset-0 before:rounded-xl before:bg-ds-base before:pointer-events-none',
-        hasContent ? "max-h-10 py-2 opacity-100" : "max-h-0 py-0 opacity-0",
+        hasContent ? "h-8 opacity-100" : "h-0 opacity-0",
         className,
       )}
       {...props}
@@ -1924,10 +2050,12 @@ const ComposerActions = ({ className, ...props }: ComponentProps<"div">) => (
 type ComposerSubmitProps = ComponentProps<typeof IconButton>;
 
 const ComposerSubmit = ({ children, className, disabled, ...props }: ComposerSubmitProps) => {
-  const { editor, attachments } = useComposer();
+  const hasContent = useComposer((composer) => composer.textarea.hasContent);
+  const isSubmitting = useComposer((composer) => composer.isSubmitting);
+  const attachments = useComposer((composer) => composer.attachments);
 
   const autoDisabled =
-    disabled ?? ((!editor.hasContent && attachments.items.length === 0) || editor.isSubmitting);
+    disabled ?? ((!hasContent && attachments.items.length === 0) || isSubmitting);
 
   return (
     <IconButton
@@ -2123,7 +2251,7 @@ type ComposerCommandListProps = {
 };
 
 const ComposerCommandList = ({ prefix, className, children }: ComposerCommandListProps) => {
-  const { attachments } = useComposer();
+  const attachments = useComposer((composer) => composer.attachments);
   const internals = useComposerInternals();
   const { commandListStore } = internals;
 
@@ -2452,7 +2580,7 @@ const ComposerCommands = ({ className }: ComposerCommandsProps) => {
 // ---------------------------------------------------------------------------
 
 const ComposerAskUser = () => {
-  const { askUser } = useComposer();
+  const askUser = useComposer((composer) => composer.askUser);
 
   const question = askUser.questions?.[askUser.step] ?? null;
   const lastQuestionRef = useRef(question);
@@ -2486,16 +2614,14 @@ const ComposerAskUser = () => {
           multiSelect={!!display.multiSelect}
           groupName={`q-${askUser.step}`}
           value={[...entry.selected][0] ?? ""}
-          onValueChange={(value) => askUser.toggleOption(askUser.step, value, false)}
+          onValueChange={askUser.toggleOption}
         >
           {display.options.map((option) => (
             <AskUser.Option
               key={option.label}
               value={option.label}
               selected={entry.selected.has(option.label)}
-              onSelect={() =>
-                askUser.toggleOption(askUser.step, option.label, !!display.multiSelect)
-              }
+              onSelect={() => askUser.toggleOption(option.label)}
             >
               <AskUser.OptionInput />
               <AskUser.OptionContent>
@@ -2513,7 +2639,7 @@ const ComposerAskUser = () => {
 };
 
 const ComposerAskUserHints = ({ className, ...props }: ComponentProps<typeof AskUser.Hints>) => {
-  const { askUser } = useComposer();
+  const askUser = useComposer((composer) => composer.askUser);
   const totalQuestions = askUser.questions?.length ?? 0;
 
   return (
@@ -2541,7 +2667,7 @@ const ComposerAskUserHints = ({ className, ...props }: ComponentProps<typeof Ask
 type ComposerAskUserDismissProps = ComponentProps<typeof Button>;
 
 const ComposerAskUserDismiss = ({ className, ...props }: ComposerAskUserDismissProps) => {
-  const { askUser } = useComposer();
+  const askUser = useComposer((composer) => composer.askUser);
   return (
     <Button
       type="button"
@@ -2560,7 +2686,7 @@ const ComposerAskUserDismiss = ({ className, ...props }: ComposerAskUserDismissP
 type ComposerAskUserContinueProps = ComponentProps<typeof Button>;
 
 const ComposerAskUserContinue = ({ className, ...props }: ComposerAskUserContinueProps) => {
-  const { askUser } = useComposer();
+  const askUser = useComposer((composer) => composer.askUser);
   return (
     <Button
       type="submit"

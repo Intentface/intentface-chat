@@ -53,7 +53,7 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
 };
 
 export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
-  const { attachments } = useComposer();
+  const attachments = useComposer((composer) => composer.attachments);
 
   return (
     <DropdownMenu>

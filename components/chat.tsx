@@ -2,7 +2,7 @@
 
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { ChatStatus } from "ai";
-import { CircleDotIcon, Loader } from "lucide-react";
+import { CircleDotIcon, Loader, TextQuoteIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -52,6 +52,11 @@ export type Artifact = {
   content: string;
 };
 
+type ChatSelection = {
+  id: string;
+  text: string;
+};
+
 type ChatContextValue = {
   chatId: string;
   messages: AppUIMessage[];
@@ -66,6 +71,9 @@ type ChatContextValue = {
   openArtifact: (artifact: Artifact) => void;
   toggleArtifact: (artifact: Artifact) => void;
   closeArtifact: () => void;
+  selections: ChatSelection[];
+  addSelection: (text: string) => void;
+  clearSelections: () => void;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -174,7 +182,7 @@ const InterleavedSteps = ({
 };
 
 const ChatMessages = () => {
-  const { messages, status, regenerate, toggleArtifact } = useChatContext();
+  const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
   const model = useModelStore((state) => state.model);
   const isDiffusionModel = model === "mercury-2-diffusing";
   const isError = status === "error";
@@ -305,6 +313,9 @@ const ChatMessages = () => {
               )}
             </Message.Content>
 
+            {/* Selection → context affordance (assistant text only) */}
+            {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
+
             {/* Source URL pills */}
             {sourcesInfo?.hasSources && (
               <Message.Sources>
@@ -382,7 +393,8 @@ const MENTION_ITEMS: CommandItemData[] = [
 ];
 
 const ChatInput = () => {
-  const { chatId, messages, sendMessage, status, addToolOutput } = useChatContext();
+  const { chatId, messages, sendMessage, status, addToolOutput, selections, clearSelections } =
+    useChatContext();
   const router = useRouter();
   const createChat = useChatStore((state) => state.createChat);
   const { model, setModel } = useModelStore();
@@ -461,11 +473,22 @@ const ChatInput = () => {
           router.replace(`/chat/${chatId}`);
         }
 
+        // Fold thread selections in as blockquote context above the question.
+        const quoted = selections
+          .map((selection) =>
+            selection.text
+              .split("\n")
+              .map((line) => `> ${line}`)
+              .join("\n"),
+          )
+          .join("\n\n");
+        const text = quoted ? `${quoted}\n\n${data.text}` : data.text;
+
         await sendMessage(
           {
             parts: [
               ...data.files,
-              { type: "text", text: data.text },
+              { type: "text", text },
               ...(data.chips.length > 0 ? [{ type: "data-chip" as const, data: data.chips }] : []),
             ],
           },
@@ -476,11 +499,23 @@ const ChatInput = () => {
             },
           },
         );
+        clearSelections();
       } finally {
         setIsSending(false);
       }
     },
-    [chatId, createChat, isNewChat, router, sendMessage, addToolOutput, panelState, toolValues],
+    [
+      chatId,
+      createChat,
+      isNewChat,
+      router,
+      sendMessage,
+      addToolOutput,
+      panelState,
+      toolValues,
+      selections,
+      clearSelections,
+    ],
   );
 
   return (
@@ -564,6 +599,24 @@ const ChatInput = () => {
         </Composer.PanelItem>
       </Composer.Panel>
 
+      <Composer.ContextWindow>
+        {selections.length > 0 && (
+          <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
+            <TextQuoteIcon className="size-3.5" />
+            <span>
+              {selections.length} selection{selections.length === 1 ? "" : "s"}
+            </span>
+            <button
+              type="button"
+              aria-label="Clear selections"
+              className="cursor-pointer rounded-full p-0.5 hover:bg-primary-hover hover:text-ink-primary"
+              onClick={clearSelections}
+            >
+              <XIcon className="size-3" />
+            </button>
+          </div>
+        )}
+      </Composer.ContextWindow>
       <Composer.Container>
         <Composer.Attachments />
         <Composer.Textarea autoFocus>
@@ -710,6 +763,16 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
     setIsArtifactOpen(false);
   }, []);
 
+  // Thread selections (Message.SelectionToolbar) — chat-level state: written
+  // from the messages, read by the composer input at submit time.
+  const [selections, setSelections] = useState<ChatSelection[]>([]);
+  const addSelection = useCallback((text: string) => {
+    setSelections((previous) => [...previous, { id: crypto.randomUUID(), text }]);
+  }, []);
+  const clearSelections = useCallback(() => {
+    setSelections([]);
+  }, []);
+
   const value: ChatContextValue = {
     chatId,
     messages,
@@ -724,6 +787,9 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
     openArtifact,
     toggleArtifact,
     closeArtifact,
+    selections,
+    addSelection,
+    clearSelections,
   };
 
   return <ChatContext value={value}>{children ?? <ChatDefaultLayout />}</ChatContext>;

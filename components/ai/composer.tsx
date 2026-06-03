@@ -1646,7 +1646,9 @@ const ComposerContainer = ({ className, children, ...props }: ComposerContainerP
       data-slot="composer-container"
       onMouseDown={handleMouseDown}
       className={cn(
-        "border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle] cursor-text transition-colors",
+        // Positioned so it paints above the context window peeking out from
+        // behind its top edge.
+        "relative border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle] cursor-text transition-colors",
         className,
       )}
       {...props}
@@ -2027,9 +2029,14 @@ const ComposerContextWindow = ({ className, children, ...props }: ComposerContex
     <div
       data-slot="composer-context-window"
       className={cn(
-        "relative overflow-hidden flex items-center transition-all duration-200 px-3 text-xs",
-        'before:content-[""] before:absolute before:inset-0 before:rounded-xl before:bg-ds-base before:pointer-events-none',
-        hasContent ? "h-8 opacity-100" : "h-0 opacity-0",
+        "relative z-0 overflow-hidden flex items-center transition-all duration-200 px-3 text-xs",
+        // Background drawn by ::before so only the top corners round — the
+        // bottom edge stays square and hides behind the container below.
+        'before:content-[""] before:absolute before:inset-0 before:-z-10 before:rounded-t-2xl before:bg-base before:pointer-events-none',
+        // Open: 32px visible band peeking above the container plus 16px
+        // submerged beneath it (negative margin pulls the container up over
+        // the bottom-padded zone).
+        hasContent ? "h-12 pb-4 -mb-4 opacity-100" : "h-0 opacity-0",
         className,
       )}
       {...props}

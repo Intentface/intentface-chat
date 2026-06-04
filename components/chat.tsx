@@ -17,7 +17,7 @@ import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
-import { Thread } from "@/components/ai/thread";
+import { Thread, useThreadScroll } from "@/components/ai/thread";
 import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
@@ -37,6 +37,7 @@ import {
   getSegmentedParts,
   getSourcesInfo,
   getTextInfo,
+  groupTurns,
   type MessageSegment,
   splitReasoningByHeaders,
 } from "@/lib/message-utils";
@@ -181,6 +182,24 @@ const InterleavedSteps = ({
   );
 };
 
+// Pins the view to a newly-sent user message. The last turn's min-height has
+// already reserved a viewport of space, so scrolling to the bottom lands the new
+// user message just under the top overlay. rAF lets that min-height commit before
+// we read scrollHeight. Re-engaging the bottom also resumes the thread's
+// stream-follow even if the user had scrolled up to read history.
+const useScrollToNewMessage = (messages: AppUIMessage[]) => {
+  const { scrollToBottom } = useThreadScroll();
+  const prevUserCountRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const userCount = messages.reduce((count, m) => (m.role === "user" ? count + 1 : count), 0);
+    if (prevUserCountRef.current !== null && userCount > prevUserCountRef.current) {
+      requestAnimationFrame(() => scrollToBottom("smooth"));
+    }
+    prevUserCountRef.current = userCount;
+  }, [messages, scrollToBottom]);
+};
+
 const ChatMessages = () => {
   const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
   const model = useModelStore((state) => state.model);
@@ -195,161 +214,169 @@ const ChatMessages = () => {
   // Track messages present at mount — skip entrance animation for these
   const initialMessageIds = useRef(new Set(messages.map((m) => m.id)));
 
+  useScrollToNewMessage(messages);
+
+  const turns = groupTurns(messages);
+  const lastMessageId = messages.at(-1)?.id;
+
   return (
     <>
-      {messages.map(({ parts, ...message }, messageIndex, messageArray) => {
-        const isLastMessage = messageIndex === messageArray.length - 1;
-        const isAssistant = message.role === "assistant";
-        const isUser = message.role === "user";
-        const skipAnimation = initialMessageIds.current.has(message.id);
-        const isMessageStreaming = isLastMessage && isStreaming;
+      {turns.map((turn, turnIndex) => (
+        <Message.Turn key={turn.key} isLast={turnIndex === turns.length - 1}>
+          {turn.messages.map(({ parts, ...message }) => {
+            const isLastMessage = message.id === lastMessageId;
+            const isAssistant = message.role === "assistant";
+            const isUser = message.role === "user";
+            const skipAnimation = initialMessageIds.current.has(message.id);
+            const isMessageStreaming = isLastMessage && isStreaming;
 
-        const segments = getSegmentedParts(parts);
-        const textInfo = getTextInfo(segments);
-        const fileParts = getFileParts(segments);
-        const chain = getChainInfo(segments);
-        const reasoning = chain.onlyReasoning
-          ? getReasoningInfo(segments, isMessageStreaming)
-          : null;
-        const askUser = getAskUserInfo(parts);
-        const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
-        const userChips: ChipData[] = isUser
-          ? parts.flatMap((p) => (p.type === "data-chip" ? p.data : []))
-          : [];
+            const segments = getSegmentedParts(parts);
+            const textInfo = getTextInfo(segments);
+            const fileParts = getFileParts(segments);
+            const chain = getChainInfo(segments);
+            const reasoning = chain.onlyReasoning
+              ? getReasoningInfo(segments, isMessageStreaming)
+              : null;
+            const askUser = getAskUserInfo(parts);
+            const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
+            const userChips: ChipData[] = isUser
+              ? parts.flatMap((p) => (p.type === "data-chip" ? p.data : []))
+              : [];
 
-        // Only show reasoning/tools inline after the message has finished streaming
-        const shouldShowReasoning =
-          isAssistant &&
-          reasoning &&
-          reasoning.parts.length > 0 &&
-          !isMessageStreaming &&
-          !askUser.isAwaitingInput;
+            // Only show reasoning/tools inline after the message has finished streaming
+            const shouldShowReasoning =
+              isAssistant &&
+              reasoning &&
+              reasoning.parts.length > 0 &&
+              !isMessageStreaming &&
+              !askUser.isAwaitingInput;
 
-        const shouldShowInterleavedReasoning =
-          isAssistant && chain.hasTools && !isMessageStreaming && !askUser.isAwaitingInput;
+            const shouldShowInterleavedReasoning =
+              isAssistant && chain.hasTools && !isMessageStreaming && !askUser.isAwaitingInput;
 
-        return (
-          <Message
-            key={message.id}
-            role={message.role}
-            isError={isError}
-            isLast={isLastMessage}
-            {...(skipAnimation && { initial: false })}
-          >
-            {/* File attachments */}
-            {isUser && fileParts.length > 0 && (
-              <Message.Attachments>
-                {fileParts.map((part, i) => (
-                  <Message.Attachment key={i} attachment={part} />
-                ))}
-              </Message.Attachments>
-            )}
-
-            {/* Standalone reasoning (no tools) — suppress when panel handles it */}
-            {shouldShowReasoning && (
-              <Reasoning isStreaming={reasoning.isStreaming}>
-                <Reasoning.Trigger label={reasoning.headers} />
-                <Reasoning.Content>{reasoning.texts}</Reasoning.Content>
-              </Reasoning>
-            )}
-
-            {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
-            {shouldShowInterleavedReasoning && (
-              <InterleavedSteps segments={chain.segments} isStreaming={isMessageStreaming} />
-            )}
-
-            {/* Message content */}
-            <Message.Content>
-              {isDiffusionModel && textInfo.isDiffusing && textInfo.lastPart ? (
-                <DiffusionMarkdown
-                  content={textInfo.lastPart.text}
-                  isStreaming={isMessageStreaming}
-                />
-              ) : (
-                parts.map((part, index) => {
-                  switch (part.type) {
-                    case "text": {
-                      // Hide intermediate text between tool calls — only
-                      // show text that appears after the last tool/reasoning part.
-                      if (chain.hasTools) {
-                        const lastChainIdx = parts.findLastIndex(
-                          (p) =>
-                            p.type === "reasoning" ||
-                            (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
-                        );
-                        if (index <= lastChainIdx) return null;
-                      }
-                      if (isUser) {
-                        return <Message.Text key={index} text={part.text} chips={userChips} />;
-                      }
-                      return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
-                    }
-                    case "data-chip":
-                      return null;
-                    case "tool-createArtifact": {
-                      const input = part.input as {
-                        title?: string;
-                        content?: string;
-                      };
-                      return (
-                        <ArtifactCard
-                          key={part.toolCallId}
-                          title={input?.title ?? "Untitled"}
-                          state={part.state}
-                          onToggle={() =>
-                            toggleArtifact({
-                              id: part.toolCallId,
-                              title: input?.title ?? "Untitled",
-                              content: input?.content ?? "",
-                            })
-                          }
-                        />
-                      );
-                    }
-                    default:
-                      return null;
-                  }
-                })
-              )}
-            </Message.Content>
-
-            {/* Selection → context affordance (assistant text only) */}
-            {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
-
-            {/* Source URL pills */}
-            {sourcesInfo?.hasSources && (
-              <Message.Sources>
-                {sourcesInfo.sources.map((source) => (
-                  <Message.Source key={source.domain} url={source.url} domain={source.domain} />
-                ))}
-              </Message.Sources>
-            )}
-
-            {/* Actions — hide while waiting for tool input */}
-            {!askUser.isAwaitingInput && (
-              <Message.Actions>
-                {isAssistant && (
-                  <Message.Action
-                    onClick={() => regenerate({ messageId: message.id })}
-                    tooltip="Regenerate"
-                  >
-                    <RefreshIcon />
-                  </Message.Action>
+            return (
+              <Message
+                key={message.id}
+                role={message.role}
+                isError={isError}
+                isLast={isLastMessage}
+                {...(skipAnimation && { initial: false })}
+              >
+                {/* File attachments */}
+                {isUser && fileParts.length > 0 && (
+                  <Message.Attachments>
+                    {fileParts.map((part, i) => (
+                      <Message.Attachment key={i} attachment={part} />
+                    ))}
+                  </Message.Attachments>
                 )}
-                <Message.Copy value={textInfo.text} />
-              </Message.Actions>
-            )}
-          </Message>
-        );
-      })}
+
+                {/* Standalone reasoning (no tools) — suppress when panel handles it */}
+                {shouldShowReasoning && (
+                  <Reasoning isStreaming={reasoning.isStreaming}>
+                    <Reasoning.Trigger label={reasoning.headers} />
+                    <Reasoning.Content>{reasoning.texts}</Reasoning.Content>
+                  </Reasoning>
+                )}
+
+                {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
+                {shouldShowInterleavedReasoning && (
+                  <InterleavedSteps segments={chain.segments} isStreaming={isMessageStreaming} />
+                )}
+
+                {/* Message content */}
+                <Message.Content>
+                  {isDiffusionModel && textInfo.isDiffusing && textInfo.lastPart ? (
+                    <DiffusionMarkdown
+                      content={textInfo.lastPart.text}
+                      isStreaming={isMessageStreaming}
+                    />
+                  ) : (
+                    parts.map((part, index) => {
+                      switch (part.type) {
+                        case "text": {
+                          // Hide intermediate text between tool calls — only
+                          // show text that appears after the last tool/reasoning part.
+                          if (chain.hasTools) {
+                            const lastChainIdx = parts.findLastIndex(
+                              (p) =>
+                                p.type === "reasoning" ||
+                                (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
+                            );
+                            if (index <= lastChainIdx) return null;
+                          }
+                          if (isUser) {
+                            return <Message.Text key={index} text={part.text} chips={userChips} />;
+                          }
+                          return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
+                        }
+                        case "data-chip":
+                          return null;
+                        case "tool-createArtifact": {
+                          const input = part.input as {
+                            title?: string;
+                            content?: string;
+                          };
+                          return (
+                            <ArtifactCard
+                              key={part.toolCallId}
+                              title={input?.title ?? "Untitled"}
+                              state={part.state}
+                              onToggle={() =>
+                                toggleArtifact({
+                                  id: part.toolCallId,
+                                  title: input?.title ?? "Untitled",
+                                  content: input?.content ?? "",
+                                })
+                              }
+                            />
+                          );
+                        }
+                        default:
+                          return null;
+                      }
+                    })
+                  )}
+                </Message.Content>
+
+                {/* Selection → context affordance (assistant text only) */}
+                {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
+
+                {/* Source URL pills */}
+                {sourcesInfo?.hasSources && (
+                  <Message.Sources>
+                    {sourcesInfo.sources.map((source) => (
+                      <Message.Source key={source.domain} url={source.url} domain={source.domain} />
+                    ))}
+                  </Message.Sources>
+                )}
+
+                {/* Actions — hide while waiting for tool input */}
+                {!askUser.isAwaitingInput && (
+                  <Message.Actions>
+                    {isAssistant && (
+                      <Message.Action
+                        onClick={() => regenerate({ messageId: message.id })}
+                        tooltip="Regenerate"
+                      >
+                        <RefreshIcon />
+                      </Message.Action>
+                    )}
+                    <Message.Copy value={textInfo.text} />
+                  </Message.Actions>
+                )}
+              </Message>
+            );
+          })}
+          {turnIndex === turns.length - 1 && isError && <Message.Error />}
+        </Message.Turn>
+      ))}
       {/* Loading indicator — suppress when panel handles it */}
       {/* {isLoading && panelState.type !== "loading" && (
         <Reasoning isStreaming>
           <Reasoning.Trigger />
         </Reasoning>
       )} */}
-      {isError && <Message.Error />}
-      <Thread.Spacer />
     </>
   );
 };

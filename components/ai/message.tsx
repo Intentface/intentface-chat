@@ -46,6 +46,28 @@ const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRoot
   );
 };
 
+// Turn wrapper — groups a user message with its trailing assistant reply.
+// Re-establishes the column layout + 16px gap each Message relies on, so message
+// self-alignment is unchanged. The last turn reserves the visible thread area via
+// min-height (value supplied by the Thread's --thread-turn-min-height var), which
+// pins the turn to the top without a JS-measured spacer. overflow-anchor:none
+// stops the browser re-anchoring scroll when that min-height collapses as the
+// next turn is added.
+type MessageTurnProps = ComponentProps<"div"> & { isLast?: boolean };
+
+const MessageTurn = ({ isLast, className, ...props }: MessageTurnProps) => (
+  <div
+    data-slot="message-turn"
+    data-last={isLast ? "" : undefined}
+    className={cn(
+      "flex w-full flex-col gap-4 [overflow-anchor:none]",
+      "data-last:min-h-(--thread-turn-min-height)",
+      className,
+    )}
+    {...props}
+  />
+);
+
 // Message content container with role-based styling
 const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
   <div
@@ -488,6 +510,7 @@ const MessageSource = ({
 
 // Composed Message component
 export const Message = Object.assign(MessageRoot, {
+  Turn: MessageTurn,
   Content: MessageContent,
   Attachments: MessageAttachments,
   Attachment: MessageAttachment,

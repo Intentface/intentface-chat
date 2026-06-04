@@ -29,7 +29,7 @@ type ThreadScrollContextValue = {
 
 const ThreadScrollContext = createContext<ThreadScrollContextValue | null>(null);
 
-const useThreadScroll = () => {
+export const useThreadScroll = () => {
   const ctx = use(ThreadScrollContext);
   if (!ctx) throw new Error("useThreadScroll must be used within <Thread>");
   return ctx;
@@ -76,13 +76,20 @@ const measureComposerInset = (root: HTMLElement): number | null => {
   );
 };
 
+// Top inset reserved by the top overlay, measured straight off the rendered
+// element (px) — no getComputedStyle / rem→px conversion. 0 if no top overlay.
+const measureTopInset = (root: HTMLElement): number =>
+  root.querySelector('[data-slot="thread-overlay-top"]')?.getBoundingClientRect().height ?? 0;
+
 /**
- * Writes the measured composer inset straight to --thread-overlay-bottom-height
- * on the root (driving the bottom overlay + viewport padding) via a
- * ResizeObserver — no React state, so composer growth never re-renders the
- * thread. The spacer reads the same measurement for its own height.
+ * Writes the measured insets to CSS vars on the root via a ResizeObserver — no
+ * React state, so composer growth never re-renders the thread:
+ *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
+ *   --thread-turn-min-height is the visible thread area (root − top − bottom),
+ *   which the last turn uses as its min-height to pin itself to the top.
+ * Recomputes only on root (window) / composer-dock resize — never per token.
  */
-const useComposerDockOffset = () => {
+const useThreadInsets = () => {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -90,10 +97,16 @@ const useComposerDockOffset = () => {
     if (!root) return;
 
     const apply = () => {
-      const inset = measureComposerInset(root);
-      if (inset !== null) {
-        root.style.setProperty("--thread-overlay-bottom-height", `${inset}px`);
+      const bottomInset = measureComposerInset(root);
+      if (bottomInset !== null) {
+        root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
       }
+      const topInset = measureTopInset(root);
+      const turnMin = Math.max(
+        0,
+        Math.round(root.clientHeight - topInset - (bottomInset ?? DEFAULT_BOTTOM_OFFSET)),
+      );
+      root.style.setProperty("--thread-turn-min-height", `${turnMin}px`);
     };
 
     apply();
@@ -109,13 +122,25 @@ const useComposerDockOffset = () => {
 };
 
 const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
-  const rootRef = useComposerDockOffset();
+  const rootRef = useThreadInsets();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  // Fresh mirror for the ResizeObserver below — it reads the latest value
+  // without re-subscribing (re-subscribing re-fires observe() and thrashes).
+  const isAtBottomRef = useRef(true);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = scrollRef.current;
     if (el) scrollContainerTo(el, el.scrollHeight, behavior);
+  }, []);
+
+  // First mount: jump straight to the bottom so an existing conversation opens
+  // pinned to the latest message instead of flashing at the top. Declared after
+  // useThreadInsets, so --thread-turn-min-height is already written and the last
+  // turn's reserved height is included in scrollHeight.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el) scrollContainerTo(el, el.scrollHeight, "instant");
   }, []);
 
   useEffect(() => {
@@ -123,13 +148,12 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
     if (!el) return;
 
     const check = () => {
-      // Honor pure scroll math. Short-circuiting to true while the spacer
-      // still has room would keep the button hidden during long streaming
-      // messages (the user message stays pinned via the spacer, but the
-      // assistant content below it can already overflow the viewport — and
-      // the user wants to be able to scroll up).
-      const threshold = 50;
-      setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < threshold);
+      // Pure scroll math — the button must stay reachable even while the last
+      // turn's min-height still has room, so the user can scroll up during a
+      // long streaming response.
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
+      isAtBottomRef.current = atBottom;
+      setIsAtBottom(atBottom);
     };
 
     let rafId: number;
@@ -140,8 +164,17 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
 
     el.addEventListener("scroll", onScroll, { passive: true });
 
-    // Also check when content resizes (new messages, spacer height changes)
-    const observer = new ResizeObserver(check);
+    // Follow the stream: when content grows while we're pinned to the bottom,
+    // keep the bottom in view. The last turn's min-height shapes where "bottom"
+    // is, so this holds a new turn pinned to the top until its response
+    // overflows the viewport, then trails the stream (smooth — see 42b4e18).
+    // When detached, just re-evaluate so the button hides if a shrink (e.g. a
+    // collapsing reasoning block) leaves us back at the bottom.
+    const onContentResize = () => {
+      if (isAtBottomRef.current) scrollContainerTo(el, el.scrollHeight, "smooth");
+      else check();
+    };
+    const observer = new ResizeObserver(onContentResize);
     if (el.firstElementChild) observer.observe(el.firstElementChild);
 
     return () => {
@@ -329,128 +362,6 @@ const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderP
 );
 
 // ---------------------------------------------------------------------------
-// DynamicSpacer
-// ---------------------------------------------------------------------------
-
-const getScrollParent = (element: HTMLElement): HTMLElement | null => {
-  let parent = element.parentElement;
-  while (parent) {
-    const { overflowY } = getComputedStyle(parent);
-    if (overflowY === "auto" || overflowY === "scroll") return parent;
-    parent = parent.parentElement;
-  }
-  return null;
-};
-
-// Top inset reserved by the top overlay, measured straight off the rendered
-// element (px) — no getComputedStyle / rem→px conversion. 0 if no top overlay.
-const measureTopInset = (root: HTMLElement): number =>
-  root.querySelector('[data-slot="thread-overlay-top"]')?.getBoundingClientRect().height ?? 0;
-
-// Distance from `target`'s row down to the spacer (px). They're siblings, so the
-// offsetTop delta already includes the flex gaps between them — no gap lookup,
-// no per-child loop, no getComputedStyle.
-const measureContentHeight = (spacer: HTMLElement, target: HTMLElement): number => {
-  const parent = spacer.parentElement;
-  if (!parent) return 0;
-  const children = Array.from(parent.children) as HTMLElement[];
-  const targetChild = children.find((child) => child.contains(target)) ?? target;
-  return spacer.offsetTop - targetChild.offsetTop;
-};
-
-// Scroll offset of `el`'s top within `container`'s scrollable content.
-const absoluteTop = (container: HTMLElement, el: HTMLElement): number =>
-  container.scrollTop + el.getBoundingClientRect().top - container.getBoundingClientRect().top;
-
-const ThreadSpacer = () => {
-  const { isAtBottom } = useThreadScroll();
-  const spacerRef = useRef<HTMLDivElement>(null);
-  const scrollParentRef = useRef<HTMLElement | null>(null);
-  const prevUserMessageCountRef = useRef(0);
-  const hasInitializedRef = useRef(false);
-
-  const calculateHeight = useCallback(() => {
-    const spacer = spacerRef.current;
-    if (!spacer) return;
-
-    scrollParentRef.current ??= getScrollParent(spacer);
-    const scrollContainer = scrollParentRef.current;
-    if (!scrollContainer) return;
-
-    const userMessages = scrollContainer.querySelectorAll<HTMLElement>(
-      '[data-slot="message"][data-role="user"]',
-    );
-    const messages = scrollContainer.querySelectorAll<HTMLElement>('[data-slot="message"]');
-    const target = userMessages[userMessages.length - 1] ?? null;
-    if (!target) return;
-
-    const threadRoot = scrollContainer.closest<HTMLElement>('[data-slot="thread-root"]');
-    const rootHeight = threadRoot?.clientHeight ?? scrollContainer.clientHeight;
-    const topInset = threadRoot ? measureTopInset(threadRoot) : 0;
-    const bottomInset = (threadRoot && measureComposerInset(threadRoot)) ?? DEFAULT_BOTTOM_OFFSET;
-
-    const remaining = rootHeight - topInset - bottomInset - measureContentHeight(spacer, target);
-    spacer.style.height = `${Math.max(0, remaining)}px`;
-
-    if (!hasInitializedRef.current && messages.length > 0) {
-      // First mount with content: jump instantly so we don't flash at the top.
-      scrollContainerTo(scrollContainer, scrollContainer.scrollHeight, "instant");
-    } else if (userMessages.length > prevUserMessageCountRef.current) {
-      // New user message: pin it just below the top overlay. absoluteTop() forces
-      // a reflow, so this scrolls against the freshly-applied spacer height.
-      const top =
-        remaining <= 0
-          ? scrollContainer.scrollHeight
-          : Math.max(0, absoluteTop(scrollContainer, target) - topInset);
-      scrollContainerTo(scrollContainer, top, "smooth");
-    } else if (remaining <= 0 && isAtBottom) {
-      // Follow the stream once content overflows and the user is at the bottom.
-      // Smooth is deliberate here (see 42b4e18) — loredex uses instant instead.
-      scrollContainerTo(scrollContainer, scrollContainer.scrollHeight, "smooth");
-    }
-
-    prevUserMessageCountRef.current = userMessages.length;
-    if (messages.length > 0) hasInitializedRef.current = true;
-  }, [isAtBottom]);
-
-  // Live ref so the dock observer can call the latest calculateHeight without
-  // re-subscribing — re-subscribing a ResizeObserver re-fires it on observe(),
-  // which combined with the isAtBottom feedback caused a measure storm.
-  const calculateHeightRef = useRef(calculateHeight);
-  calculateHeightRef.current = calculateHeight;
-
-  // Recalculate before paint
-  useLayoutEffect(() => {
-    calculateHeight();
-  });
-
-  // Recompute when the thread root (window resize) or the composer dock (context
-  // window, attachments) changes size. ThreadRoot's hook writes the CSS var for
-  // the overlay + padding; this keeps the spacer's imperative height in sync
-  // without a re-render. Subscribe once and call through the ref — re-subscribing
-  // would re-fire the observer on each observe() and thrash.
-  useLayoutEffect(() => {
-    const threadRoot = spacerRef.current?.closest<HTMLElement>('[data-slot="thread-root"]');
-    if (!threadRoot) return;
-    const observer = new ResizeObserver(() => calculateHeightRef.current());
-    observer.observe(threadRoot);
-    for (const part of threadRoot.querySelectorAll(DOCK_SELECTOR)) {
-      observer.observe(part);
-    }
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={spacerRef}
-      data-slot="thread-spacer"
-      className="w-full shrink-0 ease-out"
-      style={{ overflowAnchor: "none" }}
-    />
-  );
-};
-
-// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -460,5 +371,4 @@ export const Thread = Object.assign(ThreadRoot, {
   Composer: ThreadComposer,
   Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
-  Spacer: ThreadSpacer,
 });

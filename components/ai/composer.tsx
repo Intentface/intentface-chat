@@ -380,56 +380,6 @@ const filterArrayItems = (items: CommandItemData[], query: string): CommandItemD
 };
 
 // ---------------------------------------------------------------------------
-// Command list — store bridged to React via useSyncExternalStore
-// ---------------------------------------------------------------------------
-
-type CommandListSnapshot = {
-  isOpen: boolean;
-  trigger: string | null;
-  query: string;
-};
-
-type CommandListStore = {
-  subscribe: (listener: () => void) => () => void;
-  getSnapshot: () => CommandListSnapshot;
-  setSnapshot: (next: CommandListSnapshot) => void;
-  // Imperative refs co-located with the store; not reactive.
-  selectRef: RefObject<(() => void) | null>;
-  navigateRef: RefObject<((direction: number) => void) | null>;
-};
-
-const createCommandListStore = (): CommandListStore => {
-  let snapshot: CommandListSnapshot = {
-    isOpen: false,
-    trigger: null,
-    query: "",
-  };
-  const listeners = new Set<() => void>();
-  return {
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    getSnapshot: () => snapshot,
-    setSnapshot: (next) => {
-      if (
-        snapshot.isOpen === next.isOpen &&
-        snapshot.trigger === next.trigger &&
-        snapshot.query === next.query
-      ) {
-        return;
-      }
-      snapshot = next;
-      for (const listener of listeners) listener();
-    },
-    selectRef: { current: null },
-    navigateRef: { current: null },
-  };
-};
-
-// ---------------------------------------------------------------------------
 // Command list — ProseMirror plugin: prefix detection + active-trigger badge
 // ---------------------------------------------------------------------------
 
@@ -985,22 +935,37 @@ type ComposerAskUserState = {
   optionsRef: RefObject<AskUserOptionsHandle | null>;
 };
 
+// Mirror of the command-list plugin state: whether a trigger prefix is
+// active, which one, and the query typed after it.
+type ComposerCommandsState = {
+  isOpen: boolean;
+  trigger: string | null;
+  query: string;
+};
+
+// The effective open panel — `value` is the matched Composer.PanelItem value
+// (including the "command-list" override), null while closed.
+type ComposerPanelState = {
+  isOpen: boolean;
+  value: string | null;
+};
+
 type ComposerState = {
   // The editor controller methods (stable identities) plus the reactive
   // hasContent flag: const textarea = useComposer((c) => c.textarea)
   textarea: ComposerEditorState & { hasContent: boolean };
   isSubmitting: boolean;
-  isPanelOpen: boolean;
+  panel: ComposerPanelState;
+  commands: ComposerCommandsState;
   attachments: ComposerAttachmentsState;
   askUser: ComposerAskUserState;
 };
 
 // ---------------------------------------------------------------------------
-// Composer store — all reactive composer state in one store (same shape as the
-// command-list store), so useComposer can offer Zustand-style selectors and
-// components re-render only for the slice they read. Actions and refs are
-// created once and survive every update; a slice's identity changes only when
-// that slice's data changes.
+// Composer store — all reactive composer state in one store, so useComposer
+// can offer Zustand-style selectors and components re-render only for the
+// slice they read. Actions and refs are created once and survive every
+// update; a slice's identity changes only when that slice's data changes.
 // ---------------------------------------------------------------------------
 
 type ComposerStore = {
@@ -1009,7 +974,8 @@ type ComposerStore = {
   // Bridges for props and editor/document integrations — not consumer API.
   setHasContent: (value: boolean) => void;
   setIsSubmitting: (value: boolean) => void;
-  setPanelOpen: (value: boolean) => void;
+  setPanelValue: (value: string | null) => void;
+  setCommands: (next: ComposerCommandsState) => void;
   setQuestions: (questions: AskUserQuestion[] | null) => void;
   setDragging: (active: boolean) => void;
   resetAttachments: () => void;
@@ -1018,6 +984,8 @@ type ComposerStore = {
   // Co-located refs the mounted Composer wires up at runtime.
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
+  commandSelectRef: RefObject<(() => void) | null>;
+  commandNavigateRef: RefObject<((direction: number) => void) | null>;
 };
 
 const createComposerStore = (): ComposerStore => {
@@ -1040,6 +1008,8 @@ const createComposerStore = (): ComposerStore => {
   const submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null> = {
     current: null,
   };
+  const commandSelectRef: RefObject<(() => void) | null> = { current: null };
+  const commandNavigateRef: RefObject<((direction: number) => void) | null> = { current: null };
 
   // Canonical machine states; the snapshot mirrors them on every update.
   let attachmentState = INITIAL_ATTACHMENT_STATE;
@@ -1058,9 +1028,22 @@ const createComposerStore = (): ComposerStore => {
     notify();
   };
 
-  const setPanelOpen = (value: boolean) => {
-    if (snapshot.isPanelOpen === value) return;
-    snapshot = { ...snapshot, isPanelOpen: value };
+  const setPanelValue = (value: string | null) => {
+    if (snapshot.panel.value === value) return;
+    snapshot = { ...snapshot, panel: { isOpen: value !== null, value } };
+    notify();
+  };
+
+  const setCommands = (next: ComposerCommandsState) => {
+    const current = snapshot.commands;
+    if (
+      current.isOpen === next.isOpen &&
+      current.trigger === next.trigger &&
+      current.query === next.query
+    ) {
+      return;
+    }
+    snapshot = { ...snapshot, commands: next };
     notify();
   };
 
@@ -1203,7 +1186,8 @@ const createComposerStore = (): ComposerStore => {
   snapshot = {
     textarea: { ...composerController, hasContent: false },
     isSubmitting: false,
-    isPanelOpen: false,
+    panel: { isOpen: false, value: null },
+    commands: { isOpen: false, trigger: null, query: "" },
     attachments: {
       items: attachmentState.items,
       error: attachmentState.error,
@@ -1242,6 +1226,8 @@ const createComposerStore = (): ComposerStore => {
   const reset = () => {
     dispatchAttachments({ type: "reset" });
     askUserMachine = INITIAL_ASK_USER_STATE;
+    commandSelectRef.current = null;
+    commandNavigateRef.current = null;
     snapshot = initialSnapshot;
     notify();
   };
@@ -1256,7 +1242,8 @@ const createComposerStore = (): ComposerStore => {
     getSnapshot: () => snapshot,
     setHasContent,
     setIsSubmitting,
-    setPanelOpen,
+    setPanelValue,
+    setCommands,
     setQuestions,
     setDragging,
     resetAttachments: () => dispatchAttachments({ type: "reset" }),
@@ -1264,6 +1251,8 @@ const createComposerStore = (): ComposerStore => {
     reset,
     attachmentConfigRef,
     submitAnswersRef,
+    commandSelectRef,
+    commandNavigateRef,
   };
 };
 
@@ -1294,7 +1283,6 @@ type ComposerInternalsValue = {
   editorRef: RefObject<Editor | null>;
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   commands: ComposerCommandsMap;
-  commandListStore: CommandListStore;
   getRegisteredPrefixes: () => RegisteredPrefix[];
   reportEditorUpdate: (editor: Editor) => void;
 };
@@ -1307,15 +1295,6 @@ const useComposerInternals = (): ComposerInternalsValue => {
     throw new Error("useComposerInternals must be called inside a <Composer> subtree.");
   }
   return context;
-};
-
-const useCommandListSnapshot = <T,>(selector: (snapshot: CommandListSnapshot) => T): T => {
-  const { commandListStore } = useComposerInternals();
-  const getValue = useCallback(
-    () => selector(commandListStore.getSnapshot()),
-    [commandListStore, selector],
-  );
-  return useSyncExternalStore(commandListStore.subscribe, getValue, getValue);
 };
 
 // ---------------------------------------------------------------------------
@@ -1388,13 +1367,6 @@ const useAsRef = <T,>(value: T) => {
     ref.current = value;
   });
   return ref;
-};
-
-// Like useRef, but the initializer runs at most once. Used for stable stores.
-const useLazyRef = <T,>(initializer: () => T) => {
-  const ref = useRef<T | undefined>(undefined);
-  if (ref.current === undefined) ref.current = initializer();
-  return ref as { current: T };
 };
 
 const useCommandRegistry = (commands: ComposerCommandsMap) => {
@@ -1523,7 +1495,6 @@ const ComposerRoot = ({
 }: ComposerRootProps) => {
   const editorRef = useRef<Editor | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
-  const commandListStore = useLazyRef(() => createCommandListStore()).current;
 
   const onSubmitRef = useAsRef(onSubmit);
 
@@ -1606,11 +1577,10 @@ const ComposerRoot = ({
       editorRef,
       attachmentConfigRef: composerStore.attachmentConfigRef,
       commands,
-      commandListStore,
       getRegisteredPrefixes,
       reportEditorUpdate,
     }),
-    [commands, commandListStore, getRegisteredPrefixes, reportEditorUpdate],
+    [commands, getRegisteredPrefixes, reportEditorUpdate],
   );
 
   return (
@@ -1782,8 +1752,7 @@ const ComposerTextarea = ({
   children,
 }: ComposerTextareaProps) => {
   const hasContent = useComposer((composer) => composer.textarea.hasContent);
-  const { editorRef, commandListStore, getRegisteredPrefixes, reportEditorUpdate } =
-    useComposerInternals();
+  const { editorRef, getRegisteredPrefixes, reportEditorUpdate } = useComposerInternals();
 
   const isControlled = value !== undefined;
 
@@ -1863,7 +1832,7 @@ const ComposerTextarea = ({
         switch (action.type) {
           case "command-select": {
             event.preventDefault();
-            commandListStore.selectRef.current?.();
+            composerStore.commandSelectRef.current?.();
             return true;
           }
           case "command-close": {
@@ -1873,7 +1842,7 @@ const ComposerTextarea = ({
           }
           case "command-navigate": {
             event.preventDefault();
-            commandListStore.navigateRef.current?.(action.direction);
+            composerStore.commandNavigateRef.current?.(action.direction);
             return true;
           }
           case "ask-user-arrow": {
@@ -1923,7 +1892,7 @@ const ComposerTextarea = ({
       onValueChangeRef.current?.(text);
       reportEditorUpdate(instance);
       const pluginState = commandListPluginKey.getState(instance.state);
-      commandListStore.setSnapshot({
+      composerStore.setCommands({
         isOpen: pluginState?.isOpen ?? false,
         trigger: pluginState?.trigger ?? null,
         query: pluginState?.query ?? "",
@@ -2034,7 +2003,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
 type ComposerContextWindowProps = ComponentProps<"div">;
 
 const ComposerContextWindow = ({ className, children, ...props }: ComposerContextWindowProps) => {
-  const isPanelOpen = useComposer((composer) => composer.isPanelOpen);
+  const isPanelOpen = useComposer((composer) => composer.panel.isOpen);
   const hasContent = Children.toArray(children).length > 0;
   // Yield to an open panel — the strip slides back out once it closes.
   const isVisible = hasContent && !isPanelOpen;
@@ -2100,7 +2069,7 @@ type ComposerPanelProps = ComponentProps<"div"> & {
 };
 
 const ComposerPanel = ({ children, className, value, ...props }: ComposerPanelProps) => {
-  const isCommandListOpen = useCommandListSnapshot((snapshot) => snapshot.isOpen);
+  const isCommandListOpen = useComposer((composer) => composer.commands.isOpen);
   const [contentRef, bounds] = useMeasure();
 
   // When a command-list prefix is active, route the panel to its
@@ -2115,12 +2084,13 @@ const ComposerPanel = ({ children, className, value, ...props }: ComposerPanelPr
     : null;
   const hasMatch = matchedChild != null;
 
-  // Mirror panel visibility into the store so sibling parts (the context
-  // window) can yield while a panel is open.
+  // Mirror the open panel into the store so sibling parts (the context
+  // window) can yield while a panel is open and consumers can read which
+  // panel is active.
   useEffect(() => {
-    composerStore.setPanelOpen(hasMatch);
-    return () => composerStore.setPanelOpen(false);
-  }, [hasMatch]);
+    composerStore.setPanelValue(hasMatch ? (effectiveValue ?? null) : null);
+    return () => composerStore.setPanelValue(null);
+  }, [hasMatch, effectiveValue]);
 
   return (
     <div
@@ -2280,12 +2250,11 @@ type ComposerCommandListProps = {
 const ComposerCommandList = ({ prefix, className, children }: ComposerCommandListProps) => {
   const attachments = useComposer((composer) => composer.attachments);
   const internals = useComposerInternals();
-  const { commandListStore } = internals;
 
-  const isActive = useCommandListSnapshot(
-    (snapshot) => snapshot.isOpen && snapshot.trigger === prefix,
+  const isActive = useComposer(
+    (composer) => composer.commands.isOpen && composer.commands.trigger === prefix,
   );
-  const query = useCommandListSnapshot((snapshot) => snapshot.query);
+  const query = useComposer((composer) => composer.commands.query);
 
   const config = internals.commands[prefix];
   const itemsProp = config?.items ?? EMPTY_ITEMS;
@@ -2355,10 +2324,10 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
   );
 
   if (isActive) {
-    commandListStore.selectRef.current = effectiveHighlight
+    composerStore.commandSelectRef.current = effectiveHighlight
       ? () => selectByValue(effectiveHighlight)
       : null;
-    commandListStore.navigateRef.current = (direction: number) => {
+    composerStore.commandNavigateRef.current = (direction: number) => {
       const next = computeNextHighlight(items, effectiveHighlight, direction === -1 ? -1 : 1);
       setHighlightOverride(next);
     };

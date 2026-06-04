@@ -23,6 +23,7 @@ import { useActiveComposerState } from "@/hooks/use-active-composer-state";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
 import type { AppUIMessage } from "@/lib/ai/types";
+import { applyStopToMessages } from "@/lib/chat-instance";
 import {
   getAskUserInfo,
   getChainInfo,
@@ -316,6 +317,9 @@ const ChatMessages = () => {
                   </Message.Sources>
                 )}
 
+                {/* Stopped marker — assistant turn the user aborted mid-stream */}
+                {isAssistant && message.metadata?.stopped && <Message.Stopped />}
+
                 {/* Actions — hide while waiting for tool input */}
                 {!askUser.isAwaitingInput && (
                   <Message.Actions>
@@ -385,9 +389,27 @@ const MENTION_ITEMS: CommandItemData[] = [
 ];
 
 const ChatInput = () => {
-  const { chatId, messages, sendMessage, status, addToolOutput, selections, clearSelections } =
-    useChatContext();
+  const {
+    chatId,
+    messages,
+    sendMessage,
+    status,
+    stop,
+    setMessages,
+    addToolOutput,
+    selections,
+    clearSelections,
+  } = useChatContext();
   const router = useRouter();
+  const isGenerating = status === "submitted" || status === "streaming";
+
+  // Mark the in-flight turn stopped (or drop it if empty) in-memory for an
+  // instant marker, then abort. onFinish re-applies the same transform when it
+  // persists, so the saved copy matches regardless of ordering.
+  const handleStop = useCallback(() => {
+    setMessages((previous) => applyStopToMessages(previous));
+    stop();
+  }, [setMessages, stop]);
   const createChat = useChatStore((state) => state.createChat);
   const { model, setModel } = useModelStore();
   const [isSending, setIsSending] = useState(false);
@@ -444,7 +466,6 @@ const ChatInput = () => {
 
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
-      console.log("[chat] composer submit", data);
       if (data.kind === "answers") {
         if (panelState.type !== "ask-user") return;
         addToolOutput({
@@ -648,7 +669,7 @@ const ChatInput = () => {
               <ModelSelector value={model} onValueChange={setModel} />
               <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
             </div>
-            <Composer.Submit />
+            <Composer.Submit isGenerating={isGenerating} onStop={handleStop} />
           </Composer.Actions>
         )}
       </Composer.Container>

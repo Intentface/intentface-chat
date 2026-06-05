@@ -49,6 +49,7 @@ import {
 import { Chip, type ChipVariant } from "@/components/ai/chip";
 import { Commands } from "@/components/ai/commands";
 import { SendIcon } from "@/components/icons/send";
+import { StopIcon } from "@/components/icons/stop";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
@@ -2036,26 +2037,68 @@ const ComposerActions = ({ className, ...props }: ComponentProps<"div">) => (
   />
 );
 
-type ComposerSubmitProps = ComponentProps<typeof IconButton>;
+type ComposerSubmitProps = ComponentProps<typeof IconButton> & {
+  // While generating, the button morphs into a stop control: the send glyph
+  // cross-fades to a stop square, the type flips to "button", and clicking it
+  // (or pressing Escape) calls onStop instead of submitting the form.
+  isGenerating?: boolean;
+  onStop?: () => void;
+};
 
-const ComposerSubmit = ({ children, className, disabled, ...props }: ComposerSubmitProps) => {
+const ComposerSubmit = ({
+  children,
+  className,
+  disabled,
+  isGenerating = false,
+  onStop,
+  onClick,
+  ...props
+}: ComposerSubmitProps) => {
   const hasContent = useComposer((composer) => composer.textarea.hasContent);
   const isSubmitting = useComposer((composer) => composer.isSubmitting);
   const attachments = useComposer((composer) => composer.attachments);
+
+  // Esc aborts while generating — unless something already handled it (the
+  // command-list closes on Esc and preventDefaults first, so it wins).
+  const onStopRef = useAsRef(onStop);
+  useEffect(() => {
+    if (!isGenerating) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      onStopRef.current?.();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isGenerating]);
 
   const autoDisabled =
     disabled ?? ((!hasContent && attachments.items.length === 0) || isSubmitting);
 
   return (
     <IconButton
-      type="submit"
+      type={isGenerating ? "button" : "submit"}
       variant="accent"
       data-slot="composer-submit"
+      data-generating={isGenerating ? "" : undefined}
+      aria-label={isGenerating ? "Stop generating" : undefined}
       className={cn("rounded-full", className)}
-      disabled={autoDisabled}
+      disabled={isGenerating ? false : autoDisabled}
+      onClick={isGenerating ? () => onStop?.() : onClick}
       {...props}
     >
-      {children ?? <SendIcon />}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={isGenerating ? "stop" : "send"}
+          initial={{ opacity: 0, scale: 0.8, filter: "blur(4px)" }}
+          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          exit={{ opacity: 0, scale: 0.8, filter: "blur(4px)" }}
+          transition={{ duration: 0.15 }}
+          className="flex items-center justify-center"
+        >
+          {isGenerating ? <StopIcon /> : (children ?? <SendIcon />)}
+        </motion.span>
+      </AnimatePresence>
     </IconButton>
   );
 };

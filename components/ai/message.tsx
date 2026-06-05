@@ -19,6 +19,7 @@ import { parseChipSegments } from "@/lib/ai/chip-markdown";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
+import { StopIcon } from "../icons/stop";
 
 type MessageRootProps = {
   role: UIMessage["role"];
@@ -196,6 +197,22 @@ const MessageError = ({ children, className, ...props }: ComponentProps<"div">) 
   </div>
 );
 
+// Stopped indicator — a centered badge on an assistant turn the user aborted
+// mid-stream. The SelectionToolbar is scoped to message-content, so this marker
+// (a sibling outside it) never triggers the "Add to chat" popover.
+const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-stopped"
+    className={cn("flex w-full justify-center", className)}
+    {...props}
+  >
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-border bg-primary px-2.5 py-1 text-xs text-ink-secondary">
+      <StopIcon className="size-3 shrink-0" />
+      Stopped
+    </span>
+  </div>
+);
+
 // Loading indicator with animated dots
 const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
   <div
@@ -324,8 +341,9 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
 
 // ---------------------------------------------------------------------------
 // Message.SelectionToolbar — floating "Add to chat" bar above a text selection
-// within this message. An invisible anchor span resolves the owning
-// [data-slot="message"] element, so the listeners are scoped per message.
+// within this message's content. An invisible anchor span resolves the owning
+// [data-slot="message-content"] element, so the listeners are scoped to the
+// answer text — not markers, sources, or actions elsewhere in the message.
 // ---------------------------------------------------------------------------
 
 type MessageSelection = {
@@ -386,9 +404,15 @@ const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarPr
   const [messageElement, setMessageElement] = useState<HTMLElement | null>(null);
   const selection = useMessageSelection(messageElement);
 
-  // Resolve the owning message root from the anchor's DOM position.
+  // Scope to the owning message's content — the assistant's answer text. The
+  // anchor sits outside it (sibling), so resolve the message root first, then
+  // its content child. Markers like message-stopped, sources, and reasoning
+  // live outside message-content and so never raise the toolbar.
   const anchorRef = useCallback((node: HTMLSpanElement | null) => {
-    setMessageElement(node?.closest<HTMLElement>('[data-slot="message"]') ?? null);
+    const messageRoot = node?.closest<HTMLElement>('[data-slot="message"]');
+    setMessageElement(
+      messageRoot?.querySelector<HTMLElement>('[data-slot="message-content"]') ?? null,
+    );
   }, []);
 
   // Virtual anchor over the live Range — Floating UI's auto-update re-reads
@@ -513,6 +537,7 @@ export const Message = Object.assign(MessageRoot, {
   Markdown: MessageMarkdown,
   Chip: MessageChip,
   Error: MessageError,
+  Stopped: MessageStopped,
   Loading: MessageLoading,
   Timestamp: MessageTimestamp,
   Sources: MessageSources,

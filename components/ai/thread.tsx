@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { IconButton } from "@/components/ui/icon-button";
+import Button from "@/components/ui/button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon } from "../icons/arrow-down";
@@ -88,7 +88,7 @@ const measureTopInset = (root: HTMLElement): number =>
  * React state, so composer growth never re-renders the thread:
  *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
  *   --thread-turn-min-height is the visible thread area (root − top − bottom),
- *   which <Thread.AutoScroll> writes onto reserved turns.
+ *   which the last message turn uses to reserve the active area.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
 const useThreadInsets = () => {
@@ -290,21 +290,26 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
   }, [scrollToBottom]);
 
   return (
-    <div className="absolute -top-3 right-4 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
-      <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-end">
+    <div className="absolute inset-x-0 -top-3 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
+      <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-center">
         <AnimatePresence>
           {!isAtBottom && (
             <motion.div
-              aria-label="Scroll to bottom"
               initial={{ opacity: 0, y: 8, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.9 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               {...props}
             >
-              <IconButton size="lg" onClick={handleScrollToBottom} className="rounded-full">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleScrollToBottom}
+                className="rounded-full shadow-md"
+              >
                 <ArrowDownIcon />
-              </IconButton>
+                Latest
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -336,15 +341,13 @@ const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderP
 );
 
 // ---------------------------------------------------------------------------
-// ThreadAutoScroll — opt-in. Mount it to enable reserve + land + push + follow.
+// ThreadAutoScroll — opt-in. Mount it to land on the latest turn and follow
+// streaming content while the user stays at the bottom.
 // Renders nothing; it reacts to its own DOM (no chatId, no messages, no key).
 // ---------------------------------------------------------------------------
 
-const PUSH_SETTLE_FALLBACK_MS = 700;
-const TURN_SELECTOR = ':scope > [data-slot="message-turn"]';
-
 const ThreadAutoScroll = () => {
-  const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useThreadScroll();
+  const { contentRef, isAtBottom, scrollToBottom } = useThreadScroll();
   // Mirror at-bottom into a ref so the follow observer reads it without
   // re-subscribing each time it flips.
   const atBottomRef = useRef(isAtBottom);
@@ -352,97 +355,45 @@ const ThreadAutoScroll = () => {
 
   useEffect(() => {
     const content = contentRef.current;
-    const root = scrollRef.current;
-    if (!content || !root) return;
+    if (!content) return;
 
-    let prevLast: HTMLElement | null = null;
-    let landed = false;
-    let pushing = false;
-    let settleTimer: ReturnType<typeof setTimeout> | null = null;
-    const reservedTurns = new Set<HTMLElement>();
+    let hasLanded = false;
+    let ignoreNextResize = true;
 
-    const reserve = (turn: HTMLElement | null) => {
-      if (!turn) return;
-      turn.dataset.threadReserve = "";
-      reservedTurns.add(turn);
+    const landOnLatest = (behavior: ScrollBehavior) => {
+      ignoreNextResize = true;
+      scrollToBottom(behavior);
+      hasLanded = true;
     };
 
-    const release = (turn: HTMLElement | null) => {
-      if (!turn) return;
-      delete turn.dataset.threadReserve;
-      reservedTurns.delete(turn);
+    const handleContentMutation = (records: MutationRecord[]) => {
+      const replacedContent = records.some((record) => record.removedNodes.length > 0);
+      landOnLatest(hasLanded && !replacedContent ? "smooth" : "instant");
     };
 
-    const releaseExcept = (keeper: HTMLElement | null) => {
-      for (const turn of Array.from(reservedTurns)) {
-        if (turn !== keeper) release(turn);
+    const followLatest = () => {
+      if (ignoreNextResize) {
+        ignoreNextResize = false;
+        return;
       }
-    };
-
-    const lastTurn = (): HTMLElement | null => {
-      const turns = content.querySelectorAll<HTMLElement>(TURN_SELECTOR);
-      return turns.length ? turns[turns.length - 1] : null;
-    };
-
-    const endPush = () => {
-      if (settleTimer) clearTimeout(settleTimer);
-      settleTimer = null;
-      root.removeEventListener("scrollend", endPush);
-      pushing = false;
-      releaseExcept(prevLast);
-    };
-
-    const push = (outgoing: HTMLElement | null, incoming: HTMLElement) => {
-      endPush();
-      pushing = true;
-      reserve(outgoing);
-      reserve(incoming);
+      if (!atBottomRef.current) return;
       scrollToBottom("smooth");
-      root.addEventListener("scrollend", endPush, { once: true });
-      settleTimer = setTimeout(endPush, PUSH_SETTLE_FALLBACK_MS);
     };
 
-    // Decide from structure: previous last-turn node gone (turns replaced) →
-    // switch/open/cold-load → land; still present with a newer turn after it →
-    // send → push.
-    const decide = () => {
-      const last = lastTurn();
-      const prev = prevLast;
-      prevLast = last;
-      if (!last) {
-        releaseExcept(null);
-        return;
-      }
-      reserve(last);
-      if (!landed || !prev || !content.contains(prev)) {
-        landed = true;
-        releaseExcept(last);
-        scrollToBottom("instant");
-        return;
-      }
-      if (last !== prev) push(prev, last);
-    };
+    landOnLatest("instant");
 
-    decide(); // turns already present when AutoScroll mounts
-
-    const mo = new MutationObserver(decide);
+    const mo = new MutationObserver(handleContentMutation);
     mo.observe(content, { childList: true });
 
-    // Follow: while at the bottom and not mid-push, glue to the newest line as
-    // the reply streams. scrollHeight is read only on a real size change.
-    const ro = new ResizeObserver(() => {
-      if (pushing) return;
-      if (atBottomRef.current) scrollToBottom("instant");
-    });
+    // Follow streaming growth only while the user remains at the bottom.
+    const ro = new ResizeObserver(followLatest);
     ro.observe(content);
 
     return () => {
       mo.disconnect();
       ro.disconnect();
-      endPush();
-      for (const turn of reservedTurns) release(turn);
     };
-  }, [scrollRef, contentRef, scrollToBottom]);
+  }, [contentRef, scrollToBottom]);
 
   return null;
 };

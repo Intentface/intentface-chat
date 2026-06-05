@@ -7,17 +7,12 @@ import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
-import {
-  type ChipData,
-  type CommandItemData,
-  Composer,
-  type ComposerSubmitData,
-} from "@/components/ai/composer";
+import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
-import { Thread, useThreadScroll } from "@/components/ai/thread";
+import { Thread } from "@/components/ai/thread";
 import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
@@ -182,24 +177,6 @@ const InterleavedSteps = ({
   );
 };
 
-// Pins the view to a newly-sent user message. The last turn's min-height has
-// already reserved a viewport of space, so scrolling to the bottom lands the new
-// user message just under the top overlay. rAF lets that min-height commit before
-// we read scrollHeight. Re-engaging the bottom also resumes the thread's
-// stream-follow even if the user had scrolled up to read history.
-const useScrollToNewMessage = (messages: AppUIMessage[]) => {
-  const { scrollToBottom } = useThreadScroll();
-  const prevUserCountRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const userCount = messages.reduce((count, m) => (m.role === "user" ? count + 1 : count), 0);
-    if (prevUserCountRef.current !== null && userCount > prevUserCountRef.current) {
-      requestAnimationFrame(() => scrollToBottom("smooth"));
-    }
-    prevUserCountRef.current = userCount;
-  }, [messages, scrollToBottom]);
-};
-
 const ChatMessages = () => {
   const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
   const model = useModelStore((state) => state.model);
@@ -214,15 +191,13 @@ const ChatMessages = () => {
   // Track messages present at mount — skip entrance animation for these
   const initialMessageIds = useRef(new Set(messages.map((m) => m.id)));
 
-  useScrollToNewMessage(messages);
-
   const turns = groupTurns(messages);
   const lastMessageId = messages.at(-1)?.id;
 
   return (
     <>
       {turns.map((turn, turnIndex) => (
-        <Message.Turn key={turn.key} isLast={turnIndex === turns.length - 1}>
+        <Message.Turn key={turn.key}>
           {turn.messages.map(({ parts, ...message }) => {
             const isLastMessage = message.id === lastMessageId;
             const isAssistant = message.role === "assistant";
@@ -239,7 +214,7 @@ const ChatMessages = () => {
               : null;
             const askUser = getAskUserInfo(parts);
             const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
-            const userChips: ChipData[] = isUser
+            const userChips = isUser
               ? parts.flatMap((p) => (p.type === "data-chip" ? p.data : []))
               : [];
 
@@ -745,6 +720,9 @@ const ChatDefaultLayout = () => {
             <ChatMessages />
           )}
         </Thread.Viewport>
+        {/* Opt in to auto-scroll (reserve + land + push + follow). Remove this and
+            the thread is a plain scroll area with a working scroll-to-bottom button. */}
+        <Thread.AutoScroll />
         <Thread.Composer>
           <Thread.ScrollButton />
           <ChatInput />

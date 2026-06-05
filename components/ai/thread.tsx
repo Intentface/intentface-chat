@@ -18,13 +18,16 @@ import { cn } from "@/lib/utils";
 import { ArrowDownIcon } from "../icons/arrow-down";
 
 // ---------------------------------------------------------------------------
-// Scroll context (replaces use-stick-to-bottom)
+// Scroll context — a small, generic primitive surface. Auto-scroll behavior is
+// opt-in via <Thread.AutoScroll>; nothing here knows about chats or messages.
 // ---------------------------------------------------------------------------
 
 type ThreadScrollContextValue = {
   isAtBottom: boolean;
   scrollToBottom: (behavior?: ScrollBehavior) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
+  contentRef: RefObject<HTMLDivElement | null>;
+  sentinelRef: RefObject<HTMLDivElement | null>;
 };
 
 const ThreadScrollContext = createContext<ThreadScrollContextValue | null>(null);
@@ -36,8 +39,7 @@ export const useThreadScroll = () => {
 };
 
 // Single place that performs the scroll, so callers just choose the behavior:
-// 'instant' for jumps that must not animate (first mount), 'smooth' for
-// deliberate movements.
+// 'instant' for jumps that must not animate, 'smooth' for deliberate movements.
 const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavior) => {
   el.scrollTo({ top, behavior });
 };
@@ -86,7 +88,7 @@ const measureTopInset = (root: HTMLElement): number =>
  * React state, so composer growth never re-renders the thread:
  *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
  *   --thread-turn-min-height is the visible thread area (root − top − bottom),
- *   which the last turn uses as its min-height to pin itself to the top.
+ *   which <Thread.AutoScroll> writes onto reserved turns.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
 const useThreadInsets = () => {
@@ -124,68 +126,29 @@ const useThreadInsets = () => {
 const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
   const rootRef = useThreadInsets();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // "At the bottom" = the bottom sentinel is in view. IntersectionObserver
+  // computes it off the main thread (no scrollTop/scrollHeight reads); it drives
+  // the scroll button and, when <Thread.AutoScroll> is mounted, gates the follow.
   const [isAtBottom, setIsAtBottom] = useState(true);
-  // Fresh mirror for the ResizeObserver below — it reads the latest value
-  // without re-subscribing (re-subscribing re-fires observe() and thrashes).
-  const isAtBottomRef = useRef(true);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const io = new IntersectionObserver(([entry]) => setIsAtBottom(entry.isIntersecting), { root });
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = scrollRef.current;
     if (el) scrollContainerTo(el, el.scrollHeight, behavior);
   }, []);
 
-  // First mount: jump straight to the bottom so an existing conversation opens
-  // pinned to the latest message instead of flashing at the top. Declared after
-  // useThreadInsets, so --thread-turn-min-height is already written and the last
-  // turn's reserved height is included in scrollHeight.
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (el) scrollContainerTo(el, el.scrollHeight, "instant");
-  }, []);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const check = () => {
-      // Pure scroll math — the button must stay reachable even while the last
-      // turn's min-height still has room, so the user can scroll up during a
-      // long streaming response.
-      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 50;
-      isAtBottomRef.current = atBottom;
-      setIsAtBottom(atBottom);
-    };
-
-    let rafId: number;
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(check);
-    };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-
-    // Follow the stream: when content grows while we're pinned to the bottom,
-    // keep the bottom in view. The last turn's min-height shapes where "bottom"
-    // is, so this holds a new turn pinned to the top until its response
-    // overflows the viewport, then trails the stream (smooth — see 42b4e18).
-    // When detached, just re-evaluate so the button hides if a shrink (e.g. a
-    // collapsing reasoning block) leaves us back at the bottom.
-    const onContentResize = () => {
-      if (isAtBottomRef.current) scrollContainerTo(el, el.scrollHeight, "smooth");
-      else check();
-    };
-    const observer = new ResizeObserver(onContentResize);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(rafId);
-      observer.disconnect();
-    };
-  }, []);
-
   return (
-    <ThreadScrollContext value={{ isAtBottom, scrollToBottom, scrollRef }}>
+    <ThreadScrollContext value={{ isAtBottom, scrollToBottom, scrollRef, contentRef, sentinelRef }}>
       <div
         ref={rootRef}
         data-slot="thread-root"
@@ -228,7 +191,7 @@ const ThreadOverlay = memo(({ className, direction, ...props }: ThreadOverlayPro
     <ProgressiveBlur
       direction={direction}
       className={cn(
-        "h-full w-full bg-linear-to-b from-secondary to-transparent",
+        "h-full w-full bg-linear-to-b from-secondary to-transparent pointer-events-none",
         "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
         "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
       )}
@@ -248,12 +211,12 @@ export type ThreadViewportProps = ComponentProps<"div"> & {
 };
 
 const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => {
-  const { scrollRef } = useThreadScroll();
+  const { scrollRef, contentRef, sentinelRef } = useThreadScroll();
 
   return (
     <div
       ref={scrollRef}
-      className="h-full w-full overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--color-ink-tertiary)_transparent]"
+      className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--color-ink-tertiary)_transparent]"
     >
       <div
         data-slot="thread-viewport"
@@ -266,13 +229,24 @@ const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) 
         {...props}
       >
         <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
+          {/* Content column — turns are its direct children, so the auto-scroll
+              reserve can target the last turn with a clean :last-child selector. */}
           <div
-            className={cn(
-              "mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4",
-            )}
+            ref={contentRef}
+            data-slot="thread-content"
+            className="mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4"
           >
             {children}
           </div>
+          {/* Bottom sentinel — sibling of the content (not a child), so it stays
+              out of the :last-child reserve. The IntersectionObserver watches it
+              for at-bottom. */}
+          <div
+            ref={sentinelRef}
+            data-slot="thread-bottom"
+            aria-hidden
+            className="h-px w-full shrink-0"
+          />
         </div>
       </div>
     </div>
@@ -362,6 +336,118 @@ const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderP
 );
 
 // ---------------------------------------------------------------------------
+// ThreadAutoScroll — opt-in. Mount it to enable reserve + land + push + follow.
+// Renders nothing; it reacts to its own DOM (no chatId, no messages, no key).
+// ---------------------------------------------------------------------------
+
+const PUSH_SETTLE_FALLBACK_MS = 700;
+const TURN_SELECTOR = ':scope > [data-slot="message-turn"]';
+
+const ThreadAutoScroll = () => {
+  const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useThreadScroll();
+  // Mirror at-bottom into a ref so the follow observer reads it without
+  // re-subscribing each time it flips.
+  const atBottomRef = useRef(isAtBottom);
+  atBottomRef.current = isAtBottom;
+
+  useEffect(() => {
+    const content = contentRef.current;
+    const root = scrollRef.current;
+    if (!content || !root) return;
+
+    let prevLast: HTMLElement | null = null;
+    let landed = false;
+    let pushing = false;
+    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    const reservedTurns = new Set<HTMLElement>();
+
+    const reserve = (turn: HTMLElement | null) => {
+      if (!turn) return;
+      turn.dataset.threadReserve = "";
+      reservedTurns.add(turn);
+    };
+
+    const release = (turn: HTMLElement | null) => {
+      if (!turn) return;
+      delete turn.dataset.threadReserve;
+      reservedTurns.delete(turn);
+    };
+
+    const releaseExcept = (keeper: HTMLElement | null) => {
+      for (const turn of Array.from(reservedTurns)) {
+        if (turn !== keeper) release(turn);
+      }
+    };
+
+    const lastTurn = (): HTMLElement | null => {
+      const turns = content.querySelectorAll<HTMLElement>(TURN_SELECTOR);
+      return turns.length ? turns[turns.length - 1] : null;
+    };
+
+    const endPush = () => {
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = null;
+      root.removeEventListener("scrollend", endPush);
+      pushing = false;
+      releaseExcept(prevLast);
+    };
+
+    const push = (outgoing: HTMLElement | null, incoming: HTMLElement) => {
+      endPush();
+      pushing = true;
+      reserve(outgoing);
+      reserve(incoming);
+      scrollToBottom("smooth");
+      root.addEventListener("scrollend", endPush, { once: true });
+      settleTimer = setTimeout(endPush, PUSH_SETTLE_FALLBACK_MS);
+    };
+
+    // Decide from structure: previous last-turn node gone (turns replaced) →
+    // switch/open/cold-load → land; still present with a newer turn after it →
+    // send → push.
+    const decide = () => {
+      const last = lastTurn();
+      const prev = prevLast;
+      prevLast = last;
+      if (!last) {
+        releaseExcept(null);
+        return;
+      }
+      reserve(last);
+      if (!landed || !prev || !content.contains(prev)) {
+        landed = true;
+        releaseExcept(last);
+        scrollToBottom("instant");
+        return;
+      }
+      if (last !== prev) push(prev, last);
+    };
+
+    decide(); // turns already present when AutoScroll mounts
+
+    const mo = new MutationObserver(decide);
+    mo.observe(content, { childList: true });
+
+    // Follow: while at the bottom and not mid-push, glue to the newest line as
+    // the reply streams. scrollHeight is read only on a real size change.
+    const ro = new ResizeObserver(() => {
+      if (pushing) return;
+      if (atBottomRef.current) scrollToBottom("instant");
+    });
+    ro.observe(content);
+
+    return () => {
+      mo.disconnect();
+      ro.disconnect();
+      endPush();
+      for (const turn of reservedTurns) release(turn);
+    };
+  }, [scrollRef, contentRef, scrollToBottom]);
+
+  return null;
+};
+
+// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -371,4 +457,5 @@ export const Thread = Object.assign(ThreadRoot, {
   Composer: ThreadComposer,
   Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
+  AutoScroll: ThreadAutoScroll,
 });

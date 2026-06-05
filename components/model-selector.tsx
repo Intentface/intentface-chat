@@ -5,11 +5,10 @@ import { ChevronGrabberVerticalIcon } from "@/components/icons/chevron-grabber-v
 import { ClaudeIcon } from "@/components/icons/claude";
 import { GeminiIcon } from "@/components/icons/gemini";
 import { GrokIcon } from "@/components/icons/grok";
-import { InceptionIcon } from "@/components/icons/inception";
 import { OpenAIIcon } from "@/components/icons/openai";
 import Button from "@/components/ui/button";
 import DropdownMenu from "@/components/ui/dropdown-menu";
-import { ALL_MODELS, INCEPTION_MODELS, type ModelId, OPENAI_MODELS } from "@/lib/models";
+import { ALL_MODELS, type ModelId, OPENAI_MODELS } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 type ModelSelectorProps = {
@@ -17,10 +16,7 @@ type ModelSelectorProps = {
   onValueChange: (value: ModelId) => void;
 };
 
-const PROVIDER_GROUPS = [
-  { provider: "openai", label: "OpenAI", models: OPENAI_MODELS },
-  { provider: "inception", label: "Inception", models: INCEPTION_MODELS },
-] as const;
+const PROVIDER_GROUPS = [{ provider: "openai", label: "OpenAI", models: OPENAI_MODELS }] as const;
 
 const DISABLED_PROVIDERS = [
   { provider: "grok", label: "Grok" },
@@ -36,8 +32,6 @@ const getProviderIcon = (
   switch (provider) {
     case "openai":
       return OpenAIIcon;
-    case "inception":
-      return InceptionIcon;
     case "grok":
       return GrokIcon;
     case "gemini":

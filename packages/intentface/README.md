@@ -47,7 +47,7 @@ Run `init` once per project. Re-running it is safe — the CSS block is idempote
 Copies the requested registry items (and their transitive dependencies) into your project.
 
 - Public items — full list in [Registry items](#registry-items). Common ones:
-  - `button`, `icon-button`, `input`, `textarea`, `checkbox`, `radio-group`, `select`, `slider`, `kbd`, `dropdown-menu`, `collapsible`, `dialog`, `drawer`, `tooltip`, `hover-card`, `separator`, `skeleton`, `sidebar`, `markdown`, `diffusion-markdown`, `progressive-blur`, `text-shimmer`, `text-loop`, `input-group`, `button-group`, `commands`, `attachments`
+  - `button`, `icon-button`, `input`, `textarea`, `checkbox`, `radio-group`, `select`, `slider`, `kbd`, `dropdown-menu`, `collapsible`, `dialog`, `drawer`, `tooltip`, `hover-card`, `separator`, `skeleton`, `sidebar`, `markdown`, `progressive-blur`, `text-shimmer`, `text-loop`, `input-group`, `button-group`, `commands`, `attachments`
   - `composer`, `message`, `thread`, `steps`, `reasoning`, `step-queue`, `artifact-card`, `artifacts-panel`
   - Bundles: `ui-primitives`, `chat-primitives`, `chat-demo`
 - With `--example`, optional example/demo files are also pulled in (e.g. a wired chat page).

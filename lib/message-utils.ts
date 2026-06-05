@@ -106,22 +106,17 @@ export const groupTurns = (messages: AppUIMessage[]): Turn[] => {
 /** Aggregated text content from all text segments in a message. */
 export type TextInfo = {
   parts: TextUIPart[];
-  /** True when multiple text parts exist (diffusion model streaming). */
-  isDiffusing: boolean;
-  lastPart: TextUIPart | undefined;
-  /** Concatenated text content (or last part's text when diffusing). */
+  /** Concatenated text content of all text parts. */
   text: string;
 };
 
-/** Extracts text parts and determines if the message uses diffusion streaming. */
+/** Extracts all text parts from a message and concatenates their content. */
 export const getTextInfo = (segments: MessageSegment[]): TextInfo => {
   const parts = segments
     .filter((s): s is MessageSegment & { type: "text" } => s.type === "text")
     .flatMap((s) => s.parts);
-  const isDiffusing = parts.length > 1;
-  const lastPart = parts.at(-1);
-  const text = isDiffusing ? (lastPart?.text ?? "") : parts.map((p) => p.text).join("");
-  return { parts, isDiffusing, lastPart, text };
+  const text = parts.map((p) => p.text).join("");
+  return { parts, text };
 };
 
 /** Extracts all file attachment parts from segments. */

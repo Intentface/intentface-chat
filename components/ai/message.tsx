@@ -46,6 +46,20 @@ const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRoot
   );
 };
 
+// Turn wrapper — groups a user message with its trailing assistant reply. The
+// last turn reserves the visible thread area so the active turn lands near the
+// top while the response streams.
+const MessageTurn = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-turn"
+    className={cn(
+      "flex w-full flex-col gap-4 [overflow-anchor:none] last:min-h-(--thread-turn-min-height)",
+      className,
+    )}
+    {...props}
+  />
+);
+
 // Message content container with role-based styling
 const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
   <div
@@ -488,6 +502,7 @@ const MessageSource = ({
 
 // Composed Message component
 export const Message = Object.assign(MessageRoot, {
+  Turn: MessageTurn,
   Content: MessageContent,
   Attachments: MessageAttachments,
   Attachment: MessageAttachment,

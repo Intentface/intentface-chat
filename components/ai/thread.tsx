@@ -12,32 +12,34 @@ import {
   useRef,
   useState,
 } from "react";
-import { IconButton } from "@/components/ui/icon-button";
+import Button from "@/components/ui/button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon } from "../icons/arrow-down";
 
 // ---------------------------------------------------------------------------
-// Scroll context (replaces use-stick-to-bottom)
+// Scroll context — a small, generic primitive surface. Auto-scroll behavior is
+// opt-in via <Thread.AutoScroll>; nothing here knows about chats or messages.
 // ---------------------------------------------------------------------------
 
 type ThreadScrollContextValue = {
   isAtBottom: boolean;
   scrollToBottom: (behavior?: ScrollBehavior) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
+  contentRef: RefObject<HTMLDivElement | null>;
+  sentinelRef: RefObject<HTMLDivElement | null>;
 };
 
 const ThreadScrollContext = createContext<ThreadScrollContextValue | null>(null);
 
-const useThreadScroll = () => {
+export const useThreadScroll = () => {
   const ctx = use(ThreadScrollContext);
   if (!ctx) throw new Error("useThreadScroll must be used within <Thread>");
   return ctx;
 };
 
 // Single place that performs the scroll, so callers just choose the behavior:
-// 'instant' for jumps that must not animate (first mount), 'smooth' for
-// deliberate movements.
+// 'instant' for jumps that must not animate, 'smooth' for deliberate movements.
 const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavior) => {
   el.scrollTo({ top, behavior });
 };
@@ -76,13 +78,20 @@ const measureComposerInset = (root: HTMLElement): number | null => {
   );
 };
 
+// Top inset reserved by the top overlay, measured straight off the rendered
+// element (px) — no getComputedStyle / rem→px conversion. 0 if no top overlay.
+const measureTopInset = (root: HTMLElement): number =>
+  root.querySelector('[data-slot="thread-overlay-top"]')?.getBoundingClientRect().height ?? 0;
+
 /**
- * Writes the measured composer inset straight to --thread-overlay-bottom-height
- * on the root (driving the bottom overlay + viewport padding) via a
- * ResizeObserver — no React state, so composer growth never re-renders the
- * thread. The spacer reads the same measurement for its own height.
+ * Writes the measured insets to CSS vars on the root via a ResizeObserver — no
+ * React state, so composer growth never re-renders the thread:
+ *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
+ *   --thread-turn-min-height is the visible thread area (root − top − bottom),
+ *   which the last message turn uses to reserve the active area.
+ * Recomputes only on root (window) / composer-dock resize — never per token.
  */
-const useComposerDockOffset = () => {
+const useThreadInsets = () => {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -90,10 +99,16 @@ const useComposerDockOffset = () => {
     if (!root) return;
 
     const apply = () => {
-      const inset = measureComposerInset(root);
-      if (inset !== null) {
-        root.style.setProperty("--thread-overlay-bottom-height", `${inset}px`);
+      const bottomInset = measureComposerInset(root);
+      if (bottomInset !== null) {
+        root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
       }
+      const topInset = measureTopInset(root);
+      const turnMin = Math.max(
+        0,
+        Math.round(root.clientHeight - topInset - (bottomInset ?? DEFAULT_BOTTOM_OFFSET)),
+      );
+      root.style.setProperty("--thread-turn-min-height", `${turnMin}px`);
     };
 
     apply();
@@ -109,50 +124,31 @@ const useComposerDockOffset = () => {
 };
 
 const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
-  const rootRef = useComposerDockOffset();
+  const rootRef = useThreadInsets();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // "At the bottom" = the bottom sentinel is in view. IntersectionObserver
+  // computes it off the main thread (no scrollTop/scrollHeight reads); it drives
+  // the scroll button and, when <Thread.AutoScroll> is mounted, gates the follow.
   const [isAtBottom, setIsAtBottom] = useState(true);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const io = new IntersectionObserver(([entry]) => setIsAtBottom(entry.isIntersecting), { root });
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, []);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const el = scrollRef.current;
     if (el) scrollContainerTo(el, el.scrollHeight, behavior);
   }, []);
 
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const check = () => {
-      // Honor pure scroll math. Short-circuiting to true while the spacer
-      // still has room would keep the button hidden during long streaming
-      // messages (the user message stays pinned via the spacer, but the
-      // assistant content below it can already overflow the viewport — and
-      // the user wants to be able to scroll up).
-      const threshold = 50;
-      setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < threshold);
-    };
-
-    let rafId: number;
-    const onScroll = () => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(check);
-    };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-
-    // Also check when content resizes (new messages, spacer height changes)
-    const observer = new ResizeObserver(check);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-
-    return () => {
-      el.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(rafId);
-      observer.disconnect();
-    };
-  }, []);
-
   return (
-    <ThreadScrollContext value={{ isAtBottom, scrollToBottom, scrollRef }}>
+    <ThreadScrollContext value={{ isAtBottom, scrollToBottom, scrollRef, contentRef, sentinelRef }}>
       <div
         ref={rootRef}
         data-slot="thread-root"
@@ -195,7 +191,7 @@ const ThreadOverlay = memo(({ className, direction, ...props }: ThreadOverlayPro
     <ProgressiveBlur
       direction={direction}
       className={cn(
-        "h-full w-full bg-linear-to-b from-secondary to-transparent",
+        "h-full w-full bg-linear-to-b from-secondary to-transparent pointer-events-none",
         "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
         "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
       )}
@@ -215,12 +211,12 @@ export type ThreadViewportProps = ComponentProps<"div"> & {
 };
 
 const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => {
-  const { scrollRef } = useThreadScroll();
+  const { scrollRef, contentRef, sentinelRef } = useThreadScroll();
 
   return (
     <div
       ref={scrollRef}
-      className="h-full w-full overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--color-ink-tertiary)_transparent]"
+      className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--color-ink-tertiary)_transparent]"
     >
       <div
         data-slot="thread-viewport"
@@ -233,13 +229,24 @@ const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) 
         {...props}
       >
         <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
+          {/* Content column — turns are its direct children, so the auto-scroll
+              reserve can target the last turn with a clean :last-child selector. */}
           <div
-            className={cn(
-              "mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4",
-            )}
+            ref={contentRef}
+            data-slot="thread-content"
+            className="mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4"
           >
             {children}
           </div>
+          {/* Bottom sentinel — sibling of the content (not a child), so it stays
+              out of the :last-child reserve. The IntersectionObserver watches it
+              for at-bottom. */}
+          <div
+            ref={sentinelRef}
+            data-slot="thread-bottom"
+            aria-hidden
+            className="h-px w-full shrink-0"
+          />
         </div>
       </div>
     </div>
@@ -283,21 +290,26 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
   }, [scrollToBottom]);
 
   return (
-    <div className="absolute -top-3 right-4 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
-      <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-end">
+    <div className="absolute inset-x-0 -top-3 mx-auto flex h-0 w-full justify-center px-4 md:px-0">
+      <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-center">
         <AnimatePresence>
           {!isAtBottom && (
             <motion.div
-              aria-label="Scroll to bottom"
               initial={{ opacity: 0, y: 8, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.9 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               {...props}
             >
-              <IconButton size="lg" onClick={handleScrollToBottom} className="rounded-full">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleScrollToBottom}
+                className="rounded-full shadow-md"
+              >
                 <ArrowDownIcon />
-              </IconButton>
+                Latest
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -329,125 +341,61 @@ const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderP
 );
 
 // ---------------------------------------------------------------------------
-// DynamicSpacer
+// ThreadAutoScroll — opt-in. Mount it to land on the latest turn and follow
+// streaming content while the user stays at the bottom.
+// Renders nothing; it reacts to its own DOM (no chatId, no messages, no key).
 // ---------------------------------------------------------------------------
 
-const getScrollParent = (element: HTMLElement): HTMLElement | null => {
-  let parent = element.parentElement;
-  while (parent) {
-    const { overflowY } = getComputedStyle(parent);
-    if (overflowY === "auto" || overflowY === "scroll") return parent;
-    parent = parent.parentElement;
-  }
+const ThreadAutoScroll = () => {
+  const { contentRef, isAtBottom, scrollToBottom } = useThreadScroll();
+  // Mirror at-bottom into a ref so the follow observer reads it without
+  // re-subscribing each time it flips.
+  const atBottomRef = useRef(isAtBottom);
+  atBottomRef.current = isAtBottom;
+
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    let hasLanded = false;
+    let ignoreNextResize = true;
+
+    const landOnLatest = (behavior: ScrollBehavior) => {
+      ignoreNextResize = true;
+      scrollToBottom(behavior);
+      hasLanded = true;
+    };
+
+    const handleContentMutation = (records: MutationRecord[]) => {
+      const replacedContent = records.some((record) => record.removedNodes.length > 0);
+      landOnLatest(hasLanded && !replacedContent ? "smooth" : "instant");
+    };
+
+    const followLatest = () => {
+      if (ignoreNextResize) {
+        ignoreNextResize = false;
+        return;
+      }
+      if (!atBottomRef.current) return;
+      scrollToBottom("smooth");
+    };
+
+    landOnLatest("instant");
+
+    const mo = new MutationObserver(handleContentMutation);
+    mo.observe(content, { childList: true });
+
+    // Follow streaming growth only while the user remains at the bottom.
+    const ro = new ResizeObserver(followLatest);
+    ro.observe(content);
+
+    return () => {
+      mo.disconnect();
+      ro.disconnect();
+    };
+  }, [contentRef, scrollToBottom]);
+
   return null;
-};
-
-// Top inset reserved by the top overlay, measured straight off the rendered
-// element (px) — no getComputedStyle / rem→px conversion. 0 if no top overlay.
-const measureTopInset = (root: HTMLElement): number =>
-  root.querySelector('[data-slot="thread-overlay-top"]')?.getBoundingClientRect().height ?? 0;
-
-// Distance from `target`'s row down to the spacer (px). They're siblings, so the
-// offsetTop delta already includes the flex gaps between them — no gap lookup,
-// no per-child loop, no getComputedStyle.
-const measureContentHeight = (spacer: HTMLElement, target: HTMLElement): number => {
-  const parent = spacer.parentElement;
-  if (!parent) return 0;
-  const children = Array.from(parent.children) as HTMLElement[];
-  const targetChild = children.find((child) => child.contains(target)) ?? target;
-  return spacer.offsetTop - targetChild.offsetTop;
-};
-
-// Scroll offset of `el`'s top within `container`'s scrollable content.
-const absoluteTop = (container: HTMLElement, el: HTMLElement): number =>
-  container.scrollTop + el.getBoundingClientRect().top - container.getBoundingClientRect().top;
-
-const ThreadSpacer = () => {
-  const { isAtBottom } = useThreadScroll();
-  const spacerRef = useRef<HTMLDivElement>(null);
-  const scrollParentRef = useRef<HTMLElement | null>(null);
-  const prevUserMessageCountRef = useRef(0);
-  const hasInitializedRef = useRef(false);
-
-  const calculateHeight = useCallback(() => {
-    const spacer = spacerRef.current;
-    if (!spacer) return;
-
-    scrollParentRef.current ??= getScrollParent(spacer);
-    const scrollContainer = scrollParentRef.current;
-    if (!scrollContainer) return;
-
-    const userMessages = scrollContainer.querySelectorAll<HTMLElement>(
-      '[data-slot="message"][data-role="user"]',
-    );
-    const messages = scrollContainer.querySelectorAll<HTMLElement>('[data-slot="message"]');
-    const target = userMessages[userMessages.length - 1] ?? null;
-    if (!target) return;
-
-    const threadRoot = scrollContainer.closest<HTMLElement>('[data-slot="thread-root"]');
-    const rootHeight = threadRoot?.clientHeight ?? scrollContainer.clientHeight;
-    const topInset = threadRoot ? measureTopInset(threadRoot) : 0;
-    const bottomInset = (threadRoot && measureComposerInset(threadRoot)) ?? DEFAULT_BOTTOM_OFFSET;
-
-    const remaining = rootHeight - topInset - bottomInset - measureContentHeight(spacer, target);
-    spacer.style.height = `${Math.max(0, remaining)}px`;
-
-    if (!hasInitializedRef.current && messages.length > 0) {
-      // First mount with content: jump instantly so we don't flash at the top.
-      scrollContainerTo(scrollContainer, scrollContainer.scrollHeight, "instant");
-    } else if (userMessages.length > prevUserMessageCountRef.current) {
-      // New user message: pin it just below the top overlay. absoluteTop() forces
-      // a reflow, so this scrolls against the freshly-applied spacer height.
-      const top =
-        remaining <= 0
-          ? scrollContainer.scrollHeight
-          : Math.max(0, absoluteTop(scrollContainer, target) - topInset);
-      scrollContainerTo(scrollContainer, top, "smooth");
-    } else if (remaining <= 0 && isAtBottom) {
-      // Follow the stream once content overflows and the user is at the bottom.
-      // Smooth is deliberate here (see 42b4e18) — loredex uses instant instead.
-      scrollContainerTo(scrollContainer, scrollContainer.scrollHeight, "smooth");
-    }
-
-    prevUserMessageCountRef.current = userMessages.length;
-    if (messages.length > 0) hasInitializedRef.current = true;
-  }, [isAtBottom]);
-
-  // Live ref so the dock observer can call the latest calculateHeight without
-  // re-subscribing — re-subscribing a ResizeObserver re-fires it on observe(),
-  // which combined with the isAtBottom feedback caused a measure storm.
-  const calculateHeightRef = useRef(calculateHeight);
-  calculateHeightRef.current = calculateHeight;
-
-  // Recalculate before paint
-  useLayoutEffect(() => {
-    calculateHeight();
-  });
-
-  // Recompute when the thread root (window resize) or the composer dock (context
-  // window, attachments) changes size. ThreadRoot's hook writes the CSS var for
-  // the overlay + padding; this keeps the spacer's imperative height in sync
-  // without a re-render. Subscribe once and call through the ref — re-subscribing
-  // would re-fire the observer on each observe() and thrash.
-  useLayoutEffect(() => {
-    const threadRoot = spacerRef.current?.closest<HTMLElement>('[data-slot="thread-root"]');
-    if (!threadRoot) return;
-    const observer = new ResizeObserver(() => calculateHeightRef.current());
-    observer.observe(threadRoot);
-    for (const part of threadRoot.querySelectorAll(DOCK_SELECTOR)) {
-      observer.observe(part);
-    }
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={spacerRef}
-      data-slot="thread-spacer"
-      className="w-full shrink-0 ease-out"
-      style={{ overflowAnchor: "none" }}
-    />
-  );
 };
 
 // ---------------------------------------------------------------------------
@@ -460,5 +408,5 @@ export const Thread = Object.assign(ThreadRoot, {
   Composer: ThreadComposer,
   Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
-  Spacer: ThreadSpacer,
+  AutoScroll: ThreadAutoScroll,
 });

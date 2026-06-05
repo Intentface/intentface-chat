@@ -1,5 +1,6 @@
 import type { FileUIPart, ReasoningUIPart, TextUIPart, UIMessage } from "ai";
 import { isStaticToolUIPart } from "ai";
+import type { AppUIMessage } from "@/lib/ai/types";
 import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
 
 export type ToolLabels = Record<
@@ -67,6 +68,32 @@ export const getSegmentedParts = (parts: UIMessage["parts"]): MessageSegment[] =
     }
   }
   return segments;
+};
+
+// ---------------------------------------------------------------------------
+// Turn grouping
+// ---------------------------------------------------------------------------
+
+/** A conversational turn: a user message plus its trailing assistant/tool replies. */
+export type Turn = { key: string; messages: AppUIMessage[] };
+
+/**
+ * Groups messages into turns. A new turn starts at every user message;
+ * non-user messages attach to the current turn. A conversation that opens with
+ * a non-user message still gets a leading turn so nothing is dropped. The turn
+ * key is the first message's id — stable while the trailing assistant message
+ * streams, so React keys and entrance animations stay put.
+ */
+export const groupTurns = (messages: AppUIMessage[]): Turn[] => {
+  const turns: Turn[] = [];
+  for (const message of messages) {
+    if (message.role === "user" || turns.length === 0) {
+      turns.push({ key: message.id, messages: [message] });
+    } else {
+      turns[turns.length - 1].messages.push(message);
+    }
+  }
+  return turns;
 };
 
 // ---------------------------------------------------------------------------

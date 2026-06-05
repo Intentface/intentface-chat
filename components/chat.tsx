@@ -19,7 +19,6 @@ import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
-import { DiffusionMarkdown } from "@/components/ui/diffusion-markdown";
 import { useActiveComposerState } from "@/hooks/use-active-composer-state";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
@@ -179,8 +178,6 @@ const InterleavedSteps = ({
 
 const ChatMessages = () => {
   const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
-  const model = useModelStore((state) => state.model);
-  const isDiffusionModel = model === "mercury-2-diffusing";
   const isError = status === "error";
   const isStreaming = status === "streaming";
 
@@ -261,57 +258,50 @@ const ChatMessages = () => {
 
                 {/* Message content */}
                 <Message.Content>
-                  {isDiffusionModel && textInfo.isDiffusing && textInfo.lastPart ? (
-                    <DiffusionMarkdown
-                      content={textInfo.lastPart.text}
-                      isStreaming={isMessageStreaming}
-                    />
-                  ) : (
-                    parts.map((part, index) => {
-                      switch (part.type) {
-                        case "text": {
-                          // Hide intermediate text between tool calls — only
-                          // show text that appears after the last tool/reasoning part.
-                          if (chain.hasTools) {
-                            const lastChainIdx = parts.findLastIndex(
-                              (p) =>
-                                p.type === "reasoning" ||
-                                (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
-                            );
-                            if (index <= lastChainIdx) return null;
-                          }
-                          if (isUser) {
-                            return <Message.Text key={index} text={part.text} chips={userChips} />;
-                          }
-                          return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
-                        }
-                        case "data-chip":
-                          return null;
-                        case "tool-createArtifact": {
-                          const input = part.input as {
-                            title?: string;
-                            content?: string;
-                          };
-                          return (
-                            <ArtifactCard
-                              key={part.toolCallId}
-                              title={input?.title ?? "Untitled"}
-                              state={part.state}
-                              onToggle={() =>
-                                toggleArtifact({
-                                  id: part.toolCallId,
-                                  title: input?.title ?? "Untitled",
-                                  content: input?.content ?? "",
-                                })
-                              }
-                            />
+                  {parts.map((part, index) => {
+                    switch (part.type) {
+                      case "text": {
+                        // Hide intermediate text between tool calls — only
+                        // show text that appears after the last tool/reasoning part.
+                        if (chain.hasTools) {
+                          const lastChainIdx = parts.findLastIndex(
+                            (p) =>
+                              p.type === "reasoning" ||
+                              (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
                           );
+                          if (index <= lastChainIdx) return null;
                         }
-                        default:
-                          return null;
+                        if (isUser) {
+                          return <Message.Text key={index} text={part.text} chips={userChips} />;
+                        }
+                        return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
                       }
-                    })
-                  )}
+                      case "data-chip":
+                        return null;
+                      case "tool-createArtifact": {
+                        const input = part.input as {
+                          title?: string;
+                          content?: string;
+                        };
+                        return (
+                          <ArtifactCard
+                            key={part.toolCallId}
+                            title={input?.title ?? "Untitled"}
+                            state={part.state}
+                            onToggle={() =>
+                              toggleArtifact({
+                                id: part.toolCallId,
+                                title: input?.title ?? "Untitled",
+                                content: input?.content ?? "",
+                              })
+                            }
+                          />
+                        );
+                      }
+                      default:
+                        return null;
+                    }
+                  })}
                 </Message.Content>
 
                 {/* Selection → context affordance (assistant text only) */}

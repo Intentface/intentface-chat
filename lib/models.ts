@@ -21,25 +21,7 @@ export const OPENAI_MODELS = [
   },
 ] as const;
 
-export const INCEPTION_MODELS = [
-  {
-    id: "mercury-2",
-    label: "Mercury 2",
-    provider: "inception",
-  },
-  {
-    id: "mercury-2-diffusing",
-    label: "Mercury 2 (Diffusing)",
-    provider: "inception",
-  },
-  {
-    id: "mercury-2-instant",
-    label: "Mercury 2 (Instant)",
-    provider: "inception",
-  },
-] as const;
-
-export const ALL_MODELS = [...OPENAI_MODELS, ...INCEPTION_MODELS] as const;
+export const ALL_MODELS = [...OPENAI_MODELS] as const;
 
 export type ModelId = (typeof ALL_MODELS)[number]["id"];
 export type Provider = (typeof ALL_MODELS)[number]["provider"];

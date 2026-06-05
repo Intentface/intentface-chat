@@ -1,15 +1,6 @@
 import { openai } from "@ai-sdk/openai";
-import type { UIMessage } from "ai";
-import {
-  convertToModelMessages,
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  smoothStream,
-  stepCountIs,
-  streamText,
-} from "ai";
-import { inception } from "@/lib/inception";
-import { DEFAULT_MODEL, getModelConfig, isValidModelId } from "@/lib/models";
+import { convertToModelMessages, smoothStream, stepCountIs, streamText } from "ai";
+import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
 import { aggregateData } from "@/tools/aggregate-data";
 import { askUser } from "@/tools/ask-user";
 import { computeStats } from "@/tools/compute-stats";
@@ -23,131 +14,6 @@ import { listDataSources } from "@/tools/list-data-sources";
 import { queryData } from "@/tools/query-data";
 import { sortData } from "@/tools/sort-data";
 import { webSearch } from "@/tools/web-search";
-
-const getModel = (modelId: string, provider: string | undefined) => {
-  switch (provider) {
-    case "inception":
-      if (modelId === "mercury-2-diffusing") {
-        return inception("mercury-2", { diffusing: true });
-      }
-      if (modelId === "mercury-2-instant") {
-        return inception("mercury-2", { reasoningEffort: "instant" });
-      }
-      return inception(modelId);
-    default:
-      return openai(modelId);
-  }
-};
-
-/**
- * Convert UIMessages to simple OpenAI-compatible messages for direct API calls.
- */
-const toOpenAIMessages = (messages: UIMessage[]) =>
-  messages.map((m) => ({
-    role: m.role,
-    content:
-      m.parts
-        .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
-        .map((p) => p.text)
-        .join("") || "",
-  }));
-
-/**
- * Handle diffusion streaming by calling Inception API directly.
- *
- * Each diffusion snapshot (full replacement text) is sent as a separate
- * text-start/text-delta/text-end cycle. The client renders only the last
- * text part, creating the visual denoising effect as text resolves.
- */
-const handleDiffusionStream = (messages: UIMessage[]) => {
-  const apiKey = process.env.INCEPTION_API_KEY;
-  if (!apiKey) {
-    throw new Error("INCEPTION_API_KEY environment variable is required");
-  }
-
-  const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      const response = await fetch("https://api.inceptionlabs.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "mercury-2",
-          messages: toOpenAIMessages(messages),
-          stream: true,
-          diffusing: true,
-          stream_options: { include_usage: true },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Inception API error (${response.status}): ${errorBody}`);
-      }
-
-      if (!response.body) {
-        throw new Error("Inception API returned no response body");
-      }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let snapshotIndex = 0;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || !trimmed.startsWith("data: ")) continue;
-          if (trimmed === "data: [DONE]") continue;
-
-          const jsonStr = trimmed.slice(6);
-          if (!jsonStr.startsWith("{")) continue;
-
-          let chunk: Record<string, unknown>;
-          try {
-            chunk = JSON.parse(jsonStr);
-          } catch {
-            continue;
-          }
-
-          const choices = chunk.choices as Array<Record<string, unknown>> | undefined;
-          const choice = choices?.[0];
-
-          if (choice) {
-            const delta = choice.delta as Record<string, unknown> | undefined;
-            const content = delta?.content as string | null | undefined;
-
-            if (content != null && content !== "") {
-              // Each snapshot is a full text replacement — send as a
-              // separate text part so the client can show the latest one.
-              const textId = `diffusion-${snapshotIndex++}`;
-              writer.write({ type: "text-start", id: textId });
-              writer.write({
-                type: "text-delta",
-                delta: content,
-                id: textId,
-              });
-              writer.write({ type: "text-end", id: textId });
-            }
-          }
-        }
-      }
-
-      writer.write({ type: "finish", finishReason: "stop" });
-    },
-    originalMessages: messages,
-  });
-
-  return createUIMessageStreamResponse({ stream });
-};
 
 const SYSTEM_PROMPT = `You are a helpful AI assistant. You are knowledgeable, concise, and friendly.
 
@@ -197,18 +63,9 @@ export async function POST(req: Request) {
   } = await req.json();
 
   const modelId = isValidModelId(model) ? model : DEFAULT_MODEL;
-  const config = getModelConfig(modelId);
-  const provider = config?.provider;
-  const isOpenAI = provider === "openai" || !provider;
-  const isDiffusing = modelId === "mercury-2-diffusing";
-
-  // Diffusion models get a custom stream with data-diffusion parts
-  if (isDiffusing) {
-    return handleDiffusionStream(messages);
-  }
 
   const result = streamText({
-    model: getModel(modelId, provider),
+    model: openai(modelId),
     system: SYSTEM_PROMPT,
     messages: await convertToModelMessages(messages),
     tools: {
@@ -227,14 +84,13 @@ export async function POST(req: Request) {
       ...(webSearchEnabled && { webSearch }),
     },
     stopWhen: stepCountIs(15),
-    ...(isOpenAI &&
-      thinkingEnabled && {
-        providerOptions: {
-          openai: {
-            reasoningEffort: "medium",
-          },
+    ...(thinkingEnabled && {
+      providerOptions: {
+        openai: {
+          reasoningEffort: "medium",
         },
-      }),
+      },
+    }),
     experimental_transform: smoothStream({ chunking: "word", delayInMs: 20 }),
   });
 

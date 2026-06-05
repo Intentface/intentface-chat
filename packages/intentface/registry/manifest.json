@@ -375,19 +375,6 @@
       ]
     },
     {
-      "name": "diffusion-markdown",
-      "type": "registry:component",
-      "title": "Diffusion Markdown",
-      "registryDependencies": ["markdown", "utils"],
-      "files": [
-        {
-          "sourcePath": "components/ui/diffusion-markdown.tsx",
-          "targetPath": "components/ui/diffusion-markdown.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "progressive-blur",
       "type": "registry:component",
       "title": "Progressive Blur",

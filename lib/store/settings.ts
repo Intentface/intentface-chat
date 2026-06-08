@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { ThreadAutoScrollMode } from "@/components/ai/thread";
 
 type ThemeOverrides = {
   bg?: string;
@@ -15,6 +16,8 @@ type SettingsStore = {
   setThemeOverride: (mode: ThemeMode, key: keyof ThemeOverrides, value: string | number) => void;
   setThemeOverrides: (mode: ThemeMode, overrides: ThemeOverrides) => void;
   resetThemeOverrides: (mode: ThemeMode) => void;
+  scrollMode: ThreadAutoScrollMode;
+  setScrollMode: (mode: ThreadAutoScrollMode) => void;
 };
 
 export type { ThemeOverrides, ThemeMode };
@@ -23,6 +26,8 @@ export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
       themeOverrides: { light: {}, dark: {} },
+      scrollMode: "follow",
+      setScrollMode: (mode) => set({ scrollMode: mode }),
       setThemeOverride: (mode, key, value) =>
         set((state) => ({
           themeOverrides: {

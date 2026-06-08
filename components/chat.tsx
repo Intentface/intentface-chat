@@ -38,6 +38,7 @@ import {
 } from "@/lib/message-utils";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
+import { useSettingsStore } from "@/lib/store/settings";
 import { cn } from "@/lib/utils";
 import { IntentfaceLogo } from "./icons/intentface-logo";
 import { TextShimmer } from "./ui/text-shimmer";
@@ -715,6 +716,7 @@ const ChatPlaceholder = () => {
 
 const ChatDefaultLayout = () => {
   const { messages } = useChatContext();
+  const scrollMode = useSettingsStore((s) => s.scrollMode);
   const isEmpty = messages.length === 0;
 
   return (
@@ -731,9 +733,10 @@ const ChatDefaultLayout = () => {
             <ChatMessages />
           )}
         </Thread.Viewport>
-        {/* Opt in to auto-scroll (reserve + land + push + follow). Remove this and
-            the thread is a plain scroll area with a working scroll-to-bottom button. */}
-        <Thread.AutoScroll />
+        {/* Auto-scroll behavior is driven by the user's setting: "bottom" lands
+            the newest turn at the bottom and follows, "jump" lands it at the top
+            without following, "follow" lands at the top and follows. */}
+        <Thread.AutoScroll mode={scrollMode} />
         <Thread.Composer>
           <Thread.ScrollButton />
           <ChatInput />

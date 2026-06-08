@@ -48,15 +48,11 @@ const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRoot
 };
 
 // Turn wrapper — groups a user message with its trailing assistant reply. The
-// last turn reserves the visible thread area so the active turn lands near the
-// top while the response streams.
+// auto-scroll reserve lives on Thread's content (its last child), not here.
 const MessageTurn = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-turn"
-    className={cn(
-      "flex w-full flex-col gap-4 [overflow-anchor:none] last:min-h-(--thread-turn-min-height)",
-      className,
-    )}
+    className={cn("flex w-full flex-col gap-4 [overflow-anchor:none]", className)}
     {...props}
   />
 );

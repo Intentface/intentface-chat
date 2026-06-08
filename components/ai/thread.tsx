@@ -87,8 +87,9 @@ const measureTopInset = (root: HTMLElement): number =>
  * Writes the measured insets to CSS vars on the root via a ResizeObserver — no
  * React state, so composer growth never re-renders the thread:
  *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
- *   --thread-turn-min-height is the visible thread area (root − top − bottom),
- *   which the last message turn uses to reserve the active area.
+ *   --thread-turn-area is the visible thread area (root − top − bottom). When an
+ *   auto-scroll mode is active, <Thread.AutoScroll> maps the last turn's reserve
+ *   (--thread-turn-min-height) to it; otherwise the reserve falls back to 0.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
 const useThreadInsets = () => {
@@ -104,11 +105,11 @@ const useThreadInsets = () => {
         root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
       }
       const topInset = measureTopInset(root);
-      const turnMin = Math.max(
+      const area = Math.max(
         0,
         Math.round(root.clientHeight - topInset - (bottomInset ?? DEFAULT_BOTTOM_OFFSET)),
       );
-      root.style.setProperty("--thread-turn-min-height", `${turnMin}px`);
+      root.style.setProperty("--thread-turn-area", `${area}px`);
     };
 
     apply();
@@ -229,12 +230,13 @@ const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) 
         {...props}
       >
         <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
-          {/* Content column — turns are its direct children, so the auto-scroll
-              reserve can target the last turn with a clean :last-child selector. */}
+          {/* Content column — children are direct, so the auto-scroll reserve
+              lives here as the last child's min-height. Consumers don't wire it:
+              <Thread.AutoScroll> sets --thread-turn-min-height (0 when unset). */}
           <div
             ref={contentRef}
             data-slot="thread-content"
-            className="mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4"
+            className="mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)"
           >
             {children}
           </div>
@@ -341,12 +343,21 @@ const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderP
 );
 
 // ---------------------------------------------------------------------------
-// ThreadAutoScroll — opt-in. Mount it to land on the latest turn and follow
-// streaming content while the user stays at the bottom.
-// Renders nothing; it reacts to its own DOM (no chatId, no messages, no key).
+// ThreadAutoScroll — opt-in, with three modes:
+//   "bottom" newest lands at the bottom and the view follows the stream (Codex).
+//   "jump"   newest lands at the top (reserve); the view does not follow.
+//   "follow" newest lands at the top and the view follows the stream (ChatGPT).
+// Every mode lands the newest turn on send; the reserve lifts the landing point
+// to the top, follow tracks streaming growth. Renders nothing.
 // ---------------------------------------------------------------------------
 
-const ThreadAutoScroll = () => {
+export type ThreadAutoScrollMode = "bottom" | "jump" | "follow";
+
+export type ThreadAutoScrollProps = {
+  mode?: ThreadAutoScrollMode;
+};
+
+const ThreadAutoScroll = ({ mode = "follow" }: ThreadAutoScrollProps) => {
   const { contentRef, isAtBottom, scrollToBottom } = useThreadScroll();
   // Mirror at-bottom into a ref so the follow observer reads it without
   // re-subscribing each time it flips.
@@ -357,43 +368,47 @@ const ThreadAutoScroll = () => {
     const content = contentRef.current;
     if (!content) return;
 
-    let hasLanded = false;
-    let ignoreNextResize = true;
+    const landsAtTop = mode !== "bottom";
+    const followsStream = mode !== "jump";
 
-    const landOnLatest = (behavior: ScrollBehavior) => {
-      ignoreNextResize = true;
-      scrollToBottom(behavior);
-      hasLanded = true;
+    // Reserve a viewport on the last turn so the newest lands at the top.
+    if (landsAtTop) {
+      content.style.setProperty("--thread-turn-min-height", "var(--thread-turn-area)");
+    }
+
+    // First land (and chat switches) jump instantly; later turns animate.
+    let landed = false;
+    let skipNextResize = true;
+    const land = (mutations: MutationRecord[] = []) => {
+      const replaced = mutations.some((m) => m.removedNodes.length > 0);
+      skipNextResize = true;
+      scrollToBottom(landed && !replaced ? "smooth" : "instant");
+      landed = true;
     };
 
-    const handleContentMutation = (records: MutationRecord[]) => {
-      const replacedContent = records.some((record) => record.removedNodes.length > 0);
-      landOnLatest(hasLanded && !replacedContent ? "smooth" : "instant");
-    };
-
-    const followLatest = () => {
-      if (ignoreNextResize) {
-        ignoreNextResize = false;
+    // Follow streaming growth, but skip the resize our own land just caused and
+    // yield the moment the user scrolls up.
+    const follow = () => {
+      if (skipNextResize) {
+        skipNextResize = false;
         return;
       }
-      if (!atBottomRef.current) return;
-      scrollToBottom("smooth");
+      if (atBottomRef.current) scrollToBottom("smooth");
     };
 
-    landOnLatest("instant");
+    land();
+    const turns = new MutationObserver(land);
+    turns.observe(content, { childList: true });
 
-    const mo = new MutationObserver(handleContentMutation);
-    mo.observe(content, { childList: true });
-
-    // Follow streaming growth only while the user remains at the bottom.
-    const ro = new ResizeObserver(followLatest);
-    ro.observe(content);
+    const growth = followsStream ? new ResizeObserver(follow) : null;
+    growth?.observe(content);
 
     return () => {
-      mo.disconnect();
-      ro.disconnect();
+      turns.disconnect();
+      growth?.disconnect();
+      if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
     };
-  }, [contentRef, scrollToBottom]);
+  }, [mode, contentRef, scrollToBottom]);
 
   return null;
 };

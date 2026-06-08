@@ -12,6 +12,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState } from "react";
+import type { ThreadAutoScrollMode } from "@/components/ai/thread";
+import { ArrowDownIcon } from "@/components/icons/arrow-down";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
 import { SettingsIcon } from "@/components/icons/settings";
 import { ThemeConfigurator } from "@/components/theme-configurator";
@@ -19,6 +21,7 @@ import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
+import { useSettingsStore } from "@/lib/store/settings";
 import { EditIcon } from "./icons/edit";
 
 export const AppSidebar = () => {
@@ -27,6 +30,8 @@ export const AppSidebar = () => {
   const router = useRouter();
   const chats = useChatStore((state) => state.chats);
   const deleteChat = useChatStore((state) => state.deleteChat);
+  const scrollMode = useSettingsStore((state) => state.scrollMode);
+  const setScrollMode = useSettingsStore((state) => state.setScrollMode);
   const [themeConfiguratorOpen, setThemeConfiguratorOpen] = useState(false);
 
   const handleDelete = (chatId: string) => {
@@ -126,6 +131,22 @@ export const AppSidebar = () => {
                         <MoonIcon />
                         Dark
                       </DropdownMenu.RadioItem>
+                    </DropdownMenu.RadioGroup>
+                  </DropdownMenu.SubContent>
+                </DropdownMenu.Sub>
+                <DropdownMenu.Sub>
+                  <DropdownMenu.SubTrigger>
+                    <ArrowDownIcon />
+                    Scroll
+                  </DropdownMenu.SubTrigger>
+                  <DropdownMenu.SubContent>
+                    <DropdownMenu.RadioGroup
+                      value={scrollMode}
+                      onValueChange={(value) => setScrollMode(value as ThreadAutoScrollMode)}
+                    >
+                      <DropdownMenu.RadioItem value="bottom">Bottom</DropdownMenu.RadioItem>
+                      <DropdownMenu.RadioItem value="jump">Jump to top</DropdownMenu.RadioItem>
+                      <DropdownMenu.RadioItem value="follow">Follow</DropdownMenu.RadioItem>
                     </DropdownMenu.RadioGroup>
                   </DropdownMenu.SubContent>
                 </DropdownMenu.Sub>

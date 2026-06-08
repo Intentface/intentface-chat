@@ -54,7 +54,7 @@ const MessageTurn = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-turn"
     className={cn(
-      "flex w-full flex-col gap-4 [overflow-anchor:none] last:min-h-(--thread-turn-min-height)",
+      "flex w-full flex-col gap-4 [overflow-anchor:none] last:min-h-(--thread-turn-min-height,0px)",
       className,
     )}
     {...props}

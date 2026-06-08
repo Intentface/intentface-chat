@@ -87,8 +87,9 @@ const measureTopInset = (root: HTMLElement): number =>
  * Writes the measured insets to CSS vars on the root via a ResizeObserver — no
  * React state, so composer growth never re-renders the thread:
  *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
- *   --thread-turn-min-height is the visible thread area (root − top − bottom),
- *   which the last message turn uses to reserve the active area.
+ *   --thread-turn-area is the visible thread area (root − top − bottom). When an
+ *   auto-scroll mode is active, <Thread.AutoScroll> maps the last turn's reserve
+ *   (--thread-turn-min-height) to it; otherwise the reserve falls back to 0.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
 const useThreadInsets = () => {
@@ -104,11 +105,11 @@ const useThreadInsets = () => {
         root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
       }
       const topInset = measureTopInset(root);
-      const turnMin = Math.max(
+      const area = Math.max(
         0,
         Math.round(root.clientHeight - topInset - (bottomInset ?? DEFAULT_BOTTOM_OFFSET)),
       );
-      root.style.setProperty("--thread-turn-min-height", `${turnMin}px`);
+      root.style.setProperty("--thread-turn-area", `${area}px`);
     };
 
     apply();
@@ -341,12 +342,22 @@ const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderP
 );
 
 // ---------------------------------------------------------------------------
-// ThreadAutoScroll — opt-in. Mount it to land on the latest turn and follow
-// streaming content while the user stays at the bottom.
-// Renders nothing; it reacts to its own DOM (no chatId, no messages, no key).
+// ThreadAutoScroll — opt-in, with three modes:
+//   "off"    the newest turn lands at the bottom (visible above the composer);
+//            no reserve, no following.
+//   "jump"   the newest turn lands at the top (reserve + land), no following.
+//   "follow" jump, plus the view sticks to the bottom while content streams.
+// Every mode lands the newest turn on send; the reserve is what lifts the
+// landing point to the top. Renders nothing; it reacts to its own DOM.
 // ---------------------------------------------------------------------------
 
-const ThreadAutoScroll = () => {
+export type ThreadAutoScrollMode = "off" | "jump" | "follow";
+
+export type ThreadAutoScrollProps = {
+  mode?: ThreadAutoScrollMode;
+};
+
+const ThreadAutoScroll = ({ mode = "follow" }: ThreadAutoScrollProps) => {
   const { contentRef, isAtBottom, scrollToBottom } = useThreadScroll();
   // Mirror at-bottom into a ref so the follow observer reads it without
   // re-subscribing each time it flips.
@@ -356,6 +367,14 @@ const ThreadAutoScroll = () => {
   useEffect(() => {
     const content = contentRef.current;
     if (!content) return;
+
+    // The reserve lifts the landing point to the top of the viewport, so only
+    // "jump"/"follow" want it; "off" lands at the bottom with no reserve. Maps
+    // the last turn's min-height to the area useThreadInsets measured.
+    const reserves = mode !== "off";
+    if (reserves) {
+      content.style.setProperty("--thread-turn-min-height", "var(--thread-turn-area)");
+    }
 
     let hasLanded = false;
     let ignoreNextResize = true;
@@ -371,29 +390,33 @@ const ThreadAutoScroll = () => {
       landOnLatest(hasLanded && !replacedContent ? "smooth" : "instant");
     };
 
-    const followLatest = () => {
-      if (ignoreNextResize) {
-        ignoreNextResize = false;
-        return;
-      }
-      if (!atBottomRef.current) return;
-      scrollToBottom("smooth");
-    };
-
     landOnLatest("instant");
 
     const mo = new MutationObserver(handleContentMutation);
     mo.observe(content, { childList: true });
 
-    // Follow streaming growth only while the user remains at the bottom.
-    const ro = new ResizeObserver(followLatest);
-    ro.observe(content);
+    // Follow streaming growth only in "follow" mode, and only while the user
+    // remains at the bottom.
+    let ro: ResizeObserver | undefined;
+    if (mode === "follow") {
+      const followLatest = () => {
+        if (ignoreNextResize) {
+          ignoreNextResize = false;
+          return;
+        }
+        if (!atBottomRef.current) return;
+        scrollToBottom("smooth");
+      };
+      ro = new ResizeObserver(followLatest);
+      ro.observe(content);
+    }
 
     return () => {
       mo.disconnect();
-      ro.disconnect();
+      ro?.disconnect();
+      if (reserves) content.style.removeProperty("--thread-turn-min-height");
     };
-  }, [contentRef, scrollToBottom]);
+  }, [mode, contentRef, scrollToBottom]);
 
   return null;
 };

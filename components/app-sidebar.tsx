@@ -144,7 +144,7 @@ export const AppSidebar = () => {
                       value={scrollMode}
                       onValueChange={(value) => setScrollMode(value as ThreadAutoScrollMode)}
                     >
-                      <DropdownMenu.RadioItem value="off">Off</DropdownMenu.RadioItem>
+                      <DropdownMenu.RadioItem value="bottom">Bottom</DropdownMenu.RadioItem>
                       <DropdownMenu.RadioItem value="jump">Jump to top</DropdownMenu.RadioItem>
                       <DropdownMenu.RadioItem value="follow">Follow</DropdownMenu.RadioItem>
                     </DropdownMenu.RadioGroup>

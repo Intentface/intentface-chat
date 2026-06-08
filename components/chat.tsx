@@ -733,9 +733,9 @@ const ChatDefaultLayout = () => {
             <ChatMessages />
           )}
         </Thread.Viewport>
-        {/* Auto-scroll behavior is driven by the user's setting: "off" lands the
-            newest turn at the bottom, "jump" lands it at the top, "follow" also
-            sticks to the bottom while streaming. */}
+        {/* Auto-scroll behavior is driven by the user's setting: "bottom" lands
+            the newest turn at the bottom and follows, "jump" lands it at the top
+            without following, "follow" lands at the top and follows. */}
         <Thread.AutoScroll mode={scrollMode} />
         <Thread.Composer>
           <Thread.ScrollButton />

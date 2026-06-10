@@ -18,11 +18,11 @@ import { cn } from "@/lib/utils";
 import { ArrowDownIcon } from "../icons/arrow-down";
 
 // ---------------------------------------------------------------------------
-// Scroll context — a small, generic primitive surface. Auto-scroll behavior is
-// opt-in via <Thread.AutoScroll>; nothing here knows about chats or messages.
+// Thread context — a small, generic primitive surface. Auto-scroll behavior is
+// driven by the <Thread autoScroll> prop; nothing here knows about chats or messages.
 // ---------------------------------------------------------------------------
 
-type ThreadScrollContextValue = {
+type ThreadContextValue = {
   isAtBottom: boolean;
   scrollToBottom: (behavior?: ScrollBehavior) => void;
   scrollRef: RefObject<HTMLDivElement | null>;
@@ -30,11 +30,11 @@ type ThreadScrollContextValue = {
   sentinelRef: RefObject<HTMLDivElement | null>;
 };
 
-const ThreadScrollContext = createContext<ThreadScrollContextValue | null>(null);
+const ThreadContext = createContext<ThreadContextValue | null>(null);
 
-export const useThreadScroll = () => {
-  const ctx = use(ThreadScrollContext);
-  if (!ctx) throw new Error("useThreadScroll must be used within <Thread>");
+export const useThread = () => {
+  const ctx = use(ThreadContext);
+  if (!ctx) throw new Error("useThread must be used within <Thread>");
   return ctx;
 };
 
@@ -45,11 +45,106 @@ const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavio
 };
 
 // ---------------------------------------------------------------------------
+// useThreadScroll — owns the thread's scroll subsystem: the scroll/content/
+// sentinel refs, at-bottom detection, scrollToBottom, and the autoScroll
+// landing/follow behavior. Returns the value for ThreadContext. autoScroll modes:
+//   "off"    no landing, no follow, no reserve — a plain scroll area.
+//   "bottom" newest lands at the bottom and the view follows the stream (Codex).
+//   "jump"   newest lands at the top (reserve); the view does not follow.
+//   "follow" newest lands at the top and the view follows the stream (ChatGPT).
+// Every active mode lands the newest turn on send; the reserve lifts the landing
+// point to the top, follow tracks streaming growth. The landing runs in a layout
+// effect so the initial land + reserve apply before paint (no top-then-jump
+// flash); it runs after useThreadInsets in ThreadRoot, so --thread-turn-area is
+// set before the reserve references it.
+// ---------------------------------------------------------------------------
+
+export type ThreadAutoScrollMode = "off" | "bottom" | "jump" | "follow";
+
+const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // "At the bottom" = the bottom sentinel is in view. IntersectionObserver
+  // computes it off the main thread (no scrollTop/scrollHeight reads); it drives
+  // the scroll button and, when autoScroll is active, gates the follow.
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const io = new IntersectionObserver(([entry]) => setIsAtBottom(entry.isIntersecting), { root });
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, []);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollRef.current;
+    if (el) scrollContainerTo(el, el.scrollHeight, behavior);
+  }, []);
+
+  // Mirror at-bottom into a ref so the follow observer reads it without
+  // re-subscribing each time it flips.
+  const atBottomRef = useRef(isAtBottom);
+  atBottomRef.current = isAtBottom;
+
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content || mode === "off") return;
+
+    const landsAtTop = mode !== "bottom";
+    const followsStream = mode !== "jump";
+
+    // Reserve a viewport on the last turn so the newest lands at the top.
+    if (landsAtTop) {
+      content.style.setProperty("--thread-turn-min-height", "var(--thread-turn-area)");
+    }
+
+    // First land (and chat switches) jump instantly; later turns animate.
+    let landed = false;
+    let skipNextResize = true;
+    const land = (mutations: MutationRecord[] = []) => {
+      const replaced = mutations.some((m) => m.removedNodes.length > 0);
+      skipNextResize = true;
+      scrollToBottom(landed && !replaced ? "smooth" : "instant");
+      landed = true;
+    };
+
+    // Follow streaming growth, but skip the resize our own land just caused and
+    // yield the moment the user scrolls up.
+    const follow = () => {
+      if (skipNextResize) {
+        skipNextResize = false;
+        return;
+      }
+      if (atBottomRef.current) scrollToBottom("smooth");
+    };
+
+    land();
+    const turns = new MutationObserver(land);
+    turns.observe(content, { childList: true });
+
+    const growth = followsStream ? new ResizeObserver(follow) : null;
+    growth?.observe(content);
+
+    return () => {
+      turns.disconnect();
+      growth?.disconnect();
+      if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
+    };
+  }, [mode, scrollToBottom]);
+
+  return { isAtBottom, scrollToBottom, scrollRef, contentRef, sentinelRef };
+};
+
+// ---------------------------------------------------------------------------
 // ThreadRoot
 // ---------------------------------------------------------------------------
 
 export type ThreadRootProps = ComponentProps<"div"> & {
   children?: ReactNode;
+  autoScroll?: ThreadAutoScrollMode;
 };
 
 // Fallback (px) until the composer is measured; matches the 8rem class default.
@@ -88,7 +183,7 @@ const measureTopInset = (root: HTMLElement): number =>
  * React state, so composer growth never re-renders the thread:
  *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
  *   --thread-turn-area is the visible thread area (root − top − bottom). When an
- *   auto-scroll mode is active, <Thread.AutoScroll> maps the last turn's reserve
+ *   auto-scroll mode is active, useThreadScroll maps the last turn's reserve
  *   (--thread-turn-min-height) to it; otherwise the reserve falls back to 0.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
@@ -124,32 +219,12 @@ const useThreadInsets = () => {
   return rootRef;
 };
 
-const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
+const ThreadRoot = ({ children, className, autoScroll = "follow", ...props }: ThreadRootProps) => {
   const rootRef = useThreadInsets();
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  // "At the bottom" = the bottom sentinel is in view. IntersectionObserver
-  // computes it off the main thread (no scrollTop/scrollHeight reads); it drives
-  // the scroll button and, when <Thread.AutoScroll> is mounted, gates the follow.
-  const [isAtBottom, setIsAtBottom] = useState(true);
-
-  useEffect(() => {
-    const root = scrollRef.current;
-    const sentinel = sentinelRef.current;
-    if (!root || !sentinel) return;
-    const io = new IntersectionObserver(([entry]) => setIsAtBottom(entry.isIntersecting), { root });
-    io.observe(sentinel);
-    return () => io.disconnect();
-  }, []);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    const el = scrollRef.current;
-    if (el) scrollContainerTo(el, el.scrollHeight, behavior);
-  }, []);
+  const scroll = useThreadScroll(autoScroll);
 
   return (
-    <ThreadScrollContext value={{ isAtBottom, scrollToBottom, scrollRef, contentRef, sentinelRef }}>
+    <ThreadContext value={scroll}>
       <div
         ref={rootRef}
         data-slot="thread-root"
@@ -162,7 +237,7 @@ const ThreadRoot = ({ children, className, ...props }: ThreadRootProps) => {
       >
         {children}
       </div>
-    </ThreadScrollContext>
+    </ThreadContext>
   );
 };
 
@@ -212,7 +287,7 @@ export type ThreadViewportProps = ComponentProps<"div"> & {
 };
 
 const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => {
-  const { scrollRef, contentRef, sentinelRef } = useThreadScroll();
+  const { scrollRef, contentRef, sentinelRef } = useThread();
 
   return (
     <div
@@ -232,7 +307,7 @@ const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) 
         <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
           {/* Content column — children are direct, so the auto-scroll reserve
               lives here as the last child's min-height. Consumers don't wire it:
-              <Thread.AutoScroll> sets --thread-turn-min-height (0 when unset). */}
+              the autoScroll prop sets --thread-turn-min-height (0 when off/unset). */}
           <div
             ref={contentRef}
             data-slot="thread-content"
@@ -285,7 +360,7 @@ const ThreadComposer = ({ className, children, ...props }: ThreadComposerProps) 
 export type ThreadScrollButtonProps = ComponentProps<typeof motion.div>;
 
 const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) => {
-  const { isAtBottom, scrollToBottom } = useThreadScroll();
+  const { isAtBottom, scrollToBottom } = useThread();
 
   const handleScrollToBottom = useCallback(() => {
     scrollToBottom();
@@ -343,77 +418,6 @@ const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderP
 );
 
 // ---------------------------------------------------------------------------
-// ThreadAutoScroll — opt-in, with three modes:
-//   "bottom" newest lands at the bottom and the view follows the stream (Codex).
-//   "jump"   newest lands at the top (reserve); the view does not follow.
-//   "follow" newest lands at the top and the view follows the stream (ChatGPT).
-// Every mode lands the newest turn on send; the reserve lifts the landing point
-// to the top, follow tracks streaming growth. Renders nothing.
-// ---------------------------------------------------------------------------
-
-export type ThreadAutoScrollMode = "bottom" | "jump" | "follow";
-
-export type ThreadAutoScrollProps = {
-  mode?: ThreadAutoScrollMode;
-};
-
-const ThreadAutoScroll = ({ mode = "follow" }: ThreadAutoScrollProps) => {
-  const { contentRef, isAtBottom, scrollToBottom } = useThreadScroll();
-  // Mirror at-bottom into a ref so the follow observer reads it without
-  // re-subscribing each time it flips.
-  const atBottomRef = useRef(isAtBottom);
-  atBottomRef.current = isAtBottom;
-
-  useEffect(() => {
-    const content = contentRef.current;
-    if (!content) return;
-
-    const landsAtTop = mode !== "bottom";
-    const followsStream = mode !== "jump";
-
-    // Reserve a viewport on the last turn so the newest lands at the top.
-    if (landsAtTop) {
-      content.style.setProperty("--thread-turn-min-height", "var(--thread-turn-area)");
-    }
-
-    // First land (and chat switches) jump instantly; later turns animate.
-    let landed = false;
-    let skipNextResize = true;
-    const land = (mutations: MutationRecord[] = []) => {
-      const replaced = mutations.some((m) => m.removedNodes.length > 0);
-      skipNextResize = true;
-      scrollToBottom(landed && !replaced ? "smooth" : "instant");
-      landed = true;
-    };
-
-    // Follow streaming growth, but skip the resize our own land just caused and
-    // yield the moment the user scrolls up.
-    const follow = () => {
-      if (skipNextResize) {
-        skipNextResize = false;
-        return;
-      }
-      if (atBottomRef.current) scrollToBottom("smooth");
-    };
-
-    land();
-    const turns = new MutationObserver(land);
-    turns.observe(content, { childList: true });
-
-    const growth = followsStream ? new ResizeObserver(follow) : null;
-    growth?.observe(content);
-
-    return () => {
-      turns.disconnect();
-      growth?.disconnect();
-      if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
-    };
-  }, [mode, contentRef, scrollToBottom]);
-
-  return null;
-};
-
-// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -423,5 +427,4 @@ export const Thread = Object.assign(ThreadRoot, {
   Composer: ThreadComposer,
   Placeholder: ThreadPlaceholder,
   ScrollButton: ThreadScrollButton,
-  AutoScroll: ThreadAutoScroll,
 });

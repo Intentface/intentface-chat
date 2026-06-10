@@ -29,7 +29,7 @@ import { Message } from "@/components/ai/message";
 </Message.Turn>;
 ```
 
-`Message.Turn` groups a user message with its trailing assistant reply (it's the unit `Thread.AutoScroll` lands on). `Message` itself just sets role/state and the entrance animation; the parts inside do the rendering.
+`Message.Turn` groups a user message with its trailing assistant reply (it's the unit auto-scroll lands on). `Message` itself just sets role/state and the entrance animation; the parts inside do the rendering.
 
 ## Root props
 

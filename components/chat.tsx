@@ -180,6 +180,7 @@ const InterleavedSteps = ({
 
 const ChatMessages = () => {
   const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
+  const stickyMessages = useSettingsStore((s) => s.stickyMessages);
   const isError = status === "error";
   const isStreaming = status === "streaming";
 
@@ -196,7 +197,7 @@ const ChatMessages = () => {
   return (
     <>
       {turns.map((turn, turnIndex) => (
-        <Message.Turn key={turn.key}>
+        <Message.Turn key={turn.key} sticky={stickyMessages}>
           {turn.messages.map(({ parts, ...message }) => {
             const isLastMessage = message.id === lastMessageId;
             const isAssistant = message.role === "assistant";

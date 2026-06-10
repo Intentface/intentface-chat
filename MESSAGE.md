@@ -46,7 +46,7 @@ Sets `data-slot="message"` and fades in on mount. All three props are required.
 ## Compound parts
 
 ### Layout
-- **`Message.Turn`** — wraps a user message + its assistant reply. `div` props.
+- **`Message.Turn`** — wraps a user message + its assistant reply. `div` props + `sticky?: boolean` — when set, pins the turn's user message at the top, above the blur overlay, so the assistant reply fades under the blur as it scrolls up; releases at the turn boundary. Pure CSS; pairs with any `Thread` `autoScroll` mode.
 - **`Message.Content`** — the message body. Role-styled: user → rounded primary bubble (max-width 80%), assistant → full-width borderless, error → destructive tint. `div` props.
 
 ### Text

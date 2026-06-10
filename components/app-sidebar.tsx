@@ -32,6 +32,8 @@ export const AppSidebar = () => {
   const deleteChat = useChatStore((state) => state.deleteChat);
   const scrollMode = useSettingsStore((state) => state.scrollMode);
   const setScrollMode = useSettingsStore((state) => state.setScrollMode);
+  const stickyMessages = useSettingsStore((state) => state.stickyMessages);
+  const setStickyMessages = useSettingsStore((state) => state.setStickyMessages);
   const [themeConfiguratorOpen, setThemeConfiguratorOpen] = useState(false);
 
   const handleDelete = (chatId: string) => {
@@ -151,6 +153,12 @@ export const AppSidebar = () => {
                     </DropdownMenu.RadioGroup>
                   </DropdownMenu.SubContent>
                 </DropdownMenu.Sub>
+                <DropdownMenu.CheckboxItem
+                  checked={stickyMessages}
+                  onCheckedChange={setStickyMessages}
+                >
+                  Sticky messages
+                </DropdownMenu.CheckboxItem>
               </DropdownMenu.Content>
             </DropdownMenu>
             <ThemeConfigurator

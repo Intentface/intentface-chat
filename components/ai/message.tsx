@@ -49,10 +49,23 @@ const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRoot
 
 // Turn wrapper — groups a user message with its trailing assistant reply. The
 // auto-scroll reserve lives on Thread's content (its last child), not here.
-const MessageTurn = ({ className, ...props }: ComponentProps<"div">) => (
+type MessageTurnProps = ComponentProps<"div"> & {
+  // Pin this turn's user message at the top, above the blur overlay (z-2 > the
+  // overlay's z-1), so the assistant reply fades out under the blur as it scrolls
+  // up to meet the header — instead of colliding with a bubble in the readable
+  // area. The turn is the sticky scope, so the pin releases at the turn boundary.
+  // Pure CSS — pairs with any auto-scroll mode.
+  sticky?: boolean;
+};
+
+const MessageTurn = ({ sticky, className, ...props }: MessageTurnProps) => (
   <div
     data-slot="message-turn"
-    className={cn("flex w-full flex-col gap-4 [overflow-anchor:none]", className)}
+    className={cn(
+      "flex w-full flex-col gap-4 [overflow-anchor:none]",
+      sticky && "*:data-[role=user]:sticky *:data-[role=user]:top-4 *:data-[role=user]:z-2",
+      className,
+    )}
     {...props}
   />
 );

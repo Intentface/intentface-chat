@@ -18,6 +18,8 @@ type SettingsStore = {
   resetThemeOverrides: (mode: ThemeMode) => void;
   scrollMode: ThreadAutoScrollMode;
   setScrollMode: (mode: ThreadAutoScrollMode) => void;
+  stickyMessages: boolean;
+  setStickyMessages: (stickyMessages: boolean) => void;
 };
 
 export type { ThemeOverrides, ThemeMode };
@@ -28,6 +30,8 @@ export const useSettingsStore = create<SettingsStore>()(
       themeOverrides: { light: {}, dark: {} },
       scrollMode: "follow",
       setScrollMode: (mode) => set({ scrollMode: mode }),
+      stickyMessages: false,
+      setStickyMessages: (stickyMessages) => set({ stickyMessages }),
       setThemeOverride: (mode, key, value) =>
         set((state) => ({
           themeOverrides: {

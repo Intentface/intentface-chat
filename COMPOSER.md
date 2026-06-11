@@ -236,9 +236,29 @@ Custom: render per-prefix lists.
 </Composer.CommandList>
 ```
 
-Sub-parts: `Composer.CommandItem`, `Composer.CommandItemIcon`, `Composer.CommandItemLabel`, `Composer.CommandItemDescription`, `Composer.CommandGroup`, `Composer.CommandGroupLabel`, `Composer.CommandCollection` (renders an array with a render prop).
+Sub-parts: `Composer.CommandItem`, `Composer.CommandItemIcon`, `Composer.CommandItemLabel`, `Composer.CommandItemDescription`, `Composer.CommandGroup`, `Composer.CommandGroupLabel`, `Composer.CommandCollection` (renders an array with a render prop), `Composer.CommandEmpty`, `Composer.CommandDismiss`.
 
-Keyboard inside an open command list: **↑/↓** navigate, **Enter/Tab** select, **Esc** close.
+#### The composing token (Linear-style)
+
+While a command list is open, the trigger + its non-whitespace run (e.g. `@search`) is treated as a single **token**, highlighted as a badge. The popup always filters by the *whole* token regardless of where the caret sits inside it — so you can move into the middle and fix a typo and the list re-filters on the corrected token.
+
+Keyboard inside an open command list:
+
+- **↑/↓** — navigate the suggestions.
+- **←/→** — move the caret *within* the token. The caret is **trapped**: it stops at the prefix and at the last character and can't leave while the popup is open.
+- **Enter/Tab** — select the highlighted item. For `kind: "insert"` the whole token is replaced by the chip and a trailing space is added (skipped if one already follows) so you can keep typing.
+- **Esc** — dismiss: closes the popup and leaves the typed text in place. The token stays **dismissed** — re-entering it won't reopen the popup; delete/retype the prefix to start a fresh attempt.
+
+`Composer.CommandDismiss` is the click equivalent of **Esc** — render it in the empty state so there's a way out when nothing matches:
+
+```tsx
+<Composer.CommandEmpty>
+  No results found
+  <Composer.CommandDismiss />
+</Composer.CommandEmpty>
+```
+
+The default `<Composer.Commands />` renderer already wires this up.
 
 ### Add-on: questionnaire
 

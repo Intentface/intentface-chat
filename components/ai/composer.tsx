@@ -4,7 +4,7 @@ import { mergeAttributes, Node as TiptapNode } from "@tiptap/core";
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import {
   type Editor,
@@ -271,6 +271,15 @@ type CommandListPluginState = {
   trigger: string | null;
   query: string;
   triggerStartPosition: number;
+  // End of the active token (after its last character). The token — prefix plus
+  // its whole non-whitespace run — is treated as a single unit: badge, delete-on-
+  // select range, and arrow-key trapping all span [start, end], independent of
+  // where the caret sits inside it.
+  triggerEndPosition: number;
+  // Start position of a token the user explicitly dismissed (Escape / Dismiss).
+  // Suppresses re-opening that same token until its prefix is removed; mapped
+  // forward through every doc change so it keeps tracking the right spot.
+  dismissedAt: number | null;
 };
 
 const CLOSED_COMMAND_STATE: CommandListPluginState = {
@@ -278,18 +287,28 @@ const CLOSED_COMMAND_STATE: CommandListPluginState = {
   trigger: null,
   query: "",
   triggerStartPosition: 0,
+  triggerEndPosition: 0,
+  dismissedAt: null,
 };
-
-const escapeRegex = (input: string) => input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const detectActivePrefix = (args: {
   registered: RegisteredPrefix[];
   blockStart: number;
+  blockEnd: number;
   cursorPosition: number;
   textBeforeCursor: string;
+  textAfterCursor: string;
   fullDocText: string;
 }): CommandListPluginState => {
-  const { registered, blockStart, cursorPosition, textBeforeCursor, fullDocText } = args;
+  const {
+    registered,
+    blockStart,
+    blockEnd,
+    cursorPosition,
+    textBeforeCursor,
+    textAfterCursor,
+    fullDocText,
+  } = args;
 
   for (const entry of registered) {
     if (entry.triggerRule === "doc-start") {
@@ -299,24 +318,36 @@ const detectActivePrefix = (args: {
           trigger: entry.prefix,
           query: fullDocText.slice(entry.prefix.length),
           triggerStartPosition: blockStart,
+          triggerEndPosition: blockEnd,
+          dismissedAt: null,
         };
       }
       continue;
     }
 
-    const escaped = escapeRegex(entry.prefix);
-    const pattern = new RegExp(`(^|[\\s])${escaped}([^\\s]*)$`);
-    const match = textBeforeCursor.match(pattern);
-    if (match) {
-      const query = match[2];
-      const triggerStartPosition = cursorPosition - query.length - entry.prefix.length;
-      return {
-        isOpen: true,
-        trigger: entry.prefix,
-        query,
-        triggerStartPosition,
-      };
-    }
+    // The token is the contiguous non-whitespace run the caret sits inside,
+    // taken from both sides of the caret so it stays whole as the caret moves
+    // within it. Text chars map 1:1 to positions and an atomic chip can never
+    // sit inside a run, so the run length is the position delta on each side.
+    const leftRun = textBeforeCursor.match(/\S*$/)?.[0] ?? "";
+    const rightRun = textAfterCursor.match(/^\S*/)?.[0] ?? "";
+    const runText = leftRun + rightRun;
+    if (!runText.startsWith(entry.prefix)) continue;
+
+    // The prefix must sit at a word boundary: line start or after whitespace.
+    const charBeforeRun = textBeforeCursor
+      .slice(0, textBeforeCursor.length - leftRun.length)
+      .at(-1);
+    if (charBeforeRun !== undefined && !/\s/.test(charBeforeRun)) continue;
+
+    return {
+      isOpen: true,
+      trigger: entry.prefix,
+      query: runText.slice(entry.prefix.length),
+      triggerStartPosition: cursorPosition - leftRun.length,
+      triggerEndPosition: cursorPosition + rightRun.length,
+      dismissedAt: null,
+    };
   }
 
   return CLOSED_COMMAND_STATE;
@@ -396,12 +427,14 @@ const commandFilterDecorations = (
 ) => {
   const pluginState = commandListPluginKey.getState(state);
   if (!pluginState?.isOpen) return DecorationSet.empty;
-  const triggerStart = pluginState.triggerStartPosition;
-  const cursorPosition = state.selection.$from.pos;
   const classes = pluginState.query ? BADGE_CLASSES : `${BADGE_CLASSES} ${PLACEHOLDER_CLASSES}`;
-  const inline = Decoration.inline(triggerStart, cursorPosition, {
-    class: classes,
-  });
+  // Highlight the whole token, not just up to the caret, so the badge stays put
+  // while the caret roams inside it.
+  const inline = Decoration.inline(
+    pluginState.triggerStartPosition,
+    pluginState.triggerEndPosition,
+    { class: classes },
+  );
   return DecorationSet.create(state.doc, [inline]);
 };
 
@@ -412,27 +445,71 @@ const createCommandListPlugin = (getRegisteredPrefixes: () => RegisteredPrefix[]
       init: () => CLOSED_COMMAND_STATE,
       apply(transaction, previousState, _oldEditorState, newEditorState) {
         const meta = transaction.getMeta(commandListPluginKey);
-        if (meta?.close) return CLOSED_COMMAND_STATE;
-        if (!transaction.docChanged && !transaction.selectionSet) {
-          return previousState;
+        // Escape / Dismiss: close and remember the token's start so re-entering
+        // it won't reopen the popup (only present when something was open).
+        if (meta?.close) {
+          return {
+            ...CLOSED_COMMAND_STATE,
+            dismissedAt: previousState.isOpen ? previousState.triggerStartPosition : null,
+          };
         }
 
         const registered = getRegisteredPrefixes();
         if (registered.length === 0) return CLOSED_COMMAND_STATE;
 
+        // Track the dismissed marker across edits; drop it once its prefix is
+        // gone so retyping the trigger starts a fresh attempt.
+        let dismissedAt = previousState.dismissedAt;
+        if (dismissedAt !== null && transaction.docChanged) {
+          const mapped = transaction.mapping.mapResult(dismissedAt, -1);
+          dismissedAt = mapped.deleted ? null : mapped.pos;
+          if (dismissedAt !== null) {
+            const markerPos = dismissedAt;
+            const docEnd = newEditorState.doc.content.size;
+            const stillPrefixed = registered.some(
+              (entry) =>
+                markerPos + entry.prefix.length <= docEnd &&
+                newEditorState.doc.textBetween(markerPos, markerPos + entry.prefix.length) ===
+                  entry.prefix,
+            );
+            if (!stillPrefixed) dismissedAt = null;
+          }
+        }
+
+        if (!transaction.docChanged && !transaction.selectionSet) {
+          return previousState.dismissedAt === dismissedAt
+            ? previousState
+            : { ...previousState, dismissedAt };
+        }
+
         const { selection } = newEditorState;
         const cursorPosition = selection.$from.pos;
         const blockStart = selection.$from.start();
+        const blockEnd = selection.$from.end();
         const textBeforeCursor = newEditorState.doc.textBetween(blockStart, cursorPosition, "\n");
+        const textAfterCursor = newEditorState.doc.textBetween(cursorPosition, blockEnd, "\n");
         const fullDocText = newEditorState.doc.textContent;
 
-        return detectActivePrefix({
+        const detected = detectActivePrefix({
           registered,
           blockStart,
+          blockEnd,
           cursorPosition,
           textBeforeCursor,
+          textAfterCursor,
           fullDocText,
         });
+
+        if (detected.isOpen) {
+          // Same token the user dismissed → stay closed. A different token →
+          // open and forget the prior dismissal.
+          if (dismissedAt !== null && detected.triggerStartPosition === dismissedAt) {
+            return { ...CLOSED_COMMAND_STATE, dismissedAt };
+          }
+          return { ...detected, dismissedAt: null };
+        }
+
+        return { ...CLOSED_COMMAND_STATE, dismissedAt };
       },
     },
     props: { decorations: commandFilterDecorations },
@@ -449,6 +526,7 @@ type EditorKeyAction =
   | { type: "command-select" }
   | { type: "command-close" }
   | { type: "command-navigate"; direction: 1 | -1 }
+  | { type: "command-caret"; direction: 1 | -1 }
   | { type: "ask-user-arrow"; direction: 1 | -1 }
   | { type: "remove-last-attachment" }
   | { type: "submit-form" }
@@ -477,6 +555,10 @@ const interpretEditorKey = (
       return { type: "command-navigate", direction: -1 };
     case isCommandListOpen && key === "ArrowDown":
       return { type: "command-navigate", direction: 1 };
+    case isCommandListOpen && key === "ArrowLeft":
+      return { type: "command-caret", direction: -1 };
+    case isCommandListOpen && key === "ArrowRight":
+      return { type: "command-caret", direction: 1 };
     case isCommandListOpen && key === "Enter" && !shiftKey:
       return { type: "command-select" };
 
@@ -1847,6 +1929,26 @@ const ComposerTextarea = ({
             composerStore.commandNavigateRef.current?.(action.direction);
             return true;
           }
+          case "command-caret": {
+            // Trap the caret inside the active token: clamp Left/Right to the
+            // token range so it can't leave while the popup is open (Escape /
+            // Dismiss is the only way out).
+            event.preventDefault();
+            if (commandState?.isOpen) {
+              const { triggerStartPosition, triggerEndPosition } = commandState;
+              const current = view.state.selection.from;
+              const target = Math.min(
+                Math.max(current + action.direction, triggerStartPosition),
+                triggerEndPosition,
+              );
+              if (target !== current) {
+                view.dispatch(
+                  view.state.tr.setSelection(TextSelection.create(view.state.doc, target)),
+                );
+              }
+            }
+            return true;
+          }
           case "ask-user-arrow": {
             event.preventDefault();
             const optionsHandle = composerStore.getSnapshot().askUser.optionsRef.current;
@@ -1893,6 +1995,12 @@ const ComposerTextarea = ({
       }
       onValueChangeRef.current?.(text);
       reportEditorUpdate(instance);
+    },
+    // Command state changes on selection and meta-only transactions too (caret
+    // moving inside the token, Escape / Dismiss closing it), not just on doc
+    // edits — so mirror it from onTransaction, which fires for every kind.
+    // setCommands no-ops when nothing changed, so this stays cheap.
+    onTransaction: ({ editor: instance }) => {
       const pluginState = commandListPluginKey.getState(instance.state);
       composerStore.setCommands({
         isOpen: pluginState?.isOpen ?? false,
@@ -2193,6 +2301,7 @@ type CommandListNavContextValue = {
   highlightedValue: string | null;
   setHighlightedValue: (value: string | null) => void;
   selectByValue: (value: string) => void;
+  dismiss: () => void;
 };
 
 const CommandListNavContext = createContext<CommandListNavContextValue | null>(null);
@@ -2327,13 +2436,21 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
 
       const pluginState = commandListPluginKey.getState(editor.state);
       const triggerStartPosition = pluginState?.triggerStartPosition ?? 0;
-      const cursorPosition = editor.state.selection.$from.pos;
+      const triggerEndPosition =
+        pluginState?.triggerEndPosition ?? editor.state.selection.$from.pos;
 
       if (kind === "insert") {
-        editor
+        // Add a trailing space so the user can keep typing — unless one is
+        // already there (mid-sentence mention), to avoid doubling it.
+        const docEnd = editor.state.doc.content.size;
+        const charAfter =
+          triggerEndPosition < docEnd
+            ? editor.state.doc.textBetween(triggerEndPosition, triggerEndPosition + 1)
+            : "";
+        const chain = editor
           .chain()
           .focus()
-          .deleteRange({ from: triggerStartPosition, to: cursorPosition })
+          .deleteRange({ from: triggerStartPosition, to: triggerEndPosition })
           .insertContentAt(triggerStartPosition, {
             type: "mentionChip",
             attrs: {
@@ -2343,13 +2460,14 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
               icon: dataItem.icon ?? null,
               variant: dataItem.variant ?? null,
             },
-          })
-          .run();
+          });
+        if (charAfter !== " ") chain.insertContent(" ");
+        chain.run();
       } else {
         editor
           .chain()
           .focus()
-          .deleteRange({ from: triggerStartPosition, to: cursorPosition })
+          .deleteRange({ from: triggerStartPosition, to: triggerEndPosition })
           .run();
         const onSelectContext: PrefixOnSelectContext = {
           editor: composerController,
@@ -2367,6 +2485,13 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
     [internals, items, kind, prefix, attachments],
   );
 
+  const dismiss = useCallback(() => {
+    const editor = internals.editorRef.current;
+    if (!editor) return;
+    editor.view.focus();
+    editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
+  }, [internals]);
+
   if (isActive) {
     composerStore.commandSelectRef.current = effectiveHighlight
       ? () => selectByValue(effectiveHighlight)
@@ -2382,8 +2507,9 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
       highlightedValue: effectiveHighlight,
       setHighlightedValue: setHighlightOverride,
       selectByValue,
+      dismiss,
     }),
-    [effectiveHighlight, selectByValue],
+    [effectiveHighlight, selectByValue, dismiss],
   );
 
   const itemsContext = useMemo<CommandListItemsContextValue>(
@@ -2476,14 +2602,39 @@ const ComposerCommandEmpty = ({ className, children, ...props }: ComposerCommand
     data-slot="composer-command-empty"
     className={cn(
       "hidden group-data-[state=empty]/composer-command-list:flex",
-      "items-center px-3 h-8 text-sm text-ink-tertiary",
+      "items-center gap-2 px-3 h-8 text-sm text-ink-tertiary",
       className,
     )}
     {...props}
   >
-    {children ?? "No results"}
+    {children ?? "No results found"}
   </div>
 );
+
+// Dismisses the active token (same as Escape): closes the popup, leaves the
+// typed text in place, and keeps it dismissed until the prefix is retyped.
+// preventDefault on mousedown so the click never steals focus from the editor.
+const ComposerCommandDismiss = ({ className, children, ...props }: ComponentProps<"button">) => {
+  const navContext = useContext(CommandListNavContext);
+  if (!navContext) {
+    throw new Error("<Composer.CommandDismiss> must be rendered inside <Composer.CommandList>.");
+  }
+
+  return (
+    <button
+      type="button"
+      data-slot="composer-command-dismiss"
+      className={cn("cursor-pointer text-ink-tertiary hover:text-ink-primary", className)}
+      onMouseDown={(event) => {
+        event.preventDefault();
+        navContext.dismiss();
+      }}
+      {...props}
+    >
+      {children ?? "Dismiss"}
+    </button>
+  );
+};
 
 type ComposerCommandItemProps = {
   value: string;
@@ -2592,7 +2743,10 @@ const ComposerCommands = ({ className }: ComposerCommandsProps) => {
       {prefixes.map((prefix) => (
         <ComposerCommandList key={prefix} prefix={prefix} className={className}>
           <ComposerCommandLoading />
-          <ComposerCommandEmpty />
+          <ComposerCommandEmpty>
+            <span>No results found</span>
+            <ComposerCommandDismiss />
+          </ComposerCommandEmpty>
           <ComposerCommandItems>
             {(item) => (
               <ComposerCommandItem value={item.value}>
@@ -2765,6 +2919,7 @@ export const Composer = Object.assign(ComposerRoot, {
   CommandItems: ComposerCommandItems,
   CommandLoading: ComposerCommandLoading,
   CommandEmpty: ComposerCommandEmpty,
+  CommandDismiss: ComposerCommandDismiss,
   CommandItem: ComposerCommandItem,
   CommandItemIcon: ComposerCommandItemIcon,
   CommandItemLabel: ComposerCommandItemLabel,

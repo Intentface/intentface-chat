@@ -246,10 +246,10 @@ Keyboard inside an open command list:
 
 - **↑/↓** — navigate the suggestions.
 - **←/→** — move the caret *within* the token. The caret is **trapped**: it stops at the prefix and at the last character and can't leave while the popup is open.
-- **Enter/Tab** — select the highlighted item. For `kind: "insert"` the whole token is replaced by the chip and a trailing space is added (skipped if one already follows) so you can keep typing.
+- **Enter/Tab** — select the highlighted item. For `kind: "insert"` the whole token is replaced by the chip and a trailing space is added (skipped if one already follows) so you can keep typing. When nothing matches, the "No results" row is the single highlighted option and selecting it dismisses (see below).
 - **Esc** — dismiss: closes the popup and leaves the typed text in place. The token stays **dismissed** — re-entering it won't reopen the popup; delete/retype the prefix to start a fresh attempt.
 
-`Composer.CommandDismiss` is the click equivalent of **Esc** — render it in the empty state so there's a way out when nothing matches:
+When the filter matches nothing, the empty row acts as the single highlighted option: **Enter/Tab** select it (→ dismiss) and `Composer.CommandDismiss` is its click target. Render it in the empty state so there's always a way out:
 
 ```tsx
 <Composer.CommandEmpty>

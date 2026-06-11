@@ -2493,9 +2493,14 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
   }, [internals]);
 
   if (isActive) {
+    // With matches, select the highlight. With none, the "No results" row is
+    // itself the (only) option and selecting it dismisses — so Tab/Enter aren't
+    // dead in the empty state (Linear-style).
     composerStore.commandSelectRef.current = effectiveHighlight
       ? () => selectByValue(effectiveHighlight)
-      : null;
+      : state === "empty"
+        ? dismiss
+        : null;
     composerStore.commandNavigateRef.current = (direction: number) => {
       const next = computeNextHighlight(items, effectiveHighlight, direction === -1 ? -1 : 1);
       setHighlightOverride(next);
@@ -2602,7 +2607,9 @@ const ComposerCommandEmpty = ({ className, children, ...props }: ComposerCommand
     data-slot="composer-command-empty"
     className={cn(
       "hidden group-data-[state=empty]/composer-command-list:flex",
-      "items-center gap-2 px-3 h-8 text-sm text-ink-tertiary",
+      // Shown only when nothing matches, where it acts as the single highlighted
+      // option whose selection dismisses — so it carries the highlight styling.
+      "items-center gap-2 rounded-lg bg-primary-hover px-3 h-8 text-sm text-ink-primary",
       className,
     )}
     {...props}

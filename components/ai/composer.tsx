@@ -46,7 +46,7 @@ import {
   revokeAttachmentUrl,
   toAttachmentItem,
 } from "@/components/ai/attachments";
-import { Chip, type ChipVariant } from "@/components/ai/chip";
+import { CHIP_SURFACE_CLASS, Chip, type ChipVariant } from "@/components/ai/chip";
 import { Commands } from "@/components/ai/commands";
 import { SendIcon } from "@/components/icons/send";
 import { StopIcon } from "@/components/icons/stop";
@@ -386,8 +386,9 @@ const filterArrayItems = (items: CommandItemData[], query: string): CommandItemD
 
 const commandListPluginKey = new PluginKey<CommandListPluginState>("commandList");
 
-const BADGE_CLASSES =
-  "inline-flex items-center h-6 rounded-sm bg-primary-hover border border-transparent px-0.75 leading-[normal]";
+// Same surface as a committed chip (primary variant) so the active-prefix badge
+// and the chip it becomes share one inline text-flow model — no baseline jump.
+const BADGE_CLASSES = `${CHIP_SURFACE_CLASS} bg-primary-hover text-ink-primary`;
 const PLACEHOLDER_CLASSES =
   "after:content-['Type_to_filter'] after:text-ink-tertiary after:whitespace-nowrap after:pointer-events-none";
 
@@ -1308,7 +1309,7 @@ const MentionChipNodeView = ({ node }: { node: { attrs: Record<string, unknown> 
   const variant = node.attrs.variant as ChipVariant | null;
 
   return (
-    <NodeViewWrapper as="span" data-mention-chip>
+    <NodeViewWrapper as="span" className="inline align-baseline" data-mention-chip>
       <Chip variant={variant ?? undefined}>
         {icon && <Chip.Icon>{CHIP_ICONS[icon]}</Chip.Icon>}
         <Chip.Label>{label}</Chip.Label>

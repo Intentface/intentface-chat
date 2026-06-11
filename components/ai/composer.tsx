@@ -1587,6 +1587,7 @@ const ComposerRoot = ({
   return (
     <ComposerInternalsContext.Provider value={internalsValue}>
       <form
+        data-slot="composer-root"
         onSubmit={handleFormSubmit}
         ref={formRef}
         className={cn("relative w-full flex flex-col", className)}

@@ -1,12 +1,20 @@
 "use client";
 
-import { CircleDotIcon, Loader, TextQuoteIcon, XIcon } from "lucide-react";
+import {
+  CircleDotIcon,
+  FileCodeIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+  Loader,
+  ScanIcon,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { type CommandItemData, Composer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
+import { IconButton } from "@/components/ui/icon-button";
 import { useModelStore } from "@/lib/store/model";
 import { cn } from "@/lib/utils";
 import type { AskUserQuestion } from "@/tools/ask-user";
@@ -142,6 +150,14 @@ const fetchPlaygroundIssues = async (
   return PLAYGROUND_ISSUES.filter((item) => item.label.toLowerCase().includes(lowered));
 };
 
+// Demo: files "open in the workspace" surfaced as the AI's context, shown in the
+// strip peeking above the composer and toggled by the scan button in the chrome.
+const DEMO_CONTEXT_FILES = [
+  { id: "prd", name: "PRD.md", icon: FileTextIcon },
+  { id: "auth", name: "auth-service.ts", icon: FileCodeIcon },
+  { id: "metrics", name: "metrics.xlsx", icon: FileSpreadsheetIcon },
+];
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -235,17 +251,6 @@ export default function ComponentsPlayground() {
                       : "Ask Multi"}
               </button>
             ))}
-            <div className="h-4 w-px bg-primary-border" />
-            <button
-              type="button"
-              onClick={() => setShowContextWindow((previous) => !previous)}
-              className={cn(
-                "rounded-md px-3 py-1 text-xs border border-primary-border bg-primary text-ink-secondary hover:bg-primary-hover font-medium transition-colors",
-                showContextWindow && "bg-primary-active text-slate-1",
-              )}
-            >
-              Context
-            </button>
           </div>
         </div>
         <div className="flex min-h-[448px] items-end rounded-lg border border-secondary-border bg-secondary p-4">
@@ -299,17 +304,16 @@ export default function ComponentsPlayground() {
 
             <Composer.ContextWindow>
               {showContextWindow && (
-                <div className="flex items-center gap-1.5 text-ink-secondary">
-                  <TextQuoteIcon className="size-3.5" />
-                  <span>2 selections</span>
-                  <button
-                    type="button"
-                    aria-label="Clear selections"
-                    className="cursor-pointer rounded-full p-0.5 hover:bg-primary-hover hover:text-ink-primary"
-                    onClick={() => setShowContextWindow(false)}
-                  >
-                    <XIcon className="size-3" />
-                  </button>
+                <div data-slot="context-files" className="flex items-center gap-1.5">
+                  {DEMO_CONTEXT_FILES.map((file) => (
+                    <span
+                      key={file.id}
+                      className="inline-flex items-center gap-1 rounded-md bg-primary-hover px-1.5 py-0.5 text-ink-secondary"
+                    >
+                      <file.icon className="size-3.5 text-ink-tertiary" />
+                      {file.name}
+                    </span>
+                  ))}
                 </div>
               )}
             </Composer.ContextWindow>
@@ -337,7 +341,20 @@ export default function ComponentsPlayground() {
                     <ModelSelector value={model} onValueChange={setModel} />
                     <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
                   </div>
-                  <Composer.Submit />
+                  <div className="flex items-center gap-1">
+                    <IconButton
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-pressed={showContextWindow}
+                      aria-label="Toggle workspace context"
+                      onClick={() => setShowContextWindow((previous) => !previous)}
+                      className={cn(showContextWindow && "bg-primary-hover text-ink-primary")}
+                    >
+                      <ScanIcon />
+                    </IconButton>
+                    <Composer.Submit />
+                  </div>
                 </Composer.Actions>
               )}
             </Composer.Container>

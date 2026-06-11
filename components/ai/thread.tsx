@@ -164,9 +164,7 @@ const DOCK_SELECTOR = '[data-slot="composer-context-window"], [data-slot="compos
  * is mounted yet.
  */
 const measureComposerInset = (root: HTMLElement): number | null => {
-  const dock =
-    root.querySelector('[data-slot="composer-context-window"]') ??
-    root.querySelector('[data-slot="composer-container"]');
+  const dock = root.querySelector('[data-slot="composer-container"]');
   if (!dock) return null;
   return Math.round(
     root.getBoundingClientRect().bottom - dock.getBoundingClientRect().top + COMPOSER_GAP,

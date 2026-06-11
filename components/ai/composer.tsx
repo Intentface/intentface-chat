@@ -483,6 +483,39 @@ const createCommandListPlugin = (getRegisteredPrefixes: () => RegisteredPrefix[]
             : { ...previousState, dismissedAt };
         }
 
+        // Already-open token: track its range stickily through the change rather
+        // than re-scanning (a scan stops at whitespace and would drop typed
+        // spaces). The end grows on insert (+1 bias) and shrinks on delete; the
+        // query is read from the fixed range, so the filter holds steady — and
+        // accepts spaces — as the caret moves inside the token.
+        if (previousState.isOpen && previousState.trigger !== null) {
+          const trigger = previousState.trigger;
+          let start = previousState.triggerStartPosition;
+          let end = previousState.triggerEndPosition;
+          if (transaction.docChanged) {
+            start = transaction.mapping.map(start, -1);
+            end = transaction.mapping.map(end, 1);
+          }
+          const docEnd = newEditorState.doc.content.size;
+          const cursor = newEditorState.selection.$from.pos;
+          const prefixIntact =
+            start + trigger.length <= docEnd &&
+            newEditorState.doc.textBetween(start, start + trigger.length) === trigger;
+          // Stay open while the prefix survives and the caret is still inside.
+          if (prefixIntact && end >= start + trigger.length && cursor >= start && cursor <= end) {
+            return {
+              isOpen: true,
+              trigger,
+              query: newEditorState.doc.textBetween(start + trigger.length, end, "\n"),
+              triggerStartPosition: start,
+              triggerEndPosition: end,
+              dismissedAt,
+            };
+          }
+          // Prefix deleted or caret left the token → fall through to a fresh
+          // scan (or closed) below.
+        }
+
         const { selection } = newEditorState;
         const cursorPosition = selection.$from.pos;
         const blockStart = selection.$from.start();

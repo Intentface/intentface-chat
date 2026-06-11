@@ -240,7 +240,7 @@ Sub-parts: `Composer.CommandItem`, `Composer.CommandItemIcon`, `Composer.Command
 
 #### The composing token (Linear-style)
 
-While a command list is open, the trigger + its non-whitespace run (e.g. `@search`) is treated as a single **token**, highlighted as a badge. The popup always filters by the *whole* token regardless of where the caret sits inside it — so you can move into the middle and fix a typo and the list re-filters on the corrected token.
+While a command list is open, the trigger and the text after it (e.g. `@John Smith`) is treated as a single **token**, highlighted as a badge. The popup always filters by the *whole* token regardless of where the caret sits inside it — so you can move into the middle and fix a typo and the list re-filters on the corrected token. A token opens on a trigger that follows whitespace; once open it's tracked by range, so **spaces become part of the filter** (multi-word queries work) and the token only ends when you select an item or dismiss it.
 
 Keyboard inside an open command list:
 

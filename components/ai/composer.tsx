@@ -1724,12 +1724,11 @@ type ComposerContainerProps = ComponentProps<"div">;
 const ComposerContainer = ({ className, children, ...props }: ComposerContainerProps) => {
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;
-    if (
-      target.tagName === "BUTTON" ||
-      target.tagName === "A" ||
-      target.tagName === "INPUT" ||
-      target.closest("button, a, input")
-    ) {
+    // The editor and interactive controls own their mouse behavior. Calling
+    // preventDefault on a mousedown inside the editable area would cancel the
+    // browser's text-selection drag, so only hijack focus when the click lands
+    // on the surrounding chrome.
+    if (target.closest("button, a, input, [data-slot='composer-editor']")) {
       return;
     }
 
@@ -1899,6 +1898,7 @@ const ComposerTextarea = ({
     content: isControlled ? value : "",
     editorProps: {
       attributes: {
+        "data-slot": "composer-editor",
         class: cn("max-w-none focus:outline-none w-full font-[450] leading-[1.7]"),
         spellcheck: "false",
       },

@@ -54,16 +54,17 @@ type MessageTurnProps = ComponentProps<"div"> & {
   // overlay's z-1), so the assistant reply fades out under the blur as it scrolls
   // up to meet the header — instead of colliding with a bubble in the readable
   // area. The turn is the sticky scope, so the pin releases at the turn boundary.
-  // Pure CSS — pairs with any auto-scroll mode.
+  // Styles key off data-sticky. Pure CSS — pairs with any auto-scroll mode.
   sticky?: boolean;
 };
 
 const MessageTurn = ({ sticky, className, ...props }: MessageTurnProps) => (
   <div
     data-slot="message-turn"
+    data-sticky={sticky ? "" : undefined}
     className={cn(
       "flex w-full flex-col gap-4 [overflow-anchor:none]",
-      sticky && "*:data-[role=user]:sticky *:data-[role=user]:top-4 *:data-[role=user]:z-2",
+      "data-sticky:*[role=user]:sticky data-sticky:*[role=user]:top-4 data-sticky:*[role=user]:z-2",
       className,
     )}
     {...props}

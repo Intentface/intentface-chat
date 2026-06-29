@@ -118,7 +118,6 @@ export type ComposerMessageSubmit = {
   kind: "message";
   text: string;
   files: FileUIPart[];
-  chips: ChipData[];
 };
 
 export type ComposerAnswerEntry =
@@ -161,7 +160,8 @@ export type ComposerCommandsMap = Record<string, ComposerCommandsConfig>;
 
 // ---------------------------------------------------------------------------
 // Document — conversions between the live TipTap editor and the wire formats:
-// the opaque snapshot (ProseMirror JSON) and the {text, chips} submit payload.
+// the opaque snapshot (ProseMirror JSON) and the {text} submit payload (chips
+// ride inline in the text as chip: markdown tokens).
 // ---------------------------------------------------------------------------
 
 const snapshotFromEditor = (editor: Editor): ComposerSnapshot =>
@@ -174,8 +174,7 @@ const applySnapshotToEditor = (editor: Editor, snapshot: ComposerSnapshot): void
   editor.commands.setContent(snapshot.__pmDoc as never);
 };
 
-const serializeEditorContent = (editor: Editor): { text: string; chips: ChipData[] } => {
-  const chipsByKey = new Map<string, ChipData>();
+const serializeEditorContent = (editor: Editor): { text: string } => {
   const blocks: string[] = [];
 
   editor.state.doc.forEach((block) => {
@@ -194,25 +193,18 @@ const serializeEditorContent = (editor: Editor): { text: string; chips: ChipData
         icon?: ChipIconKey | null;
         variant?: ChipVariant | null;
       };
-      const prefix = attrs.prefix ?? "";
-      const value = attrs.value ?? "";
-      const label = attrs.label ?? "";
-      inline += encodeChipMarkdown(prefix, value, label);
-      const key = `${prefix}:${value}`;
-      if (!chipsByKey.has(key)) {
-        chipsByKey.set(key, {
-          prefix,
-          value,
-          label,
-          ...(attrs.icon ? { icon: attrs.icon } : {}),
-          ...(attrs.variant ? { variant: attrs.variant } : {}),
-        });
-      }
+      inline += encodeChipMarkdown({
+        prefix: attrs.prefix ?? "",
+        value: attrs.value ?? "",
+        label: attrs.label ?? "",
+        variant: attrs.variant ?? undefined,
+        icon: attrs.icon ?? undefined,
+      });
     });
     blocks.push(inline);
   });
 
-  return { text: blocks.join("\n"), chips: [...chipsByKey.values()] };
+  return { text: blocks.join("\n") };
 };
 
 // ---------------------------------------------------------------------------
@@ -239,7 +231,7 @@ const registerComposerController = (instance: Editor) => {
 export type ComposerEditorState = ComposerEditorHandle & {
   getText: () => string;
   setText: (text: string) => void;
-  serialize: () => { text: string; chips: ChipData[] };
+  serialize: () => { text: string };
   ensureFocus: () => void;
 };
 
@@ -251,7 +243,7 @@ export const composerController: ComposerEditorState = {
   insertChip: (chip) => activeEditor?.commands.insertContent({ type: "mentionChip", attrs: chip }),
   getText: () => activeEditor?.getText() ?? "",
   setText: (text) => activeEditor?.commands.setContent(text),
-  serialize: () => (activeEditor ? serializeEditorContent(activeEditor) : { text: "", chips: [] }),
+  serialize: () => (activeEditor ? serializeEditorContent(activeEditor) : { text: "" }),
   ensureFocus: () => {
     if (activeEditor && !activeEditor.isFocused) activeEditor.commands.focus();
   },
@@ -1685,7 +1677,6 @@ const ComposerRoot = ({
       kind: "message",
       text: submitText,
       files: fileParts,
-      chips: serialized.chips,
     });
   };
 

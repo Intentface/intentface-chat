@@ -34,7 +34,7 @@ export const IntentfaceChatDemo = () => {
             >
               <Message.Content>
                 {message.role === "user" ? (
-                  <Message.Text text={message.text} />
+                  <Message.Text>{message.text}</Message.Text>
                 ) : (
                   <Message.Markdown>{message.text}</Message.Markdown>
                 )}

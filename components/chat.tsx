@@ -214,9 +214,6 @@ const ChatMessages = () => {
               : null;
             const askUser = getAskUserInfo(parts);
             const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
-            const userChips = isUser
-              ? parts.flatMap((p) => (p.type === "data-chip" ? p.data : []))
-              : [];
 
             // Only show reasoning/tools inline after the message has finished streaming
             const shouldShowReasoning =
@@ -275,12 +272,10 @@ const ChatMessages = () => {
                           if (index <= lastChainIdx) return null;
                         }
                         if (isUser) {
-                          return <Message.Text key={index} text={part.text} chips={userChips} />;
+                          return <Message.Text key={index}>{part.text}</Message.Text>;
                         }
                         return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
                       }
-                      case "data-chip":
-                        return null;
                       case "tool-createArtifact": {
                         const input = part.input as {
                           title?: string;
@@ -501,11 +496,7 @@ const ChatInput = () => {
 
         await sendMessage(
           {
-            parts: [
-              ...data.files,
-              { type: "text", text },
-              ...(data.chips.length > 0 ? [{ type: "data-chip" as const, data: data.chips }] : []),
-            ],
+            parts: [...data.files, { type: "text", text }],
           },
           {
             body: {

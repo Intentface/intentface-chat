@@ -156,14 +156,12 @@ const MessageChip = ({ label, chip, className }: MessageChipProps) => (
 );
 
 type MessageTextProps = {
-  text: string;
-  chips?: ChipData[];
+  children: string;
   className?: string;
 };
 
-const MessageText = ({ text, chips, className }: MessageTextProps) => {
-  const segments = parseChipSegments(text);
-  const chipByKey = new Map((chips ?? []).map((c) => [`${c.prefix}:${c.value}`, c]));
+const MessageText = ({ children, className }: MessageTextProps) => {
+  const segments = parseChipSegments(children);
 
   return (
     <span className={cn("whitespace-pre-wrap text-md", className)}>
@@ -171,11 +169,7 @@ const MessageText = ({ text, chips, className }: MessageTextProps) => {
         segment.type === "text" ? (
           <Fragment key={index}>{segment.text}</Fragment>
         ) : (
-          <MessageChip
-            key={index}
-            label={segment.label}
-            chip={chipByKey.get(`${segment.prefix}:${segment.value}`)}
-          />
+          <MessageChip key={index} label={segment.label} chip={segment} />
         ),
       )}
     </span>

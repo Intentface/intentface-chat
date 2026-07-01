@@ -353,18 +353,6 @@ const detectActivePrefix = (args: {
   return CLOSED_COMMAND_STATE;
 };
 
-const computeNextHighlight = (
-  rows: Array<{ value: string }>,
-  current: string | null,
-  direction: 1 | -1,
-): string | null => {
-  if (rows.length === 0) return null;
-  const currentIndex = current === null ? -1 : rows.findIndex((row) => row.value === current);
-  const nextIndex =
-    currentIndex === -1 ? 0 : (currentIndex + direction + rows.length) % rows.length;
-  return rows[nextIndex].value;
-};
-
 // ---------------------------------------------------------------------------
 // Command list — fuzzy filtering. A prefix match wins outright (2); otherwise
 // every matched character scores, with bonuses for adjacency and word-boundary
@@ -1052,12 +1040,16 @@ type ComposerAskUserState = {
   optionsRef: RefObject<AskUserOptionsHandle | null>;
 };
 
-// Mirror of the command-list plugin state: whether a trigger prefix is
-// active, which one, and the query typed after it.
+// Command-list state: the plugin mirror (whether a trigger prefix is active,
+// which one, the query typed after it) plus the navigation highlight. The
+// highlight lives here — not in the CommandList component — so the editor's
+// keydown handler (outside React) can move it through a plain store method
+// instead of a bridged ref. It's a raw index; readers wrap it by item count.
 type ComposerCommandsState = {
   isOpen: boolean;
   trigger: string | null;
   query: string;
+  highlightIndex: number;
 };
 
 // The effective open panel — `value` is the matched Composer.PanelItem value
@@ -1092,7 +1084,9 @@ type ComposerStore = {
   setHasContent: (value: boolean) => void;
   setIsSubmitting: (value: boolean) => void;
   setPanelValue: (value: string | null) => void;
-  setCommands: (next: ComposerCommandsState) => void;
+  setCommands: (next: { isOpen: boolean; trigger: string | null; query: string }) => void;
+  moveHighlight: (direction: number) => void;
+  setHighlight: (index: number) => void;
   setQuestions: (questions: AskUserQuestion[] | null) => void;
   setDragging: (active: boolean) => void;
   resetAttachments: () => void;
@@ -1101,8 +1095,9 @@ type ComposerStore = {
   // Co-located refs the mounted Composer wires up at runtime.
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
+  // Invokes the active list's current selection. Registered by the mounted
+  // CommandList via a callback ref (commit-time), not an effect.
   commandSelectRef: RefObject<(() => void) | null>;
-  commandNavigateRef: RefObject<((direction: number) => void) | null>;
 };
 
 const createComposerStore = (): ComposerStore => {
@@ -1126,7 +1121,6 @@ const createComposerStore = (): ComposerStore => {
     current: null,
   };
   const commandSelectRef: RefObject<(() => void) | null> = { current: null };
-  const commandNavigateRef: RefObject<((direction: number) => void) | null> = { current: null };
 
   // Canonical machine states; the snapshot mirrors them on every update.
   let attachmentState = INITIAL_ATTACHMENT_STATE;
@@ -1151,7 +1145,7 @@ const createComposerStore = (): ComposerStore => {
     notify();
   };
 
-  const setCommands = (next: ComposerCommandsState) => {
+  const setCommands = (next: { isOpen: boolean; trigger: string | null; query: string }) => {
     const current = snapshot.commands;
     if (
       current.isOpen === next.isOpen &&
@@ -1160,7 +1154,31 @@ const createComposerStore = (): ComposerStore => {
     ) {
       return;
     }
-    snapshot = { ...snapshot, commands: next };
+    // Re-point the highlight at the first row whenever the active token or its
+    // query changes, so filtering always lands on the top match.
+    const resetHighlight = current.trigger !== next.trigger || current.query !== next.query;
+    snapshot = {
+      ...snapshot,
+      commands: { ...next, highlightIndex: resetHighlight ? 0 : current.highlightIndex },
+    };
+    notify();
+  };
+
+  // Move the highlight by ±1 (raw, unbounded). The active CommandList wraps it
+  // by its item count when reading, so the store needs no item knowledge.
+  const moveHighlight = (direction: number) => {
+    const { commands } = snapshot;
+    snapshot = {
+      ...snapshot,
+      commands: { ...commands, highlightIndex: commands.highlightIndex + direction },
+    };
+    notify();
+  };
+
+  // Set the highlight to an absolute index (hover).
+  const setHighlight = (index: number) => {
+    if (snapshot.commands.highlightIndex === index) return;
+    snapshot = { ...snapshot, commands: { ...snapshot.commands, highlightIndex: index } };
     notify();
   };
 
@@ -1304,7 +1322,7 @@ const createComposerStore = (): ComposerStore => {
     textarea: { ...composerController, hasContent: false },
     isSubmitting: false,
     panel: { isOpen: false, value: null },
-    commands: { isOpen: false, trigger: null, query: "" },
+    commands: { isOpen: false, trigger: null, query: "", highlightIndex: 0 },
     attachments: {
       items: attachmentState.items,
       error: attachmentState.error,
@@ -1344,7 +1362,6 @@ const createComposerStore = (): ComposerStore => {
     dispatchAttachments({ type: "reset" });
     askUserMachine = INITIAL_ASK_USER_STATE;
     commandSelectRef.current = null;
-    commandNavigateRef.current = null;
     snapshot = initialSnapshot;
     notify();
   };
@@ -1361,6 +1378,8 @@ const createComposerStore = (): ComposerStore => {
     setIsSubmitting,
     setPanelValue,
     setCommands,
+    moveHighlight,
+    setHighlight,
     setQuestions,
     setDragging,
     resetAttachments: () => dispatchAttachments({ type: "reset" }),
@@ -1369,7 +1388,6 @@ const createComposerStore = (): ComposerStore => {
     attachmentConfigRef,
     submitAnswersRef,
     commandSelectRef,
-    commandNavigateRef,
   };
 };
 
@@ -1960,7 +1978,7 @@ const ComposerTextarea = ({
           }
           case "command-navigate": {
             event.preventDefault();
-            composerStore.commandNavigateRef.current?.(action.direction);
+            composerStore.moveHighlight(action.direction);
             return true;
           }
           case "command-caret": {
@@ -2336,6 +2354,9 @@ type CommandListNavContextValue = {
   setHighlightedValue: (value: string | null) => void;
   selectByValue: (value: string) => void;
   dismiss: () => void;
+  // Stable callback ref the highlighted row attaches to: stores nothing, just
+  // scrolls itself into view when it becomes the highlight (no effect).
+  scrollHighlightedIntoView: (node: HTMLElement | null) => void;
 };
 
 const CommandListNavContext = createContext<CommandListNavContextValue | null>(null);
@@ -2449,17 +2470,14 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
 
   const { items, state } = useResolvedItems(itemsProp, query, isActive);
 
-  // Only the user's explicit choice (hover / arrow keys) is stored. The active
-  // highlight is *derived* every render: honor the override while it still
-  // points at a present item, otherwise fall back to the first row (or nothing
-  // when the list is empty). The override may go stale as items change and the
-  // derivation silently corrects it — so there is no setState during render.
-  const [highlightOverride, setHighlightOverride] = useState<string | null>(null);
-
-  const effectiveHighlight =
-    highlightOverride !== null && items.some((item) => item.value === highlightOverride)
-      ? highlightOverride
-      : (items[0]?.value ?? null);
+  // The highlight index lives in the store (so the editor's keydown handler can
+  // move it). It's raw/unbounded; wrap it by the current item count here. An
+  // empty list has no highlighted row — the "No results" row stands in as the
+  // sole selectable.
+  const highlightIndex = useComposer((composer) => composer.commands.highlightIndex);
+  const activeIndex =
+    items.length > 0 ? ((highlightIndex % items.length) + items.length) % items.length : -1;
+  const effectiveHighlight = items[activeIndex]?.value ?? null;
 
   const selectByValue = useCallback(
     (value: string) => {
@@ -2526,29 +2544,43 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
     editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
   }, [internals]);
 
-  if (isActive) {
-    // With matches, select the highlight. With none, the "No results" row is
-    // itself the (only) option and selecting it dismisses — so Tab/Enter aren't
-    // dead in the empty state (Linear-style).
-    composerStore.commandSelectRef.current = effectiveHighlight
-      ? () => selectByValue(effectiveHighlight)
-      : state === "empty"
-        ? dismiss
-        : null;
-    composerStore.commandNavigateRef.current = (direction: number) => {
-      const next = computeNextHighlight(items, effectiveHighlight, direction === -1 ? -1 : 1);
-      setHighlightOverride(next);
-    };
-  }
+  // The editor's keydown handler invokes the current selection through
+  // commandSelectRef. Keep the latest values in a ref so the callback stays
+  // stable, and register it via the root's callback ref (commit-time) — not an
+  // effect, not a render-phase assignment.
+  const selectState = useAsRef({ effectiveHighlight, selectByValue, dismiss, state });
+  const runSelect = useCallback(() => {
+    const { effectiveHighlight, selectByValue, dismiss, state } = selectState.current;
+    // With a match, select it. When empty, the "No results" row is the sole
+    // option and selecting it dismisses — so Tab/Enter aren't dead (Linear-style).
+    if (effectiveHighlight) selectByValue(effectiveHighlight);
+    else if (state === "empty") dismiss();
+  }, []);
+  const registerSelect = useCallback(
+    (node: HTMLDivElement | null) => {
+      composerStore.commandSelectRef.current = node ? runSelect : null;
+    },
+    [runSelect],
+  );
+
+  // Scroll the highlighted row into view as it becomes the highlight. Stable, so
+  // React calls it only on highlight change — no per-render scroll, no effect.
+  const scrollHighlightedIntoView = useCallback((node: HTMLElement | null) => {
+    node?.scrollIntoView({ block: "nearest" });
+  }, []);
 
   const navContext = useMemo<CommandListNavContextValue>(
     () => ({
       highlightedValue: effectiveHighlight,
-      setHighlightedValue: setHighlightOverride,
+      setHighlightedValue: (value) => {
+        const index = value === null ? -1 : items.findIndex((item) => item.value === value);
+        if (index >= 0) composerStore.setHighlight(index);
+      },
       selectByValue,
       dismiss,
+      scrollHighlightedIntoView,
     }),
-    [effectiveHighlight, selectByValue, dismiss],
+    [effectiveHighlight, items, selectByValue, dismiss, scrollHighlightedIntoView],
   );
 
   const itemsContext = useMemo<CommandListItemsContextValue>(
@@ -2562,10 +2594,11 @@ const ComposerCommandList = ({ prefix, className, children }: ComposerCommandLis
     <CommandListItemsContext.Provider value={itemsContext}>
       <CommandListNavContext.Provider value={navContext}>
         <div
+          ref={registerSelect}
           data-slot="composer-command-list"
           data-state={state}
           className={cn(
-            "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1",
+            "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1 scroll-py-1",
             className,
           )}
         >
@@ -2692,6 +2725,7 @@ const ComposerCommandItem = ({ value, children }: ComposerCommandItemProps) => {
 
   return (
     <Commands.Item
+      ref={isHighlighted ? navContext.scrollHighlightedIntoView : undefined}
       data-slot="composer-command-item"
       highlighted={isHighlighted}
       onMouseDown={(event) => {

@@ -112,7 +112,7 @@ const StepsIcon = ({
     {
       state: { status: resolvedStatus },
       props: [
-        { "data-slot": "steps-icon", "data-status": resolvedStatus, "aria-hidden": true },
+        { "data-slot": "steps-icon", "aria-hidden": true },
         elementProps,
       ],
     },
@@ -139,7 +139,7 @@ const StepsLabel = ({
     { className, render, style },
     {
       state: { status: resolvedStatus },
-      props: [{ "data-slot": "steps-label", "data-status": resolvedStatus }, elementProps],
+      props: [{ "data-slot": "steps-label" }, elementProps],
     },
   );
 };

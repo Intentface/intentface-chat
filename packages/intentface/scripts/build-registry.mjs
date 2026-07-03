@@ -2,6 +2,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveSourceImport } from "../src/imports.js";
+import { buildShadcnDist } from "./build-shadcn-dist.mjs";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(packageRoot, "..", "..");
@@ -46,6 +47,12 @@ await writeFile(
 );
 
 console.log(`Built ${path.relative(repoRoot, outputPath)}.`);
+
+const distDir = path.join(repoRoot, "public", "r");
+const dist = await buildShadcnDist({ manifest, expandedItems, outputDir: distDir });
+console.log(
+  `Built ${path.relative(repoRoot, distDir)} (${dist.itemCount} items, ${dist.listedCount} listed).`,
+);
 
 async function expandFile(file) {
   if (!file.sourcePath.includes("*")) {

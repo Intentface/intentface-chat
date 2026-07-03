@@ -43,3 +43,6 @@ next-env.d.ts
 # claude
 .claude
 CLAUDE.md
+
+# generated shadcn registry dist
+/public/r/

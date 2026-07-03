@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { buildShadcnDist } from "../scripts/build-shadcn-dist.mjs";
 import {
   addItems,
   detectPackageManager,
@@ -33,6 +34,109 @@ test("every manifest sourcePath exists on disk", async () => {
         `${item.name}: sourcePath "${file.sourcePath}" does not exist`,
       );
     }
+  }
+});
+
+test("shadcn dist maps items, hides unlisted, rewrites deps to URLs", async () => {
+  const outputDir = await mkdtemp(path.join(os.tmpdir(), "intentface-dist-"));
+  try {
+    const expandedItems = [
+      {
+        name: "widget",
+        type: "registry:component",
+        title: "Widget",
+        dependencies: ["@intentface/chat"],
+        registryDependencies: ["utils"],
+        files: [
+          {
+            sourcePath: "components/ai/widget.tsx",
+            targetPath: "components/ai/widget.tsx",
+            type: "registry:component",
+            content: "export const Widget = () => null;\n",
+          },
+        ],
+      },
+      {
+        name: "utils",
+        type: "registry:lib",
+        hidden: true,
+        files: [
+          {
+            sourcePath: "lib/utils.ts",
+            targetPath: "lib/utils.ts",
+            type: "registry:lib",
+            content: "export const cn = () => '';\n",
+          },
+        ],
+      },
+      {
+        name: "bundle",
+        type: "registry:bundle",
+        title: "Bundle",
+        registryDependencies: ["widget"],
+        exampleDependencies: ["widget"],
+      },
+      {
+        name: "theme",
+        type: "registry:theme",
+        hidden: true,
+        cssBlocks: [
+          {
+            name: "theme",
+            content: [
+              '@source "../node_modules/streamdown/dist/*.js";',
+              "@custom-variant dark (&:is(.dark *));",
+              ":root { --bg: #fff; --mix: calc(16% * var(--con)); font-feature-settings: 'liga' 1; }",
+              ".dark { --bg: #111; }",
+              "@theme inline { --color-base: var(--base); }",
+            ].join("\n"),
+          },
+        ],
+      },
+    ];
+
+    await buildShadcnDist({
+      manifest: { name: "intentface", homepage: "https://intentface.dev" },
+      expandedItems,
+      outputDir,
+      baseUrl: "http://localhost:4141",
+    });
+
+    const index = JSON.parse(await readFile(path.join(outputDir, "registry.json"), "utf8"));
+    assert.deepEqual(
+      index.items.map((item) => item.name),
+      ["widget", "bundle"],
+    );
+    assert.ok(index.items.every((item) => (item.files ?? []).every((file) => !file.content)));
+
+    const widget = JSON.parse(await readFile(path.join(outputDir, "widget.json"), "utf8"));
+    assert.equal(widget.$schema, "https://ui.shadcn.com/schema/registry-item.json");
+    assert.equal(widget.type, "registry:component");
+    assert.deepEqual(widget.registryDependencies, ["http://localhost:4141/r/utils.json"]);
+    assert.equal(widget.files[0].path, "components/ai/widget.tsx");
+    assert.equal(widget.files[0].target, "components/ai/widget.tsx");
+    assert.ok(widget.files[0].content.includes("Widget"));
+    assert.equal(widget.exampleDependencies, undefined);
+    assert.equal(widget.hidden, undefined);
+
+    // Hidden items are still emitted so transitive URL deps resolve.
+    const utils = JSON.parse(await readFile(path.join(outputDir, "utils.json"), "utf8"));
+    assert.equal(utils.name, "utils");
+
+    const bundle = JSON.parse(await readFile(path.join(outputDir, "bundle.json"), "utf8"));
+    assert.equal(bundle.type, "registry:block");
+    assert.equal(bundle.files, undefined);
+
+    const theme = JSON.parse(await readFile(path.join(outputDir, "theme.json"), "utf8"));
+    assert.equal(theme.cssVars.light.bg, "#fff");
+    assert.equal(theme.cssVars.light.mix, "calc(16% * var(--con))");
+    assert.equal(theme.cssVars.dark.bg, "#111");
+    assert.equal(theme.cssVars.theme["color-base"], "var(--base)");
+    assert.deepEqual(theme.css["@custom-variant dark (&:is(.dark *))"], {});
+    assert.deepEqual(theme.css['@source "../node_modules/streamdown/dist/*.js"'], {});
+    assert.equal(theme.css[":root"]["font-feature-settings"], "'liga' 1");
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
   }
 });
 

@@ -14,7 +14,8 @@
       "!dist",
       "!build",
       "!.source",
-      "!packages/intentface/registry/registry.json"
+      "!packages/intentface/registry/registry.json",
+      "!packages/chat/src/internal/render"
     ]
   },
   "formatter": {

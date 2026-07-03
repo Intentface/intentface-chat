@@ -44,8 +44,5 @@ next-env.d.ts
 .claude
 CLAUDE.md
 
-# generated shadcn registry dist
-/public/r/
-
 # fumadocs-mdx generated
 .source/

@@ -31,10 +31,10 @@ jobs:
       - name: Typecheck
         run: bunx tsc --noEmit
 
-      # Builds the shadcn registry dist; its closure validator fails the job on a
-      # stale manifest, so this doubles as the registry regression gate.
-      - name: Registry build
-        run: bun run intentface:build-registry
+      # Validates the registry manifest (deps + files metadata for the docs'
+      # manual-install blocks); its closure check fails the job on a stale manifest.
+      - name: Registry validate
+        run: bun run intentface:validate
 
       - name: Registry tests
         run: bun run intentface:test

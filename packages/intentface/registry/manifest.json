@@ -17,18 +17,6 @@
       ]
     },
     {
-      "name": "intentface-theme-file",
-      "type": "registry:item",
-      "title": "Intentface theme (standalone CSS file)",
-      "files": [
-        {
-          "sourcePath": "packages/intentface/registry/intentface.css",
-          "targetPath": "~/app/intentface.css",
-          "type": "registry:file"
-        }
-      ]
-    },
-    {
       "name": "utils",
       "type": "registry:lib",
       "title": "Utilities",
@@ -536,6 +524,7 @@
         "button",
         "icon-button",
         "kbd",
+        "hooks-use-loop",
         "hooks-use-measure",
         "utils",
         "icons"
@@ -627,68 +616,6 @@
           "type": "registry:component"
         }
       ]
-    },
-    {
-      "name": "chat-demo",
-      "type": "registry:component",
-      "title": "Chat Demo",
-      "hidden": true,
-      "registryDependencies": ["composer", "message", "thread"],
-      "files": [
-        {
-          "sourcePath": "packages/intentface/registry/examples/chat-demo.tsx",
-          "targetPath": "components/intentface-chat-demo.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "ui-primitives",
-      "type": "registry:bundle",
-      "title": "UI primitives",
-      "registryDependencies": [
-        "button",
-        "button-group",
-        "checkbox",
-        "collapsible",
-        "dialog",
-        "drawer",
-        "dropdown-menu",
-        "hover-card",
-        "icon-button",
-        "input",
-        "input-group",
-        "kbd",
-        "markdown",
-        "progressive-blur",
-        "radio-group",
-        "select",
-        "separator",
-        "sidebar",
-        "skeleton",
-        "slider",
-        "textarea",
-        "text-loop",
-        "text-shimmer",
-        "tooltip"
-      ]
-    },
-    {
-      "name": "chat-primitives",
-      "type": "registry:bundle",
-      "title": "AI chat primitives",
-      "registryDependencies": [
-        "ask-user",
-        "attachments",
-        "chip",
-        "composer",
-        "message",
-        "reasoning",
-        "step-queue",
-        "steps",
-        "thread"
-      ],
-      "exampleDependencies": ["chat-demo"]
     }
   ]
 }

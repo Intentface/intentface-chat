@@ -1,13 +1,17 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveSourceImport } from "../src/imports.js";
-import { buildShadcnDist } from "./build-shadcn-dist.mjs";
+
+// Validates the registry manifest against the repo: no duplicate source files,
+// every registryDependency is a known item, and every internal import in a
+// component's source is covered by that item's dependency closure. The manifest
+// is metadata for the docs' manual copy-paste blocks (deps + files per item);
+// this validator keeps it honest. Exits non-zero on any violation.
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(packageRoot, "..", "..");
 const manifestPath = path.join(packageRoot, "registry", "manifest.json");
-const outputPath = path.join(packageRoot, "registry", "registry.json");
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 const expandedItems = [];
@@ -17,42 +21,12 @@ for (const item of manifest.items) {
   for (const file of item.files ?? []) {
     files.push(...(await expandFile(file)));
   }
-
-  const cssBlocks = [];
-  for (const block of item.cssBlocks ?? []) {
-    cssBlocks.push({
-      ...block,
-      content: await readFile(path.join(repoRoot, block.sourcePath), "utf8"),
-    });
-  }
-
-  expandedItems.push({ ...item, files, cssBlocks });
+  expandedItems.push({ ...item, files });
 }
 
 validateRegistry(expandedItems);
 
-await writeFile(
-  outputPath,
-  `${JSON.stringify(
-    {
-      $schema: manifest.$schema,
-      name: manifest.name,
-      version: manifest.version,
-      homepage: manifest.homepage,
-      items: expandedItems,
-    },
-    null,
-    2,
-  )}\n`,
-);
-
-console.log(`Built ${path.relative(repoRoot, outputPath)}.`);
-
-const distDir = path.join(repoRoot, "public", "r");
-const dist = await buildShadcnDist({ manifest, expandedItems, outputDir: distDir });
-console.log(
-  `Built ${path.relative(repoRoot, distDir)} (${dist.itemCount} items, ${dist.listedCount} listed).`,
-);
+console.log(`Validated ${expandedItems.length} registry items.`);
 
 async function expandFile(file) {
   if (!file.sourcePath.includes("*")) {
@@ -100,10 +74,7 @@ function validateRegistry(items) {
   }
 
   for (const item of items) {
-    for (const dependency of [
-      ...(item.registryDependencies ?? []),
-      ...(item.exampleDependencies ?? []),
-    ]) {
+    for (const dependency of item.registryDependencies ?? []) {
       if (!itemMap.has(dependency)) {
         throw new Error(`${item.name} depends on unknown item ${dependency}`);
       }

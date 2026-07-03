@@ -530,30 +530,17 @@
       "name": "composer",
       "type": "registry:component",
       "title": "Composer",
-      "dependencies": [
-        "@intentface/chat",
-        "@tiptap/core",
-        "@tiptap/extension-document",
-        "@tiptap/extension-paragraph",
-        "@tiptap/extension-text",
-        "@tiptap/pm",
-        "@tiptap/react",
-        "ai",
-        "motion"
-      ],
+      "dependencies": ["@intentface/chat", "motion"],
       "registryDependencies": [
         "attachments",
         "chip",
-        "commands",
         "ask-user",
         "button",
         "icon-button",
         "kbd",
-        "hooks-use-loop",
         "hooks-use-measure",
         "utils",
-        "icons",
-        "ai-types"
+        "icons"
       ],
       "files": [
         {

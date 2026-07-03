@@ -1,97 +1,34 @@
 "use client";
 
-import type { ToolLabels } from "@intentface/chat/message-utils";
+import {
+  getAskUserStepInfo,
+  getToolCallInfo,
+  type StepStatus,
+  Steps as StepsPrimitive,
+  useSteps,
+} from "@intentface/chat/steps";
 import type { ToolPart } from "@intentface/chat/types";
 import { CircleHelpIcon, CircleIcon } from "lucide-react";
-import {
-  Children,
-  type ComponentProps,
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
+import { Children, type ComponentProps, type ReactNode } from "react";
 import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
-import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
 import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
-import type { AskUserInput, AskUserQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
-
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
-type StepsContextValue = {
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  toolLabels: ToolLabels;
-};
-
-const StepsContext = createContext<StepsContextValue | null>(null);
-
-const useSteps = () => {
-  const context = useContext(StepsContext);
-  if (!context) {
-    throw new Error("Steps components must be used within Steps");
-  }
-  return context;
-};
 
 // ---------------------------------------------------------------------------
 // Root
 // ---------------------------------------------------------------------------
 
-type StepsRootProps = Omit<ComponentProps<"div">, "defaultOpen"> & {
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  toolLabels?: ToolLabels;
-};
+type StepsRootProps = ComponentProps<typeof StepsPrimitive>;
 
-const StepsRoot = ({
-  open: controlledOpen,
-  defaultOpen = false,
-  onOpenChange,
-  toolLabels = DEFAULT_TOOL_LABELS,
-  className,
-  children,
-  ...props
-}: StepsRootProps) => {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  const isControlled = controlledOpen !== undefined;
-  const isOpen = isControlled ? controlledOpen : internalOpen;
-
-  const setIsOpen = useCallback(
-    (value: boolean) => {
-      if (!isControlled) setInternalOpen(value);
-      onOpenChange?.(value);
-    },
-    [isControlled, onOpenChange],
-  );
-
-  const contextValue = useMemo(
-    () => ({ isOpen, setIsOpen, toolLabels }),
-    [isOpen, setIsOpen, toolLabels],
-  );
-
-  return (
-    <StepsContext.Provider value={contextValue}>
-      <Collapsible
-        open={isOpen}
-        onOpenChange={(open) => setIsOpen(open)}
-        data-slot="steps"
-        className={cn("not-prose w-full", className)}
-        {...props}
-      >
-        {children}
-      </Collapsible>
-    </StepsContext.Provider>
-  );
-};
+const StepsRoot = ({ toolLabels = DEFAULT_TOOL_LABELS, className, ...props }: StepsRootProps) => (
+  <StepsPrimitive
+    toolLabels={toolLabels}
+    className={cn("not-prose w-full", className)}
+    {...props}
+  />
+);
 
 StepsRoot.displayName = "Steps";
 
@@ -99,13 +36,13 @@ StepsRoot.displayName = "Steps";
 // Header (trigger for outer collapsible)
 // ---------------------------------------------------------------------------
 
-type StepsHeaderProps = ComponentProps<typeof Collapsible.Trigger>;
+type StepsHeaderProps = ComponentProps<typeof StepsPrimitive.Header>;
 
 const StepsHeader = ({ children, className, ...props }: StepsHeaderProps) => {
   const { isOpen } = useSteps();
 
   return (
-    <Collapsible.Trigger
+    <StepsPrimitive.Header
       className={cn(
         "flex w-full cursor-pointer items-center gap-2 py-1 text-sm text-ink-secondary transition-colors hover:text-ink-primary",
         className,
@@ -116,7 +53,7 @@ const StepsHeader = ({ children, className, ...props }: StepsHeaderProps) => {
       <ChevronDownIcon
         className={cn("size-4 shrink-0 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
       />
-    </Collapsible.Trigger>
+    </StepsPrimitive.Header>
   );
 };
 
@@ -126,14 +63,14 @@ StepsHeader.displayName = "StepsHeader";
 // Content (panel for outer collapsible — timeline container)
 // ---------------------------------------------------------------------------
 
-type StepsContentProps = ComponentProps<typeof Collapsible.Panel>;
+type StepsContentProps = ComponentProps<typeof StepsPrimitive.Content>;
 
 const StepsContent = ({ className, children, ...props }: StepsContentProps) => (
-  <Collapsible.Panel className={cn("mt-2", className)} {...props}>
+  <StepsPrimitive.Content className={cn("mt-2", className)} {...props}>
     <div className="flex flex-col [&>:last-child_[data-slot=step-connector]]:hidden">
       {children}
     </div>
-  </Collapsible.Panel>
+  </StepsPrimitive.Content>
 );
 
 StepsContent.displayName = "StepsContent";
@@ -145,8 +82,6 @@ StepsContent.displayName = "StepsContent";
 // children render below with a vertical connector line on the left. When
 // there are no children the step is a static row (no collapse).
 // ---------------------------------------------------------------------------
-
-type StepStatus = "complete" | "active" | "pending";
 
 type IconComponent = React.ComponentType<{ className?: string }>;
 
@@ -192,7 +127,7 @@ const StepsStep = ({ label, status = "complete", icon, className, children }: St
   // Static row — no children, not collapsible
   if (!hasContent) {
     return (
-      <div data-slot="steps-step" data-status={status} className={className}>
+      <StepsPrimitive.Step status={status} className={className}>
         <div className="flex items-center gap-2 py-0.5">
           <div className={cn("flex size-4 shrink-0 items-center justify-center", iconClasses)}>
             <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
@@ -200,19 +135,14 @@ const StepsStep = ({ label, status = "complete", icon, className, children }: St
           <span className={labelClasses}>{label}</span>
         </div>
         {connector}
-      </div>
+      </StepsPrimitive.Step>
     );
   }
 
   // Collapsible row — trigger swaps icon ↔ chevron on hover/open
   return (
-    <Collapsible
-      defaultOpen={status === "active"}
-      data-slot="steps-step"
-      data-status={status}
-      className={className}
-    >
-      <Collapsible.Trigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-0.5 transition-colors hover:text-ink-primary">
+    <StepsPrimitive.Step status={status} className={className}>
+      <StepsPrimitive.StepTrigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-0.5 transition-colors hover:text-ink-primary">
         <div
           className={cn("relative flex size-4 shrink-0 items-center justify-center", iconClasses)}
         >
@@ -231,19 +161,19 @@ const StepsStep = ({ label, status = "complete", icon, className, children }: St
           />
         </div>
         <span className={labelClasses}>{label}</span>
-      </Collapsible.Trigger>
+      </StepsPrimitive.StepTrigger>
 
-      <Collapsible.Panel>
+      <StepsPrimitive.StepPanel>
         <div className="flex gap-2">
           <div className="flex w-4 justify-center">
             <div className="w-px bg-slate-6" />
           </div>
           <div className="min-w-0 flex-1 py-1">{children}</div>
         </div>
-      </Collapsible.Panel>
+      </StepsPrimitive.StepPanel>
 
       {connector}
-    </Collapsible>
+    </StepsPrimitive.Step>
   );
 };
 
@@ -270,16 +200,10 @@ StepsBody.displayName = "StepsBody";
 // Summary (compact result text)
 // ---------------------------------------------------------------------------
 
-type StepsSummaryProps = ComponentProps<"span">;
+type StepsSummaryProps = ComponentProps<typeof StepsPrimitive.Summary>;
 
-const StepsSummary = ({ className, children, ...props }: StepsSummaryProps) => (
-  <span
-    data-slot="steps-summary"
-    className={cn("text-xs text-ink-secondary", className)}
-    {...props}
-  >
-    {children}
-  </span>
+const StepsSummary = ({ className, ...props }: StepsSummaryProps) => (
+  <StepsPrimitive.Summary className={cn("text-xs text-ink-secondary", className)} {...props} />
 );
 
 StepsSummary.displayName = "StepsSummary";
@@ -288,33 +212,24 @@ StepsSummary.displayName = "StepsSummary";
 // SearchResults / SearchResult
 // ---------------------------------------------------------------------------
 
-type StepsSearchResultsProps = ComponentProps<"div">;
+type StepsSearchResultsProps = ComponentProps<typeof StepsPrimitive.SearchResults>;
 
-const StepsSearchResults = ({ className, children, ...props }: StepsSearchResultsProps) => (
-  <div
-    data-slot="steps-search-results"
-    className={cn("flex flex-wrap gap-1.5", className)}
-    {...props}
-  >
-    {children}
-  </div>
+const StepsSearchResults = ({ className, ...props }: StepsSearchResultsProps) => (
+  <StepsPrimitive.SearchResults className={cn("flex flex-wrap gap-1.5", className)} {...props} />
 );
 
 StepsSearchResults.displayName = "StepsSearchResults";
 
-type StepsSearchResultProps = ComponentProps<"span">;
+type StepsSearchResultProps = ComponentProps<typeof StepsPrimitive.SearchResult>;
 
-const StepsSearchResult = ({ className, children, ...props }: StepsSearchResultProps) => (
-  <span
-    data-slot="steps-search-result"
+const StepsSearchResult = ({ className, ...props }: StepsSearchResultProps) => (
+  <StepsPrimitive.SearchResult
     className={cn(
       "inline-flex items-center rounded-md border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground",
       className,
     )}
     {...props}
-  >
-    {children}
-  </span>
+  />
 );
 
 StepsSearchResult.displayName = "StepsSearchResult";
@@ -323,11 +238,6 @@ StepsSearchResult.displayName = "StepsSearchResult";
 // ToolCall — renders a tool invocation as a timeline step
 // ---------------------------------------------------------------------------
 
-type WebSearchFinding = {
-  claim: string;
-  sources: { url: string; title: string }[];
-};
-
 type StepsToolCallProps = {
   part: ToolPart;
   className?: string;
@@ -335,38 +245,7 @@ type StepsToolCallProps = {
 
 const StepsToolCall = ({ part, className }: StepsToolCallProps) => {
   const { toolLabels } = useSteps();
-  const input = (part.input as Record<string, unknown>) ?? {};
-  const isActive = part.state === "input-streaming" || part.state === "input-available";
-  const isComplete = part.state === "output-available";
-  const name = part.type.replace("tool-", "");
-
-  const labelConfig = toolLabels[name];
-  const label = labelConfig
-    ? isActive
-      ? labelConfig.active(input)
-      : labelConfig.complete(input)
-    : isActive
-      ? `Running ${name}`
-      : `Ran ${name}`;
-
-  const status: StepStatus = isActive ? "active" : isComplete ? "complete" : "pending";
-
-  // Extract summary from tool output
-  const output = isComplete ? (part.output as Record<string, unknown>) : null;
-  const summary = typeof output?.summary === "string" ? output.summary : null;
-
-  // Flatten sources from web search findings
-  const rawOutput = isComplete && part.type === "tool-webSearch" ? part.output : null;
-  const findings = Array.isArray(rawOutput) ? (rawOutput as WebSearchFinding[]) : [];
-  const sources = findings
-    .flatMap((f) => f.sources)
-    .map((s) => {
-      try {
-        return { ...s, domain: new URL(s.url).hostname.replace(/^www\./, "") };
-      } catch {
-        return { ...s, domain: s.title };
-      }
-    });
+  const { label, status, summary, sources } = getToolCallInfo(part, toolLabels);
 
   return (
     <StepsStep label={label} status={status} className={className}>
@@ -394,32 +273,10 @@ type StepsAskUserProps = {
 };
 
 const StepsAskUser = ({ part, className }: StepsAskUserProps) => {
-  const isComplete = part.state === "output-available";
-  const input = part.input as AskUserInput | undefined;
-  const questions: AskUserQuestion[] = input?.questions ?? [];
-
-  let answers: Record<string, string> = {};
-  if (isComplete) {
-    try {
-      answers = JSON.parse(part.output as string) as Record<string, string>;
-    } catch (error) {
-      console.error("Failed to parse askUser output", {
-        output: part.output,
-        error,
-      });
-    }
-  }
-
-  const count = questions.length;
-  const label = `Answered ${count} ${count === 1 ? "question" : "questions"}`;
+  const { label, status, questions, answers, isComplete } = getAskUserStepInfo(part);
 
   return (
-    <StepsStep
-      label={label}
-      status={isComplete ? "complete" : "active"}
-      icon={CircleHelpIcon}
-      className={className}
-    >
+    <StepsStep label={label} status={status} icon={CircleHelpIcon} className={className}>
       <div className="flex flex-col gap-1.5">
         {questions.map((q) => (
           <div key={q.question} className="flex flex-col gap-0.5">

@@ -605,14 +605,7 @@
       "type": "registry:component",
       "title": "Steps",
       "dependencies": ["@intentface/chat", "lucide-react"],
-      "registryDependencies": [
-        "collapsible",
-        "markdown",
-        "tool-labels",
-        "utils",
-        "icons",
-        "ai-types"
-      ],
+      "registryDependencies": ["markdown", "tool-labels", "utils", "icons"],
       "files": [
         {
           "sourcePath": "components/ai/steps.tsx",

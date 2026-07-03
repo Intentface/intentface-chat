@@ -170,7 +170,7 @@ export const ComposerRoot = ({
       reportEditorUpdate,
       chipIconsRef,
     }),
-    [commands, getRegisteredPrefixes, reportEditorUpdate, chipIconsRef],
+    [commands, getRegisteredPrefixes, reportEditorUpdate],
   );
 
   return (

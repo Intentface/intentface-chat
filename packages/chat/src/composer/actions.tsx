@@ -68,7 +68,7 @@ export const useComposerSubmit = ({
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isGenerating, onStopRef]);
+  }, [isGenerating]);
 
   const autoDisabled =
     disabled ?? ((!hasContent && attachments.items.length === 0) || isSubmitting);

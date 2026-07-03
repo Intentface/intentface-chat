@@ -232,7 +232,7 @@ export const ComposerCommandList = ({ prefix, className, children }: ComposerCom
     // option and selecting it dismisses — so Tab/Enter aren't dead (Linear-style).
     if (effectiveHighlight) selectByValue(effectiveHighlight);
     else if (state === "empty") dismiss();
-  }, [selectState]);
+  }, []);
   const registerSelect = useCallback(
     (node: HTMLDivElement | null) => {
       store.commandSelectRef.current = node ? runSelect : null;

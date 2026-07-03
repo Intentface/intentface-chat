@@ -79,7 +79,7 @@ export const ComposerTextarea = ({
           return decorationClassesRef.current.commandPlaceholderClassName;
         },
       }),
-    [getRegisteredPrefixes, chipIconsRef, decorationClassesRef],
+    [getRegisteredPrefixes, chipIconsRef],
   );
 
   const tiptapEditor = useEditor({

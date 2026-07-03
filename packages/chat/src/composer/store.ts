@@ -442,8 +442,10 @@ export const ComposerStoreContext = createContext<ComposerStore | null>(null);
 
 let globalComposerStore: ComposerStore | undefined;
 
-export const getGlobalComposerStore = (): ComposerStore =>
-  (globalComposerStore ??= createComposerStore());
+export const getGlobalComposerStore = (): ComposerStore => {
+  globalComposerStore ??= createComposerStore();
+  return globalComposerStore;
+};
 
 export const useComposerStore = (): ComposerStore =>
   use(ComposerStoreContext) ?? getGlobalComposerStore();

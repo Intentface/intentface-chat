@@ -643,61 +643,6 @@
       ]
     },
     {
-      "name": "shimmer",
-      "type": "registry:component",
-      "title": "Shimmer",
-      "dependencies": ["@intentface/chat"],
-      "registryDependencies": ["utils"],
-      "cssBlocks": [
-        {
-          "name": "intentface-shimmer",
-          "sourcePath": "packages/intentface/registry/shimmer.css"
-        }
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/shimmer.tsx",
-          "targetPath": "components/ai/shimmer.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "artifact-card",
-      "type": "registry:component",
-      "title": "Artifact Card",
-      "dependencies": ["@intentface/chat", "lucide-react", "motion"],
-      "registryDependencies": ["utils"],
-      "files": [
-        {
-          "sourcePath": "components/ai/artifact-card.tsx",
-          "targetPath": "components/ai/artifact-card.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "artifacts-panel",
-      "type": "registry:component",
-      "title": "Artifacts Panel",
-      "dependencies": ["@intentface/chat", "lucide-react", "motion"],
-      "registryDependencies": [
-        "icon-button",
-        "markdown",
-        "tooltip",
-        "hooks-use-copy",
-        "utils",
-        "icons"
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/artifacts-panel.tsx",
-          "targetPath": "components/ai/artifacts-panel.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "chat-demo",
       "type": "registry:component",
       "title": "Chat Demo",
@@ -747,8 +692,6 @@
       "type": "registry:bundle",
       "title": "AI chat primitives",
       "registryDependencies": [
-        "artifact-card",
-        "artifacts-panel",
         "ask-user",
         "attachments",
         "chip",
@@ -756,7 +699,6 @@
         "composer",
         "message",
         "reasoning",
-        "shimmer",
         "step-queue",
         "steps",
         "thread"

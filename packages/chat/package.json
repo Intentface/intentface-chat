@@ -30,7 +30,6 @@
     "./types": "./src/types.ts",
     "./composer": "./src/composer/index.tsx",
     "./chip": "./src/chip.tsx",
-    "./shimmer": "./src/shimmer.tsx",
     "./commands": "./src/commands.tsx",
     "./thread": "./src/thread.tsx",
     "./step-queue": "./src/step-queue.tsx",
@@ -39,8 +38,6 @@
     "./attachments": "./src/attachments.tsx",
     "./ask-user": "./src/ask-user.tsx",
     "./message": "./src/message.tsx",
-    "./artifact-card": "./src/artifact-card.tsx",
-    "./artifacts-panel": "./src/artifacts-panel.tsx",
     "./message-utils": "./src/message-utils.ts",
     "./chip-markdown": "./src/chip-markdown.ts",
     "./chat-status": "./src/chat-status.ts"
@@ -87,10 +84,6 @@
         "types": "./dist/src/chip.d.ts",
         "default": "./dist/src/chip.js"
       },
-      "./shimmer": {
-        "types": "./dist/src/shimmer.d.ts",
-        "default": "./dist/src/shimmer.js"
-      },
       "./commands": {
         "types": "./dist/src/commands.d.ts",
         "default": "./dist/src/commands.js"
@@ -122,14 +115,6 @@
       "./message": {
         "types": "./dist/src/message.d.ts",
         "default": "./dist/src/message.js"
-      },
-      "./artifact-card": {
-        "types": "./dist/src/artifact-card.d.ts",
-        "default": "./dist/src/artifact-card.js"
-      },
-      "./artifacts-panel": {
-        "types": "./dist/src/artifacts-panel.d.ts",
-        "default": "./dist/src/artifacts-panel.js"
       },
       "./message-utils": {
         "types": "./dist/src/message-utils.d.ts",

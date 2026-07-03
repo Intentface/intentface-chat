@@ -1,10 +1,11 @@
 "use client";
 
-import { isArtifactStreaming } from "@intentface/chat/artifact-card";
 import { FileTextIcon, LoaderIcon } from "lucide-react";
 import { motion } from "motion/react";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
+
+const isArtifactStreaming = (state: string) => state === "input-streaming";
 
 type ArtifactCardProps = ComponentProps<typeof motion.button> & {
   title: string;

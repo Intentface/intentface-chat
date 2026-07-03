@@ -1,6 +1,4 @@
 import type { ComponentType } from "react";
-import { ArtifactCardBasic } from "./artifact-card-basic";
-import { ArtifactsPanelBasic } from "./artifacts-panel-basic";
 import { AskUserBasic } from "./ask-user-basic";
 import { AttachmentsBasic } from "./attachments-basic";
 import { ChipBasic } from "./chip-basic";
@@ -9,7 +7,6 @@ import { ComposerBasic } from "./composer-basic";
 import { ComposerCommands } from "./composer-commands";
 import { MessageBasic } from "./message-basic";
 import { ReasoningBasic } from "./reasoning-basic";
-import { ShimmerBasic } from "./shimmer-basic";
 import { StepQueueBasic } from "./step-queue-basic";
 import { StepsBasic } from "./steps-basic";
 import { ThreadBasic } from "./thread-basic";
@@ -37,10 +34,4 @@ export const previews: Record<string, PreviewEntry> = {
   "ask-user-basic": { Component: AskUserBasic, file: `${dir}/ask-user-basic.tsx` },
   "commands-basic": { Component: CommandsBasic, file: `${dir}/commands-basic.tsx` },
   "step-queue-basic": { Component: StepQueueBasic, file: `${dir}/step-queue-basic.tsx` },
-  "shimmer-basic": { Component: ShimmerBasic, file: `${dir}/shimmer-basic.tsx` },
-  "artifact-card-basic": { Component: ArtifactCardBasic, file: `${dir}/artifact-card-basic.tsx` },
-  "artifacts-panel-basic": {
-    Component: ArtifactsPanelBasic,
-    file: `${dir}/artifacts-panel-basic.tsx`,
-  },
 };

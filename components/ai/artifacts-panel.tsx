@@ -1,6 +1,5 @@
 "use client";
 
-import { ArtifactsPanel as ArtifactsPanelPrimitive } from "@intentface/chat/artifacts-panel";
 import { XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentProps, ReactNode } from "react";
@@ -49,11 +48,12 @@ const ArtifactsPanelHeader = ({
   onClose,
   className,
   ...props
-}: ComponentProps<typeof ArtifactsPanelPrimitive.Header> & {
+}: ComponentProps<"div"> & {
   title: string;
   onClose: () => void;
 }) => (
-  <ArtifactsPanelPrimitive.Header
+  <div
+    data-slot="artifacts-panel-header"
     className={cn("flex items-center justify-between border-b border-border px-4 py-3", className)}
     {...props}
   >
@@ -61,18 +61,19 @@ const ArtifactsPanelHeader = ({
     <IconButton variant="ghost" size="sm" onClick={onClose}>
       <XIcon />
     </IconButton>
-  </ArtifactsPanelPrimitive.Header>
+  </div>
 );
 
 const ArtifactsPanelFooter = ({
   content,
   className,
   ...props
-}: ComponentProps<typeof ArtifactsPanelPrimitive.Footer> & { content: string }) => {
+}: ComponentProps<"div"> & { content: string }) => {
   const { copy, isCopied } = useCopy();
 
   return (
-    <ArtifactsPanelPrimitive.Footer
+    <div
+      data-slot="artifacts-panel-footer"
       className={cn("flex items-center justify-end border-t border-border px-4 py-2", className)}
       {...props}
     >
@@ -88,15 +89,13 @@ const ArtifactsPanelFooter = ({
           <Tooltip.Content>{isCopied ? "Copied!" : "Copy markdown"}</Tooltip.Content>
         </Tooltip>
       </Tooltip.Provider>
-    </ArtifactsPanelPrimitive.Footer>
+    </div>
   );
 };
 
-const ArtifactsPanelViewport = ({
-  className,
-  ...props
-}: ComponentProps<typeof ArtifactsPanelPrimitive.Viewport>) => (
-  <ArtifactsPanelPrimitive.Viewport
+const ArtifactsPanelViewport = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="artifacts-panel-viewport"
     className={cn("flex-1 overflow-y-auto p-4", className)}
     {...props}
   />

@@ -37,7 +37,7 @@ hooks, and render props — no classes, no animation library:
 | `@intentface/chat/thread` | Scroll container with at-bottom detection and auto-follow. |
 | `@intentface/chat/message` | Message parts, turns, chip-segmented text, sources, actions. |
 | `@intentface/chat/steps`, `/reasoning`, `/step-queue` | Tool-call timelines and reasoning disclosure. |
-| `@intentface/chat/chip`, `/attachments`, `/commands`, `/ask-user`, `/shimmer`, `/artifact-card`, `/artifacts-panel` | The remaining building blocks. |
+| `@intentface/chat/chip`, `/attachments`, `/commands`, `/ask-user` | The remaining building blocks. |
 | `@intentface/chat/types` | The structural message contract + part type guards. |
 | `@intentface/chat/message-utils` | Part segmentation, turn grouping, reasoning/source derivation. |
 | `@intentface/chat/chip-markdown` | The self-describing chip wire format. |

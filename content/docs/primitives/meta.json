@@ -10,9 +10,6 @@
     "attachments",
     "commands",
     "ask-user",
-    "step-queue",
-    "shimmer",
-    "artifact-card",
-    "artifacts-panel"
+    "step-queue"
   ]
 }

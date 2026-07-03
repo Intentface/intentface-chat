@@ -659,8 +659,14 @@
       "name": "shimmer",
       "type": "registry:component",
       "title": "Shimmer",
-      "dependencies": ["motion"],
+      "dependencies": ["@intentface/chat"],
       "registryDependencies": ["utils"],
+      "cssBlocks": [
+        {
+          "name": "intentface-shimmer",
+          "sourcePath": "packages/intentface/registry/shimmer.css"
+        }
+      ],
       "files": [
         {
           "sourcePath": "components/ai/shimmer.tsx",

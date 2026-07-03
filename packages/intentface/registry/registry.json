@@ -1104,20 +1104,26 @@
       "type": "registry:component",
       "title": "Shimmer",
       "dependencies": [
-        "motion"
+        "@intentface/chat"
       ],
       "registryDependencies": [
         "utils"
+      ],
+      "cssBlocks": [
+        {
+          "name": "intentface-shimmer",
+          "sourcePath": "packages/intentface/registry/shimmer.css",
+          "content": "@keyframes intentface-shimmer {\n  from {\n    background-position: 100% center;\n  }\n  to {\n    background-position: 0% center;\n  }\n}\n"
+        }
       ],
       "files": [
         {
           "sourcePath": "components/ai/shimmer.tsx",
           "targetPath": "components/ai/shimmer.tsx",
           "type": "registry:component",
-          "content": "\"use client\";\n\nimport { motion } from \"motion/react\";\nimport type { CSSProperties, ElementType, JSX } from \"react\";\nimport { memo, useMemo } from \"react\";\nimport { cn } from \"@/lib/utils\";\n\nexport interface TextShimmerProps {\n  children: string;\n  as?: ElementType;\n  className?: string;\n  duration?: number;\n  spread?: number;\n}\n\nconst ShimmerComponent = ({\n  children,\n  as: Component = \"p\",\n  className,\n  duration = 2,\n  spread = 2,\n}: TextShimmerProps) => {\n  const MotionComponent = motion.create(Component as keyof JSX.IntrinsicElements);\n\n  const dynamicSpread = useMemo(() => (children?.length ?? 0) * spread, [children, spread]);\n\n  return (\n    <MotionComponent\n      animate={{ backgroundPosition: \"0% center\" }}\n      className={cn(\n        \"relative inline-block bg-size-[250%_100%,auto] bg-clip-text text-transparent\",\n        \"[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),var(--color-background),#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]\",\n        className,\n      )}\n      initial={{ backgroundPosition: \"100% center\" }}\n      style={\n        {\n          \"--spread\": `${dynamicSpread}px`,\n          backgroundImage:\n            \"var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground))\",\n        } as CSSProperties\n      }\n      transition={{\n        duration,\n        ease: \"linear\",\n        repeat: Number.POSITIVE_INFINITY,\n      }}\n    >\n      {children}\n    </MotionComponent>\n  );\n};\n\nexport const Shimmer = memo(ShimmerComponent);\n"
+          "content": "\"use client\";\n\nimport { Shimmer as ShimmerPrimitive } from \"@intentface/chat/shimmer\";\nimport type { ComponentProps } from \"react\";\nimport { cn } from \"@/lib/utils\";\n\nexport type TextShimmerProps = ComponentProps<typeof ShimmerPrimitive>;\n\n// The primitive owns the spread math (--shimmer-spread/--shimmer-duration);\n// this wrapper paints the gradient and runs the intentface-shimmer keyframes.\nconst ShimmerComponent = ({ className, ...props }: TextShimmerProps) => (\n  <ShimmerPrimitive\n    className={cn(\n      \"relative inline-block bg-size-[250%_100%,auto] bg-clip-text text-transparent\",\n      \"[--bg:linear-gradient(90deg,#0000_calc(50%-var(--shimmer-spread)),var(--color-background),#0000_calc(50%+var(--shimmer-spread)))] [background-repeat:no-repeat,padding-box]\",\n      \"[background-image:var(--bg),linear-gradient(var(--color-muted-foreground),var(--color-muted-foreground))]\",\n      \"animate-[intentface-shimmer_var(--shimmer-duration)_linear_infinite]\",\n      className,\n    )}\n    {...props}\n  />\n);\n\nexport const Shimmer = ShimmerComponent;\n"
         }
-      ],
-      "cssBlocks": []
+      ]
     },
     {
       "name": "artifact-card",

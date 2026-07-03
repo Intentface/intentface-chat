@@ -196,6 +196,16 @@
   }
 }
 
+/* Drives the headless AI shimmer via its --shimmer-* variables. */
+@keyframes intentface-shimmer {
+  from {
+    background-position: 100% center;
+  }
+  to {
+    background-position: 0% center;
+  }
+}
+
 @layer base {
   ::-webkit-scrollbar {
     width: 5px;

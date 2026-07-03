@@ -1,0 +1,8 @@
+@keyframes intentface-shimmer {
+  from {
+    background-position: 100% center;
+  }
+  to {
+    background-position: 0% center;
+  }
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { isArtifactStreaming } from "@intentface/chat/artifact-card";
 import { FileTextIcon, LoaderIcon } from "lucide-react";
 import { motion } from "motion/react";
 import type { ComponentProps } from "react";
@@ -18,7 +19,7 @@ export const ArtifactCard = ({
   className,
   ...props
 }: ArtifactCardProps) => {
-  const isStreaming = state === "input-streaming";
+  const isStreaming = isArtifactStreaming(state);
 
   return (
     <motion.button
@@ -27,6 +28,7 @@ export const ArtifactCard = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15 }}
       data-slot="artifact-card"
+      data-streaming={isStreaming || undefined}
       onClick={onToggle}
       disabled={isStreaming}
       className={cn(

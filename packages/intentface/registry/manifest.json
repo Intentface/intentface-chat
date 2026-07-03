@@ -666,7 +666,7 @@
       "name": "artifact-card",
       "type": "registry:component",
       "title": "Artifact Card",
-      "dependencies": ["lucide-react", "motion"],
+      "dependencies": ["@intentface/chat", "lucide-react", "motion"],
       "registryDependencies": ["utils"],
       "files": [
         {
@@ -680,7 +680,7 @@
       "name": "artifacts-panel",
       "type": "registry:component",
       "title": "Artifacts Panel",
-      "dependencies": ["lucide-react", "motion"],
+      "dependencies": ["@intentface/chat", "lucide-react", "motion"],
       "registryDependencies": [
         "icon-button",
         "markdown",

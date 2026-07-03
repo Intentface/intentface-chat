@@ -31,6 +31,8 @@
     "./attachments": "./src/attachments.tsx",
     "./ask-user": "./src/ask-user.tsx",
     "./message": "./src/message.tsx",
+    "./artifact-card": "./src/artifact-card.tsx",
+    "./artifacts-panel": "./src/artifacts-panel.tsx",
     "./message-utils": "./src/message-utils.ts",
     "./chip-markdown": "./src/chip-markdown.ts",
     "./chat-status": "./src/chat-status.ts"

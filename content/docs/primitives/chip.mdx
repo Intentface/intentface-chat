@@ -1,0 +1,61 @@
+---
+title: Chip
+description: An inline, text-flowing token — used for mentions in the composer and reconstructed chips in messages.
+---
+
+Chip is an inline token that flows with text rather than breaking the line box.
+It backs both the composer's mention decorations and the chips a message
+reconstructs from its wire format. Variants tint the surface; a `Chip.Preview`
+child promotes the chip to a hover card.
+
+<ComponentPreview name="chip-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/chip
+```
+
+## Anatomy
+
+```tsx
+<Chip variant="accent">
+  <Chip.Icon>{icon}</Chip.Icon>
+  <Chip.Label>{label}</Chip.Label>
+</Chip>
+```
+
+With a hover preview — the `Chip.Preview` child is lifted into a hover card and
+never rendered inline:
+
+```tsx
+<Chip>
+  <Chip.Label>{label}</Chip.Label>
+  <Chip.Preview>
+    <SourceCard source={source} />
+  </Chip.Preview>
+</Chip>
+```
+
+## Props
+
+export const rootProps = [
+  { name: "variant", type: '"primary" | "accent" | "warning"', default: '"primary"', description: "Tints the chip surface." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const partProps = [
+  { name: "Icon", type: "children", description: "Leading inline icon, baseline-aligned to the label." },
+  { name: "Label", type: "children", description: "The chip text." },
+  { name: "Preview", type: "children", description: "Marker child — its content becomes the hover-card body; renders nothing inline." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+The headless chip is unstyled and popup-agnostic; the wrapper adds the CVA
+variants and composes the hover card. This is what `shadcn add` writes:
+
+<RegistrySource item="chip" />

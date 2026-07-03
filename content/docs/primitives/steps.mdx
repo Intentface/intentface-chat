@@ -1,0 +1,73 @@
+---
+title: Steps
+description: A collapsible timeline of a run — reasoning, tool calls, and answered questions as chronological steps.
+---
+
+Steps renders an agent run as a vertical timeline. Each step is a row with a
+status; steps with children expand to reveal detail. `Steps.ToolCall` and
+`Steps.AskUser` derive a label, status, and summary from a tool part via the
+package's helpers, so you pass the part and they render the row.
+
+<ComponentPreview name="steps-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/steps
+```
+
+## Anatomy
+
+```tsx
+<Steps>
+  <Steps.Header>Steps</Steps.Header>
+  <Steps.Content>
+    <Steps.Step label="Read the request" status="complete" />
+  </Steps.Content>
+</Steps>
+```
+
+Driven from message segments — tool parts render themselves:
+
+```tsx
+<Steps defaultOpen={isStreaming}>
+  <Steps.Header>{header}</Steps.Header>
+  <Steps.Content>
+    {segments.map((seg) =>
+      seg.type === "reasoning" ? (
+        <Steps.Step label={seg.header} status="complete">
+          <Steps.Body>{seg.body}</Steps.Body>
+        </Steps.Step>
+      ) : seg.part.type === "tool-askUser" ? (
+        <Steps.AskUser part={seg.part} />
+      ) : (
+        <Steps.ToolCall part={seg.part} />
+      ),
+    )}
+  </Steps.Content>
+</Steps>
+```
+
+## Props
+
+export const rootProps = [
+  { name: "toolLabels", type: "ToolLabels", description: "Maps tool names to active/complete label text. Defaults to the app's DEFAULT_TOOL_LABELS." },
+  { name: "defaultOpen", type: "boolean", default: "false", description: "Uncontrolled initial open state of the outer timeline." },
+  { name: "open", type: "boolean", description: "Controlled open state." },
+  { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on toggle." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const partProps = [
+  { name: "Step", type: 'label: string; status?: "complete" | "active" | "pending"; icon?', description: "A timeline row; with children it becomes collapsible." },
+  { name: "Body", type: "children: string", description: "Markdown detail inside a step's expanded area." },
+  { name: "ToolCall", type: "part: ToolPart", description: "Renders a tool invocation as a step (label/status/summary/sources derived)." },
+  { name: "AskUser", type: "part: ToolPart", description: "Renders an answered ask-user exchange as a step." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+<RegistrySource item="steps" />

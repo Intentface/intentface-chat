@@ -1,0 +1,53 @@
+---
+title: Artifacts Panel
+description: A side panel that slides in beside the thread to host a streamed artifact — header, scrollable content, and a copy footer.
+---
+
+Artifacts Panel is the right-hand surface that opens beside the thread to show a
+generated artifact in full. It's open-gated — mounted only while `open` — and
+slides in over a fixed width. The header carries the title and a close button;
+the footer copies the raw content.
+
+<ComponentPreview name="artifacts-panel-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/artifacts-panel
+```
+
+## Anatomy
+
+```tsx
+<ArtifactsPanel open={open}>
+  <ArtifactsPanel.Header title={title} onClose={close} />
+  <ArtifactsPanel.Viewport>
+    <ArtifactsPanel.Content>{content}</ArtifactsPanel.Content>
+  </ArtifactsPanel.Viewport>
+  <ArtifactsPanel.Footer content={content} />
+</ArtifactsPanel>
+```
+
+Panel width comes from the `--artifacts-panel-width` CSS variable, so a chat
+layout can animate the thread's width against it.
+
+## Props
+
+export const rootProps = [
+  { name: "open", type: "boolean", description: "Mounts and slides the panel in; unmounts it on exit." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const partProps = [
+  { name: "Header", type: "title: string; onClose: () => void", description: "Title row with a close button." },
+  { name: "Viewport", type: "children", description: "Scrollable content region." },
+  { name: "Content", type: "children: string", description: "Renders the artifact markdown." },
+  { name: "Footer", type: "content: string", description: "Action bar with a copy-to-clipboard button." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+<RegistrySource item="artifacts-panel" />

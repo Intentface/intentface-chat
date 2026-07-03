@@ -1,0 +1,83 @@
+---
+title: Message
+description: Renders a single chat message — role-aware bubble, markdown, chips, attachments, sources, and actions.
+---
+
+Message renders one turn's content with role-based styling. It reads plain
+message fields (role, text, attachments, sources) and composes them; the text
+segmenter reconstructs inline chips from the wire format, and a selection
+toolbar can add highlighted text back to the chat.
+
+<ComponentPreview name="message-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/message
+```
+
+## Anatomy
+
+The bare nesting — `Message` and `Message.Content` carry the structure:
+
+```tsx
+<Message role={role} isLast={isLast} isError={isError}>
+  <Message.Content>
+    <Message.Text>{text}</Message.Text>
+  </Message.Content>
+  <Message.Actions>
+    <Message.Copy value={text} />
+  </Message.Actions>
+</Message>
+```
+
+A realistic assistant turn with markdown, sources, and actions:
+
+```tsx
+<Message.Turn sticky>
+  <Message role="assistant" isLast isError={false}>
+    <Message.Content>
+      <Message.Markdown>{content}</Message.Markdown>
+      <Message.Sources>
+        {sources.map((s) => (
+          <Message.Source key={s.url} url={s.url} domain={s.domain} />
+        ))}
+      </Message.Sources>
+    </Message.Content>
+    <Message.Actions>
+      <Message.Copy value={content} />
+      <Message.Action tooltip="Regenerate" onClick={regenerate}>
+        <RefreshIcon />
+      </Message.Action>
+    </Message.Actions>
+  </Message>
+</Message.Turn>
+```
+
+## Props
+
+`Message` (root) takes the message's role and position; the sub-components take
+only what they render.
+
+export const rootProps = [
+  { name: "role", type: '"system" | "user" | "assistant"', description: "Drives the role-based styling via data-role." },
+  { name: "isLast", type: "boolean", description: "Marks the last message (data-last) — used for streaming/animation hooks." },
+  { name: "isError", type: "boolean", description: "Renders the error surface (data-error)." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const partProps = [
+  { name: "Text", type: "children: string", description: "Segments inline chips out of the text and renders them; plain text otherwise." },
+  { name: "Markdown", type: "children: string", description: "Renders assistant markdown via Streamdown." },
+  { name: "Copy", type: "value: string", description: "Copy-to-clipboard action with copied state." },
+  { name: "Source", type: "url: string; domain: string", description: "A source pill with favicon + domain." },
+  { name: "Attachment", type: "attachment: FilePart", description: "Read-only attachment chip (image hover-card or file icon)." },
+  { name: "SelectionToolbar", type: "onAdd: (text: string) => void", description: "Floating toolbar over a text selection within this message." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+<RegistrySource item="message" />

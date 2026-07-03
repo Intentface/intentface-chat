@@ -1,0 +1,75 @@
+---
+title: Ask User
+description: An interactive clarifying-question card — single- or multi-select options with keyboard navigation and a step flow.
+---
+
+Ask User renders the interactive prompt a model raises to gather a choice. It
+handles option registration, highlight, and keyboard navigation in the package;
+the wrapper draws each option as a radio (single-select) or checkbox
+(multi-select) card, plus a step header for multi-question flows and a
+read-only summary of answered exchanges.
+
+<ComponentPreview name="ask-user-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/ask-user
+```
+
+## Anatomy
+
+```tsx
+<AskUser>
+  <AskUser.Header>
+    <AskUser.Label>{question}</AskUser.Label>
+  </AskUser.Header>
+  <AskUser.Options value={value} onValueChange={setValue}>
+    <AskUser.Option value={option.value}>
+      <AskUser.OptionInput />
+      <AskUser.OptionContent>
+        <AskUser.OptionLabel>{option.label}</AskUser.OptionLabel>
+        <AskUser.OptionDescription>{option.description}</AskUser.OptionDescription>
+      </AskUser.OptionContent>
+    </AskUser.Option>
+  </AskUser.Options>
+  <AskUser.Hints>{/* shortcut hints */}</AskUser.Hints>
+</AskUser>
+```
+
+For multi-question flows, add navigation to the header:
+
+```tsx
+<AskUser.Header>
+  <AskUser.Label>{question}</AskUser.Label>
+  <AskUser.Navigation>
+    <AskUser.Previous />
+    <AskUser.StepLabel />
+    <AskUser.Next />
+  </AskUser.Navigation>
+</AskUser.Header>
+```
+
+## Props
+
+export const optionsProps = [
+  { name: "multiSelect", type: "boolean", default: "false", description: "Checkbox cards when true; radio cards (wrapped in a RadioGroup) when false." },
+  { name: "value", type: "string", description: "Selected value in single-select mode." },
+  { name: "onValueChange", type: "(value: string) => void", description: "Fires on single-select change." },
+  { name: "ref", type: "Ref<AskUserOptionsHandle>", description: "Imperative handle: navigate/select/clear the highlight (for keyboard wiring)." },
+];
+
+<PropsTable rows={optionsProps} />
+
+export const partProps = [
+  { name: "Option", type: "value: string", description: "A selectable card; self-registers with Options for navigation." },
+  { name: "OptionInput", type: "—", description: "Renders a checkbox or radio based on the Options multiSelect flag." },
+  { name: "StepLabel", type: "children?", description: 'Defaults to "{current} of {total}".' },
+  { name: "Summary", type: "questions: AskUserQuestion[]; answers: Record<string, string>", description: "Collapsible read-only recap of an answered exchange." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+<RegistrySource item="ask-user" />

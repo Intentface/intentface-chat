@@ -1,0 +1,54 @@
+---
+title: Commands
+description: The command-list surface — grouped, labelled items with icons and descriptions.
+---
+
+Commands is the styled list the composer's panel renders while a `/` or `@`
+prefix is active. It's a thin, presentational compound: groups, items, labels,
+descriptions, and a footer. The selection and keyboard navigation live in the
+composer; on its own, Commands is a static menu you can reuse anywhere.
+
+<ComponentPreview name="commands-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/commands
+```
+
+## Anatomy
+
+```tsx
+<Commands>
+  <Commands.Group>
+    <Commands.GroupLabel>Actions</Commands.GroupLabel>
+    <Commands.Item icon={Icon}>
+      <Commands.ItemLabel>Improve writing</Commands.ItemLabel>
+      <Commands.ItemDescription>Rewrite for clarity</Commands.ItemDescription>
+    </Commands.Item>
+  </Commands.Group>
+  <Commands.Empty>No results</Commands.Empty>
+  <Commands.Footer>↑↓ to navigate · ↵ to run</Commands.Footer>
+</Commands>
+```
+
+Inside the composer, the command items come from the `commands` map and the
+composer's own `Composer.CommandItem` family drives selection — see the
+[Composer](/docs/primitives/composer) page.
+
+## Props
+
+export const partProps = [
+  { name: "Item", type: "icon?: ComponentType; highlighted?: boolean", description: "A selectable row; highlighted sets data-highlighted for the active-item style." },
+  { name: "ItemLabel", type: "children", description: "The item's primary text." },
+  { name: "ItemDescription", type: "children", description: "Secondary text, truncated." },
+  { name: "GroupLabel", type: "children", description: "Uppercase section heading." },
+  { name: "Empty", type: "children", description: "No-results row; defaults to “No results”." },
+  { name: "Footer", type: "children", description: "Hint bar under the list." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+<RegistrySource item="commands" />

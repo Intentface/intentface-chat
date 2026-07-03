@@ -1,0 +1,82 @@
+---
+title: Thread
+description: The scrolling message viewport with auto-follow, a docked composer, overlays, and a scroll-to-bottom button.
+---
+
+Thread is the chat surface: a scroll container that lands the newest turn,
+follows the stream while you're at the bottom, and yields the moment you scroll
+up. It measures the composer dock to reserve space and exposes its scroll state
+through `useThread`. It owns no message data — you map your messages into it.
+
+<ComponentPreview name="thread-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/thread
+```
+
+## Anatomy
+
+The bare nesting — `Thread` provides the scroll context its parts read:
+
+```tsx
+<Thread>
+  <Thread.Viewport>{/* messages */}</Thread.Viewport>
+  <Thread.Composer>{/* composer */}</Thread.Composer>
+  <Thread.ScrollButton />
+</Thread>
+```
+
+A realistic surface with overlays and a message list:
+
+```tsx
+<Thread autoScroll="follow">
+  <Thread.Overlay direction="top" />
+  <Thread.Viewport>
+    {turns.map((turn) => (
+      <Message.Turn key={turn.key}>{/* … */}</Message.Turn>
+    ))}
+  </Thread.Viewport>
+  <Thread.Composer>
+    <Composer onSubmit={sendMessage}>{/* … */}</Composer>
+  </Thread.Composer>
+  <Thread.ScrollButton />
+</Thread>
+```
+
+## Auto-scroll
+
+`autoScroll` controls how the newest turn lands and whether the view follows a
+stream. `Thread.Viewport` maps `--thread-turn-min-height` onto its last child,
+so the reserve that lets the newest turn land at the top is wired for you.
+
+export const autoScrollProps = [
+  { name: '"follow"', type: "default", description: "Newest lands at the top; the view follows the stream (ChatGPT-style)." },
+  { name: '"bottom"', type: "", description: "Newest lands at the bottom; the view follows the stream (Codex-style)." },
+  { name: '"jump"', type: "", description: "Newest lands at the top; the view does not follow." },
+  { name: '"off"', type: "", description: "A plain scroll area — no landing, no follow, no reserve." },
+];
+
+<PropsTable rows={autoScrollProps} />
+
+## Props
+
+export const rootProps = [
+  { name: "autoScroll", type: '"off" | "bottom" | "jump" | "follow"', default: '"follow"', description: "Landing + follow behavior (see above)." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const partProps = [
+  { name: "Overlay", type: 'direction: "top" | "bottom"', description: "A progressive-blur fade strip; the top overlay's height is also the top inset." },
+  { name: "Viewport", type: "children", description: "The scroll container + measured content column + at-bottom sentinel." },
+  { name: "Composer", type: "children", description: "Bottom-docked slot; its height is measured to inset the viewport." },
+  { name: "ScrollButton", type: "—", description: "Scroll-to-bottom affordance, shown only when not at the bottom." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+<RegistrySource item="thread" />

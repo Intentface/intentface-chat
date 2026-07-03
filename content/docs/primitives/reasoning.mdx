@@ -1,0 +1,58 @@
+---
+title: Reasoning
+description: A collapsible "chain of thought" disclosure that tracks streaming duration and splits text into labelled sections.
+---
+
+Reasoning is a disclosure for a model's thinking. It tracks how long reasoning
+streamed and exposes that (plus open state) through `useReasoning`, so the
+trigger can shimmer "Thinking…" live and settle to "Thought for Ns". The content
+splits bold `**Header**` lines into sections.
+
+<ComponentPreview name="reasoning-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/reasoning
+```
+
+## Anatomy
+
+```tsx
+<Reasoning isStreaming={isStreaming}>
+  <Reasoning.Trigger />
+  <Reasoning.Content>{reasoningText}</Reasoning.Content>
+</Reasoning>
+```
+
+Driven from a streaming message, passing the reasoning parts' text:
+
+```tsx
+<Reasoning isStreaming={isLast && isStreaming} defaultOpen={false}>
+  <Reasoning.Trigger label={headers} />
+  <Reasoning.Content>{texts}</Reasoning.Content>
+</Reasoning>
+```
+
+## Props
+
+export const rootProps = [
+  { name: "isStreaming", type: "boolean", default: "false", description: "While true the trigger shimmers; the streamed duration is captured when it flips false." },
+  { name: "defaultOpen", type: "boolean", default: "false", description: "Uncontrolled initial open state." },
+  { name: "open", type: "boolean", description: "Controlled open state." },
+  { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on toggle." },
+  { name: "duration", type: "number", description: "Override the tracked streaming duration (seconds)." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const partProps = [
+  { name: "Trigger", type: "label?: string[]", description: "Toggle. Without children, shows the default thinking/thought message; label supplies the streaming headers." },
+  { name: "Content", type: "children: string | string[]", description: "Reasoning text; bold headers split it into sections rendered as markdown." },
+];
+
+<PropsTable rows={partProps} />
+
+## Styled source
+
+<RegistrySource item="reasoning" />

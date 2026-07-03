@@ -1,4 +1,18 @@
 {
   "title": "Primitives",
-  "pages": ["composer"]
+  "pages": [
+    "composer",
+    "message",
+    "thread",
+    "steps",
+    "reasoning",
+    "chip",
+    "attachments",
+    "commands",
+    "ask-user",
+    "step-queue",
+    "shimmer",
+    "artifact-card",
+    "artifacts-panel"
+  ]
 }

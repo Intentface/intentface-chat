@@ -1,0 +1,67 @@
+---
+title: Attachments
+description: The file-attachment tray — item chips, a remove affordance, and inline or global drop zones.
+---
+
+Attachments renders the pending-file tray that sits above the composer input. It
+ships the attachment model (accept matching, blob-URL lifecycle, send
+preparation) in the package; the styled tray animates items in and out and can
+project a global drop zone anywhere in the app.
+
+<ComponentPreview name="attachments-basic" />
+
+## Installation
+
+```bash
+bunx shadcn@latest add @intentface/attachments
+```
+
+## Anatomy
+
+```tsx
+<Attachments show={items.length > 0}>
+  {items.map((item) => (
+    <Attachments.Item key={item.id} item={item}>
+      <Attachments.Remove onRemove={() => remove(item.id)} />
+    </Attachments.Item>
+  ))}
+</Attachments>
+```
+
+With a drop zone and a picker trigger:
+
+```tsx
+<>
+  <Attachments.Dropzone visible={isDragging} variant="global" />
+  <Attachments show={items.length > 0}>
+    {items.map((item) => (
+      <Attachments.Item key={item.id} item={item}>
+        <Attachments.Remove onRemove={() => remove(item.id)} />
+      </Attachments.Item>
+    ))}
+  </Attachments>
+  <Attachments.Trigger onClick={openFileDialog} />
+</>
+```
+
+## Props
+
+export const partProps = [
+  { name: "Root", type: "show?: boolean", default: "true", description: "Animates the tray open/closed." },
+  { name: "Item", type: "item: AttachmentItem", description: "One attachment chip; data-media-type is image | pdf | file." },
+  { name: "Remove", type: "onRemove: () => void", description: "Removal affordance shown on hover." },
+  { name: "Dropzone", type: 'visible?: boolean; variant?: "inline" | "global"', description: "Drop overlay; global portals into the app shell." },
+  { name: "Trigger", type: "(IconButton props)", description: "The file-picker button." },
+];
+
+<PropsTable rows={partProps} />
+
+## Utilities
+
+The wrapper re-exports the package's attachment helpers so you import them from
+one place: `toAttachmentItem`, `matchesAccept`, `prepareAttachmentsForSend`,
+`revokeAttachmentUrl`, and the `DEFAULT_ATTACHMENT_*` limits.
+
+## Styled source
+
+<RegistrySource item="attachments" />

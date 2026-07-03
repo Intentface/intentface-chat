@@ -30,7 +30,6 @@
     "./types": "./src/types.ts",
     "./composer": "./src/composer/index.tsx",
     "./chip": "./src/chip.tsx",
-    "./commands": "./src/commands.tsx",
     "./thread": "./src/thread.tsx",
     "./step-queue": "./src/step-queue.tsx",
     "./reasoning": "./src/reasoning.tsx",
@@ -83,10 +82,6 @@
       "./chip": {
         "types": "./dist/src/chip.d.ts",
         "default": "./dist/src/chip.js"
-      },
-      "./commands": {
-        "types": "./dist/src/commands.d.ts",
-        "default": "./dist/src/commands.js"
       },
       "./thread": {
         "types": "./dist/src/thread.d.ts",

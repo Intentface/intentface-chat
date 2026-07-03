@@ -106,6 +106,15 @@ a prefix is active.
 
 <ComponentPreview name="composer-commands" />
 
+### Ask-user flow
+
+When the `questions` prop is set — typically from an assistant's clarifying
+question — the panel routes to an ask-user prompt. The user picks an answer and
+`onSubmit` fires with `{ kind: "answers" }`. This is the same questionnaire the
+composer renders inside its panel:
+
+<ComponentPreview name="composer-ask-user" />
+
 ## Styled source
 
 This is the exact source `shadcn add @intentface/composer` writes into your

@@ -8,8 +8,6 @@
     "reasoning",
     "chip",
     "attachments",
-    "commands",
-    "ask-user",
     "step-queue"
   ]
 }

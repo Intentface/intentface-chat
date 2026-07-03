@@ -11,7 +11,7 @@ const OPTIONS = [
 
 // A single-select ask-user prompt. Options wraps its children in a RadioGroup
 // when multiSelect is false; clicking a card selects it.
-export const AskUserBasic = () => {
+export const ComposerAskUser = () => {
   const [value, setValue] = useState("bun");
 
   return (

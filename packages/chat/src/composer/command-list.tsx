@@ -17,7 +17,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Commands } from "../commands";
+import { Commands } from "./commands";
 import { filterArrayItems } from "./fuzzy";
 import { useAsRef, useComposerInternals } from "./internals";
 import { commandListPluginKey } from "./prefix-plugin";

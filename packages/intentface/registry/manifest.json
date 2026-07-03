@@ -511,20 +511,6 @@
       ]
     },
     {
-      "name": "commands",
-      "type": "registry:component",
-      "title": "Commands",
-      "dependencies": ["@intentface/chat"],
-      "registryDependencies": ["intentface-theme", "utils"],
-      "files": [
-        {
-          "sourcePath": "components/ai/commands.tsx",
-          "targetPath": "components/ai/commands.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "attachments",
       "type": "registry:component",
       "title": "Attachments",
@@ -695,7 +681,6 @@
         "ask-user",
         "attachments",
         "chip",
-        "commands",
         "composer",
         "message",
         "reasoning",

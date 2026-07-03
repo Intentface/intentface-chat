@@ -1,8 +1,9 @@
 "use client";
 
-// Headless command-list structure. Pure markup with data-slot hooks — the
-// selection/keyboard behavior lives in the composer's command plumbing, and
-// all styling (including item icons) belongs to the styled layer.
+// Command-list structural primitives used internally by the composer's command
+// palette (see command-list.tsx). Pure markup with data-slot hooks — selection
+// and keyboard behavior live in the composer's command plumbing; styling belongs
+// to the styled layer. Not a public export.
 
 import type { ComponentProps } from "react";
 

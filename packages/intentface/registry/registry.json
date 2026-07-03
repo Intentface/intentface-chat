@@ -904,27 +904,6 @@
       "cssBlocks": []
     },
     {
-      "name": "commands",
-      "type": "registry:component",
-      "title": "Commands",
-      "dependencies": [
-        "@intentface/chat"
-      ],
-      "registryDependencies": [
-        "intentface-theme",
-        "utils"
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/commands.tsx",
-          "targetPath": "components/ai/commands.tsx",
-          "type": "registry:component",
-          "content": "\"use client\";\n\nimport { Commands as CommandsPrimitive } from \"@intentface/chat/commands\";\nimport type React from \"react\";\nimport type { ComponentProps } from \"react\";\nimport { cn } from \"@/lib/utils\";\n\nconst CommandsRoot = ({ className, ...props }: ComponentProps<typeof CommandsPrimitive>) => (\n  <CommandsPrimitive className={cn(\"flex flex-col p-1\", className)} {...props} />\n);\n\nconst CommandsGroup = ({ className, ...props }: ComponentProps<typeof CommandsPrimitive.Group>) => (\n  <CommandsPrimitive.Group className={cn(\"flex flex-col\", className)} {...props} />\n);\n\nconst CommandsGroupLabel = ({\n  className,\n  ...props\n}: ComponentProps<typeof CommandsPrimitive.GroupLabel>) => (\n  <CommandsPrimitive.GroupLabel\n    className={cn(\n      \"px-3 py-1 text-2xs font-medium text-ink-tertiary uppercase tracking-wider\",\n      className,\n    )}\n    {...props}\n  />\n);\n\ntype CommandsItemProps = ComponentProps<typeof CommandsPrimitive.Item> & {\n  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>;\n};\n\nconst CommandsItem = ({ icon: Icon, className, children, ...props }: CommandsItemProps) => (\n  <CommandsPrimitive.Item\n    className={cn(\n      \"flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm text-ink-primary cursor-pointer data-highlighted:bg-primary-hover\",\n      className,\n    )}\n    {...props}\n  >\n    {Icon && <Icon className=\"size-4 text-ink-tertiary shrink-0\" />}\n    {children}\n  </CommandsPrimitive.Item>\n);\n\nconst CommandsItemLabel = ({\n  className,\n  ...props\n}: ComponentProps<typeof CommandsPrimitive.ItemLabel>) => (\n  <CommandsPrimitive.ItemLabel className={cn(\"text-sm\", className)} {...props} />\n);\n\nconst CommandsItemDescription = ({\n  className,\n  ...props\n}: ComponentProps<typeof CommandsPrimitive.ItemDescription>) => (\n  <CommandsPrimitive.ItemDescription\n    className={cn(\"text-xs text-ink-tertiary truncate\", className)}\n    {...props}\n  />\n);\n\nconst CommandsEmpty = ({ className, ...props }: ComponentProps<typeof CommandsPrimitive.Empty>) => (\n  <CommandsPrimitive.Empty\n    className={cn(\"flex items-center px-3 h-8 text-sm text-ink-tertiary\", className)}\n    {...props}\n  />\n);\n\nconst CommandsFooter = ({\n  className,\n  ...props\n}: ComponentProps<typeof CommandsPrimitive.Footer>) => (\n  <CommandsPrimitive.Footer\n    className={cn(\n      \"border-t border-slate-6 pt-1 px-3 flex items-center gap-3 text-2xs text-ink-tertiary\",\n      className,\n    )}\n    {...props}\n  />\n);\n\nexport const Commands = Object.assign(CommandsRoot, {\n  Group: CommandsGroup,\n  GroupLabel: CommandsGroupLabel,\n  Item: CommandsItem,\n  ItemLabel: CommandsItemLabel,\n  ItemDescription: CommandsItemDescription,\n  Empty: CommandsEmpty,\n  Footer: CommandsFooter,\n});\n"
-        }
-      ],
-      "cssBlocks": []
-    },
-    {
       "name": "attachments",
       "type": "registry:component",
       "title": "Attachments",
@@ -1103,81 +1082,6 @@
       "cssBlocks": []
     },
     {
-      "name": "shimmer",
-      "type": "registry:component",
-      "title": "Shimmer",
-      "dependencies": [
-        "@intentface/chat"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "cssBlocks": [
-        {
-          "name": "intentface-shimmer",
-          "sourcePath": "packages/intentface/registry/shimmer.css",
-          "content": "@keyframes intentface-shimmer {\n  from {\n    background-position: 100% center;\n  }\n  to {\n    background-position: 0% center;\n  }\n}\n"
-        }
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/shimmer.tsx",
-          "targetPath": "components/ai/shimmer.tsx",
-          "type": "registry:component",
-          "content": "\"use client\";\n\nimport { Shimmer as ShimmerPrimitive } from \"@intentface/chat/shimmer\";\nimport type { ComponentProps } from \"react\";\nimport { cn } from \"@/lib/utils\";\n\nexport type TextShimmerProps = ComponentProps<typeof ShimmerPrimitive>;\n\n// The primitive owns the spread math (--shimmer-spread/--shimmer-duration);\n// this wrapper paints the gradient and runs the intentface-shimmer keyframes.\nconst ShimmerComponent = ({ className, ...props }: TextShimmerProps) => (\n  <ShimmerPrimitive\n    className={cn(\n      \"relative inline-block bg-size-[250%_100%,auto] bg-clip-text text-transparent\",\n      \"[--bg:linear-gradient(90deg,#0000_calc(50%-var(--shimmer-spread)),var(--color-background),#0000_calc(50%+var(--shimmer-spread)))] [background-repeat:no-repeat,padding-box]\",\n      \"[background-image:var(--bg),linear-gradient(var(--color-muted-foreground),var(--color-muted-foreground))]\",\n      \"animate-[intentface-shimmer_var(--shimmer-duration)_linear_infinite]\",\n      className,\n    )}\n    {...props}\n  />\n);\n\nexport const Shimmer = ShimmerComponent;\n"
-        }
-      ]
-    },
-    {
-      "name": "artifact-card",
-      "type": "registry:component",
-      "title": "Artifact Card",
-      "dependencies": [
-        "@intentface/chat",
-        "lucide-react",
-        "motion"
-      ],
-      "registryDependencies": [
-        "utils"
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/artifact-card.tsx",
-          "targetPath": "components/ai/artifact-card.tsx",
-          "type": "registry:component",
-          "content": "\"use client\";\n\nimport { isArtifactStreaming } from \"@intentface/chat/artifact-card\";\nimport { FileTextIcon, LoaderIcon } from \"lucide-react\";\nimport { motion } from \"motion/react\";\nimport type { ComponentProps } from \"react\";\nimport { cn } from \"@/lib/utils\";\n\ntype ArtifactCardProps = ComponentProps<typeof motion.button> & {\n  title: string;\n  state: string;\n  onToggle: () => void;\n};\n\nexport const ArtifactCard = ({\n  title,\n  state,\n  onToggle,\n  className,\n  ...props\n}: ArtifactCardProps) => {\n  const isStreaming = isArtifactStreaming(state);\n\n  return (\n    <motion.button\n      type=\"button\"\n      initial={{ opacity: 0, y: 4 }}\n      animate={{ opacity: 1, y: 0 }}\n      transition={{ duration: 0.15 }}\n      data-slot=\"artifact-card\"\n      data-streaming={isStreaming || undefined}\n      onClick={onToggle}\n      disabled={isStreaming}\n      className={cn(\n        \"flex w-full cursor-pointer items-center gap-3 rounded-xl border border-slate-7 bg-primary px-4 py-3 text-left transition-colors shadow-xs\",\n        \"hover:bg-primary-hover disabled:cursor-default disabled:opacity-70\",\n        className,\n      )}\n      {...props}\n    >\n      <div className=\"flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary\">\n        {isStreaming ? (\n          <LoaderIcon className=\"size-4 animate-spin\" />\n        ) : (\n          <FileTextIcon className=\"size-4\" />\n        )}\n      </div>\n      <div className=\"min-w-0 flex-1\">\n        <p className=\"truncate text-sm font-medium\">{title}</p>\n        <p className=\"text-xs text-muted-foreground\">\n          {isStreaming ? \"Creating...\" : \"Click to open\"}\n        </p>\n      </div>\n    </motion.button>\n  );\n};\n"
-        }
-      ],
-      "cssBlocks": []
-    },
-    {
-      "name": "artifacts-panel",
-      "type": "registry:component",
-      "title": "Artifacts Panel",
-      "dependencies": [
-        "@intentface/chat",
-        "lucide-react",
-        "motion"
-      ],
-      "registryDependencies": [
-        "icon-button",
-        "markdown",
-        "tooltip",
-        "hooks-use-copy",
-        "utils",
-        "icons"
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/artifacts-panel.tsx",
-          "targetPath": "components/ai/artifacts-panel.tsx",
-          "type": "registry:component",
-          "content": "\"use client\";\n\nimport { ArtifactsPanel as ArtifactsPanelPrimitive } from \"@intentface/chat/artifacts-panel\";\nimport { XIcon } from \"lucide-react\";\nimport { AnimatePresence, motion } from \"motion/react\";\nimport type { ComponentProps, ReactNode } from \"react\";\nimport { CheckMarkMediumIcon } from \"@/components/icons/check-mark-medium\";\nimport { CopyIcon } from \"@/components/icons/copy\";\nimport { IconButton } from \"@/components/ui/icon-button\";\nimport { Markdown } from \"@/components/ui/markdown\";\nimport Tooltip from \"@/components/ui/tooltip\";\nimport { useCopy } from \"@/hooks/use-copy\";\nimport { cn } from \"@/lib/utils\";\n\ntype ArtifactsPanelRootProps = {\n  open: boolean;\n  children?: ReactNode;\n  className?: string;\n};\n\nconst ArtifactsPanelRoot = ({ open, children, className, ...props }: ArtifactsPanelRootProps) => (\n  <AnimatePresence>\n    {open && (\n      <motion.aside\n        data-slot=\"artifacts-panel\"\n        data-open=\"\"\n        initial={{ width: 0, opacity: 0 }}\n        animate={{ width: \"var(--artifacts-panel-width)\", opacity: 1 }}\n        exit={{ width: 0, opacity: 0 }}\n        transition={{ duration: 0.2, ease: \"easeInOut\" }}\n        className={cn(\n          \"relative h-full shrink-0 overflow-hidden border-l border-border bg-background\",\n          className,\n        )}\n        {...props}\n      >\n        <div className=\"flex h-full w-(--artifacts-panel-width) flex-col\">{children}</div>\n      </motion.aside>\n    )}\n  </AnimatePresence>\n);\n\nconst ArtifactsPanelContent = ({ className, ...props }: ComponentProps<typeof Markdown>) => (\n  <Markdown className={cn(\"size-full\", className)} {...props} />\n);\n\nconst ArtifactsPanelHeader = ({\n  title,\n  onClose,\n  className,\n  ...props\n}: ComponentProps<typeof ArtifactsPanelPrimitive.Header> & {\n  title: string;\n  onClose: () => void;\n}) => (\n  <ArtifactsPanelPrimitive.Header\n    className={cn(\"flex items-center justify-between border-b border-border px-4 py-3\", className)}\n    {...props}\n  >\n    <h2 className=\"truncate text-sm font-semibold\">{title}</h2>\n    <IconButton variant=\"ghost\" size=\"sm\" onClick={onClose}>\n      <XIcon />\n    </IconButton>\n  </ArtifactsPanelPrimitive.Header>\n);\n\nconst ArtifactsPanelFooter = ({\n  content,\n  className,\n  ...props\n}: ComponentProps<typeof ArtifactsPanelPrimitive.Footer> & { content: string }) => {\n  const { copy, isCopied } = useCopy();\n\n  return (\n    <ArtifactsPanelPrimitive.Footer\n      className={cn(\"flex items-center justify-end border-t border-border px-4 py-2\", className)}\n      {...props}\n    >\n      <Tooltip.Provider>\n        <Tooltip>\n          <Tooltip.Trigger\n            render={\n              <IconButton variant=\"ghost\" size=\"sm\" onClick={() => copy(content)}>\n                {isCopied ? <CheckMarkMediumIcon /> : <CopyIcon />}\n              </IconButton>\n            }\n          />\n          <Tooltip.Content>{isCopied ? \"Copied!\" : \"Copy markdown\"}</Tooltip.Content>\n        </Tooltip>\n      </Tooltip.Provider>\n    </ArtifactsPanelPrimitive.Footer>\n  );\n};\n\nconst ArtifactsPanelViewport = ({\n  className,\n  ...props\n}: ComponentProps<typeof ArtifactsPanelPrimitive.Viewport>) => (\n  <ArtifactsPanelPrimitive.Viewport\n    className={cn(\"flex-1 overflow-y-auto p-4\", className)}\n    {...props}\n  />\n);\n\nexport const ArtifactsPanel = Object.assign(ArtifactsPanelRoot, {\n  Header: ArtifactsPanelHeader,\n  Viewport: ArtifactsPanelViewport,\n  Content: ArtifactsPanelContent,\n  Footer: ArtifactsPanelFooter,\n});\n"
-        }
-      ],
-      "cssBlocks": []
-    },
-    {
       "name": "chat-demo",
       "type": "registry:component",
       "title": "Chat Demo",
@@ -1235,16 +1139,12 @@
       "type": "registry:bundle",
       "title": "AI chat primitives",
       "registryDependencies": [
-        "artifact-card",
-        "artifacts-panel",
         "ask-user",
         "attachments",
         "chip",
-        "commands",
         "composer",
         "message",
         "reasoning",
-        "shimmer",
         "step-queue",
         "steps",
         "thread"

@@ -1,8 +1,7 @@
 import type { ComponentType } from "react";
-import { AskUserBasic } from "./ask-user-basic";
 import { AttachmentsBasic } from "./attachments-basic";
 import { ChipBasic } from "./chip-basic";
-import { CommandsBasic } from "./commands-basic";
+import { ComposerAskUser } from "./composer-ask-user";
 import { ComposerBasic } from "./composer-basic";
 import { ComposerCommands } from "./composer-commands";
 import { MessageBasic } from "./message-basic";
@@ -25,13 +24,12 @@ const dir = "components/docs/previews";
 export const previews: Record<string, PreviewEntry> = {
   "composer-basic": { Component: ComposerBasic, file: `${dir}/composer-basic.tsx` },
   "composer-commands": { Component: ComposerCommands, file: `${dir}/composer-commands.tsx` },
+  "composer-ask-user": { Component: ComposerAskUser, file: `${dir}/composer-ask-user.tsx` },
   "thread-basic": { Component: ThreadBasic, file: `${dir}/thread-basic.tsx` },
   "message-basic": { Component: MessageBasic, file: `${dir}/message-basic.tsx` },
   "chip-basic": { Component: ChipBasic, file: `${dir}/chip-basic.tsx` },
   "reasoning-basic": { Component: ReasoningBasic, file: `${dir}/reasoning-basic.tsx` },
   "steps-basic": { Component: StepsBasic, file: `${dir}/steps-basic.tsx` },
   "attachments-basic": { Component: AttachmentsBasic, file: `${dir}/attachments-basic.tsx` },
-  "ask-user-basic": { Component: AskUserBasic, file: `${dir}/ask-user-basic.tsx` },
-  "commands-basic": { Component: CommandsBasic, file: `${dir}/commands-basic.tsx` },
   "step-queue-basic": { Component: StepQueueBasic, file: `${dir}/step-queue-basic.tsx` },
 };

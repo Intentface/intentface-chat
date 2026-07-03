@@ -1,0 +1,75 @@
+---
+title: Theming
+description: The token system, how the theme installs, and the one collision to know about in shadcn-styled apps.
+---
+
+The styled layer paints against a small set of semantic tokens. You install them
+once; every primitive reads them. This page covers the token model, the default
+install path, and the single sharp edge — installing into an app that already
+carries a shadcn palette.
+
+## The token model
+
+Four **seeds** drive everything:
+
+```css
+:root {
+  --bg: #ffffff;   /* canvas */
+  --fg: #1a1a1a;   /* ink */
+  --acc: #0169cc;  /* accent */
+  --con: 0.3;      /* contrast — how far surfaces and states step from bg */
+}
+```
+
+Every other token derives from those with `oklch(from … calc(…))`: the surface
+tiers (`--primary`, `--tertiary`, `--base`), their `-hover`/`-active`/`-border`
+states, the accent chain, and the ink tiers. Because the derivations reference
+the seeds, **dark mode is just a different set of seeds** — the `.dark` block
+re-seeds `--bg`/`--fg`/`--acc` and flips the state-delta signs, and every
+derived value recomputes. Tune the whole system by changing four values.
+
+## Default install (Mechanism A)
+
+For a bare Next + Tailwind v4 app, the theme installs as CSS variables through
+the shadcn CLI. It writes the `:root`/`.dark` seeds, the `@theme inline`
+mappings, the `@custom-variant dark`, and the `color-mix`/`calc` chains straight
+into your `globals.css`. Re-running the add is byte-idempotent.
+
+```bash
+bunx shadcn@latest add @intentface/composer
+```
+
+The theme rides along as a registry dependency — no separate step.
+
+## Installing over an existing shadcn palette (Mechanism B)
+
+If your app already ran `shadcn init`, there's one thing to know. Three of our
+token names collide with shadcn's defaults:
+
+- `--color-primary`
+- `--color-secondary`
+- `--color-accent`
+
+When the CLI merges CSS variables, **existing values win**: your app's shadcn
+`--primary`/`--secondary`/`--accent` survive, and ours are dropped. Because our
+`-hover`/`-active`/`-border` chains derive from those bases, they'd then compute
+from the wrong colors — the components render but look wrong.
+
+The fix is to install the theme as a **standalone file** and import it last, so
+the Intentface palette wins the cascade for the colliding keys:
+
+```bash
+bunx shadcn@latest add @intentface/intentface-theme-file
+```
+
+That writes `app/intentface.css`. Import it **after** your existing token block
+in `globals.css`:
+
+```css
+@import "tailwindcss";
+/* …your shadcn tokens… */
+@import "./intentface.css"; /* last — wins the colliding variables */
+```
+
+Alternatively, keep Mechanism A and manually override just the three colliding
+variables after the merge. The file approach is simpler and fully idempotent.

@@ -1,0 +1,45 @@
+---
+title: Animation
+description: The headless layer stays animation-free; motion lives in the styled wrappers via data attributes and render props.
+---
+
+The package ships no animation library. Motion is presentation, so it belongs in
+the styled layer — which keeps the package's peer surface to React alone and
+lets you swap Motion for CSS, or another library, without touching behavior.
+
+## Two mechanisms
+
+**Data attributes for state.** Headless parts expose their state as `data-*`
+attributes — `data-state="open|closed"`, `data-open`, `data-highlighted`,
+`data-streaming`, `data-media-type`, and so on. The styled layer animates off
+them, in CSS or by reading them, with no JavaScript coordination:
+
+```tsx
+// The shimmer keyframes run purely from the primitive's CSS variables.
+<ShimmerPrimitive className="animate-[intentface-shimmer_var(--shimmer-duration)_linear_infinite]" />
+```
+
+**State hooks + render props for enter/exit.** Where a wrapper needs true
+enter/exit choreography (Motion's `AnimatePresence`, layout transitions), it
+reads the primitive's state through a hook and owns the animated element itself.
+The thread's scroll button is the pattern: the primitive exposes `isAtBottom`
+via `useThread`, and the wrapper wraps a `motion.div` in `AnimatePresence`:
+
+```tsx
+const { isAtBottom, scrollToBottom } = useThread();
+
+<AnimatePresence>
+  {!isAtBottom && (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      <ScrollToBottomButton onClick={scrollToBottom} />
+    </motion.div>
+  )}
+</AnimatePresence>;
+```
+
+## What this buys you
+
+Because the primitive never mounts a motion element, restyling is safe: you can
+delete the animation, change its curve, or replace the library, and the behavior
+— when the button should show, when the panel is open — is unchanged. Update the
+package for behavior fixes; own the motion in your copy of the wrapper.

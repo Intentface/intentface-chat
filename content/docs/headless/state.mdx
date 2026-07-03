@@ -1,0 +1,55 @@
+---
+title: Composer state
+description: One store per Composer.Provider, with a global fallback for the zero-config path.
+---
+
+The composer's state — editor content, command lists, ask-user flow, attachments
+— lives in a store. How that store is resolved is what lets a single composer
+work with zero setup while several composers coexist on one page.
+
+## Resolution order
+
+`Composer.Root` resolves its store in this order:
+
+1. an explicit `store` prop, else
+2. the nearest `Composer.Provider` in the tree, else
+3. a lazily-created **global** instance.
+
+```tsx
+// Zero config — resolves the global store.
+<Composer onSubmit={handleSubmit}>{/* … */}</Composer>
+
+// Scoped — its own instance, isolated from any other composer.
+<Composer.Provider>
+  <Composer onSubmit={handleSubmit}>{/* … */}</Composer>
+</Composer.Provider>
+```
+
+## Why the global fallback
+
+With one composer per page — the common case — you write nothing. And because
+the global store is shared, you can drive the composer from anywhere with
+`composerController` (insert a chip, focus, clear) without threading a ref:
+
+```ts
+import { composerController } from "@/components/ai/composer";
+
+composerController.insertChip({ prefix: "@", value: fileId, label: fileName });
+```
+
+## Why the provider
+
+Two composers sharing one global store would fight over the same editor and
+command state. Wrapping each in `Composer.Provider` gives each its own instance
+— which is exactly why the docs previews on this site can render several live
+composers on one page. Inside a provider, use the `useComposer` selector hook
+and `useComposerController` to read and drive the nearest store.
+
+## Reading state
+
+`useComposer(selector)` subscribes to a slice of the resolved store:
+
+```ts
+const isSubmitting = useComposer((state) => state.isSubmitting);
+const attachments = useComposer((state) => state.attachments.items);
+```

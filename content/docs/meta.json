@@ -1,4 +1,4 @@
 {
   "title": "Documentation",
-  "pages": ["index", "primitives"]
+  "pages": ["index", "installation", "theming", "headless", "primitives"]
 }

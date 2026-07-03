@@ -1,0 +1,61 @@
+---
+title: Installation
+description: Add primitives to your project with the shadcn CLI.
+---
+
+Intentface chat is distributed as a shadcn registry. You add a primitive with
+the shadcn CLI: the styled component's source lands in your repo, its headless
+logic installs from npm as `@intentface/chat`, and any registry dependencies
+(other primitives, base UI, the theme) resolve automatically.
+
+## Prerequisites
+
+A Next.js app on **React 19** and **Tailwind v4**. The shadcn CLI reads (or
+creates) a `components.json` on first run.
+
+## Register the namespace
+
+Point the `@intentface` namespace at the hosted registry in your
+`components.json`:
+
+```json
+{
+  "registries": {
+    "@intentface": "https://intentface.dev/r/{name}.json"
+  }
+}
+```
+
+Then add primitives by name:
+
+```bash
+bunx shadcn@latest add @intentface/composer
+```
+
+## Or add by URL
+
+Without configuring the namespace, add any item by its full URL — transitive
+dependencies still resolve, because the registry rewrites them to absolute URLs:
+
+```bash
+bunx shadcn@latest add https://intentface.dev/r/composer.json
+```
+
+## What an add installs
+
+Adding `@intentface/composer` writes the styled `composer.tsx` (and the
+primitives it composes) into your `components/` tree and installs the npm
+dependencies collected across the closure — including **`@intentface/chat`**,
+which carries all the behavior. From then on the styled source is yours to edit.
+
+To pull the whole set at once, add the bundle:
+
+```bash
+bunx shadcn@latest add @intentface/chat-primitives
+```
+
+## Theme
+
+The primitives are styled against a small set of design tokens. Install them and
+read the collision notes on the [Theming](/docs/theming) page — especially if
+your app already ran `shadcn init`.

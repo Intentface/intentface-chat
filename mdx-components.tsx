@@ -78,17 +78,16 @@ const proseComponents: MDXComponents = {
     />
   ),
   pre: async ({ children }: ComponentProps<"pre">) => {
-    // The MDX code element carries the raw source + language className.
-    const child = children as { props?: { children?: string; className?: string } } | undefined;
-    const raw = child?.props?.children ?? "";
+    // Built-in rehype highlighting is disabled (source.config.ts), so the code
+    // element carries the raw source as its children — a string, or an array of
+    // strings when MDX splits it. Flatten to a single string for CodeBlock.
+    const child = children as { props?: { children?: unknown; className?: string } } | undefined;
+    const rawChildren = child?.props?.children;
+    const code = (Array.isArray(rawChildren) ? rawChildren.join("") : (rawChildren ?? ""))
+      .toString()
+      .replace(/\n$/, "");
     const lang = child?.props?.className?.replace(/^language-/, "") ?? "tsx";
-    return (
-      <CodeBlock
-        code={typeof raw === "string" ? raw.replace(/\n$/, "") : ""}
-        lang={lang}
-        className="my-4"
-      />
-    );
+    return <CodeBlock code={code} lang={lang} className="my-4" />;
   },
 };
 

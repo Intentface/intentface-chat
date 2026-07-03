@@ -645,7 +645,7 @@
       "name": "step-queue",
       "type": "registry:component",
       "title": "Step Queue",
-      "dependencies": ["motion"],
+      "dependencies": ["@intentface/chat", "motion"],
       "registryDependencies": ["text-shimmer", "utils"],
       "files": [
         {

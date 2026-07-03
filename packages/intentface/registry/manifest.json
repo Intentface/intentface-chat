@@ -17,6 +17,18 @@
       ]
     },
     {
+      "name": "intentface-theme-file",
+      "type": "registry:item",
+      "title": "Intentface theme (standalone CSS file)",
+      "files": [
+        {
+          "sourcePath": "packages/intentface/registry/intentface.css",
+          "targetPath": "~/app/intentface.css",
+          "type": "registry:file"
+        }
+      ]
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "title": "Utilities",
@@ -176,7 +188,7 @@
       "type": "registry:component",
       "title": "Icon Button",
       "dependencies": ["@base-ui/react", "class-variance-authority"],
-      "registryDependencies": ["button", "utils"],
+      "registryDependencies": ["utils"],
       "files": [
         {
           "sourcePath": "components/ui/icon-button.tsx",
@@ -502,7 +514,7 @@
       "name": "commands",
       "type": "registry:component",
       "title": "Commands",
-      "dependencies": ["@intentface/chat", "react"],
+      "dependencies": ["@intentface/chat"],
       "registryDependencies": ["intentface-theme", "utils"],
       "files": [
         {
@@ -554,8 +566,9 @@
       "name": "message",
       "type": "registry:component",
       "title": "Message",
-      "dependencies": ["@intentface/chat", "lucide-react", "motion"],
+      "dependencies": ["@base-ui/react", "@intentface/chat", "lucide-react", "motion"],
       "registryDependencies": [
+        "button",
         "chip",
         "hover-card",
         "icon-button",

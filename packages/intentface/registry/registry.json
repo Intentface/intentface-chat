@@ -19,6 +19,20 @@
       "files": []
     },
     {
+      "name": "intentface-theme-file",
+      "type": "registry:item",
+      "title": "Intentface theme (standalone CSS file)",
+      "files": [
+        {
+          "sourcePath": "packages/intentface/registry/intentface.css",
+          "targetPath": "~/app/intentface.css",
+          "type": "registry:file",
+          "content": "@source \"../node_modules/streamdown/dist/*.js\";\n\n@custom-variant dark (&:is(.dark *));\n\n:root {\n  font-feature-settings:\n    \"liga\" 1,\n    \"calt\" 1;\n\n  --bg: #ffffff;\n  --fg: #1a1a1a;\n  --acc: #0169cc;\n  --con: 0.35;\n\n  --mix-hover: calc(16% * var(--con));\n  --mix-active: calc(20% * var(--con));\n  --mix-border: calc(24% * var(--con));\n\n  --base: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--con)));\n  --base-hover: color-mix(in oklch, var(--base), var(--fg) var(--mix-hover));\n  --base-active: color-mix(in oklch, var(--base), var(--fg) var(--mix-active));\n  --base-border: color-mix(in oklch, var(--base), var(--fg) var(--mix-border));\n\n  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(4% * var(--con)));\n  --secondary-hover: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-hover));\n  --secondary-active: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-active));\n  --secondary-border: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-border));\n\n  --primary: var(--bg);\n  --primary-hover: color-mix(in oklch, var(--primary), var(--fg) var(--mix-hover));\n  --primary-active: color-mix(in oklch, var(--primary), var(--fg) var(--mix-active));\n  --primary-border: color-mix(in oklch, var(--primary), var(--fg) var(--mix-border));\n\n  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(2% * var(--con)));\n  --tertiary-hover: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-hover));\n  --tertiary-active: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-active));\n  --tertiary-border: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-border));\n\n  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(24% * var(--con)));\n  --quaternary-hover: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-hover));\n  --quaternary-active: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-active));\n  --quaternary-border: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-border));\n\n  --accent: color-mix(in oklch, var(--acc), var(--fg) calc(28% * var(--con)));\n  --accent-hover: color-mix(in oklch, var(--acc), var(--fg) var(--mix-hover));\n  --accent-active: color-mix(in oklch, var(--acc), var(--fg) var(--mix-active));\n  --accent-border: color-mix(in oklch, var(--acc), var(--fg) var(--mix-border));\n\n  --text-primary: color-mix(in oklch, var(--bg), var(--fg) 85%);\n  --text-secondary: color-mix(in oklch, var(--bg), var(--fg) 58%);\n  --text-tertiary: color-mix(in oklch, var(--bg), var(--fg) 40%);\n\n  --radius: 8px;\n  --sidebar-width: 224px;\n  --thread-width: 672px;\n  --artifacts-panel-width: 512px;\n}\n\n.dark {\n  --bg: #111111;\n  --fg: #fcfcfc;\n  --acc: #4a9eed;\n\n  --base: var(--bg);\n  --primary: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));\n  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));\n  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));\n  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(56% * var(--con)));\n\n  --mix-hover: calc(16% * var(--con));\n  --mix-active: calc(18% * var(--con));\n  --mix-border: calc(20% * var(--con));\n}\n\n@theme inline {\n  --color-base: var(--base);\n  --color-base-hover: var(--base-hover);\n  --color-base-active: var(--base-active);\n  --color-base-border: var(--base-border);\n  --color-secondary: var(--secondary);\n  --color-secondary-hover: var(--secondary-hover);\n  --color-secondary-active: var(--secondary-active);\n  --color-secondary-border: var(--secondary-border);\n  --color-primary: var(--primary);\n  --color-primary-hover: var(--primary-hover);\n  --color-primary-active: var(--primary-active);\n  --color-primary-border: var(--primary-border);\n  --color-tertiary: var(--tertiary);\n  --color-tertiary-hover: var(--tertiary-hover);\n  --color-tertiary-active: var(--tertiary-active);\n  --color-tertiary-border: var(--tertiary-border);\n  --color-quaternary: var(--quaternary);\n  --color-quaternary-hover: var(--quaternary-hover);\n  --color-quaternary-active: var(--quaternary-active);\n  --color-quaternary-border: var(--quaternary-border);\n  --color-accent: var(--accent);\n  --color-accent-hover: var(--accent-hover);\n  --color-accent-active: var(--accent-active);\n  --color-accent-border: var(--accent-border);\n  --color-ink-primary: var(--text-primary);\n  --color-ink-secondary: var(--text-secondary);\n  --color-ink-tertiary: var(--text-tertiary);\n  --radius-xs: calc(var(--radius) - 4px);\n  --radius-sm: calc(var(--radius) - 2px);\n  --radius-md: var(--radius);\n  --radius-lg: calc(var(--radius) + 2px);\n  --radius-xl: calc(var(--radius) + 4px);\n  --radius-2xl: calc(var(--radius) + 8px);\n  --radius-3xl: calc(var(--radius) + 12px);\n  --radius-4xl: calc(var(--radius) + 16px);\n  --text-2xs: 11px;\n  --text-xs: 12px;\n  --text-sm: 13px;\n  --text-md: 14px;\n  --text-lg: 15px;\n  --text-xl: 16px;\n}\n"
+        }
+      ],
+      "cssBlocks": []
+    },
+    {
       "name": "utils",
       "type": "registry:lib",
       "title": "Utilities",
@@ -409,7 +423,6 @@
         "class-variance-authority"
       ],
       "registryDependencies": [
-        "button",
         "utils"
       ],
       "files": [
@@ -895,8 +908,7 @@
       "type": "registry:component",
       "title": "Commands",
       "dependencies": [
-        "@intentface/chat",
-        "react"
+        "@intentface/chat"
       ],
       "registryDependencies": [
         "intentface-theme",
@@ -970,11 +982,13 @@
       "type": "registry:component",
       "title": "Message",
       "dependencies": [
+        "@base-ui/react",
         "@intentface/chat",
         "lucide-react",
         "motion"
       ],
       "registryDependencies": [
+        "button",
         "chip",
         "hover-card",
         "icon-button",

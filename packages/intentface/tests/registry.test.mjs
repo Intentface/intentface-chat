@@ -77,6 +77,19 @@ test("shadcn dist maps items, hides unlisted, rewrites deps to URLs", async () =
         exampleDependencies: ["widget"],
       },
       {
+        name: "theme-file",
+        type: "registry:item",
+        title: "Theme file",
+        files: [
+          {
+            sourcePath: "packages/intentface/registry/intentface.css",
+            targetPath: "~/app/intentface.css",
+            type: "registry:file",
+            content: ":root { --bg: #fff; }\n",
+          },
+        ],
+      },
+      {
         name: "theme",
         type: "registry:theme",
         hidden: true,
@@ -105,7 +118,7 @@ test("shadcn dist maps items, hides unlisted, rewrites deps to URLs", async () =
     const index = JSON.parse(await readFile(path.join(outputDir, "registry.json"), "utf8"));
     assert.deepEqual(
       index.items.map((item) => item.name),
-      ["widget", "bundle"],
+      ["widget", "bundle", "theme-file"],
     );
     assert.ok(index.items.every((item) => (item.files ?? []).every((file) => !file.content)));
 
@@ -126,6 +139,13 @@ test("shadcn dist maps items, hides unlisted, rewrites deps to URLs", async () =
     const bundle = JSON.parse(await readFile(path.join(outputDir, "bundle.json"), "utf8"));
     assert.equal(bundle.type, "registry:block");
     assert.equal(bundle.files, undefined);
+
+    // registry:file items keep their root-relative "~/" target and carry content.
+    const themeFile = JSON.parse(await readFile(path.join(outputDir, "theme-file.json"), "utf8"));
+    assert.equal(themeFile.type, "registry:item");
+    assert.equal(themeFile.files[0].type, "registry:file");
+    assert.equal(themeFile.files[0].target, "~/app/intentface.css");
+    assert.ok(themeFile.files[0].content.includes("--bg"));
 
     const theme = JSON.parse(await readFile(path.join(outputDir, "theme.json"), "utf8"));
     assert.equal(theme.cssVars.light.bg, "#fff");

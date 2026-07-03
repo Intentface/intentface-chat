@@ -3,8 +3,9 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { CodeBlock } from "@/components/docs/code-block";
 import { ComponentPreview } from "@/components/docs/component-preview";
+import { ManualInstall } from "@/components/docs/manual-install";
 import { PropsTable } from "@/components/docs/props-table";
-import { RegistrySource } from "@/components/docs/registry-source";
+import { ThemeSource } from "@/components/docs/theme-source";
 import { cn } from "@/lib/utils";
 
 // Slugify heading text into an id so the TOC anchors resolve. Mirrors the
@@ -94,8 +95,9 @@ const proseComponents: MDXComponents = {
 // Docs components available inside every MDX page without an import.
 const docsComponents: MDXComponents = {
   ComponentPreview,
-  RegistrySource,
+  ManualInstall,
   PropsTable,
+  ThemeSource,
 };
 
 export const getMDXComponents = (components?: MDXComponents): MDXComponents => ({

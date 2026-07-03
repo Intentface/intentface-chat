@@ -567,7 +567,7 @@
       "name": "message",
       "type": "registry:component",
       "title": "Message",
-      "dependencies": ["@intentface/chat", "ai", "lucide-react", "motion"],
+      "dependencies": ["@intentface/chat", "lucide-react", "motion"],
       "registryDependencies": [
         "chip",
         "hover-card",

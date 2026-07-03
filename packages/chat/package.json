@@ -30,6 +30,7 @@
     "./steps": "./src/steps.tsx",
     "./attachments": "./src/attachments.tsx",
     "./ask-user": "./src/ask-user.tsx",
+    "./message": "./src/message.tsx",
     "./message-utils": "./src/message-utils.ts",
     "./chip-markdown": "./src/chip-markdown.ts",
     "./chat-status": "./src/chat-status.ts"

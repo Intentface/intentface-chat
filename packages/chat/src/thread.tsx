@@ -12,6 +12,7 @@
 
 import {
   createContext,
+  type KeyboardEvent,
   memo,
   type ReactNode,
   type RefObject,
@@ -19,21 +20,61 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import type { PrimitiveProps } from "./internal/primitive-props";
 import type { StateAttributesMapping } from "./internal/render/getStateAttributesProps";
+import { useRefWithInit } from "./internal/render/useRefWithInit";
 import { useRenderElement } from "./internal/render/useRenderElement";
 
 // ---------------------------------------------------------------------------
-// Thread context — a small, generic primitive surface. Auto-scroll behavior is
-// driven by the <Thread autoScroll> prop; nothing here knows about chats or messages.
+// At-bottom store — external so an at-bottom flip re-renders only the
+// components that actually read isAtBottom (via useThread), never the Thread
+// tree itself: the context value stays referentially stable for the lifetime
+// of the thread.
 // ---------------------------------------------------------------------------
 
+const createAtBottomStore = () => {
+  let snapshot = true;
+  const listeners = new Set<() => void>();
+  return {
+    getSnapshot: () => snapshot,
+    setSnapshot: (next: boolean) => {
+      if (snapshot === next) return;
+      snapshot = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+};
+
+type AtBottomStore = ReturnType<typeof createAtBottomStore>;
+
+// ---------------------------------------------------------------------------
+// Thread context — a small, generic primitive surface. Auto-scroll behavior is
+// driven by the <Thread autoScroll> prop; nothing here knows about chats or
+// messages beyond the opt-in data-message-id row contract.
+// ---------------------------------------------------------------------------
+
+export type ThreadScrollToMessageOptions = {
+  /** Viewport edge (or center) to align the row to; scrollIntoView's block. */
+  align?: "start" | "center" | "end" | "nearest";
+  behavior?: ScrollBehavior;
+};
+
 type ThreadContextValue = {
-  isAtBottom: boolean;
+  atBottomStore: AtBottomStore;
   scrollToBottom: (behavior?: ScrollBehavior) => void;
+  scrollToTop: (behavior?: ScrollBehavior) => void;
+  scrollToMessage: (messageId: string, options?: ThreadScrollToMessageOptions) => boolean;
+  releaseFollow: () => void;
   scrollRef: RefObject<HTMLDivElement | null>;
   contentRef: RefObject<HTMLDivElement | null>;
   sentinelRef: RefObject<HTMLDivElement | null>;
@@ -41,10 +82,41 @@ type ThreadContextValue = {
 
 const ThreadContext = createContext<ThreadContextValue | null>(null);
 
-export const useThread = () => {
+const useThreadContext = () => {
   const ctx = use(ThreadContext);
   if (!ctx) throw new Error("useThread must be used within <Thread>");
   return ctx;
+};
+
+/**
+ * Public thread surface. Subscribes to at-bottom, so call it where isAtBottom
+ * is actually read (e.g. a scroll button); the commands and refs are stable
+ * and never cause re-renders on their own.
+ */
+export const useThread = () => {
+  const {
+    atBottomStore,
+    scrollToBottom,
+    scrollToTop,
+    scrollToMessage,
+    scrollRef,
+    contentRef,
+    sentinelRef,
+  } = useThreadContext();
+  const isAtBottom = useSyncExternalStore(
+    atBottomStore.subscribe,
+    atBottomStore.getSnapshot,
+    atBottomStore.getSnapshot,
+  );
+  return {
+    isAtBottom,
+    scrollToBottom,
+    scrollToTop,
+    scrollToMessage,
+    scrollRef,
+    contentRef,
+    sentinelRef,
+  };
 };
 
 // Single place that performs the scroll, so callers just choose the behavior:
@@ -55,7 +127,7 @@ const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavio
 
 // ---------------------------------------------------------------------------
 // useThreadScroll — owns the thread's scroll subsystem: the scroll/content/
-// sentinel refs, at-bottom detection, scrollToBottom, and the autoScroll
+// sentinel refs, at-bottom detection, the scroll commands, and the autoScroll
 // landing/follow behavior. Returns the value for ThreadContext. autoScroll modes:
 //   "off"    no landing, no follow, no reserve — a plain scroll area.
 //   "bottom" newest lands at the bottom and the view follows the stream (Codex).
@@ -66,39 +138,154 @@ const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavio
 // effect so the initial land + reserve apply before paint (no top-then-jump
 // flash); it runs after useThreadInsets in ThreadRoot, so --thread-turn-area is
 // set before the reserve references it.
+//
+// The follow is released by deliberate reading intent — a wheel/touch/scroll-key
+// gesture on the viewport, or the sentinel leaving view outside a programmatic
+// scroll (a scrollbar drag) — and re-armed whenever the sentinel comes back into
+// view. Content growth alone can never release it: every scroll we start marks
+// autoScrollingRef, so the sentinel briefly leaving view mid-animation (a large
+// code block landing at once, a stream outrunning the smooth scroll) is not
+// mistaken for the user scrolling away.
 // ---------------------------------------------------------------------------
 
 export type ThreadAutoScrollMode = "off" | "bottom" | "jump" | "follow";
+
+// Keys that scroll the viewport and therefore count as deliberate reading
+// intent, releasing the follow.
+const USER_SCROLL_KEYS = new Set([
+  "ArrowDown",
+  "ArrowUp",
+  "End",
+  "Home",
+  "PageDown",
+  "PageUp",
+  " ",
+]);
+
+// How long after a programmatic scroll the sentinel may leave view without
+// releasing the follow. Cleared earlier by scrollend where supported; the
+// timeout is the Safari fallback.
+const AUTO_SCROLL_SETTLE_MS = 200;
 
 const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
   // "At the bottom" = the bottom sentinel is in view. IntersectionObserver
-  // computes it off the main thread (no scrollTop/scrollHeight reads); it drives
-  // the scroll button and, when autoScroll is active, gates the follow.
-  const [isAtBottom, setIsAtBottom] = useState(true);
+  // computes it off the main thread (no scrollTop/scrollHeight reads); it
+  // drives the scroll button and re-arms the follow.
+  const atBottomStore = useRefWithInit(createAtBottomStore).current;
+
+  // Follow intent: true while the view should track streaming growth.
+  const followingRef = useRef(true);
+
+  // True while a scroll we started may still be in flight.
+  const autoScrollingRef = useRef(false);
+  const autoScrollingTimeoutRef = useRef<number | null>(null);
+
+  const markAutoScrolling = useCallback(() => {
+    autoScrollingRef.current = true;
+    if (autoScrollingTimeoutRef.current !== null) {
+      window.clearTimeout(autoScrollingTimeoutRef.current);
+    }
+    autoScrollingTimeoutRef.current = window.setTimeout(() => {
+      autoScrollingTimeoutRef.current = null;
+      autoScrollingRef.current = false;
+    }, AUTO_SCROLL_SETTLE_MS);
+  }, []);
 
   useEffect(() => {
     const root = scrollRef.current;
     const sentinel = sentinelRef.current;
     if (!root || !sentinel) return;
-    const io = new IntersectionObserver(([entry]) => setIsAtBottom(entry?.isIntersecting ?? true), {
-      root,
-    });
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const isAtBottom = entry?.isIntersecting ?? true;
+        atBottomStore.setSnapshot(isAtBottom);
+        if (isAtBottom) {
+          followingRef.current = true;
+        } else if (!autoScrollingRef.current) {
+          // The sentinel left view and we didn't cause it: a scrollbar drag or
+          // a momentum scroll away. Wheel/touch/keys release via the viewport's
+          // gesture handlers before this even fires.
+          followingRef.current = false;
+        }
+      },
+      { root },
+    );
     io.observe(sentinel);
-    return () => io.disconnect();
-  }, []);
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    const el = scrollRef.current;
-    if (el) scrollContainerTo(el, el.scrollHeight, behavior);
-  }, []);
+    // A finished scroll means nothing of ours is in flight anymore; clear
+    // early instead of waiting out the timeout fallback.
+    const settle = () => {
+      autoScrollingRef.current = false;
+      if (autoScrollingTimeoutRef.current !== null) {
+        window.clearTimeout(autoScrollingTimeoutRef.current);
+        autoScrollingTimeoutRef.current = null;
+      }
+    };
+    root.addEventListener("scrollend", settle);
 
-  // Mirror at-bottom into a ref so the follow observer reads it without
-  // re-subscribing each time it flips.
-  const atBottomRef = useRef(isAtBottom);
-  atBottomRef.current = isAtBottom;
+    return () => {
+      io.disconnect();
+      root.removeEventListener("scrollend", settle);
+      if (autoScrollingTimeoutRef.current !== null) {
+        window.clearTimeout(autoScrollingTimeoutRef.current);
+        autoScrollingTimeoutRef.current = null;
+      }
+    };
+  }, [atBottomStore]);
+
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const el = scrollRef.current;
+      if (!el) return;
+      markAutoScrolling();
+      scrollContainerTo(el, el.scrollHeight, behavior);
+    },
+    [markAutoScrolling],
+  );
+
+  // Scrolling to the top is a deliberate move away from the live end, so it
+  // releases the follow; reaching the bottom again re-arms it.
+  const scrollToTop = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const el = scrollRef.current;
+      if (!el) return;
+      followingRef.current = false;
+      markAutoScrolling();
+      scrollContainerTo(el, 0, behavior);
+    },
+    [markAutoScrolling],
+  );
+
+  // Jump to a row by its consumer-provided data-message-id. Resolved lazily at
+  // call time — no per-row registration, nothing on the hot path. Returns false
+  // when the id isn't mounted. scrollIntoView handles the alignment math and
+  // honors any scroll-margin the styled layer sets on rows.
+  const scrollToMessage = useCallback(
+    (messageId: string, options: ThreadScrollToMessageOptions = {}) => {
+      const row = contentRef.current?.querySelector<HTMLElement>(
+        `[data-message-id="${CSS.escape(messageId)}"]`,
+      );
+      if (!row) return false;
+      followingRef.current = false;
+      markAutoScrolling();
+      row.scrollIntoView({
+        block: options.align ?? "start",
+        inline: "nearest",
+        behavior: options.behavior ?? "smooth",
+      });
+      return true;
+    },
+    [markAutoScrolling],
+  );
+
+  const releaseFollow = useCallback(() => {
+    followingRef.current = false;
+  }, []);
 
   useLayoutEffect(() => {
     const content = contentRef.current;
@@ -112,24 +299,30 @@ const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
       content.style.setProperty("--thread-turn-min-height", "var(--thread-turn-area)");
     }
 
-    // First land (and chat switches) jump instantly; later turns animate.
+    // First land (and chat switches) jump instantly; later turns animate. A
+    // land is a deliberate move to the live end, so it re-arms the follow.
     let landed = false;
     let skipNextResize = true;
     const land = (mutations: MutationRecord[] = []) => {
       const replaced = mutations.some((m) => m.removedNodes.length > 0);
       skipNextResize = true;
+      followingRef.current = true;
       scrollToBottom(landed && !replaced ? "smooth" : "instant");
       landed = true;
     };
 
-    // Follow streaming growth, but skip the resize our own land just caused and
-    // yield the moment the user scrolls up.
+    // Follow streaming growth, but skip the resize our own land just caused
+    // and yield once the follow is released. The `|| at bottom` keeps a
+    // gesture that never leaves the bottom (a wheel nudge at the end) from
+    // stranding the view unfollowed while visually pinned there.
     const follow = () => {
       if (skipNextResize) {
         skipNextResize = false;
         return;
       }
-      if (atBottomRef.current) scrollToBottom("smooth");
+      if (followingRef.current || atBottomStore.getSnapshot()) {
+        scrollToBottom("smooth");
+      }
     };
 
     land();
@@ -144,9 +337,21 @@ const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
       growth?.disconnect();
       if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
     };
-  }, [mode, scrollToBottom]);
+  }, [mode, scrollToBottom, atBottomStore]);
 
-  return { isAtBottom, scrollToBottom, scrollRef, contentRef, sentinelRef };
+  return useMemo(
+    () => ({
+      atBottomStore,
+      scrollToBottom,
+      scrollToTop,
+      scrollToMessage,
+      releaseFollow,
+      scrollRef,
+      contentRef,
+      sentinelRef,
+    }),
+    [atBottomStore, scrollToBottom, scrollToTop, scrollToMessage, releaseFollow],
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -249,7 +454,6 @@ const ThreadRoot = ({
       props: [
         {
           "data-slot": "thread-root",
-          role: "log",
           // Anchors the overlays/composer and bounds the inset measurement.
           style: { position: "relative", overflow: "hidden" },
         },
@@ -303,13 +507,22 @@ const ThreadOverlay = memo(
 ThreadOverlay.displayName = "ThreadOverlay";
 
 // ---------------------------------------------------------------------------
-// Viewport — the scroll container.
+// Viewport — the scroll container. A focusable region so keyboard users can
+// scroll the transcript; wheel/touch/scroll-key gestures double as the
+// deliberate reading intent that releases the follow.
 // ---------------------------------------------------------------------------
 
 export type ThreadViewportProps = PrimitiveProps<"div">;
 
 const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadViewportProps) => {
-  const { scrollRef } = useThread();
+  const { scrollRef, releaseFollow } = useThreadContext();
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (USER_SCROLL_KEYS.has(event.key)) releaseFollow();
+    },
+    [releaseFollow],
+  );
 
   return useRenderElement(
     "div",
@@ -319,7 +532,13 @@ const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadVie
       props: [
         {
           "data-slot": "thread-scroller",
+          role: "region",
+          "aria-label": "Messages",
+          tabIndex: 0,
           style: { overflowY: "auto", overflowX: "hidden" },
+          onWheel: releaseFollow,
+          onTouchMove: releaseFollow,
+          onKeyDown: handleKeyDown,
         },
         elementProps,
       ],
@@ -335,12 +554,24 @@ const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadVie
 export type ThreadContentProps = PrimitiveProps<"div">;
 
 const ThreadContent = ({ className, render, style, ...elementProps }: ThreadContentProps) => {
-  const { contentRef, sentinelRef } = useThread();
+  const { contentRef, sentinelRef } = useThreadContext();
 
   const element = useRenderElement(
     "div",
     { className, render, style },
-    { ref: contentRef, props: [{ "data-slot": "thread-content" }, elementProps] },
+    {
+      ref: contentRef,
+      props: [
+        {
+          "data-slot": "thread-content",
+          // The transcript is the live log; new turns are what screen readers
+          // should announce.
+          role: "log",
+          "aria-relevant": "additions" as const,
+        },
+        elementProps,
+      ],
+    },
   );
 
   return (

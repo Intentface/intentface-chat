@@ -58,6 +58,40 @@ export const autoScrollProps = [
 
 <PropsTable rows={autoScrollProps} />
 
+The follow is released by deliberate reading intent — a wheel, touch, or
+scroll-key gesture, or dragging the scrollbar away from the bottom — and
+re-arms when you return to the bottom. Content growth alone never releases it:
+a large code block landing at once won't drop the follow mid-stream.
+
+## useThread
+
+Read the scroll state and issue commands from anywhere inside `<Thread>`:
+
+export const useThreadMembers = [
+  { name: "isAtBottom", type: "boolean", description: "Whether the bottom sentinel is in view. Subscribes the caller — only components that render it re-render on flips." },
+  { name: "scrollToBottom", type: "(behavior?) => void", description: "Scroll to the live end." },
+  { name: "scrollToTop", type: "(behavior?) => void", description: "Scroll to the start; releases the follow." },
+  { name: "scrollToMessage", type: "(id, options?) => boolean", description: "Scroll to a row carrying data-message-id={id}. Options: align (\"start\" | \"center\" | \"end\" | \"nearest\"), behavior. Returns false when the id isn't mounted." },
+];
+
+<PropsTable rows={useThreadMembers} />
+
+`scrollToMessage` resolves rows lazily by the `data-message-id` attribute — put
+it on each row you want addressable; there is no wrapper component and no
+per-row cost:
+
+```tsx
+{turns.map((turn) => (
+  <Message.Turn key={turn.key} data-message-id={turn.id}>{/* … */}</Message.Turn>
+))}
+```
+
+## Accessibility
+
+The viewport is a focusable `role="region"` (default `aria-label="Messages"`,
+overridable), so keyboard users can Tab to it and scroll with the arrow and
+page keys. The content column is a `role="log"` announcing additions.
+
 ## Props
 
 export const rootProps = [

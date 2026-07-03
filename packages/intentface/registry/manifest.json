@@ -108,7 +108,7 @@
       "name": "chip",
       "type": "registry:component",
       "title": "Chip",
-      "dependencies": ["class-variance-authority"],
+      "dependencies": ["@intentface/chat", "class-variance-authority"],
       "registryDependencies": ["hover-card", "utils", "icons"],
       "files": [
         {

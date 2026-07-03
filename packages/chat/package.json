@@ -21,6 +21,7 @@
   ],
   "exports": {
     "./types": "./src/types.ts",
+    "./chip": "./src/chip.tsx",
     "./message-utils": "./src/message-utils.ts",
     "./chip-markdown": "./src/chip-markdown.ts",
     "./chat-status": "./src/chat-status.ts"

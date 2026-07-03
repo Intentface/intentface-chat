@@ -11,19 +11,18 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "intentface:build-registry": "npm --workspace intentface run build:registry",
-    "intentface:test": "npm --workspace intentface test"
+    "intentface:build-registry": "bun run --cwd packages/intentface build:registry",
+    "intentface:test": "bun run --cwd packages/intentface test"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
+    "@intentface/chat": "workspace:*",
     "@ai-sdk/provider": "^3.0.8",
     "@ai-sdk/react": "^3.0.108",
     "@base-ui/react": "^1.2.0",
-    "@tanstack/react-form": "^1.28.0",
     "@tiptap/core": "^3.23.1",
     "@tiptap/extension-document": "^3.19.0",
     "@tiptap/extension-paragraph": "^3.19.0",
-    "@tiptap/extension-placeholder": "^3.19.0",
     "@tiptap/extension-text": "^3.19.0",
     "@tiptap/pm": "^3.19.0",
     "@tiptap/react": "^3.19.0",
@@ -40,7 +39,6 @@
     "react-dom": "19.2.3",
     "streamdown": "^2.2.0",
     "tailwind-merge": "^3.4.0",
-    "use-stick-to-bottom": "^1.1.2",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },

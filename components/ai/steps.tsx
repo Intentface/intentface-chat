@@ -1,5 +1,7 @@
 "use client";
 
+import type { ToolLabels } from "@intentface/chat/message-utils";
+import type { ToolPart } from "@intentface/chat/types";
 import { CircleHelpIcon, CircleIcon } from "lucide-react";
 import {
   Children,
@@ -15,9 +17,9 @@ import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
-import { DEFAULT_TOOL_LABELS, type ToolLabels, type ToolPart } from "@/lib/message-utils";
+import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
+import type { AskUserInput, AskUserQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
-import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
 // Context

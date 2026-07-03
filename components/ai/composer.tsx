@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  type ChipData,
+  chipSegmentsToParagraphJSON,
+  encodeChipMarkdown,
+  parseChipSegments,
+} from "@intentface/chat/chip-markdown";
 import { mergeAttributes, Node as TiptapNode } from "@tiptap/core";
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
@@ -56,13 +62,8 @@ import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
-import {
-  chipSegmentsToParagraphJSON,
-  encodeChipMarkdown,
-  parseChipSegments,
-} from "@/lib/ai/chip-markdown";
+import type { AskUserQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
-import type { AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -72,13 +73,7 @@ export type CommandItemKind = "insert" | "execute";
 
 export type TriggerRule = "doc-start" | "after-whitespace";
 
-export type ChipData = {
-  prefix: string;
-  value: string;
-  label: string;
-  icon?: ChipIconKey;
-  variant?: ChipVariant;
-};
+export type { ChipData };
 
 export type ComposerEditorHandle = {
   focus: () => void;

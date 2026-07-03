@@ -1,7 +1,20 @@
-import type { ChatStatus, UIMessage } from "ai";
+"use client";
+
+// Derives the composer panel's state (idle / active steps / ask-user) from the
+// message list and chat status. Pure derivation plus a memoizing hook — no
+// rendering, no styling.
+
 import { useRef } from "react";
-import { type ToolPart, toolLabels } from "@/lib/message-utils";
-import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
+import type { ToolLabels } from "./message-utils";
+import {
+  type AskUserInput,
+  type AskUserQuestion,
+  type ChatMessage,
+  type ChatStatus,
+  isReasoningPart,
+  isToolPart,
+  type ToolPart,
+} from "./types";
 
 // ---------------------------------------------------------------------------
 // State types
@@ -34,7 +47,10 @@ const stateEqual = (a: ComposerPanelState, b: ComposerPanelState): boolean => {
     return a.toolCallId === b.toolCallId && a.isAnswered === b.isAnswered;
   if (a.type === "active" && b.type === "active") {
     if (a.steps.length !== b.steps.length) return false;
-    return a.steps.every((s, i) => s.key === b.steps[i].key && s.label === b.steps[i].label);
+    return a.steps.every((step, index) => {
+      const other = b.steps[index];
+      return other !== undefined && step.key === other.key && step.label === other.label;
+    });
   }
   return false;
 };
@@ -43,7 +59,11 @@ const stateEqual = (a: ComposerPanelState, b: ComposerPanelState): boolean => {
 // Pure derivation — no hooks
 // ---------------------------------------------------------------------------
 
-const deriveComposerState = (messages: UIMessage[], status: ChatStatus): ComposerPanelState => {
+const deriveComposerState = (
+  messages: readonly ChatMessage[],
+  status: ChatStatus,
+  labels?: ToolLabels,
+): ComposerPanelState => {
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
 
   // Check for ask-user awaiting input regardless of status — the chat goes
@@ -51,10 +71,10 @@ const deriveComposerState = (messages: UIMessage[], status: ChatStatus): Compose
   if ((status === "ready" || status === "streaming") && lastAssistant) {
     const askUserPart = lastAssistant.parts.find(
       (p): p is ToolPart =>
-        p.type === "tool-askUser" && "state" in p && p.state === "input-available",
+        isToolPart(p) && p.type === "tool-askUser" && p.state === "input-available",
     );
     if (askUserPart) {
-      const input = askUserPart.input as AskUserInput;
+      const input = askUserPart.input as AskUserInput | undefined;
       return {
         type: "ask-user",
         toolCallId: askUserPart.toolCallId,
@@ -92,9 +112,8 @@ const deriveComposerState = (messages: UIMessage[], status: ChatStatus): Compose
   // 2. Check for active tool parts (input-streaming / input-available)
   const toolParts = parts.filter(
     (p): p is ToolPart =>
+      isToolPart(p) &&
       p.type !== "tool-askUser" &&
-      p.type.startsWith("tool-") &&
-      "state" in p &&
       (p.state === "input-streaming" ||
         p.state === "input-available" ||
         p.state === "output-available"),
@@ -128,7 +147,7 @@ const deriveComposerState = (messages: UIMessage[], status: ChatStatus): Compose
         const input = (part.input as Record<string, unknown>) ?? {};
         const name = part.type.replace("tool-", "");
 
-        const labelConfig = toolLabels[name];
+        const labelConfig = labels?.[name];
         const label = labelConfig ? labelConfig.active(input) : `Running ${name}`;
 
         steps.push({
@@ -144,10 +163,9 @@ const deriveComposerState = (messages: UIMessage[], status: ChatStatus): Compose
 
   // 3. Check if last part is reasoning
   const lastPart = parts.at(-1);
-  if (lastPart?.type === "reasoning") {
+  if (lastPart && isReasoningPart(lastPart)) {
     // Extract label from reasoning headers
-    const text = "text" in lastPart ? lastPart.text : "";
-    const headers = text.match(/\*\*(.+?)\*\*/g)?.map((h) => h.replace(/\*\*/g, ""));
+    const headers = lastPart.text.match(/\*\*(.+?)\*\*/g)?.map((h) => h.replace(/\*\*/g, ""));
     const label = headers?.at(-1) ?? "Thinking...";
 
     return {
@@ -165,11 +183,12 @@ const deriveComposerState = (messages: UIMessage[], status: ChatStatus): Compose
 // ---------------------------------------------------------------------------
 
 export const useActiveComposerState = (
-  messages: UIMessage[],
+  messages: readonly ChatMessage[],
   status: ChatStatus,
+  labels?: ToolLabels,
 ): ComposerPanelState => {
   const prevRef = useRef<ComposerPanelState>({ type: "idle" });
-  const next = deriveComposerState(messages, status);
+  const next = deriveComposerState(messages, status, labels);
   if (stateEqual(prevRef.current, next)) return prevRef.current;
   prevRef.current = next;
   return next;

@@ -95,30 +95,49 @@
       "name": "ai-types",
       "type": "registry:lib",
       "hidden": true,
+      "dependencies": ["@intentface/chat", "ai"],
       "files": [
         {
-          "sourcePath": "components/ai/types.ts",
-          "targetPath": "components/ai/types.ts",
+          "sourcePath": "lib/ai/types.ts",
+          "targetPath": "lib/ai/types.ts",
           "type": "registry:lib"
         }
       ]
     },
     {
-      "name": "message-utils",
+      "name": "chip",
+      "type": "registry:component",
+      "title": "Chip",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["hover-card", "utils", "icons"],
+      "files": [
+        {
+          "sourcePath": "components/ai/chip.tsx",
+          "targetPath": "components/ai/chip.tsx",
+          "type": "registry:component"
+        },
+        {
+          "sourcePath": "lib/ai/chip-icons.tsx",
+          "targetPath": "lib/ai/chip-icons.tsx",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "tool-labels",
       "type": "registry:lib",
       "hidden": true,
-      "dependencies": ["ai"],
-      "registryDependencies": ["ai-types"],
+      "dependencies": ["@intentface/chat"],
       "files": [
         {
-          "sourcePath": "lib/message-utils.ts",
-          "targetPath": "lib/message-utils.ts",
+          "sourcePath": "lib/ai/tool-labels.ts",
+          "targetPath": "lib/ai/tool-labels.ts",
           "type": "registry:lib"
         }
       ]
     },
     {
-      "name": "questionnaire",
+      "name": "ask-user",
       "type": "registry:component",
       "hidden": true,
       "dependencies": ["lucide-react"],
@@ -132,8 +151,8 @@
       ],
       "files": [
         {
-          "sourcePath": "components/questionnaire.tsx",
-          "targetPath": "components/ai/questionnaire.tsx",
+          "sourcePath": "components/ai/ask-user.tsx",
+          "targetPath": "components/ai/ask-user.tsx",
           "type": "registry:component"
         }
       ]
@@ -512,6 +531,7 @@
       "type": "registry:component",
       "title": "Composer",
       "dependencies": [
+        "@intentface/chat",
         "@tiptap/core",
         "@tiptap/extension-document",
         "@tiptap/extension-paragraph",
@@ -523,8 +543,9 @@
       ],
       "registryDependencies": [
         "attachments",
+        "chip",
         "commands",
-        "questionnaire",
+        "ask-user",
         "button",
         "icon-button",
         "kbd",
@@ -546,8 +567,9 @@
       "name": "message",
       "type": "registry:component",
       "title": "Message",
-      "dependencies": ["ai", "lucide-react", "motion"],
+      "dependencies": ["@intentface/chat", "ai", "lucide-react", "motion"],
       "registryDependencies": [
+        "chip",
         "hover-card",
         "icon-button",
         "markdown",
@@ -582,11 +604,11 @@
       "name": "steps",
       "type": "registry:component",
       "title": "Steps",
-      "dependencies": ["lucide-react"],
+      "dependencies": ["@intentface/chat", "lucide-react"],
       "registryDependencies": [
         "collapsible",
         "markdown",
-        "message-utils",
+        "tool-labels",
         "utils",
         "icons",
         "ai-types"
@@ -603,12 +625,11 @@
       "name": "reasoning",
       "type": "registry:component",
       "title": "Reasoning",
-      "dependencies": ["motion"],
+      "dependencies": ["@intentface/chat", "motion"],
       "registryDependencies": [
         "collapsible",
         "markdown",
         "text-shimmer",
-        "message-utils",
         "utils",
         "icons"
       ],
@@ -735,7 +756,9 @@
       "registryDependencies": [
         "artifact-card",
         "artifacts-panel",
+        "ask-user",
         "attachments",
+        "chip",
         "commands",
         "composer",
         "message",

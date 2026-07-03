@@ -1,6 +1,19 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
+import { useActiveComposerState } from "@intentface/chat/chat-status";
+import {
+  getAskUserInfo,
+  getChainInfo,
+  getFileParts,
+  getReasoningInfo,
+  getSegmentedParts,
+  getSourcesInfo,
+  getTextInfo,
+  groupTurns,
+  type MessageSegment,
+  splitReasoningByHeaders,
+} from "@intentface/chat/message-utils";
 import type { ChatStatus } from "ai";
 import { CircleDotIcon, Loader, TextQuoteIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
@@ -19,23 +32,11 @@ import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
-import { useActiveComposerState } from "@/hooks/use-active-composer-state";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
+import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
 import type { AppUIMessage } from "@/lib/ai/types";
 import { applyStopToMessages } from "@/lib/chat-instance";
-import {
-  getAskUserInfo,
-  getChainInfo,
-  getFileParts,
-  getReasoningInfo,
-  getSegmentedParts,
-  getSourcesInfo,
-  getTextInfo,
-  groupTurns,
-  type MessageSegment,
-  splitReasoningByHeaders,
-} from "@/lib/message-utils";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
 import { useSettingsStore } from "@/lib/store/settings";
@@ -456,7 +457,7 @@ const ChatInput = () => {
     [setTool],
   );
 
-  const panelState = useActiveComposerState(messages, status);
+  const panelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS);
   const isAskUser = panelState.type === "ask-user";
   const activeSteps = panelState.type === "active" ? panelState.steps : [];
   const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;

@@ -15,9 +15,9 @@ import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
 import { IconButton } from "@/components/ui/icon-button";
+import type { AskUserQuestion } from "@/lib/ai/types";
 import { useModelStore } from "@/lib/store/model";
 import { cn } from "@/lib/utils";
-import type { AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
 // Composer States panel — needs useComposer() so must be inside <Composer>

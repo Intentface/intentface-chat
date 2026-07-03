@@ -1,8 +1,32 @@
-import type { FileUIPart, ReasoningUIPart, TextUIPart, UIMessage } from "ai";
-import { isStaticToolUIPart } from "ai";
-import type { AppUIMessage } from "@/lib/ai/types";
-import type { AskUserInput, AskUserQuestion } from "@/tools/ask-user";
+// Derivation helpers over the structural message contract in types.ts.
+// Pure functions — no React, no styling. Renderers and panel-state hooks share
+// these so they stay decoupled from concrete part shapes.
 
+import {
+  type AskUserInput,
+  type AskUserQuestion,
+  type ChatMessage,
+  type FilePart,
+  isFilePart,
+  isReasoningPart,
+  isSourceUrlPart,
+  isTextPart,
+  isToolPart,
+  type ReasoningPart,
+  type TextPart,
+  type ToolPart,
+  type UnknownPart,
+} from "./types";
+
+// ---------------------------------------------------------------------------
+// Tool labels
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps tool names (the part type minus its `tool-` prefix) to human-readable
+ * labels. Each entry provides an active (in-progress) and complete (finished)
+ * label generator that receives the tool's input for dynamic text.
+ */
 export type ToolLabels = Record<
   string,
   {
@@ -12,39 +36,31 @@ export type ToolLabels = Record<
 >;
 
 // ---------------------------------------------------------------------------
-// Types
+// Segmentation
 // ---------------------------------------------------------------------------
-
-/** A tool-call part extracted from a UIMessage (any `tool-*` typed part). */
-export type ToolPart = Extract<UIMessage["parts"][number], { type: `tool-${string}` }>;
 
 /** Classifies message parts into coarse groups for chronological rendering. */
 export type SegmentType = "reasoning" | "tool" | "text" | "file";
 
 /**
- * A contiguous run of same-typed message parts. Used by the message renderer
- * to group reasoning blocks, tool calls, text chunks, etc.
+ * A contiguous run of same-typed message parts. Used by message renderers to
+ * group reasoning blocks, tool calls, text chunks, etc.
  */
 export type MessageSegment =
-  | { type: "reasoning"; parts: ReasoningUIPart[] }
+  | { type: "reasoning"; parts: ReasoningPart[] }
   | { type: "tool"; parts: ToolPart[] }
-  | { type: "text"; parts: TextUIPart[] }
-  | { type: "file"; parts: FileUIPart[] };
-
-// ---------------------------------------------------------------------------
-// Segmentation helpers
-// ---------------------------------------------------------------------------
+  | { type: "text"; parts: TextPart[] }
+  | { type: "file"; parts: FilePart[] };
 
 /**
  * Maps a single message part to its segment type.
- * Returns `null` for parts that are rendered separately (e.g. askUser).
+ * Returns `null` for parts that are not rendered chronologically.
  */
-export const partSegmentType = (part: UIMessage["parts"][number]): SegmentType | null => {
-  if (part.type === "reasoning") return "reasoning";
-  if (part.type === "text") return "text";
-  if (part.type === "file") return "file";
-  if (part.type === "tool-askUser") return "tool";
-  if (isStaticToolUIPart(part)) return "tool";
+export const partSegmentType = (part: UnknownPart): SegmentType | null => {
+  if (isReasoningPart(part)) return "reasoning";
+  if (isTextPart(part)) return "text";
+  if (isFilePart(part)) return "file";
+  if (isToolPart(part)) return "tool";
   return null;
 };
 
@@ -54,14 +70,14 @@ export const partSegmentType = (part: UIMessage["parts"][number]): SegmentType |
  * preserves chronological order for interleaved rendering (e.g. reasoning
  * interspersed with tool calls).
  */
-export const getSegmentedParts = (parts: UIMessage["parts"]): MessageSegment[] => {
+export const getSegmentedParts = (parts: readonly UnknownPart[]): MessageSegment[] => {
   const segments: MessageSegment[] = [];
   for (const part of parts) {
     const segType = partSegmentType(part);
     if (!segType) continue;
 
     const last = segments.at(-1);
-    if (last && "parts" in last && last.type === segType) {
+    if (last && last.type === segType) {
       (last.parts as unknown[]).push(part);
     } else {
       segments.push({ type: segType, parts: [part] } as MessageSegment);
@@ -75,7 +91,10 @@ export const getSegmentedParts = (parts: UIMessage["parts"]): MessageSegment[] =
 // ---------------------------------------------------------------------------
 
 /** A conversational turn: a user message plus its trailing assistant/tool replies. */
-export type Turn = { key: string; messages: AppUIMessage[] };
+export type Turn<Message extends ChatMessage<unknown, UnknownPart> = ChatMessage> = {
+  key: string;
+  messages: Message[];
+};
 
 /**
  * Groups messages into turns. A new turn starts at every user message;
@@ -84,13 +103,16 @@ export type Turn = { key: string; messages: AppUIMessage[] };
  * key is the first message's id — stable while the trailing assistant message
  * streams, so React keys and entrance animations stay put.
  */
-export const groupTurns = (messages: AppUIMessage[]): Turn[] => {
-  const turns: Turn[] = [];
+export const groupTurns = <Message extends ChatMessage<unknown, UnknownPart>>(
+  messages: readonly Message[],
+): Turn<Message>[] => {
+  const turns: Turn<Message>[] = [];
   for (const message of messages) {
-    if (message.role === "user" || turns.length === 0) {
+    const currentTurn = turns.at(-1);
+    if (message.role === "user" || !currentTurn) {
       turns.push({ key: message.id, messages: [message] });
     } else {
-      turns[turns.length - 1].messages.push(message);
+      currentTurn.messages.push(message);
     }
   }
   return turns;
@@ -99,19 +121,19 @@ export const groupTurns = (messages: AppUIMessage[]): Turn[] => {
 // ---------------------------------------------------------------------------
 // Per-message derivation helpers
 //
-// These extract structured info from segments/parts so the message renderer
-// can stay declarative instead of doing inline filter/map chains.
+// These extract structured info from segments/parts so message renderers can
+// stay declarative instead of doing inline filter/map chains.
 // ---------------------------------------------------------------------------
 
 /** Aggregated text content from all text segments in a message. */
 export type TextInfo = {
-  parts: TextUIPart[];
+  parts: TextPart[];
   /** Concatenated text content of all text parts. */
   text: string;
 };
 
 /** Extracts all text parts from a message and concatenates their content. */
-export const getTextInfo = (segments: MessageSegment[]): TextInfo => {
+export const getTextInfo = (segments: readonly MessageSegment[]): TextInfo => {
   const parts = segments
     .filter((s): s is MessageSegment & { type: "text" } => s.type === "text")
     .flatMap((s) => s.parts);
@@ -120,7 +142,7 @@ export const getTextInfo = (segments: MessageSegment[]): TextInfo => {
 };
 
 /** Extracts all file attachment parts from segments. */
-export const getFileParts = (segments: MessageSegment[]): FileUIPart[] =>
+export const getFileParts = (segments: readonly MessageSegment[]): FilePart[] =>
   segments
     .filter((s): s is MessageSegment & { type: "file" } => s.type === "file")
     .flatMap((s) => s.parts);
@@ -138,7 +160,7 @@ export type ChainInfo = {
  * Filters segments to the steps subset (reasoning + tools) and
  * classifies whether tools are present.
  */
-export const getChainInfo = (segments: MessageSegment[]): ChainInfo => {
+export const getChainInfo = (segments: readonly MessageSegment[]): ChainInfo => {
   const chainSegments = segments.filter((s) => s.type === "reasoning" || s.type === "tool");
   const hasTools = chainSegments.some((s) => s.type === "tool");
   const hasReasoning = chainSegments.some((s) => s.type === "reasoning");
@@ -151,7 +173,7 @@ export const getChainInfo = (segments: MessageSegment[]): ChainInfo => {
 
 /** Standalone reasoning info (used when no tools are present). */
 export type ReasoningInfo = {
-  parts: ReasoningUIPart[];
+  parts: ReasoningPart[];
   texts: string[];
   /** Bold headers extracted from reasoning text (e.g. **Analyzing data**). */
   headers: string[] | undefined;
@@ -163,7 +185,7 @@ export type ReasoningInfo = {
  * collapsible trigger, and whether reasoning is actively streaming.
  */
 export const getReasoningInfo = (
-  segments: MessageSegment[],
+  segments: readonly MessageSegment[],
   isMessageStreaming: boolean,
 ): ReasoningInfo => {
   const parts = segments
@@ -177,6 +199,10 @@ export const getReasoningInfo = (
     ?.map((h) => h.replace(/\*\*/g, ""));
   return { parts, texts, headers, isStreaming };
 };
+
+// ---------------------------------------------------------------------------
+// Ask-user helpers
+// ---------------------------------------------------------------------------
 
 /** A single answered ask-user exchange with parsed questions and answers. */
 export type AskUserAnswered = {
@@ -197,11 +223,11 @@ export type AskUserInfo = {
  * Extracts ask-user tool parts and returns structured info:
  * whether any are awaiting input, and parsed Q&A pairs for answered ones.
  */
-export const getAskUserInfo = (allParts: UIMessage["parts"]): AskUserInfo => {
+export const getAskUserInfo = (allParts: readonly UnknownPart[]): AskUserInfo => {
   const parts = allParts.filter(
     (p): p is ToolPart =>
+      isToolPart(p) &&
       p.type === "tool-askUser" &&
-      "state" in p &&
       (p.state === "input-available" || p.state === "output-available"),
   );
 
@@ -251,18 +277,17 @@ export type SourcesInfo = {
  * Extracts `source-url` parts, deduplicates by hostname (stripping `www.`),
  * and returns an array of unique sources with their display domain.
  */
-export const getSourcesInfo = (parts: UIMessage["parts"]): SourcesInfo => {
+export const getSourcesInfo = (parts: readonly UnknownPart[]): SourcesInfo => {
   const seen = new Set<string>();
   const sources: SourceInfo[] = [];
 
   for (const part of parts) {
-    if (part.type !== "source-url") continue;
+    if (!isSourceUrlPart(part)) continue;
     try {
-      const url = (part as { url: string }).url;
-      const domain = new URL(url).hostname.replace(/^www\./, "");
+      const domain = new URL(part.url).hostname.replace(/^www\./, "");
       if (seen.has(domain)) continue;
       seen.add(domain);
-      sources.push({ url, domain });
+      sources.push({ url: part.url, domain });
     } catch {
       // skip malformed URLs
     }
@@ -282,7 +307,7 @@ export type ReasoningSection = { header: string | null; body: string };
  * Splits reasoning text into sections by standalone bold `**Header**` lines.
  * Each header and its following body become a separate section.
  */
-export const splitReasoningByHeaders = (texts: string[]): ReasoningSection[] => {
+export const splitReasoningByHeaders = (texts: readonly string[]): ReasoningSection[] => {
   const combined = texts.join("\n\n");
   const parts = combined.split(/(?=^\*\*[^*]+\*\*$)/m);
 
@@ -292,9 +317,10 @@ export const splitReasoningByHeaders = (texts: string[]): ReasoningSection[] => 
     if (!trimmed) continue;
 
     const headerMatch = trimmed.match(/^\*\*([^*]+)\*\*\s*/);
-    if (headerMatch) {
+    const header = headerMatch?.[1];
+    if (headerMatch && header) {
       sections.push({
-        header: headerMatch[1].trim(),
+        header: header.trim(),
         body: trimmed.slice(headerMatch[0].length).trim(),
       });
     } else {
@@ -303,64 +329,3 @@ export const splitReasoningByHeaders = (texts: string[]): ReasoningSection[] => 
   }
   return sections;
 };
-
-// ---------------------------------------------------------------------------
-// Tool label map
-//
-// Maps tool names to human-readable labels for the steps UI.
-// Each entry provides an active (in-progress) and complete (finished) label
-// generator that receives the tool's input for dynamic text.
-// ---------------------------------------------------------------------------
-
-export const DEFAULT_TOOL_LABELS: ToolLabels = {
-  webSearch: {
-    active: (i) => `Searching for '${i.query ?? ""}'`,
-    complete: (i) => `Searched for '${i.query ?? ""}'`,
-  },
-  createArtifact: {
-    active: (i) => `Creating '${i.title ?? "Untitled"}'`,
-    complete: (i) => `Created '${i.title ?? "Untitled"}'`,
-  },
-  listDataSources: {
-    active: () => "Discovering data sources",
-    complete: () => "Discovered data sources",
-  },
-  connectDataSource: {
-    active: (i) => `Connecting to ${i.sourceId ?? "source"}`,
-    complete: (i) => `Connected to ${i.sourceId ?? "source"}`,
-  },
-  queryData: {
-    active: () => "Querying data",
-    complete: () => "Queried data",
-  },
-  filterData: {
-    active: () => "Filtering results",
-    complete: () => "Filtered results",
-  },
-  aggregateData: {
-    active: () => "Aggregating data",
-    complete: () => "Aggregated data",
-  },
-  sortData: {
-    active: (i) => `Sorting by ${i.column ?? "column"}`,
-    complete: (i) => `Sorted by ${i.column ?? "column"}`,
-  },
-  computeStats: {
-    active: (i) => `Computing stats for ${i.column ?? "column"}`,
-    complete: (i) => `Computed stats for ${i.column ?? "column"}`,
-  },
-  detectAnomalies: {
-    active: (i) => `Detecting anomalies in ${i.column ?? "column"}`,
-    complete: (i) => `Detected anomalies in ${i.column ?? "column"}`,
-  },
-  createVisualization: {
-    active: (i) => `Creating ${i.chartType ?? ""} chart`,
-    complete: (i) => `Created ${i.chartType ?? ""} chart`,
-  },
-  exportReport: {
-    active: (i) => `Exporting report "${i.title ?? ""}"`,
-    complete: (i) => `Exported report "${i.title ?? ""}"`,
-  },
-};
-
-export const toolLabels = DEFAULT_TOOL_LABELS;

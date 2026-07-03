@@ -1,0 +1,50 @@
+{
+  "name": "@intentface/chat",
+  "version": "0.1.0",
+  "description": "Headless chat UI primitives — unstyled compound components, hooks, and wire formats for building AI chat interfaces.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "homepage": "https://intentface.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Intentface/intentface-chat.git",
+    "directory": "packages/chat"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    "./types": "./src/types.ts",
+    "./message-utils": "./src/message-utils.ts",
+    "./chip-markdown": "./src/chip-markdown.ts",
+    "./chat-status": "./src/chat-status.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tiptap/core": "^3.23.1",
+    "@tiptap/extension-document": "^3.19.0",
+    "@tiptap/extension-paragraph": "^3.19.0",
+    "@tiptap/extension-text": "^3.19.0",
+    "@tiptap/pm": "^3.19.0",
+    "@tiptap/react": "^3.19.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

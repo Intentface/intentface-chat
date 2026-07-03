@@ -1,5 +1,6 @@
 "use client";
 
+import { splitReasoningByHeaders } from "@intentface/chat/message-utils";
 import { AnimatePresence, motion } from "motion/react";
 import {
   type ComponentProps,
@@ -16,7 +17,6 @@ import {
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Collapsible } from "@/components/ui/collapsible";
 import { Markdown } from "@/components/ui/markdown";
-import { splitReasoningByHeaders } from "@/lib/message-utils";
 import { cn } from "@/lib/utils";
 import { BrainIcon } from "../icons/brain";
 import { TextShimmer } from "../ui/text-shimmer";

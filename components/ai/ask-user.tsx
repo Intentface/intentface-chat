@@ -17,8 +17,8 @@ import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible } from "@/components/ui/collapsible";
 import { RadioGroup } from "@/components/ui/radio-group";
+import type { AskUserQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
-import type { AskUserQuestion } from "@/tools/ask-user";
 
 /** AskUser root container. Stateless — consumers manage all state externally. */
 type AskUserRootProps = ComponentProps<"div">;

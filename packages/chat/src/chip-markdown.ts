@@ -3,10 +3,22 @@
 // along in the token, so a rendered message reconstructs the chip from its own
 // text alone — no sidecar metadata array.
 
-import type { ChipVariant } from "@/components/ai/chip";
-import type { ChipIconKey } from "@/lib/ai/chip-icons";
+/**
+ * Opaque wire strings. The styled layer owns the concrete unions (e.g.
+ * "primary" | "accent" | "warning") and narrows at its own boundary.
+ */
+export type ChipVariant = string;
+export type ChipIconKey = string;
 
 export const CHIP_REF_PATTERN = /\[([^\]]+)\]\(chip:([^:)]+):([^)?]+)(?:\?([^)]*))?\)/g;
+
+export type ChipData = {
+  prefix: string;
+  value: string;
+  label: string;
+  icon?: ChipIconKey;
+  variant?: ChipVariant;
+};
 
 export type ChipSegment =
   | { type: "text"; text: string }
@@ -32,13 +44,7 @@ const safeDecode = (value: string): string => {
   }
 };
 
-export const encodeChipMarkdown = (chip: {
-  prefix: string;
-  value: string;
-  label: string;
-  variant?: ChipVariant;
-  icon?: ChipIconKey;
-}): string => {
+export const encodeChipMarkdown = (chip: ChipData): string => {
   const params = new URLSearchParams();
   if (chip.variant) params.set("variant", chip.variant);
   if (chip.icon) params.set("icon", chip.icon);
@@ -55,18 +61,19 @@ export const parseChipSegments = (text: string): ChipSegment[] => {
     if (start > lastIndex) {
       segments.push({ type: "text", text: text.slice(lastIndex, start) });
     }
-    const params = new URLSearchParams(match[4] ?? "");
+    const [token, label = "", prefix = "", rawValue = "", rawQuery] = match;
+    const params = new URLSearchParams(rawQuery ?? "");
     const variant = params.get("variant");
     const icon = params.get("icon");
     segments.push({
       type: "chip",
-      label: match[1],
-      prefix: match[2],
-      value: safeDecode(match[3]),
-      ...(variant ? { variant: variant as ChipVariant } : {}),
-      ...(icon ? { icon: icon as ChipIconKey } : {}),
+      label,
+      prefix,
+      value: safeDecode(rawValue),
+      ...(variant ? { variant } : {}),
+      ...(icon ? { icon } : {}),
     });
-    lastIndex = start + match[0].length;
+    lastIndex = start + token.length;
   }
   if (lastIndex < text.length) {
     segments.push({ type: "text", text: text.slice(lastIndex) });
@@ -92,10 +99,13 @@ export type ParagraphNodeJSON = {
   content?: InlineNodeJSON[];
 };
 
-export const chipSegmentsToParagraphJSON = (segments: ChipSegment[]): ParagraphNodeJSON[] => {
+export const chipSegmentsToParagraphJSON = (
+  segments: readonly ChipSegment[],
+): ParagraphNodeJSON[] => {
   const paragraphs: ParagraphNodeJSON[] = [{ type: "paragraph", content: [] }];
   const pushInline = (node: InlineNodeJSON) => {
-    const target = paragraphs[paragraphs.length - 1];
+    const target = paragraphs.at(-1);
+    if (!target) return;
     target.content = target.content ?? [];
     target.content.push(node);
   };

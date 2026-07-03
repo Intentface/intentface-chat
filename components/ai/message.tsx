@@ -1,21 +1,20 @@
 "use client";
 
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import { type ChipData, parseChipSegments } from "@intentface/chat/chip-markdown";
 import type { FileUIPart, UIMessage } from "ai";
 import { FileIcon, MessageCircleIcon, PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import { type ComponentProps, Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { Chip } from "@/components/ai/chip";
-import type { ChipData } from "@/components/ai/composer";
+import { Chip, type ChipVariant } from "@/components/ai/chip";
 import Button from "@/components/ui/button";
 import HoverCard from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
-import { CHIP_ICONS } from "@/lib/ai/chip-icons";
-import { parseChipSegments } from "@/lib/ai/chip-markdown";
+import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
@@ -148,12 +147,17 @@ type MessageChipProps = {
   className?: string;
 };
 
-const MessageChip = ({ label, chip, className }: MessageChipProps) => (
-  <Chip variant={chip?.variant} className={className}>
-    {chip?.icon && <Chip.Icon>{CHIP_ICONS[chip.icon]}</Chip.Icon>}
-    <Chip.Label>{label}</Chip.Label>
-  </Chip>
-);
+// The wire format carries variant/icon as opaque strings; narrow them to this
+// app's concrete unions here — unknown values fall back to the default look.
+const MessageChip = ({ label, chip, className }: MessageChipProps) => {
+  const icon = chip?.icon ? CHIP_ICONS[chip.icon as ChipIconKey] : undefined;
+  return (
+    <Chip variant={chip?.variant as ChipVariant | undefined} className={className}>
+      {icon && <Chip.Icon>{icon}</Chip.Icon>}
+      <Chip.Label>{label}</Chip.Label>
+    </Chip>
+  );
+};
 
 type MessageTextProps = {
   children: string;

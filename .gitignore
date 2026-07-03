@@ -46,3 +46,6 @@ CLAUDE.md
 
 # generated shadcn registry dist
 /public/r/
+
+# fumadocs-mdx generated
+.source/

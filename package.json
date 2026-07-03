@@ -12,14 +12,15 @@
     "lint": "biome check",
     "format": "biome format --write",
     "intentface:build-registry": "bun run --cwd packages/intentface build:registry",
-    "intentface:test": "bun run --cwd packages/intentface test"
+    "intentface:test": "bun run --cwd packages/intentface test",
+    "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.37",
-    "@intentface/chat": "workspace:*",
     "@ai-sdk/provider": "^3.0.8",
     "@ai-sdk/react": "^3.0.108",
     "@base-ui/react": "^1.2.0",
+    "@intentface/chat": "workspace:*",
     "@tiptap/core": "^3.23.1",
     "@tiptap/extension-document": "^3.19.0",
     "@tiptap/extension-paragraph": "^3.19.0",
@@ -29,6 +30,8 @@
     "ai": "^6.0.106",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "fumadocs-core": "^16.10.5",
+    "fumadocs-mdx": "^15.0.12",
     "lucide-react": "^0.563.0",
     "motion": "^12.31.1",
     "nanoid": "^5.1.11",
@@ -45,6 +48,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
     "@tailwindcss/postcss": "^4",
+    "@types/mdx": "^2.0.14",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

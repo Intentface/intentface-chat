@@ -14,11 +14,29 @@ import {
   type MessageSegment,
   splitReasoningByHeaders,
 } from "@intentface/chat/message-utils";
+import type { StepStatus } from "@intentface/chat/steps";
+import type { ToolPart } from "@intentface/chat/types";
 import type { ChatStatus } from "ai";
-import { CircleDotIcon, Loader, TextQuoteIcon, XIcon } from "lucide-react";
+import {
+  CircleDotIcon,
+  CircleHelpIcon,
+  CircleIcon,
+  Loader,
+  TextQuoteIcon,
+  XIcon,
+} from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
-import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  createContext,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ArtifactCard } from "@/components/ai/artifact-card";
 import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
@@ -30,10 +48,14 @@ import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
+import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
+import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
+import { Markdown } from "@/components/ui/markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
+import { getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/steps-info";
 import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
 import type { AppUIMessage } from "@/lib/ai/types";
 import { applyStopToMessages } from "@/lib/chat-instance";
@@ -88,6 +110,116 @@ export const useChatContext = (): ChatContextValue => {
 // InterleavedSteps — renders reasoning + tools chronologically
 // ---------------------------------------------------------------------------
 
+type IconComponent = React.ComponentType<{ className?: string }>;
+
+const statusIcons: Record<StepStatus, IconComponent> = {
+  complete: CheckMarkMediumIcon,
+  active: CircleIcon,
+  pending: CircleIcon,
+};
+
+// A timeline row: static when it has no detail, collapsible (icon morphs to a
+// chevron) when it does. App-owned — composed over the Steps primitive.
+const TimelineStep = ({
+  label,
+  status = "complete",
+  icon,
+  children,
+}: {
+  label: string;
+  status?: StepStatus;
+  icon?: IconComponent;
+  children?: React.ReactNode;
+}) => {
+  const Icon = icon ?? statusIcons[status];
+  const hasDetail = Children.toArray(children).length > 0;
+
+  const iconClasses = cn(
+    status === "complete" && "text-ink-secondary",
+    status === "active" && "text-ink-primary",
+    status === "pending" && "text-slate-9",
+  );
+  const labelClasses = cn(
+    "text-sm text-left",
+    status === "active" && "text-ink-primary font-medium",
+    status === "complete" && "text-ink-secondary",
+    status === "pending" && "text-slate-9",
+  );
+
+  if (!hasDetail) {
+    return (
+      <Steps.Item status={status}>
+        <div className="flex items-center gap-2 py-0.5">
+          <span className={cn("flex size-4 shrink-0 items-center justify-center", iconClasses)}>
+            <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
+          </span>
+          <span className={labelClasses}>{label}</span>
+        </div>
+      </Steps.Item>
+    );
+  }
+
+  return (
+    <Steps.Item status={status}>
+      <Steps.Trigger>
+        <span
+          className={cn("relative flex size-4 shrink-0 items-center justify-center", iconClasses)}
+        >
+          <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
+            <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
+          </span>
+          <ChevronDownIcon className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
+        </span>
+        <span className={labelClasses}>{label}</span>
+      </Steps.Trigger>
+      <Steps.Panel>{children}</Steps.Panel>
+    </Steps.Item>
+  );
+};
+
+const TimelineToolCall = ({ part }: { part: ToolPart }) => {
+  const { label, status, summary, sources } = getToolCallInfo(part, DEFAULT_TOOL_LABELS);
+
+  return (
+    <TimelineStep label={label} status={status}>
+      {summary && <span className="text-xs text-ink-secondary">{summary}</span>}
+      {sources.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {sources.map((source, index) => (
+            <span
+              key={index}
+              className="inline-flex items-center rounded-md border border-primary-border bg-primary px-2 py-0.5 text-xs text-ink-secondary"
+            >
+              {source.domain}
+            </span>
+          ))}
+        </div>
+      )}
+    </TimelineStep>
+  );
+};
+
+const TimelineAskUser = ({ part }: { part: ToolPart }) => {
+  const { label, status, questions, answers, isComplete } = getAskUserStepInfo(part);
+
+  return (
+    <TimelineStep label={label} status={status} icon={CircleHelpIcon}>
+      <div className="flex flex-col gap-1.5">
+        {questions.map((q) => (
+          <div key={q.question} className="flex flex-col gap-0.5">
+            <span className="text-xs font-medium leading-tight text-ink-primary">{q.question}</span>
+            {isComplete && (
+              <span className="text-xs leading-tight text-ink-secondary">
+                {answers[q.question] ?? "—"}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </TimelineStep>
+  );
+};
+
 const InterleavedSteps = ({
   segments,
   isStreaming,
@@ -141,40 +273,49 @@ const InterleavedSteps = ({
   );
 
   return (
-    <Steps defaultOpen={isStreaming}>
-      <Steps.Header>{header}</Steps.Header>
-      <Steps.Content>
-        {segments.map((seg, i) => {
-          if (seg.type === "reasoning") {
-            const text = seg.parts.map((p) => p.text).join("");
-            const lastPart = seg.parts.at(-1);
-            const streaming = isStreaming && lastPart === segments.at(-1);
+    <Steps>
+      <Steps.Item defaultOpen={isStreaming}>
+        <Steps.Trigger>
+          <span className="flex-1 text-left">{header}</span>
+          <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
+        </Steps.Trigger>
+        <Steps.Panel>
+          {segments.map((seg, i) => {
+            if (seg.type === "reasoning") {
+              const text = seg.parts.map((p) => p.text).join("");
+              const lastPart = seg.parts.at(-1);
+              const streaming = isStreaming && lastPart === segments.at(-1);
 
-            const sections = splitReasoningByHeaders([text]);
+              const sections = splitReasoningByHeaders([text]);
 
-            return sections.map((section, j) => (
-              <Steps.Step
-                key={`r-${i}-${j}`}
-                label={section.header ?? "Thinking"}
-                status={streaming && j === sections.length - 1 ? "active" : "complete"}
-                icon={BrainIcon}
-              >
-                {section.body && <Steps.Body>{section.body}</Steps.Body>}
-              </Steps.Step>
-            ));
-          }
-          if (seg.type === "tool") {
-            return seg.parts.map((part, j) =>
-              part.type === "tool-askUser" ? (
-                <Steps.AskUser key={`a-${i}-${j}`} part={part} />
-              ) : (
-                <Steps.ToolCall key={`t-${i}-${j}`} part={part} />
-              ),
-            );
-          }
-          return null;
-        })}
-      </Steps.Content>
+              return sections.map((section, j) => (
+                <TimelineStep
+                  key={`r-${i}-${j}`}
+                  label={section.header ?? "Thinking"}
+                  status={streaming && j === sections.length - 1 ? "active" : "complete"}
+                  icon={BrainIcon}
+                >
+                  {section.body && (
+                    <Markdown className="text-sm leading-tight text-ink-secondary [&_p]:mb-0">
+                      {section.body}
+                    </Markdown>
+                  )}
+                </TimelineStep>
+              ));
+            }
+            if (seg.type === "tool") {
+              return seg.parts.map((part, j) =>
+                part.type === "tool-askUser" ? (
+                  <TimelineAskUser key={`a-${i}-${j}`} part={part} />
+                ) : (
+                  <TimelineToolCall key={`t-${i}-${j}`} part={part} />
+                ),
+              );
+            }
+            return null;
+          })}
+        </Steps.Panel>
+      </Steps.Item>
     </Steps>
   );
 };

@@ -1,20 +1,41 @@
 "use client";
 
 import { Steps } from "@/components/ai/steps";
+import { ChevronDownIcon } from "@/components/icons/chevron-down";
 
-// A collapsible timeline of work. Steps with children become expandable rows;
-// leaf steps are static. Open by default so the timeline is visible at rest.
+// The recursive Steps primitive: a top-level item whose panel holds rows, and
+// a nested item whose panel indents behind the rail (data-nested). Open by
+// default so the timeline is visible at rest.
+const Chevron = () => (
+  <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
+);
+
 export const StepsBasic = () => (
   <div className="w-full max-w-xl">
-    <Steps defaultOpen>
-      <Steps.Header>Worked for 3 seconds</Steps.Header>
-      <Steps.Content>
-        <Steps.Step label="Read the request" status="complete" />
-        <Steps.Step label="Searched the web" status="complete">
-          <Steps.Body>{"Found three relevant sources and skimmed each."}</Steps.Body>
-        </Steps.Step>
-        <Steps.Step label="Writing the answer" status="active" />
-      </Steps.Content>
+    <Steps>
+      <Steps.Item defaultOpen>
+        <Steps.Trigger>
+          <span className="flex-1 text-left">Worked for 3 seconds</span>
+          <Chevron />
+        </Steps.Trigger>
+        <Steps.Panel>
+          <span className="py-0.5 text-sm text-ink-secondary">Read the request</span>
+
+          <Steps.Item defaultOpen>
+            <Steps.Trigger>
+              <span className="flex-1 text-left">Searched the web</span>
+              <Chevron />
+            </Steps.Trigger>
+            <Steps.Panel>
+              <span className="py-0.5 text-sm text-ink-secondary">
+                Found three relevant sources and skimmed each.
+              </span>
+            </Steps.Panel>
+          </Steps.Item>
+
+          <span className="py-0.5 text-sm font-medium text-ink-primary">Writing the answer</span>
+        </Steps.Panel>
+      </Steps.Item>
     </Steps>
   </div>
 );

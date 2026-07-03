@@ -3,10 +3,13 @@ title: Steps
 description: A collapsible timeline of a run — reasoning, tool calls, and answered questions as chronological steps.
 ---
 
-Steps renders an agent run as a vertical timeline. Each step is a row with a
-status; steps with children expand to reveal detail. `Steps.ToolCall` and
-`Steps.AskUser` derive a label, status, and summary from a tool part via the
-package's helpers, so you pass the part and they render the row.
+Steps is a recursive disclosure tree: every node is an `Item` with a `Trigger`
+and a `Panel`, and panels can contain further items, so timelines nest
+arbitrarily. Nested items surface `data-nested` for rail styling; sibling
+facts (the last connector) are plain CSS. Row helpers ship as named exports —
+`StepsStep` is the high-level row (label, status, icon), and `StepsToolCall` /
+`StepsAskUser` derive a label, status, and summary from a tool part, so you
+pass the part and they render the row.
 
 <ComponentPreview name="steps-basic" />
 
@@ -16,33 +19,39 @@ package's helpers, so you pass the part and they render the row.
 
 ## Anatomy
 
+The bare nesting — a timeline is a top-level item whose panel holds the rows:
+
 ```tsx
 <Steps>
-  <Steps.Header>Steps</Steps.Header>
-  <Steps.Content>
-    <Steps.Step label="Read the request" status="complete" />
-  </Steps.Content>
+  <Steps.Item>
+    <Steps.Trigger>Steps</Steps.Trigger>
+    <Steps.Panel>
+      <StepsStep label="Read the request" status="complete" />
+    </Steps.Panel>
+  </Steps.Item>
 </Steps>
 ```
 
 Driven from message segments — tool parts render themselves:
 
 ```tsx
-<Steps defaultOpen={isStreaming}>
-  <Steps.Header>{header}</Steps.Header>
-  <Steps.Content>
-    {segments.map((seg) =>
-      seg.type === "reasoning" ? (
-        <Steps.Step label={seg.header} status="complete">
-          <Steps.Body>{seg.body}</Steps.Body>
-        </Steps.Step>
-      ) : seg.part.type === "tool-askUser" ? (
-        <Steps.AskUser part={seg.part} />
-      ) : (
-        <Steps.ToolCall part={seg.part} />
-      ),
-    )}
-  </Steps.Content>
+<Steps>
+  <Steps.Item defaultOpen={isStreaming}>
+    <Steps.Trigger>{header}</Steps.Trigger>
+    <Steps.Panel>
+      {segments.map((seg) =>
+        seg.type === "reasoning" ? (
+          <StepsStep label={seg.header} status="complete">
+            <StepsBody>{seg.body}</StepsBody>
+          </StepsStep>
+        ) : seg.part.type === "tool-askUser" ? (
+          <StepsAskUser part={seg.part} />
+        ) : (
+          <StepsToolCall part={seg.part} />
+        ),
+      )}
+    </Steps.Panel>
+  </Steps.Item>
 </Steps>
 ```
 
@@ -50,18 +59,33 @@ Driven from message segments — tool parts render themselves:
 
 export const rootProps = [
   { name: "toolLabels", type: "ToolLabels", description: "Maps tool names to active/complete label text. Defaults to the app's DEFAULT_TOOL_LABELS." },
-  { name: "defaultOpen", type: "boolean", default: "false", description: "Uncontrolled initial open state of the outer timeline." },
-  { name: "open", type: "boolean", description: "Controlled open state." },
-  { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on toggle." },
 ];
 
 <PropsTable rows={rootProps} />
 
+export const itemProps = [
+  { name: "status", type: '"complete" | "active" | "pending"', default: '"complete"', description: "Surfaced as data-status; active items open by default." },
+  { name: "defaultOpen", type: "boolean", description: "Uncontrolled initial open state. Defaults to true while status is active." },
+  { name: "open", type: "boolean", description: "Controlled open state." },
+  { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on toggle." },
+];
+
+<PropsTable rows={itemProps} />
+
 export const partProps = [
-  { name: "Step", type: 'label: string; status?: "complete" | "active" | "pending"; icon?', description: "A timeline row; with children it becomes collapsible." },
-  { name: "Body", type: "children: string", description: "Markdown detail inside a step's expanded area." },
-  { name: "ToolCall", type: "part: ToolPart", description: "Renders a tool invocation as a step (label/status/summary/sources derived)." },
-  { name: "AskUser", type: "part: ToolPart", description: "Renders an answered ask-user exchange as a step." },
+  { name: "Trigger", type: "children", description: "Toggles the nearest item; carries data-open / data-closed for the chevron." },
+  { name: "Panel", type: "children", description: "The nearest item's disclosure area — lays out the timeline column." },
 ];
 
 <PropsTable rows={partProps} />
+
+Row helpers (named exports):
+
+export const helperProps = [
+  { name: "StepsStep", type: 'label: string; status?: "complete" | "active" | "pending"; icon?', description: "A timeline row; with children it becomes collapsible." },
+  { name: "StepsBody", type: "children: string", description: "Markdown detail inside a step's expanded area." },
+  { name: "StepsToolCall", type: "part: ToolPart", description: "Renders a tool invocation as a step (label/status/summary/sources derived)." },
+  { name: "StepsAskUser", type: "part: ToolPart", description: "Renders an answered ask-user exchange as a step." },
+];
+
+<PropsTable rows={helperProps} />

@@ -392,8 +392,9 @@ const ComposerCommandItems = <Item extends CommandItemDataPrimitive = CommandIte
       "group-data-[state=empty]/composer-command-list:hidden",
       className,
     )}
-    children={children}
-  />
+  >
+    {children}
+  </ComposerPrimitive.CommandItems>
 );
 
 const ComposerCommandLoading = ({

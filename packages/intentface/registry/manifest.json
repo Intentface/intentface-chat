@@ -516,7 +516,7 @@
       "name": "attachments",
       "type": "registry:component",
       "title": "Attachments",
-      "dependencies": ["ai", "lucide-react", "motion", "nanoid"],
+      "dependencies": ["@intentface/chat", "lucide-react", "motion"],
       "registryDependencies": ["icon-button", "utils", "icons"],
       "files": [
         {

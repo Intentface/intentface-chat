@@ -53,6 +53,7 @@
         "@tiptap/extension-text": "^3.19.0",
         "@tiptap/pm": "^3.19.0",
         "@tiptap/react": "^3.19.0",
+        "nanoid": "^5.1.11",
       },
       "devDependencies": {
         "@types/bun": "^1",

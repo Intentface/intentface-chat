@@ -317,3 +317,18 @@
 [data-streamdown="image"] {
   @apply max-w-full rounded-md;
 }
+
+/* ─── Shiki dual-theme code blocks ───
+   CodeBlock highlights with { light: github-light, dark: github-dark } and
+   defaultColor:false, so shiki emits per-token CSS variables instead of a fixed
+   color. Activate light by default and swap to dark under the .dark class. Only
+   the text color switches — the <pre> keeps its own bg-secondary surface. */
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+}
+
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark);
+}

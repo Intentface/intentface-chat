@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Generates .source (postinstall: fumadocs-mdx) so the docs build compiles.
+      - run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bunx biome check
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      # Builds the shadcn registry dist; its closure validator fails the job on a
+      # stale manifest, so this doubles as the registry regression gate.
+      - name: Registry build
+        run: bun run intentface:build-registry
+
+      - name: Registry tests
+        run: bun run intentface:test
+
+      - name: Package tests
+        run: bun test
+        working-directory: packages/chat
+
+      - name: Package build (publint gate)
+        working-directory: packages/chat
+        run: |
+          bun run build
+          bunx publint
+
+      # The chat API route reads OPENAI_API_KEY at request time only; a dummy
+      # value keeps the production build self-contained.
+      - name: App build
+        run: bun run build
+        env:
+          OPENAI_API_KEY: sk-ci-placeholder

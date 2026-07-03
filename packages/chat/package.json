@@ -1,6 +1,6 @@
 {
   "name": "@intentface/chat",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Headless chat UI primitives — unstyled compound components, hooks, and wire formats for building AI chat interfaces.",
   "license": "MIT",
   "type": "module",
@@ -11,9 +11,16 @@
     "url": "git+https://github.com/Intentface/intentface-chat.git",
     "directory": "packages/chat"
   },
-  "publishConfig": {
-    "access": "public"
-  },
+  "keywords": [
+    "react",
+    "chat",
+    "ai",
+    "headless",
+    "ui",
+    "components",
+    "composer",
+    "ai-sdk"
+  ],
   "files": [
     "dist",
     "LICENSE",
@@ -39,17 +46,20 @@
     "./chat-status": "./src/chat-status.ts"
   },
   "scripts": {
+    "build": "bunup",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepack": "bunup && node scripts/swap-exports.mjs pre",
+    "postpack": "node scripts/swap-exports.mjs post"
   },
   "dependencies": {
-    "nanoid": "^5.1.11",
     "@tiptap/core": "^3.23.1",
     "@tiptap/extension-document": "^3.19.0",
     "@tiptap/extension-paragraph": "^3.19.0",
     "@tiptap/extension-text": "^3.19.0",
     "@tiptap/pm": "^3.19.0",
-    "@tiptap/react": "^3.19.0"
+    "@tiptap/react": "^3.19.0",
+    "nanoid": "^5.1.11"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -59,6 +69,80 @@
     "@types/bun": "^1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "bunup": "^0.16.32",
     "typescript": "^5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      "./types": {
+        "types": "./dist/src/types.d.ts",
+        "default": "./dist/src/types.js"
+      },
+      "./composer": {
+        "types": "./dist/src/composer/index.d.ts",
+        "default": "./dist/src/composer/index.js"
+      },
+      "./chip": {
+        "types": "./dist/src/chip.d.ts",
+        "default": "./dist/src/chip.js"
+      },
+      "./shimmer": {
+        "types": "./dist/src/shimmer.d.ts",
+        "default": "./dist/src/shimmer.js"
+      },
+      "./commands": {
+        "types": "./dist/src/commands.d.ts",
+        "default": "./dist/src/commands.js"
+      },
+      "./thread": {
+        "types": "./dist/src/thread.d.ts",
+        "default": "./dist/src/thread.js"
+      },
+      "./step-queue": {
+        "types": "./dist/src/step-queue.d.ts",
+        "default": "./dist/src/step-queue.js"
+      },
+      "./reasoning": {
+        "types": "./dist/src/reasoning.d.ts",
+        "default": "./dist/src/reasoning.js"
+      },
+      "./steps": {
+        "types": "./dist/src/steps.d.ts",
+        "default": "./dist/src/steps.js"
+      },
+      "./attachments": {
+        "types": "./dist/src/attachments.d.ts",
+        "default": "./dist/src/attachments.js"
+      },
+      "./ask-user": {
+        "types": "./dist/src/ask-user.d.ts",
+        "default": "./dist/src/ask-user.js"
+      },
+      "./message": {
+        "types": "./dist/src/message.d.ts",
+        "default": "./dist/src/message.js"
+      },
+      "./artifact-card": {
+        "types": "./dist/src/artifact-card.d.ts",
+        "default": "./dist/src/artifact-card.js"
+      },
+      "./artifacts-panel": {
+        "types": "./dist/src/artifacts-panel.d.ts",
+        "default": "./dist/src/artifacts-panel.js"
+      },
+      "./message-utils": {
+        "types": "./dist/src/message-utils.d.ts",
+        "default": "./dist/src/message-utils.js"
+      },
+      "./chip-markdown": {
+        "types": "./dist/src/chip-markdown.d.ts",
+        "default": "./dist/src/chip-markdown.js"
+      },
+      "./chat-status": {
+        "types": "./dist/src/chat-status.d.ts",
+        "default": "./dist/src/chat-status.js"
+      }
+    }
   }
 }

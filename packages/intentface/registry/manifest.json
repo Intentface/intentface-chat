@@ -502,7 +502,7 @@
       "name": "commands",
       "type": "registry:component",
       "title": "Commands",
-      "dependencies": ["react"],
+      "dependencies": ["@intentface/chat", "react"],
       "registryDependencies": ["intentface-theme", "utils"],
       "files": [
         {

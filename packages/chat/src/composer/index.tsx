@@ -63,7 +63,6 @@ export const Composer = Object.assign(ComposerRoot, {
   CommandCollection: ComposerCommandCollection,
 });
 
-export { useLoop } from "../internal/use-loop";
 export type { ComposerSubmitState, UseComposerSubmitOptions } from "./actions";
 export { useComposerSubmit } from "./actions";
 export type { ComposerAttachmentsProps, ComposerAttachmentTriggerProps } from "./attachments";
@@ -80,8 +79,7 @@ export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";
 export { createMentionChipExtension } from "./mention-chip";
 export type { ComposerPanelItemProps, ComposerPanelProps } from "./panel";
-export type { ComposerPlaceholderProps, ComposerPlaceholderState } from "./placeholder";
-export { useComposerPlaceholder } from "./placeholder";
+export type { ComposerPlaceholderProps } from "./placeholder";
 export type { CommandListPluginState, RegisteredPrefix } from "./prefix-plugin";
 export { CLOSED_COMMAND_STATE, commandListPluginKey, detectActivePrefix } from "./prefix-plugin";
 export type { ComposerProviderProps, ComposerRootProps } from "./root";

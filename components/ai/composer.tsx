@@ -12,11 +12,10 @@ import {
   useComposer,
   useComposerCommandsMap,
   useComposerController,
-  useComposerPlaceholder,
   useComposerSubmit,
 } from "@intentface/chat/composer";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { type ComponentProps, type ReactNode, useRef } from "react";
+import { Children, type ComponentProps, type ReactNode, useMemo, useRef } from "react";
 import { AskUser } from "@/components/ai/ask-user";
 import { Attachments } from "@/components/ai/attachments";
 import { CHIP_SURFACE_CLASS, type ChipVariant } from "@/components/ai/chip";
@@ -25,6 +24,7 @@ import { StopIcon } from "@/components/icons/stop";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
+import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
 import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
@@ -194,7 +194,20 @@ type ComposerPlaceholderProps =
   | { placeholder?: never; children: ReactNode; className?: string };
 
 const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlaceholderProps) => {
-  const { items, isLooping, currentItem, key } = useComposerPlaceholder(placeholder, children);
+  // Rotation lives here, in the styled layer — the headless Composer.Placeholder
+  // just renders content. Resolve the items and loop over the string ones.
+  const items = useMemo<ReactNode[]>(() => {
+    if (placeholder !== undefined) return Array.isArray(placeholder) ? placeholder : [placeholder];
+    if (children) return Children.toArray(children);
+    return [];
+  }, [placeholder, children]);
+
+  const isLooping = items.length > 1;
+  const loopItems = useMemo(
+    () => items.map((item) => (typeof item === "string" ? item : "")),
+    [items],
+  );
+  const { currentItem, key } = useLoop(loopItems);
 
   if (!isLooping && items.length === 1) {
     return (

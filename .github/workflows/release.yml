@@ -1,8 +1,11 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+  # Paused during initial development — trigger manually when ready to publish.
+  # Re-enable automatic releases by restoring:
+  #   push:
+  #     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.workflow }}-${{ github.ref }}

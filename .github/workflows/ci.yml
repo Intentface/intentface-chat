@@ -1,9 +1,12 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Paused during initial development — run manually from the Actions tab.
+  # Re-enable automatic checks by restoring these triggers:
+  #   push:
+  #     branches: [main]
+  #   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

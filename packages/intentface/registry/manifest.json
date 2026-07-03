@@ -626,13 +626,7 @@
       "type": "registry:component",
       "title": "Reasoning",
       "dependencies": ["@intentface/chat", "motion"],
-      "registryDependencies": [
-        "collapsible",
-        "markdown",
-        "text-shimmer",
-        "utils",
-        "icons"
-      ],
+      "registryDependencies": ["markdown", "text-shimmer", "utils", "icons"],
       "files": [
         {
           "sourcePath": "components/ai/reasoning.tsx",

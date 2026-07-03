@@ -26,6 +26,7 @@
     "./commands": "./src/commands.tsx",
     "./thread": "./src/thread.tsx",
     "./step-queue": "./src/step-queue.tsx",
+    "./reasoning": "./src/reasoning.tsx",
     "./message-utils": "./src/message-utils.ts",
     "./chip-markdown": "./src/chip-markdown.ts",
     "./chat-status": "./src/chat-status.ts"

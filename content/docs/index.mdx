@@ -5,7 +5,7 @@ description: Headless chat UI primitives with a copy-paste styled layer.
 
 **@intentface/chat** is a set of headless, unstyled chat primitives — the
 behavior, state, and wire formats for building AI chat interfaces — paired with
-a shadcn-style copy-paste layer of styled components you own.
+a copy-paste layer of styled components you own.
 
 This is the Base UI model applied to chat: **install the logic from npm, copy
 the look from the docs.**
@@ -18,18 +18,18 @@ scroll and auto-follow, message part segmentation, the chip wire format. These
 render no styles of their own; they expose behavior through `data-*` attributes,
 context hooks, and render props.
 
-The styled layer is thin wrappers around those primitives, distributed the way
-shadcn/ui distributes components: you run the CLI, the source lands in your
-repo, and you own every class from then on.
+The styled layer is thin wrappers around those primitives, distributed as
+copy-paste source: each component page lists the dependencies and shows the
+`.tsx` to drop into your repo, and you own every class from then on.
 
 ## Get started
 
-Add a primitive with the shadcn CLI:
+Install the headless package:
 
 ```bash
-bunx shadcn@latest add @intentface/composer
+bun add @intentface/chat
 ```
 
-It installs `@intentface/chat` and drops the styled `composer.tsx` into your
-project. Head to a primitive page — start with the [Composer](/docs/primitives/composer) —
-to see it live and copy the source.
+Then head to a primitive page — start with the [Composer](/docs/primitives/composer) —
+to see it live, install its dependencies, and copy the styled source into your
+project.

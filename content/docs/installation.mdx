@@ -1,64 +1,20 @@
 ---
 title: Installation
-description: Add styled primitives with the shadcn CLI, or install the headless package directly.
+description: Install the headless package, then copy the styled components you want.
 ---
 
-Intentface chat is distributed as a shadcn registry. You add a primitive with
-the shadcn CLI: the styled component's source lands in your repo, its headless
-logic installs from npm as `@intentface/chat`, and any registry dependencies
-(other primitives, base UI, the theme) resolve automatically.
+Intentface chat comes in two layers. The **headless package** — behavior, state,
+and wire formats — installs from npm. The **styled components** are copy-paste:
+each component page shows the dependencies to install and the source to drop into
+your project, so you own every class from the start.
 
 ## Prerequisites
 
-A Next.js app on **React 19** and **Tailwind v4**. The shadcn CLI reads (or
-creates) a `components.json` on first run.
+A React 19 app. The styled components assume **Tailwind v4** and the token set on
+the [Theming](/docs/theming) page; the headless package itself has no styling and
+works with any styling approach.
 
-## Register the namespace
-
-Point the `@intentface` namespace at the hosted registry in your
-`components.json`:
-
-```json
-{
-  "registries": {
-    "@intentface": "https://intentface.dev/r/{name}.json"
-  }
-}
-```
-
-Then add primitives by name:
-
-```bash
-bunx shadcn@latest add @intentface/composer
-```
-
-## Or add by URL
-
-Without configuring the namespace, add any item by its full URL — transitive
-dependencies still resolve, because the registry rewrites them to absolute URLs:
-
-```bash
-bunx shadcn@latest add https://intentface.dev/r/composer.json
-```
-
-## What an add installs
-
-Adding `@intentface/composer` writes the styled `composer.tsx` (and the
-primitives it composes) into your `components/` tree and installs the npm
-dependencies collected across the closure — including **`@intentface/chat`**,
-which carries all the behavior. From then on the styled source is yours to edit.
-
-To pull the whole set at once, add the bundle:
-
-```bash
-bunx shadcn@latest add @intentface/chat-primitives
-```
-
-## Headless package on its own
-
-The shadcn CLI is the fast path to the styled look, but the headless package
-stands alone. If you'd rather build your own styled layer (or don't use shadcn),
-install it directly:
+## Headless package
 
 ```bash
 bun add @intentface/chat
@@ -66,8 +22,7 @@ bun add @intentface/chat
 ```
 
 `react` and `react-dom` (v19+) are the only peer dependencies — no styling, no
-animation library. Import primitives from their subpaths and style them however
-you like:
+animation library. Import primitives from their subpaths:
 
 ```tsx
 import { Composer } from "@intentface/chat/composer";
@@ -76,11 +31,18 @@ import { groupTurns } from "@intentface/chat/message-utils";
 ```
 
 Each primitive renders semantic DOM with `data-*` state attributes and exposes
-behavior through context hooks and render props, so your className strategy is
-entirely your own. See the [headless concepts](/docs/headless) for the model.
+behavior through context hooks and render props. See the
+[headless concepts](/docs/headless) for the model.
+
+## Styled components
+
+If you want the Intentface look rather than styling from scratch, copy the styled
+components. Every component page has an **Installation** block that lists the
+exact dependencies to `bun add` and shows the source to copy into your project —
+for example, the [Composer](/docs/primitives/composer). Copy the file, plus any
+components it lists as also-needed, and the styling is yours to edit.
 
 ## Theme
 
-The primitives are styled against a small set of design tokens. Install them and
-read the collision notes on the [Theming](/docs/theming) page — especially if
-your app already ran `shadcn init`.
+The styled components reference a small set of design tokens. Copy the token CSS
+from the [Theming](/docs/theming) page into your global stylesheet.

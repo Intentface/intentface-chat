@@ -71,6 +71,44 @@ const StepsPanel = ({ className, children, ...props }: StepsPanelProps) => (
 StepsPanel.displayName = "StepsPanel";
 
 // ---------------------------------------------------------------------------
+// Icon / Label
+// ---------------------------------------------------------------------------
+
+type StepsIconProps = ComponentProps<typeof StepsPrimitive.Icon>;
+
+const StepsIcon = ({ className, ...props }: StepsIconProps) => (
+  <StepsPrimitive.Icon
+    className={cn(
+      "flex size-4 shrink-0 items-center justify-center",
+      "data-[status=complete]:text-ink-secondary",
+      "data-[status=active]:text-ink-primary",
+      "data-[status=pending]:text-slate-9",
+      className,
+    )}
+    {...props}
+  />
+);
+
+StepsIcon.displayName = "StepsIcon";
+
+type StepsLabelProps = ComponentProps<typeof StepsPrimitive.Label>;
+
+const StepsLabel = ({ className, ...props }: StepsLabelProps) => (
+  <StepsPrimitive.Label
+    className={cn(
+      "text-sm text-left",
+      "data-[status=complete]:text-ink-secondary",
+      "data-[status=active]:font-medium data-[status=active]:text-ink-primary",
+      "data-[status=pending]:text-slate-9",
+      className,
+    )}
+    {...props}
+  />
+);
+
+StepsLabel.displayName = "StepsLabel";
+
+// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -78,4 +116,6 @@ export const Steps = Object.assign(StepsRoot, {
   Item: StepsItem,
   Trigger: StepsTrigger,
   Panel: StepsPanel,
+  Icon: StepsIcon,
+  Label: StepsLabel,
 });

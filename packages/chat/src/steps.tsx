@@ -38,7 +38,15 @@ StepsRoot.displayName = "Steps";
 // True inside any Item, so deeper items can surface data-nested.
 const NestedContext = createContext(false);
 
+// Status inherited by Icon / Label from the nearest Item.
+const StepStatusContext = createContext<StepStatus | null>(null);
+
 export type StepStatus = "complete" | "active" | "pending";
+
+const useStepStatus = (status?: StepStatus): StepStatus => {
+  const inherited = use(StepStatusContext);
+  return status ?? inherited ?? "complete";
+};
 
 export type StepsItemProps = ComponentProps<typeof Collapsible> & {
   status?: StepStatus;
@@ -49,13 +57,15 @@ const StepsItem = ({ status = "complete", defaultOpen, ...props }: StepsItemProp
 
   return (
     <NestedContext value={true}>
-      <Collapsible
-        defaultOpen={defaultOpen ?? status === "active"}
-        data-slot="steps-item"
-        data-status={status}
-        data-nested={isNested || undefined}
-        {...props}
-      />
+      <StepStatusContext value={status}>
+        <Collapsible
+          defaultOpen={defaultOpen ?? status === "active"}
+          data-slot="steps-item"
+          data-status={status}
+          data-nested={isNested || undefined}
+          {...props}
+        />
+      </StepStatusContext>
     </NestedContext>
   );
 };
@@ -79,6 +89,64 @@ const StepsPanel = (props: StepsPanelProps) => (
 StepsPanel.displayName = "StepsPanel";
 
 // ---------------------------------------------------------------------------
+// Icon / Label — timeline row parts. Status comes from an optional prop or
+// the nearest Item ancestor.
+// ---------------------------------------------------------------------------
+
+export type StepsIconProps = PrimitiveProps<"span", { status: StepStatus }> & {
+  status?: StepStatus;
+};
+
+const StepsIcon = ({
+  status,
+  className,
+  render,
+  style,
+  ...elementProps
+}: StepsIconProps) => {
+  const resolvedStatus = useStepStatus(status);
+
+  return useRenderElement(
+    "span",
+    { className, render, style },
+    {
+      state: { status: resolvedStatus },
+      props: [
+        { "data-slot": "steps-icon", "data-status": resolvedStatus, "aria-hidden": true },
+        elementProps,
+      ],
+    },
+  );
+};
+
+StepsIcon.displayName = "StepsIcon";
+
+export type StepsLabelProps = PrimitiveProps<"span", { status: StepStatus }> & {
+  status?: StepStatus;
+};
+
+const StepsLabel = ({
+  status,
+  className,
+  render,
+  style,
+  ...elementProps
+}: StepsLabelProps) => {
+  const resolvedStatus = useStepStatus(status);
+
+  return useRenderElement(
+    "span",
+    { className, render, style },
+    {
+      state: { status: resolvedStatus },
+      props: [{ "data-slot": "steps-label", "data-status": resolvedStatus }, elementProps],
+    },
+  );
+};
+
+StepsLabel.displayName = "StepsLabel";
+
+// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -86,4 +154,6 @@ export const Steps = Object.assign(StepsRoot, {
   Item: StepsItem,
   Trigger: StepsTrigger,
   Panel: StepsPanel,
+  Icon: StepsIcon,
+  Label: StepsLabel,
 });

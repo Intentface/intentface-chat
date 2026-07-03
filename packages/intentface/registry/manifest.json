@@ -140,7 +140,7 @@
       "name": "ask-user",
       "type": "registry:component",
       "hidden": true,
-      "dependencies": ["lucide-react"],
+      "dependencies": ["@intentface/chat", "lucide-react"],
       "registryDependencies": [
         "ai-types",
         "checkbox",

@@ -1,0 +1,64 @@
+import { describe, expect, test } from "bun:test";
+import { detectActivePrefix } from "../src/composer/prefix-plugin";
+
+// Helper: build the detect args from a one-line document with a caret marker.
+// "|"" marks the caret; positions are 1-based like ProseMirror text blocks
+// (blockStart = 1).
+const argsFromLine = (
+  line: string,
+  registered: Parameters<typeof detectActivePrefix>[0]["registered"],
+) => {
+  const caret = line.indexOf("|");
+  const text = line.replace("|", "");
+  const blockStart = 1;
+  return {
+    registered,
+    blockStart,
+    blockEnd: blockStart + text.length,
+    cursorPosition: blockStart + caret,
+    textBeforeCursor: text.slice(0, caret),
+    textAfterCursor: text.slice(caret),
+    fullDocText: text,
+  };
+};
+
+describe("detectActivePrefix", () => {
+  const slash = [{ prefix: "/", triggerRule: "doc-start" as const }];
+  const mention = [{ prefix: "@", triggerRule: "after-whitespace" as const }];
+
+  test("doc-start prefix opens when the document starts with it", () => {
+    const state = detectActivePrefix(argsFromLine("/sum|mary", slash));
+    expect(state.isOpen).toBe(true);
+    expect(state.trigger).toBe("/");
+    expect(state.query).toBe("summary");
+  });
+
+  test("doc-start prefix stays closed mid-document", () => {
+    const state = detectActivePrefix(argsFromLine("hello /sum|", slash));
+    expect(state.isOpen).toBe(false);
+  });
+
+  test("after-whitespace prefix opens at line start", () => {
+    const state = detectActivePrefix(argsFromLine("@ras|", mention));
+    expect(state.isOpen).toBe(true);
+    expect(state.query).toBe("ras");
+  });
+
+  test("after-whitespace prefix opens after a space and spans the whole token", () => {
+    const state = detectActivePrefix(argsFromLine("hi @ras|mus", mention));
+    expect(state.isOpen).toBe(true);
+    // Query covers both sides of the caret — the token is treated whole.
+    expect(state.query).toBe("rasmus");
+    expect(state.triggerEndPosition - state.triggerStartPosition).toBe("@rasmus".length);
+  });
+
+  test("prefix glued to a word does not trigger", () => {
+    const state = detectActivePrefix(argsFromLine("email@exam|ple", mention));
+    expect(state.isOpen).toBe(false);
+  });
+
+  test("no registered prefixes → closed", () => {
+    const state = detectActivePrefix(argsFromLine("@ras|", []));
+    expect(state.isOpen).toBe(false);
+  });
+});

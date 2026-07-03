@@ -21,6 +21,7 @@
   ],
   "exports": {
     "./types": "./src/types.ts",
+    "./composer": "./src/composer/index.tsx",
     "./chip": "./src/chip.tsx",
     "./shimmer": "./src/shimmer.tsx",
     "./commands": "./src/commands.tsx",

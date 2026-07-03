@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Add primitives to your project with the shadcn CLI.
+description: Add styled primitives with the shadcn CLI, or install the headless package directly.
 ---
 
 Intentface chat is distributed as a shadcn registry. You add a primitive with
@@ -53,6 +53,31 @@ To pull the whole set at once, add the bundle:
 ```bash
 bunx shadcn@latest add @intentface/chat-primitives
 ```
+
+## Headless package on its own
+
+The shadcn CLI is the fast path to the styled look, but the headless package
+stands alone. If you'd rather build your own styled layer (or don't use shadcn),
+install it directly:
+
+```bash
+bun add @intentface/chat
+# or: npm install @intentface/chat / pnpm add @intentface/chat
+```
+
+`react` and `react-dom` (v19+) are the only peer dependencies — no styling, no
+animation library. Import primitives from their subpaths and style them however
+you like:
+
+```tsx
+import { Composer } from "@intentface/chat/composer";
+import { Message } from "@intentface/chat/message";
+import { groupTurns } from "@intentface/chat/message-utils";
+```
+
+Each primitive renders semantic DOM with `data-*` state attributes and exposes
+behavior through context hooks and render props, so your className strategy is
+entirely your own. See the [headless concepts](/docs/headless) for the model.
 
 ## Theme
 

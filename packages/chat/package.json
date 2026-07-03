@@ -24,6 +24,7 @@
     "./chip": "./src/chip.tsx",
     "./shimmer": "./src/shimmer.tsx",
     "./commands": "./src/commands.tsx",
+    "./thread": "./src/thread.tsx",
     "./message-utils": "./src/message-utils.ts",
     "./chip-markdown": "./src/chip-markdown.ts",
     "./chat-status": "./src/chat-status.ts"

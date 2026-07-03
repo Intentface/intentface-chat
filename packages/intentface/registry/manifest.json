@@ -590,8 +590,8 @@
       "name": "thread",
       "type": "registry:component",
       "title": "Thread",
-      "dependencies": ["motion"],
-      "registryDependencies": ["icon-button", "progressive-blur", "utils", "icons"],
+      "dependencies": ["@intentface/chat", "motion"],
+      "registryDependencies": ["button", "progressive-blur", "utils", "icons"],
       "files": [
         {
           "sourcePath": "components/ai/thread.tsx",

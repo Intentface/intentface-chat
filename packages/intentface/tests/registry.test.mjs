@@ -49,7 +49,7 @@ test("registry resolves transitive dependencies for a named AI primitive", async
 
   const plan = getInstallPlan(items);
   assert.ok(plan.files.some((file) => file.targetPath === "components/ai/message.tsx"));
-  assert.ok(plan.dependencies.includes("ai"));
+  assert.ok(plan.dependencies.includes("@intentface/chat"));
 });
 
 test("import rewriting uses target aliases when configured", () => {

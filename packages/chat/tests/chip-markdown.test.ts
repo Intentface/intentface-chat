@@ -18,12 +18,11 @@ describe("encodeChipMarkdown / parseChipSegments round trip", () => {
     ]);
   });
 
-  test("variant and icon ride along in the token", () => {
+  test("icon rides along in the token", () => {
     const token = encodeChipMarkdown({
       prefix: "tool",
       value: "web-search",
       label: "Web search",
-      variant: "accent",
       icon: "globe",
     });
 
@@ -34,9 +33,15 @@ describe("encodeChipMarkdown / parseChipSegments round trip", () => {
         label: "Web search",
         prefix: "tool",
         value: "web-search",
-        variant: "accent",
         icon: "globe",
       },
+    ]);
+  });
+
+  test("unknown token params (e.g. legacy variant) are ignored", () => {
+    const segments = parseChipSegments("[Web search](chip:tool:web-search?variant=accent)");
+    expect(segments).toEqual([
+      { type: "chip", label: "Web search", prefix: "tool", value: "web-search" },
     ]);
   });
 

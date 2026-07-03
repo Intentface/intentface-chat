@@ -6,10 +6,17 @@
 // close transition is presentation: the styled layer supplies renderContent
 // and composes its own motion around the matched child.
 
-import { Children, type ComponentProps, isValidElement, type ReactNode, useEffect } from "react";
+import { Children, Fragment, isValidElement, type ReactNode, useEffect } from "react";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
+import { openStateMapping } from "../internal/state-mappings";
 import { useComposer, useComposerStore } from "./store";
 
-export type ComposerPanelProps = Omit<ComponentProps<"div">, "children"> & {
+export type ComposerPanelState = {
+  open: boolean;
+};
+
+export type ComposerPanelProps = Omit<PrimitiveProps<"div", ComposerPanelState>, "children"> & {
   value?: string;
   children?: ReactNode;
   /**
@@ -20,7 +27,15 @@ export type ComposerPanelProps = Omit<ComponentProps<"div">, "children"> & {
   renderContent?: (matchedChild: ReactNode, hasMatch: boolean) => ReactNode;
 };
 
-export const ComposerPanel = ({ children, value, renderContent, ...props }: ComposerPanelProps) => {
+export const ComposerPanel = ({
+  children,
+  value,
+  renderContent,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerPanelProps) => {
   const store = useComposerStore();
   const isCommandListOpen = useComposer((composer) => composer.commands.isOpen);
 
@@ -44,23 +59,44 @@ export const ComposerPanel = ({ children, value, renderContent, ...props }: Comp
     return () => store.setPanelValue(null);
   }, [store, hasMatch, effectiveValue]);
 
-  return (
-    <div data-slot="composer-panel" data-open={hasMatch || undefined} {...props}>
-      {renderContent
-        ? renderContent(matchedChild ?? null, hasMatch)
-        : hasMatch
-          ? matchedChild
-          : null}
-    </div>
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      state: { open: hasMatch },
+      stateAttributesMapping: openStateMapping,
+      props: [
+        {
+          "data-slot": "composer-panel",
+          children: renderContent
+            ? renderContent(matchedChild ?? null, hasMatch)
+            : hasMatch
+              ? matchedChild
+              : null,
+        },
+        elementProps,
+      ],
+    },
   );
 };
 
-export type ComposerPanelItemProps = ComponentProps<"div"> & {
+export type ComposerPanelItemProps = PrimitiveProps<"div"> & {
   value: string;
 };
 
-export const ComposerPanelItem = ({ value, children, ...props }: ComposerPanelItemProps) => (
-  <div key={value} data-slot="composer-panel-item" {...props}>
-    {children}
-  </div>
-);
+export const ComposerPanelItem = ({
+  value,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerPanelItemProps) => {
+  const element = useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "composer-panel-item" }, elementProps] },
+  );
+
+  // Keyed per value so switching panels remounts the item's subtree.
+  return <Fragment key={value}>{element}</Fragment>;
+};

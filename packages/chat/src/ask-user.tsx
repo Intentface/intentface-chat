@@ -4,10 +4,9 @@
 // (cmdk pattern), highlight state, and the imperative keyboard-navigation
 // handle. Input widgets (checkbox/radio), icons, and the answered summary
 // belong to the styled layer, which reads state via useAskUserOptions() /
-// useAskUserOption().
+// useAskUserOption(). Every part supports the Base UI render prop.
 
 import {
-  type ComponentProps,
   createContext,
   type RefObject,
   use,
@@ -18,54 +17,94 @@ import {
   useRef,
   useState,
 } from "react";
+import type { PrimitiveProps } from "./internal/primitive-props";
+import { useRenderElement } from "./internal/render/useRenderElement";
 
 /** AskUser root container. Stateless — consumers manage all state externally. */
-export type AskUserRootProps = ComponentProps<"div">;
+export type AskUserRootProps = PrimitiveProps<"div">;
 
-const AskUserRoot = (props: AskUserRootProps) => <div data-slot="ask-user" {...props} />;
+const AskUserRoot = ({ className, render, style, ...elementProps }: AskUserRootProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user" }, elementProps] },
+  );
 
 /** Question heading text. */
-export type AskUserLabelProps = ComponentProps<"p">;
+export type AskUserLabelProps = PrimitiveProps<"p">;
 
-const AskUserLabel = (props: AskUserLabelProps) => <p data-slot="ask-user-label" {...props} />;
+const AskUserLabel = ({ className, render, style, ...elementProps }: AskUserLabelProps) =>
+  useRenderElement(
+    "p",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-label" }, elementProps] },
+  );
 
 /** Row container for `Label` and optional `Navigation`. */
-export type AskUserHeaderProps = ComponentProps<"div">;
+export type AskUserHeaderProps = PrimitiveProps<"div">;
 
-const AskUserHeader = (props: AskUserHeaderProps) => <div data-slot="ask-user-header" {...props} />;
+const AskUserHeader = ({ className, render, style, ...elementProps }: AskUserHeaderProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-header" }, elementProps] },
+  );
 
 /** Row container for `Previous`, `StepLabel`, and `Next`. */
-export type AskUserNavigationProps = ComponentProps<"div">;
+export type AskUserNavigationProps = PrimitiveProps<"div">;
 
-const AskUserNavigation = (props: AskUserNavigationProps) => (
-  <div data-slot="ask-user-navigation" {...props} />
-);
+const AskUserNavigation = ({ className, render, style, ...elementProps }: AskUserNavigationProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-navigation" }, elementProps] },
+  );
 
 /** Navigate to the previous step. */
-export type AskUserPreviousProps = ComponentProps<"button">;
+export type AskUserPreviousProps = PrimitiveProps<"button">;
 
-const AskUserPrevious = (props: AskUserPreviousProps) => (
-  <button type="button" data-slot="ask-user-previous" {...props} />
-);
+const AskUserPrevious = ({ className, render, style, ...elementProps }: AskUserPreviousProps) =>
+  useRenderElement(
+    "button",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-previous" }, elementProps] },
+  );
 
 /** Navigate to the next step. */
-export type AskUserNextProps = ComponentProps<"button">;
+export type AskUserNextProps = PrimitiveProps<"button">;
 
-const AskUserNext = (props: AskUserNextProps) => (
-  <button type="button" data-slot="ask-user-next" {...props} />
-);
+const AskUserNext = ({ className, render, style, ...elementProps }: AskUserNextProps) =>
+  useRenderElement(
+    "button",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-next" }, elementProps] },
+  );
 
 /** Displays "{current} of {total}" step indicator. Supports custom children to override the default text. */
-export type AskUserStepLabelProps = ComponentProps<"span"> & {
+export type AskUserStepLabelProps = PrimitiveProps<"span"> & {
   current: number;
   total: number;
 };
 
-const AskUserStepLabel = ({ current, total, children, ...props }: AskUserStepLabelProps) => (
-  <span data-slot="ask-user-step-label" {...props}>
-    {children ?? `${current} of ${total}`}
-  </span>
-);
+const AskUserStepLabel = ({
+  current,
+  total,
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserStepLabelProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    {
+      props: [
+        { "data-slot": "ask-user-step-label", children: children ?? `${current} of ${total}` },
+        elementProps,
+      ],
+    },
+  );
 
 /** Fieldset wrapper for `Option` items. Provides `multiSelect`, `groupName`, and highlight state to child options via context. Items self-register on mount (cmdk pattern). */
 type OptionsContextValue = {
@@ -98,7 +137,7 @@ export type AskUserOptionsHandle = {
   highlightedValue: string | null;
 };
 
-export type AskUserOptionsProps = Omit<ComponentProps<"fieldset">, "value" | "ref"> & {
+export type AskUserOptionsProps = Omit<PrimitiveProps<"fieldset">, "value" | "ref"> & {
   /** When true, options render as multi-select (checkbox semantics in the styled layer). */
   multiSelect?: boolean;
   /** Shared `name` attribute for all option inputs in this group. */
@@ -111,8 +150,11 @@ const AskUserOptions = ({
   multiSelect = false,
   groupName = "",
   ref,
+  className,
+  render,
+  style,
   children,
-  ...props
+  ...elementProps
 }: AskUserOptionsProps) => {
   const registeredItems = useRef<string[]>([]);
   const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
@@ -188,6 +230,12 @@ const AskUserOptions = ({
     [],
   );
 
+  const element = useRenderElement(
+    "fieldset",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-options", children }, elementProps] },
+  );
+
   return (
     <OptionsContext
       value={{
@@ -199,9 +247,7 @@ const AskUserOptions = ({
         onItemHover,
       }}
     >
-      <fieldset data-slot="ask-user-options" {...props}>
-        {children}
-      </fieldset>
+      {element}
     </OptionsContext>
   );
 };
@@ -223,7 +269,14 @@ const OptionContext = createContext<OptionContextValue>({
 
 export const useAskUserOption = () => use(OptionContext);
 
-export type AskUserOptionProps = ComponentProps<"label"> & {
+export type AskUserOptionState = {
+  /** Present as data-highlighted while keyboard/hover highlighted. */
+  highlighted: boolean;
+  /** Present as data-selected while the option is selected. */
+  selected: boolean;
+};
+
+export type AskUserOptionProps = PrimitiveProps<"label", AskUserOptionState> & {
   value?: string;
   selected?: boolean;
   onSelect?: () => void;
@@ -233,8 +286,11 @@ const AskUserOption = ({
   value = "",
   selected = false,
   onSelect,
+  className,
+  render,
+  style,
   children,
-  ...props
+  ...elementProps
 }: AskUserOptionProps) => {
   const id = useId();
   const { highlightedValue, register, onItemHover } = use(OptionsContext);
@@ -245,19 +301,24 @@ const AskUserOption = ({
   registerRef.current = register;
   useItemRegistration(value, registerRef);
 
-  return (
-    <OptionContext value={{ id, value, selected, onSelect }}>
-      <label
-        htmlFor={id}
-        data-slot="ask-user-option"
-        data-highlighted={isHighlighted || undefined}
-        onMouseMove={() => onItemHover(value)}
-        {...props}
-      >
-        {children}
-      </label>
-    </OptionContext>
+  const element = useRenderElement(
+    "label",
+    { className, render, style },
+    {
+      state: { highlighted: isHighlighted, selected },
+      props: [
+        {
+          htmlFor: id,
+          "data-slot": "ask-user-option",
+          onMouseMove: () => onItemHover(value),
+          children,
+        },
+        elementProps,
+      ],
+    },
   );
+
+  return <OptionContext value={{ id, value, selected, onSelect }}>{element}</OptionContext>;
 };
 
 /** Registers an item value with the parent Options container synchronously before paint and deregisters on unmount. */
@@ -272,30 +333,59 @@ const useItemRegistration = (
 };
 
 /** Flex column wrapper for `OptionLabel` and `OptionDescription`. */
-export type AskUserOptionContentProps = ComponentProps<"span">;
+export type AskUserOptionContentProps = PrimitiveProps<"span">;
 
-const AskUserOptionContent = (props: AskUserOptionContentProps) => (
-  <span data-slot="ask-user-option-content" {...props} />
-);
+const AskUserOptionContent = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserOptionContentProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-option-content" }, elementProps] },
+  );
 
 /** Option title text. */
-export type AskUserOptionLabelProps = ComponentProps<"span">;
+export type AskUserOptionLabelProps = PrimitiveProps<"span">;
 
-const AskUserOptionLabel = (props: AskUserOptionLabelProps) => (
-  <span data-slot="ask-user-option-label" {...props} />
-);
+const AskUserOptionLabel = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserOptionLabelProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-option-label" }, elementProps] },
+  );
 
 /** Option subtitle/description text. */
-export type AskUserOptionDescriptionProps = ComponentProps<"span">;
+export type AskUserOptionDescriptionProps = PrimitiveProps<"span">;
 
-const AskUserOptionDescription = (props: AskUserOptionDescriptionProps) => (
-  <span data-slot="ask-user-option-description" {...props} />
-);
+const AskUserOptionDescription = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserOptionDescriptionProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-option-description" }, elementProps] },
+  );
 
 /** Keyboard shortcut hints displayed below the ask-user options. */
-export type AskUserHintsProps = ComponentProps<"div">;
+export type AskUserHintsProps = PrimitiveProps<"div">;
 
-const AskUserHints = (props: AskUserHintsProps) => <div data-slot="ask-user-hints" {...props} />;
+const AskUserHints = ({ className, render, style, ...elementProps }: AskUserHintsProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "ask-user-hints" }, elementProps] },
+  );
 
 export const AskUser = Object.assign(AskUserRoot, {
   Header: AskUserHeader,

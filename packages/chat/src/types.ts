@@ -2,6 +2,17 @@
 // SDK-agnostic: an AI SDK `UIMessage` satisfies `ChatMessage` structurally, so
 // no adapter or translation layer is needed. Extend via the generics.
 
+// `data-slot` is the part-identity styling hook every primitive stamps.
+// Declared on React's HTMLAttributes so internal props objects typecheck —
+// TS only special-cases data-* attributes inside JSX literals, not in plain
+// object literals handed to the render machinery.
+declare module "react" {
+  // biome-ignore lint/correctness/noUnusedVariables: augmentation must repeat React's type parameter
+  interface HTMLAttributes<T> {
+    "data-slot"?: string | undefined;
+  }
+}
+
 export type MessageRole = "system" | "user" | "assistant";
 
 /**

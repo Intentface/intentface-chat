@@ -6,7 +6,7 @@
 
 import type { Editor } from "@tiptap/react";
 import type { RefObject } from "react";
-import { type ChipIconKey, type ChipVariant, encodeChipMarkdown } from "../chip-markdown";
+import { type ChipIconKey, encodeChipMarkdown } from "../chip-markdown";
 import type { ComposerEditorHandle, ComposerSnapshot } from "./types";
 
 export const snapshotFromEditor = (editor: Editor): ComposerSnapshot =>
@@ -46,13 +46,11 @@ export const serializeDocument = (doc: SerializableNode): { text: string } => {
         value?: string;
         label?: string;
         icon?: ChipIconKey | null;
-        variant?: ChipVariant | null;
       };
       inline += encodeChipMarkdown({
         prefix: attrs.prefix ?? "",
         value: attrs.value ?? "",
         label: attrs.label ?? "",
-        variant: attrs.variant ?? undefined,
         icon: attrs.icon ?? undefined,
       });
     });

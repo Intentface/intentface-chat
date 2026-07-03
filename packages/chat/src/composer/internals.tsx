@@ -1,13 +1,12 @@
 "use client";
 
 // Component-wiring shared by the composer parts: the internals context
-// (command registry, editor-update reporting, chip icon injection) and the
-// small hooks the parts build on. Not consumer API.
+// (command registry, editor-update reporting) and the small hooks the parts
+// build on. Not consumer API.
 
 import type { Editor } from "@tiptap/react";
 import {
   createContext,
-  type ReactNode,
   type RefObject,
   use,
   useCallback,
@@ -40,7 +39,6 @@ export type ComposerInternalsValue = {
   commands: ComposerCommandsMap;
   getRegisteredPrefixes: () => RegisteredPrefix[];
   reportEditorUpdate: (editor: Editor) => void;
-  chipIconsRef: RefObject<Record<string, ReactNode>>;
 };
 
 export const ComposerInternalsContext = createContext<ComposerInternalsValue | null>(null);
@@ -52,9 +50,6 @@ export const useComposerInternals = (): ComposerInternalsValue => {
   }
   return context;
 };
-
-/** The commands map registered on Composer Root — for default command renders. */
-export const useComposerCommandsMap = (): ComposerCommandsMap => useComposerInternals().commands;
 
 export const useCommandRegistry = (commands: ComposerCommandsMap) => {
   const registryRef = useAsRef(commands);

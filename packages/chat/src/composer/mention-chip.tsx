@@ -1,20 +1,21 @@
 "use client";
 
-// TipTap mention-chip extension. Renders the headless Chip in a NodeView; the
-// icon map is injected through extension options (getChipIcons) so the package
-// ships no icons — unknown keys render no icon. The command-list plugin rides
-// along here so a single extension wires the whole prefix system.
+// TipTap mention-chip extension. Renders committed chips in a NodeView through
+// the injected renderChip seam — the package interprets none of the chip's
+// opaque data (the icon key); without a renderer a label-only Chip renders.
+// The command-list plugin rides along here so a single extension wires the
+// whole prefix system.
 
 import { mergeAttributes, Node as TiptapNode } from "@tiptap/core";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import type { ReactNode } from "react";
 import { Chip } from "../chip";
-import type { ChipIconKey, ChipVariant } from "../chip-markdown";
+import type { ChipData, ChipIconKey } from "../chip-markdown";
 import { type CommandListPluginOptions, createCommandListPlugin } from "./prefix-plugin";
 
 export type MentionChipOptions = CommandListPluginOptions & {
-  /** Icon map for chip icon keys. Read per render; unknown keys render nothing. */
-  getChipIcons: () => Record<string, ReactNode>;
+  /** Custom renderer for committed chips. Read per render; defaults to a label-only Chip. */
+  renderChip?: (chip: ChipData) => ReactNode;
 };
 
 type MentionChipNodeViewProps = {
@@ -23,10 +24,12 @@ type MentionChipNodeViewProps = {
 };
 
 const MentionChipNodeView = ({ node, extension }: MentionChipNodeViewProps) => {
-  const label = node.attrs.label as string;
-  const icon = node.attrs.icon as ChipIconKey | null;
-  const variant = node.attrs.variant as ChipVariant | null;
-  const iconNode = icon ? extension.options.getChipIcons()[icon] : undefined;
+  const chip: ChipData = {
+    prefix: (node.attrs.prefix as string) ?? "",
+    value: (node.attrs.value as string) ?? "",
+    label: (node.attrs.label as string) ?? "",
+    icon: (node.attrs.icon as ChipIconKey | null) ?? undefined,
+  };
 
   return (
     <NodeViewWrapper
@@ -34,10 +37,11 @@ const MentionChipNodeView = ({ node, extension }: MentionChipNodeViewProps) => {
       style={{ display: "inline", verticalAlign: "baseline" }}
       data-mention-chip
     >
-      <Chip variant={variant ?? undefined}>
-        {iconNode && <Chip.Icon>{iconNode}</Chip.Icon>}
-        <Chip.Label>{label}</Chip.Label>
-      </Chip>
+      {extension.options.renderChip?.(chip) ?? (
+        <Chip>
+          <Chip.Label>{chip.label}</Chip.Label>
+        </Chip>
+      )}
     </NodeViewWrapper>
   );
 };
@@ -59,7 +63,6 @@ export const createMentionChipExtension = (options: MentionChipOptions) =>
         label: { default: "" },
         value: { default: "" },
         icon: { default: null },
-        variant: { default: null },
       };
     },
 

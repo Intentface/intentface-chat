@@ -2,7 +2,7 @@
 // command configs, submit payloads, the opaque editor snapshot, and the
 // imperative editor/attachments APIs.
 
-import type { ChipData, ChipIconKey, ChipVariant } from "../chip-markdown";
+import type { ChipData, ChipIconKey } from "../chip-markdown";
 import type { AskUserQuestion, FilePart } from "../types";
 
 export type CommandItemKind = "insert" | "execute";
@@ -35,7 +35,6 @@ export type CommandItemData = {
   label: string;
   description?: string;
   icon?: ChipIconKey;
-  variant?: ChipVariant;
   keywords?: string;
   onSelect?: (context: PrefixOnSelectContext) => void;
 };

@@ -7,6 +7,8 @@
 
 import { type ComponentProps, useRef } from "react";
 import { AskUser } from "../ask-user";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 import { useComposer } from "./store";
 
 export const ComposerAskUser = () => {
@@ -85,29 +87,56 @@ export const ComposerAskUserHints = ({ children, ...props }: ComposerAskUserHint
   );
 };
 
-export type ComposerAskUserDismissProps = ComponentProps<"button">;
+export type ComposerAskUserDismissProps = PrimitiveProps<"button">;
 
-export const ComposerAskUserDismiss = ({ children, ...props }: ComposerAskUserDismissProps) => {
+export const ComposerAskUserDismiss = ({
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerAskUserDismissProps) => {
   const askUser = useComposer((composer) => composer.askUser);
-  return (
-    <button
-      type="button"
-      data-slot="composer-ask-user-dismiss"
-      onClick={askUser.dismissStep}
-      {...props}
-    >
-      {children ?? "Dismiss"}
-    </button>
+
+  return useRenderElement(
+    "button",
+    { className, render, style },
+    {
+      props: [
+        {
+          "data-slot": "composer-ask-user-dismiss",
+          onClick: askUser.dismissStep,
+          children: children ?? "Dismiss",
+        },
+        elementProps,
+      ],
+    },
   );
 };
 
-export type ComposerAskUserContinueProps = ComponentProps<"button">;
+export type ComposerAskUserContinueProps = PrimitiveProps<"button">;
 
-export const ComposerAskUserContinue = ({ children, ...props }: ComposerAskUserContinueProps) => {
+export const ComposerAskUserContinue = ({
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerAskUserContinueProps) => {
   const askUser = useComposer((composer) => composer.askUser);
-  return (
-    <button type="submit" data-slot="composer-ask-user-continue" {...props}>
-      {children ?? (askUser.isLastStep ? "Submit" : "Continue")}
-    </button>
+
+  return useRenderElement(
+    "button",
+    { className, render, style },
+    {
+      props: [
+        {
+          type: "submit" as const,
+          "data-slot": "composer-ask-user-continue",
+          children: children ?? (askUser.isLastStep ? "Submit" : "Continue"),
+        },
+        elementProps,
+      ],
+    },
   );
 };

@@ -15,6 +15,7 @@ import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
 import { IconButton } from "@/components/ui/icon-button";
+import { CHIP_ICONS } from "@/lib/ai/chip-icons";
 import type { AskUserQuestion } from "@/lib/ai/types";
 import { useModelStore } from "@/lib/store/model";
 import { cn } from "@/lib/utils";
@@ -219,67 +220,61 @@ export default function ComponentsPlayground() {
       </div>
 
       <div>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-ink-tertiary">Composer</p>
-          <div className="flex items-center gap-2">
-            {(["idle", "active", "ask-user", "ask-user-multi"] as const).map((state) => (
-              <button
-                key={state}
-                type="button"
-                onClick={() => {
-                  if (state === "active") {
-                    if (composerState === "active") {
-                      const next = stepLabels[composerSteps.length % stepLabels.length];
-                      setComposerSteps((prev) => [...prev, next]);
-                      return;
-                    }
-                    setComposerSteps(stepLabels.slice(0, 1));
-                  }
-                  setComposerState(state);
-                }}
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs border border-primary-border bg-primary text-ink-secondary hover:bg-primary-hover font-medium transition-colors",
-                  composerState === state && "bg-primary-active text-slate-1",
-                )}
+        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-ink-tertiary">Composer</p>
+        <div className="flex min-h-[640px] items-end justify-center rounded-lg border border-secondary-border bg-secondary p-4">
+          <div className="flex w-full max-w-xl flex-col items-center">
+            <div className="relative w-full">
+              <Composer
+              onSubmit={(data) => {
+                if (data.kind === "answers") setComposerState("idle");
+              }}
+              commands={{
+                "@": {
+                  kind: "insert",
+                  trigger: "after-whitespace",
+                  items: PLAYGROUND_MENTIONS,
+                },
+                "/": {
+                  kind: "execute",
+                  trigger: "doc-start",
+                  items: playgroundCommands,
+                },
+                "#": {
+                  kind: "insert",
+                  trigger: "after-whitespace",
+                  items: fetchPlaygroundIssues,
+                },
+              }}
+              questions={questions}
+            >
+              <Composer.Panel
+                value={panelValue}
+                className="absolute bottom-full left-0 right-0 z-10 mb-2 w-full data-open:pb-0"
               >
-                {state === "idle"
-                  ? "Idle"
-                  : state === "active"
-                    ? "Active"
-                    : state === "ask-user"
-                      ? "Ask User"
-                      : "Ask Multi"}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex min-h-[448px] items-end rounded-lg border border-secondary-border bg-secondary p-4">
-          <Composer
-            onSubmit={(data) => {
-              if (data.kind === "answers") setComposerState("idle");
-            }}
-            commands={{
-              "@": {
-                kind: "insert",
-                trigger: "after-whitespace",
-                items: PLAYGROUND_MENTIONS,
-              },
-              "/": {
-                kind: "execute",
-                trigger: "doc-start",
-                items: playgroundCommands,
-              },
-              "#": {
-                kind: "insert",
-                trigger: "after-whitespace",
-                items: fetchPlaygroundIssues,
-              },
-            }}
-            questions={questions}
-          >
-            <Composer.Panel value={panelValue}>
               <Composer.PanelItem value="command-list">
-                <Composer.Commands />
+                {["@", "/", "#"].map((prefix) => (
+                  <Composer.CommandList key={prefix} prefix={prefix}>
+                    <Composer.CommandLoading />
+                    <Composer.CommandEmpty />
+                    <Composer.CommandItems>
+                      {(item) => (
+                        <Composer.CommandItem value={item.value}>
+                          {item.icon && (
+                            <Composer.CommandItemIcon>
+                              {CHIP_ICONS[item.icon]}
+                            </Composer.CommandItemIcon>
+                          )}
+                          <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                          {item.description && (
+                            <Composer.CommandItemDescription>
+                              {item.description}
+                            </Composer.CommandItemDescription>
+                          )}
+                        </Composer.CommandItem>
+                      )}
+                    </Composer.CommandItems>
+                  </Composer.CommandList>
+                ))}
               </Composer.PanelItem>
               <Composer.PanelItem value="active">
                 <StepQueue>
@@ -358,7 +353,40 @@ export default function ComponentsPlayground() {
                 </Composer.Actions>
               )}
             </Composer.Container>
-          </Composer>
+              </Composer>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              {(["idle", "active", "ask-user", "ask-user-multi"] as const).map((state) => (
+                <button
+                  key={state}
+                  type="button"
+                  onClick={() => {
+                    if (state === "active") {
+                      if (composerState === "active") {
+                        const next = stepLabels[composerSteps.length % stepLabels.length];
+                        setComposerSteps((prev) => [...prev, next]);
+                        return;
+                      }
+                      setComposerSteps(stepLabels.slice(0, 1));
+                    }
+                    setComposerState(state);
+                  }}
+                  className={cn(
+                    "rounded-full border border-primary-border bg-primary px-4 py-1.5 text-sm text-ink-secondary font-medium transition-colors hover:bg-primary-hover",
+                    composerState === state && "bg-primary-active text-slate-1",
+                  )}
+                >
+                  {state === "idle"
+                    ? "Idle"
+                    : state === "active"
+                      ? "Active"
+                      : state === "ask-user"
+                        ? "Ask User"
+                        : "Ask Multi"}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </main>

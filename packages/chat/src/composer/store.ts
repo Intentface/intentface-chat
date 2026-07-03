@@ -13,7 +13,7 @@
 // (client-only), so server renders only ever read the pristine snapshot.
 
 import type { Editor } from "@tiptap/react";
-import { createContext, type RefObject, use, useSyncExternalStore } from "react";
+import { createContext, type ReactNode, type RefObject, use, useSyncExternalStore } from "react";
 import type { AskUserOptionsHandle } from "../ask-user";
 import {
   type AttachmentItem,
@@ -80,7 +80,14 @@ export type ComposerCommandsState = {
   trigger: string | null;
   query: string;
   highlightIndex: number;
+  // items: ComposerCommandItem[];
 };
+
+// export type ComposerCommandItem = {
+//   icon: ReactNode;
+//   label: string;
+//   value: string;
+// };
 
 // The effective open panel — `value` is the matched Composer.PanelItem value
 // (including the "command-list" override), null while closed.

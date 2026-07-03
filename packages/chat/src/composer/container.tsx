@@ -4,12 +4,18 @@
 // chrome (not the editor or interactive controls) focuses the editor without
 // cancelling in-editor text selection.
 
-import type { ComponentProps } from "react";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 import { useComposerStore } from "./store";
 
-export type ComposerContainerProps = ComponentProps<"div">;
+export type ComposerContainerProps = PrimitiveProps<"div">;
 
-export const ComposerContainer = ({ children, ...props }: ComposerContainerProps) => {
+export const ComposerContainer = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerContainerProps) => {
   const store = useComposerStore();
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -26,15 +32,19 @@ export const ComposerContainer = ({ children, ...props }: ComposerContainerProps
     store.controller.ensureFocus();
   };
 
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      data-slot="composer-container"
-      onMouseDown={handleMouseDown}
-      {...props}
-    >
-      {children}
-    </div>
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      props: [
+        {
+          role: "button",
+          tabIndex: 0,
+          "data-slot": "composer-container",
+          onMouseDown: handleMouseDown,
+        },
+        elementProps,
+      ],
+    },
   );
 };

@@ -6,16 +6,18 @@
 
 import type { Editor } from "@tiptap/react";
 import {
-  type ComponentProps,
   type ReactNode,
   use,
   useEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import type { AttachmentItem } from "../attachments";
 import { prepareAttachmentsForSend } from "../attachments";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 import {
   ComposerInternalsContext,
   type ComposerInternalsValue,
@@ -38,7 +40,6 @@ import type {
 } from "./types";
 
 const EMPTY_COMMANDS: ComposerCommandsMap = {};
-const EMPTY_CHIP_ICONS: Record<string, ReactNode> = {};
 
 export type ComposerProviderProps = {
   store?: ComposerStore;
@@ -55,7 +56,14 @@ export const ComposerProvider = ({ store, children }: ComposerProviderProps) => 
   return <ComposerStoreContext value={instanceStore}>{children}</ComposerStoreContext>;
 };
 
-export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit" | "ref"> & {
+export type ComposerRootState = {
+  /** Present as data-submitting while a submission is in flight. */
+  submitting: boolean;
+  /** Present as data-dragging while files are dragged over the drop scope. */
+  dragging: boolean;
+};
+
+export type ComposerRootProps = Omit<PrimitiveProps<"form", ComposerRootState>, "onSubmit"> & {
   onSubmit?: (data: ComposerSubmitData) => void | Promise<void>;
   isSubmitting?: boolean;
   commands?: ComposerCommandsMap;
@@ -65,12 +73,9 @@ export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit" | "ref">
   onValueChange?: (snapshot: ComposerSnapshot) => void;
   /** Explicit store instance; defaults to the nearest provider, then the global. */
   store?: ComposerStore;
-  /** Icon map for chip icon keys, threaded into the mention-chip node view. */
-  chipIcons?: Record<string, ReactNode>;
 };
 
 export const ComposerRoot = ({
-  children,
   onSubmit,
   isSubmitting = false,
   commands = EMPTY_COMMANDS,
@@ -79,8 +84,10 @@ export const ComposerRoot = ({
   value,
   onValueChange,
   store: storeProp,
-  chipIcons = EMPTY_CHIP_ICONS,
-  ...formProps
+  className,
+  render,
+  style,
+  ...elementProps
 }: ComposerRootProps) => {
   const contextStore = use(ComposerStoreContext);
   const store = storeProp ?? contextStore ?? getGlobalComposerStore();
@@ -88,7 +95,6 @@ export const ComposerRoot = ({
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const onSubmitRef = useAsRef(onSubmit);
-  const chipIconsRef = useAsRef(chipIcons);
 
   // Register this mount on the resolved store: answers submit through this
   // mount's onSubmit, and unmounting resets all mount-scoped state so nothing
@@ -105,6 +111,11 @@ export const ComposerRoot = ({
   // Prop → store bridges. Actions and refs on the snapshot are identity-stable,
   // so reading them here without subscribing is safe.
   const { add: addAttachments, globalDropRef } = store.getSnapshot().attachments;
+
+  // Subscribed on the resolved store (not through useComposer — a `store` prop
+  // may differ from the nearest context) to surface drag state as data-dragging.
+  const getIsDragging = () => store.getSnapshot().attachments.isDragging;
+  const isDragging = useSyncExternalStore(store.subscribe, getIsDragging, getIsDragging);
 
   useEffect(() => {
     store.setIsSubmitting(isSubmitting);
@@ -168,18 +179,23 @@ export const ComposerRoot = ({
       commands,
       getRegisteredPrefixes,
       reportEditorUpdate,
-      chipIconsRef,
     }),
     [commands, getRegisteredPrefixes, reportEditorUpdate],
   );
 
+  const formElement = useRenderElement(
+    "form",
+    { className, render, style },
+    {
+      state: { submitting: isSubmitting, dragging: isDragging },
+      ref: formRef,
+      props: [{ "data-slot": "composer-root", onSubmit: handleFormSubmit }, elementProps],
+    },
+  );
+
   return (
     <ComposerStoreContext value={store}>
-      <ComposerInternalsContext value={internalsValue}>
-        <form data-slot="composer-root" onSubmit={handleFormSubmit} ref={formRef} {...formProps}>
-          {children}
-        </form>
-      </ComposerInternalsContext>
+      <ComposerInternalsContext value={internalsValue}>{formElement}</ComposerInternalsContext>
     </ComposerStoreContext>
   );
 };

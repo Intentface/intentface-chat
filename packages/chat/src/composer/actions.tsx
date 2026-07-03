@@ -5,29 +5,54 @@
 // send↔stop behavior via useComposerSubmit and renders a plain button — the
 // styled layer applies the same hook to its own button component.
 
-import { Children, type ComponentProps, useEffect } from "react";
+import { Children, useEffect } from "react";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 import { useAsRef } from "./internals";
 import { useComposer } from "./store";
 
-export type ComposerContextWindowProps = ComponentProps<"div">;
+export type ComposerContextWindowState = {
+  /** Present as data-visible while the strip has content and no panel is open. */
+  visible: boolean;
+};
 
-export const ComposerContextWindow = ({ children, ...props }: ComposerContextWindowProps) => {
+export type ComposerContextWindowProps = PrimitiveProps<"div", ComposerContextWindowState>;
+
+export const ComposerContextWindow = ({
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerContextWindowProps) => {
   const isPanelOpen = useComposer((composer) => composer.panel.isOpen);
   const hasContent = Children.toArray(children).length > 0;
   // Yield to an open panel — the strip slides back out once it closes.
   const isVisible = hasContent && !isPanelOpen;
-  return (
-    <div data-slot="composer-context-window" data-visible={isVisible || undefined} {...props}>
-      {children}
-    </div>
+
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      state: { visible: isVisible },
+      props: [{ "data-slot": "composer-context-window", children }, elementProps],
+    },
   );
 };
 
-export type ComposerActionsProps = ComponentProps<"div">;
+export type ComposerActionsProps = PrimitiveProps<"div">;
 
-export const ComposerActions = (props: ComposerActionsProps) => (
-  <div data-slot="composer-actions" {...props} />
-);
+export const ComposerActions = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerActionsProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "composer-actions" }, elementProps] },
+  );
 
 export type UseComposerSubmitOptions = {
   isGenerating?: boolean;
@@ -80,7 +105,12 @@ export const useComposerSubmit = ({
   };
 };
 
-export type ComposerSubmitProps = ComponentProps<"button"> & {
+export type ComposerSubmitButtonState = {
+  /** Present as data-generating while the stop affordance is active. */
+  generating: boolean;
+};
+
+export type ComposerSubmitProps = PrimitiveProps<"button", ComposerSubmitButtonState> & {
   // While generating, the button morphs into a stop control: the type flips
   // to "button" and clicking it (or pressing Escape) calls onStop instead of
   // submitting the form.
@@ -89,26 +119,34 @@ export type ComposerSubmitProps = ComponentProps<"button"> & {
 };
 
 export const ComposerSubmit = ({
-  children,
   disabled,
   isGenerating = false,
   onStop,
   onClick,
-  ...props
+  className,
+  render,
+  style,
+  ...elementProps
 }: ComposerSubmitProps) => {
   const submit = useComposerSubmit({ isGenerating, onStop, disabled });
 
-  return (
-    <button
-      type={submit.type}
-      data-slot="composer-submit"
-      data-generating={isGenerating ? "" : undefined}
-      aria-label={isGenerating ? "Stop generating" : undefined}
-      disabled={submit.disabled}
-      onClick={isGenerating ? () => onStop?.() : onClick}
-      {...props}
-    >
-      {children}
-    </button>
+  return useRenderElement(
+    "button",
+    { className, render, style },
+    {
+      state: { generating: isGenerating },
+      props: [
+        {
+          type: submit.type,
+          "data-slot": "composer-submit",
+          "aria-label": isGenerating ? "Stop generating" : undefined,
+          disabled: submit.disabled,
+          // Replaces (not chains) the consumer's onClick while generating —
+          // a stop click must never fall through to submit handlers.
+          onClick: isGenerating ? () => onStop?.() : onClick,
+        },
+        elementProps,
+      ],
+    },
   );
 };

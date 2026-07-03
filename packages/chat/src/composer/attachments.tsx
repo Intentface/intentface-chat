@@ -5,12 +5,14 @@
 // dropzone, error) is presentation: the styled layer composes it from
 // useComposer((c) => c.attachments) and the Attachments primitives.
 
-import type { ChangeEvent, ComponentProps, ReactNode } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import {
   DEFAULT_ATTACHMENT_ACCEPT,
   DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
   DEFAULT_ATTACHMENT_MAX_FILES,
 } from "../attachments";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 import { useComposer, useComposerStore } from "./store";
 
 export type ComposerAttachmentsProps = {
@@ -58,17 +60,27 @@ export const ComposerAttachments = ({
   );
 };
 
-export type ComposerAttachmentTriggerProps = ComponentProps<"button">;
+export type ComposerAttachmentTriggerProps = PrimitiveProps<"button">;
 
-export const ComposerAttachmentTrigger = (props: ComposerAttachmentTriggerProps) => {
+export const ComposerAttachmentTrigger = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerAttachmentTriggerProps) => {
   const attachments = useComposer((composer) => composer.attachments);
 
-  return (
-    <button
-      type="button"
-      data-slot="composer-attachment-trigger"
-      onClick={() => attachments.openFileDialog()}
-      {...props}
-    />
+  return useRenderElement(
+    "button",
+    { className, render, style },
+    {
+      props: [
+        {
+          "data-slot": "composer-attachment-trigger",
+          onClick: () => attachments.openFileDialog(),
+        },
+        elementProps,
+      ],
+    },
   );
 };

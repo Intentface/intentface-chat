@@ -6,17 +6,27 @@
 // in the styled layer, not here.
 
 import type { ReactNode } from "react";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 
-export type ComposerPlaceholderProps =
-  | { placeholder: string; children?: never; className?: string }
-  | { placeholder?: never; children: ReactNode; className?: string };
+export type ComposerPlaceholderProps = Omit<PrimitiveProps<"div">, "children"> &
+  ({ placeholder: string; children?: never } | { placeholder?: never; children: ReactNode });
 
 export const ComposerPlaceholder = ({
   placeholder,
   children,
   className,
-}: ComposerPlaceholderProps) => (
-  <div data-slot="composer-placeholder-text" className={className}>
-    {placeholder ?? children}
-  </div>
-);
+  render,
+  style,
+  ...elementProps
+}: ComposerPlaceholderProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      props: [
+        { "data-slot": "composer-placeholder-text", children: placeholder ?? children },
+        elementProps,
+      ],
+    },
+  );

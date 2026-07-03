@@ -54,7 +54,7 @@ describe("serializeDocument", () => {
     const { text } = serializeDocument(
       doc(
         paragraph(
-          chipNode({ prefix: "tool", value: "web-search", label: "Web search", variant: "accent" }),
+          chipNode({ prefix: "tool", value: "web-search", label: "Web search", icon: "globe" }),
         ),
       ),
     );
@@ -65,7 +65,7 @@ describe("serializeDocument", () => {
         label: "Web search",
         prefix: "tool",
         value: "web-search",
-        variant: "accent",
+        icon: "globe",
       },
     ]);
   });

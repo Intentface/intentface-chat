@@ -3,9 +3,17 @@
 // Headless step queue: an expandable, click/keyboard-togglable stack of live
 // steps. Owns only the open state and toggle interaction — item enter/exit
 // choreography and collapsed-height math belong to the styled layer, which
-// reads the open state via useStepQueue().
+// reads the open state via useStepQueue(). Every part supports the Base UI
+// render prop; open/closed surface as generated presence attributes.
 
-import { type ComponentProps, createContext, use, useCallback, useState } from "react";
+import { createContext, use, useCallback, useState } from "react";
+import type { PrimitiveProps } from "./internal/primitive-props";
+import { useRenderElement } from "./internal/render/useRenderElement";
+import { openStateMapping } from "./internal/state-mappings";
+
+export type StepQueueState = {
+  open: boolean;
+};
 
 type StepQueueContextValue = {
   isOpen: boolean;
@@ -20,7 +28,7 @@ export const useStepQueue = () => {
   return ctx;
 };
 
-export type StepQueueRootProps = ComponentProps<"div"> & {
+export type StepQueueRootProps = PrimitiveProps<"div", StepQueueState> & {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -30,8 +38,10 @@ const StepQueueRoot = ({
   open: controlledOpen,
   defaultOpen = false,
   onOpenChange,
-  children,
-  ...props
+  className,
+  render,
+  style,
+  ...elementProps
 }: StepQueueRootProps) => {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   const isControlled = controlledOpen !== undefined;
@@ -43,51 +53,77 @@ const StepQueueRoot = ({
     onOpenChange?.(next);
   }, [isOpen, isControlled, onOpenChange]);
 
-  return (
-    <StepQueueContext value={{ isOpen, toggle }}>
-      <div
-        role="button"
-        tabIndex={0}
-        data-slot="step-queue"
-        data-open={isOpen || undefined}
-        onClick={toggle}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            toggle();
-          }
-        }}
-        {...props}
-      >
-        {children}
-      </div>
-    </StepQueueContext>
+  const element = useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      state: { open: isOpen },
+      stateAttributesMapping: openStateMapping,
+      props: [
+        {
+          role: "button",
+          tabIndex: 0,
+          "data-slot": "step-queue",
+          onClick: toggle,
+          onKeyDown: (e: React.KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggle();
+            }
+          },
+        },
+        elementProps,
+      ],
+    },
   );
+
+  return <StepQueueContext value={{ isOpen, toggle }}>{element}</StepQueueContext>;
 };
 
 StepQueueRoot.displayName = "StepQueue";
 
-export type StepQueueItemProps = ComponentProps<"div">;
+export type StepQueueItemProps = PrimitiveProps<"div">;
 
-const StepQueueItem = (props: StepQueueItemProps) => <div data-slot="step-queue-item" {...props} />;
+const StepQueueItem = ({ className, render, style, ...elementProps }: StepQueueItemProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "step-queue-item" }, elementProps] },
+  );
 
 StepQueueItem.displayName = "StepQueueItem";
 
-export type StepQueueIconProps = ComponentProps<"span">;
+export type StepQueueIconProps = PrimitiveProps<"span">;
 
-const StepQueueIcon = (props: StepQueueIconProps) => (
-  <span data-slot="step-queue-icon" {...props} />
-);
+const StepQueueIcon = ({ className, render, style, ...elementProps }: StepQueueIconProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "step-queue-icon" }, elementProps] },
+  );
 
 StepQueueIcon.displayName = "StepQueueIcon";
 
-export type StepQueueLabelProps = ComponentProps<"span"> & {
+export type StepQueueLabelState = {
+  active: boolean;
+};
+
+export type StepQueueLabelProps = PrimitiveProps<"span", StepQueueLabelState> & {
   active?: boolean;
 };
 
-const StepQueueLabel = ({ active = false, ...props }: StepQueueLabelProps) => (
-  <span data-slot="step-queue-label" data-active={active || undefined} {...props} />
-);
+const StepQueueLabel = ({
+  active = false,
+  className,
+  render,
+  style,
+  ...elementProps
+}: StepQueueLabelProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { state: { active }, props: [{ "data-slot": "step-queue-label" }, elementProps] },
+  );
 
 StepQueueLabel.displayName = "StepQueueLabel";
 

@@ -2,9 +2,10 @@
 
 // Composer.Textarea — the TipTap editor. All editing behavior lives here:
 // chip paste handling, the command-prefix plugin, keyboard interpretation,
-// store mirroring, controlled/uncontrolled text. The only styling that crosses
-// this boundary is className-as-config for the ProseMirror decorations
-// (decorations can only take class strings) and the editor element's class.
+// store mirroring, controlled/uncontrolled text. No styling crosses this
+// boundary — the editor element and the command decorations expose data
+// attributes (data-slot="composer-editor", data-command-badge,
+// data-command-placeholder) for the styled layer's CSS.
 
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
@@ -12,25 +13,32 @@ import Text from "@tiptap/extension-text";
 import { TextSelection } from "@tiptap/pm/state";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
-import { chipSegmentsToParagraphJSON, parseChipSegments } from "../chip-markdown";
+import { type ChipData, chipSegmentsToParagraphJSON, parseChipSegments } from "../chip-markdown";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 import { useAsRef, useComposerInternals } from "./internals";
 import { interpretEditorKey } from "./keyboard";
 import { createMentionChipExtension } from "./mention-chip";
 import { commandListPluginKey } from "./prefix-plugin";
 import { useComposer, useComposerStore } from "./store";
 
-export type ComposerTextareaProps = {
+export type ComposerTextareaState = {
+  /** Present as data-disabled while the editor is non-editable. */
+  disabled: boolean;
+  /** Present as data-filled while the editor has content. */
+  filled: boolean;
+};
+
+export type ComposerTextareaProps = Omit<
+  PrimitiveProps<"div", ComposerTextareaState>,
+  "children"
+> & {
   value?: string;
   onValueChange?: (text: string) => void;
-  className?: string;
   disabled?: boolean;
   autoFocus?: boolean;
-  /** Class applied to the contenteditable ProseMirror element. */
-  editorClassName?: string;
-  /** Classes for the active command-token badge decoration. */
-  commandBadgeClassName?: string;
-  /** Extra decoration classes while the command query is empty. */
-  commandPlaceholderClassName?: string;
+  /** Custom renderer for committed chips in the editor. Defaults to a label-only Chip. */
+  renderChip?: (chip: ChipData) => ReactNode;
   /** Placeholder overlay content, shown while the editor is empty. */
   children?: ReactNode;
 };
@@ -39,21 +47,22 @@ export const ComposerTextarea = ({
   value,
   onValueChange,
   className,
+  render,
+  style,
   disabled = false,
   autoFocus = false,
-  editorClassName,
-  commandBadgeClassName,
-  commandPlaceholderClassName,
+  renderChip,
   children,
+  ...elementProps
 }: ComposerTextareaProps) => {
   const store = useComposerStore();
   const hasContent = useComposer((composer) => composer.textarea.hasContent);
-  const { getRegisteredPrefixes, reportEditorUpdate, chipIconsRef } = useComposerInternals();
+  const { getRegisteredPrefixes, reportEditorUpdate } = useComposerInternals();
 
   const isControlled = value !== undefined;
 
   const onValueChangeRef = useAsRef(onValueChange);
-  const decorationClassesRef = useAsRef({ commandBadgeClassName, commandPlaceholderClassName });
+  const renderChipRef = useAsRef(renderChip);
 
   // Single-select questions clear their selection once the user starts typing
   // a free-text answer. Stable across renders — event-time reads go through
@@ -71,15 +80,11 @@ export const ComposerTextarea = ({
     () =>
       createMentionChipExtension({
         getRegisteredPrefixes,
-        getChipIcons: () => chipIconsRef.current,
-        get commandBadgeClassName() {
-          return decorationClassesRef.current.commandBadgeClassName;
-        },
-        get commandPlaceholderClassName() {
-          return decorationClassesRef.current.commandPlaceholderClassName;
+        get renderChip() {
+          return renderChipRef.current;
         },
       }),
-    [getRegisteredPrefixes, chipIconsRef],
+    [getRegisteredPrefixes],
   );
 
   const tiptapEditor = useEditor({
@@ -89,7 +94,6 @@ export const ComposerTextarea = ({
     editorProps: {
       attributes: {
         "data-slot": "composer-editor",
-        ...(editorClassName ? { class: editorClassName } : {}),
         spellcheck: "false",
       },
       handlePaste: (_view, event) => {
@@ -250,21 +254,27 @@ export const ComposerTextarea = ({
     return store.registerEditor(tiptapEditor);
   }, [store, tiptapEditor]);
 
-  return (
-    <div data-slot="composer-textarea" data-disabled={disabled || undefined} className={className}>
-      {tiptapEditor !== null ? (
-        <EditorContent editor={tiptapEditor} style={{ position: "relative" }}>
-          {!hasContent && children && (
-            <div
-              data-slot="composer-placeholder"
-              style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-              aria-hidden="true"
-            >
-              {children}
-            </div>
-          )}
-        </EditorContent>
-      ) : null}
-    </div>
+  const editorContent =
+    tiptapEditor !== null ? (
+      <EditorContent editor={tiptapEditor} style={{ position: "relative" }}>
+        {!hasContent && children && (
+          <div
+            data-slot="composer-placeholder"
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+            aria-hidden="true"
+          >
+            {children}
+          </div>
+        )}
+      </EditorContent>
+    ) : null;
+
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      state: { disabled, filled: hasContent },
+      props: [{ "data-slot": "composer-textarea", children: editorContent }, elementProps],
+    },
   );
 };

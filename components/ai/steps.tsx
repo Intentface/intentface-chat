@@ -155,8 +155,8 @@ const StepsStep = ({ label, status = "complete", icon, className, children }: St
             className={cn(
               "absolute size-4 opacity-0 transition-all",
               "group-hover/trigger:opacity-100",
-              "group-data-panel-open/trigger:opacity-100",
-              "group-data-panel-open/trigger:rotate-180",
+              "group-data-open/trigger:opacity-100",
+              "group-data-open/trigger:rotate-180",
             )}
           />
         </div>

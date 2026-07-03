@@ -1,8 +1,8 @@
 // Command list — prefix trigger detection + the ProseMirror plugin that keeps
-// the active-token state and paints the trigger badge decoration. Decoration
-// classes are injected (the styled layer owns them); structural
-// data-command-badge / data-command-placeholder attributes are always present
-// so pure-CSS styling works too.
+// the active-token state and paints the trigger badge decoration. The
+// decoration carries no styling of its own — it stamps data-command-badge /
+// data-command-placeholder attributes and the styled layer targets them
+// from CSS.
 
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
@@ -104,30 +104,21 @@ export const commandListPluginKey = new PluginKey<CommandListPluginState>("comma
 
 export type CommandListPluginOptions = {
   getRegisteredPrefixes: () => RegisteredPrefix[];
-  /** Classes for the active-trigger badge decoration. Styled-layer injected. */
-  commandBadgeClassName?: string;
-  /** Extra classes applied while the query is empty (the type-to-filter hint). */
-  commandPlaceholderClassName?: string;
 };
 
 const commandFilterDecorations = (
   state: Parameters<NonNullable<Plugin["props"]["decorations"]>>[0],
-  options: CommandListPluginOptions,
 ) => {
   const pluginState = commandListPluginKey.getState(state);
   if (!pluginState?.isOpen) return DecorationSet.empty;
 
-  const badgeClasses = options.commandBadgeClassName ?? "";
-  const placeholderClasses = options.commandPlaceholderClassName ?? "";
-  const classes = pluginState.query ? badgeClasses : `${badgeClasses} ${placeholderClasses}`.trim();
-
   // Highlight the whole token, not just up to the caret, so the badge stays put
-  // while the caret roams inside it.
+  // while the caret roams inside it. Styling hooks only — the styled layer
+  // targets data-command-badge / data-command-placeholder from CSS.
   const inline = Decoration.inline(
     pluginState.triggerStartPosition,
     pluginState.triggerEndPosition,
     {
-      ...(classes ? { class: classes } : {}),
       "data-command-badge": "",
       ...(pluginState.query ? {} : { "data-command-placeholder": "" }),
     },
@@ -242,5 +233,5 @@ export const createCommandListPlugin = (options: CommandListPluginOptions) =>
         return { ...CLOSED_COMMAND_STATE, dismissedAt };
       },
     },
-    props: { decorations: (state) => commandFilterDecorations(state, options) },
+    props: { decorations: (state) => commandFilterDecorations(state) },
   });

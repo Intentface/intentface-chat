@@ -20,3 +20,6 @@ export const CHIP_ICONS = {
 } satisfies Record<string, ReactNode>;
 
 export type ChipIconKey = keyof typeof CHIP_ICONS;
+
+/** Narrows a wire-format icon string to this app's concrete keys. */
+export const isChipIconKey = (value: string): value is ChipIconKey => value in CHIP_ICONS;

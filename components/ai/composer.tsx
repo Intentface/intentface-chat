@@ -10,7 +10,6 @@ import {
   Composer as ComposerPrimitive,
   composerController,
   useComposer,
-  useComposerCommandsMap,
   useComposerController,
   useComposerSubmit,
 } from "@intentface/chat/composer";
@@ -18,7 +17,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { Children, type ComponentProps, type ReactNode, useMemo, useRef } from "react";
 import { AskUser } from "@/components/ai/ask-user";
 import { Attachments } from "@/components/ai/attachments";
-import { CHIP_SURFACE_CLASS, type ChipVariant } from "@/components/ai/chip";
+import { Chip } from "@/components/ai/chip";
 import { SendIcon } from "@/components/icons/send";
 import { StopIcon } from "@/components/icons/stop";
 import Button from "@/components/ui/button";
@@ -26,17 +25,15 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
-import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
+import { CHIP_ICONS, type ChipIconKey, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
 
 export { composerController, useComposer, useComposerController };
 
-// The wire format carries icon/variant as opaque strings; this app's command
-// items narrow them to the concrete unions so CHIP_ICONS indexing and Chip
-// variants stay typed.
-export type CommandItemData = Omit<CommandItemDataPrimitive, "icon" | "variant"> & {
+// The wire format carries the icon as an opaque string; this app's command
+// items narrow it to the concrete union so CHIP_ICONS indexing stays typed.
+export type CommandItemData = Omit<CommandItemDataPrimitive, "icon"> & {
   icon?: ChipIconKey;
-  variant?: ChipVariant;
 };
 
 export type {
@@ -64,11 +61,7 @@ export type {
 export type ComposerRootProps = ComponentProps<typeof ComposerPrimitive>;
 
 const ComposerRoot = ({ className, ...props }: ComposerRootProps) => (
-  <ComposerPrimitive
-    chipIcons={CHIP_ICONS}
-    className={cn("relative w-full flex flex-col", className)}
-    {...props}
-  />
+  <ComposerPrimitive className={cn("relative w-full flex flex-col", className)} {...props} />
 );
 
 // ---------------------------------------------------------------------------
@@ -158,12 +151,6 @@ const ComposerAttachmentTrigger = (props: ComposerAttachmentTriggerProps) => {
 // Textarea / Placeholder
 // ---------------------------------------------------------------------------
 
-// Same surface as a committed chip (primary variant) so the active-prefix badge
-// and the chip it becomes share one inline text-flow model — no baseline jump.
-const BADGE_CLASSES = `${CHIP_SURFACE_CLASS} bg-primary-hover text-ink-primary`;
-const PLACEHOLDER_CLASSES =
-  "after:content-['Type_to_filter'] after:text-ink-tertiary after:whitespace-nowrap after:pointer-events-none";
-
 type ComposerTextareaProps = {
   value?: string;
   onValueChange?: (text: string) => void;
@@ -176,12 +163,28 @@ type ComposerTextareaProps = {
 const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTextareaProps) => (
   <ComposerPrimitive.Textarea
     disabled={disabled}
-    editorClassName="max-w-none focus:outline-none w-full font-[450] leading-[1.7]"
-    commandBadgeClassName={BADGE_CLASSES}
-    commandPlaceholderClassName={PLACEHOLDER_CLASSES}
+    // The wire format carries the icon as an opaque string; narrow it to this
+    // app's concrete keys here — unknown values fall back to no icon.
+    renderChip={(chip) => {
+      const icon = chip.icon && isChipIconKey(chip.icon) ? CHIP_ICONS[chip.icon] : undefined;
+      return (
+        <Chip>
+          {icon && <Chip.Icon>{icon}</Chip.Icon>}
+          <Chip.Label>{chip.label}</Chip.Label>
+        </Chip>
+      );
+    }}
     className={cn(
       "max-h-32 min-h-8 overflow-y-auto py-2 px-3 text-md",
       "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
+      // The editor element — ProseMirror-owned DOM, out of JSX reach.
+      "**:data-[slot=composer-editor]:w-full **:data-[slot=composer-editor]:max-w-none **:data-[slot=composer-editor]:font-[450] **:data-[slot=composer-editor]:leading-[1.7] [&_[data-slot=composer-editor]:focus]:outline-none",
+      // Active-prefix badge: same inline text-flow surface as a committed chip
+      // (CHIP_SURFACE_CLASS in chip.tsx) so the badge and the chip it becomes
+      // share one baseline — no jump on commit.
+      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-[450] **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
+      // Type-to-filter hint while the command query is empty.
+      "[&_[data-command-placeholder]::after]:content-['Type_to_filter'] [&_[data-command-placeholder]::after]:pointer-events-none [&_[data-command-placeholder]::after]:whitespace-nowrap [&_[data-command-placeholder]::after]:text-ink-tertiary",
       disabled && "opacity-50 cursor-not-allowed",
       className,
     )}
@@ -400,11 +403,7 @@ const ComposerCommandItems = <Item extends CommandItemDataPrimitive = CommandIte
   children,
 }: ComposerCommandItemsProps<Item>): ReactNode => (
   <ComposerPrimitive.CommandItems
-    className={cn(
-      "flex flex-col",
-      "group-data-[state=empty]/composer-command-list:hidden",
-      className,
-    )}
+    className={cn("flex flex-col", "group-data-empty/composer-command-list:hidden", className)}
   >
     {children}
   </ComposerPrimitive.CommandItems>
@@ -416,7 +415,7 @@ const ComposerCommandLoading = ({
 }: ComponentProps<typeof ComposerPrimitive.CommandLoading>) => (
   <ComposerPrimitive.CommandLoading
     className={cn(
-      "hidden group-data-[state=loading]/composer-command-list:flex",
+      "hidden group-data-loading/composer-command-list:flex",
       "items-center px-3 h-8 text-sm text-ink-tertiary",
       className,
     )}
@@ -430,7 +429,7 @@ const ComposerCommandEmpty = ({
 }: ComponentProps<typeof ComposerPrimitive.CommandEmpty>) => (
   <ComposerPrimitive.CommandEmpty
     className={cn(
-      "hidden group-data-[state=empty]/composer-command-list:flex",
+      "hidden group-data-empty/composer-command-list:flex",
       // Shown only when nothing matches, where it acts as the single highlighted
       // option whose selection dismisses — so it carries the highlight styling.
       "items-center gap-2 rounded-lg bg-primary-hover px-3 h-8 text-sm text-ink-primary",
@@ -505,46 +504,6 @@ const ComposerCommandGroupLabel = ({
 );
 
 const ComposerCommandCollection = ComposerPrimitive.CommandCollection;
-
-// Default render for all registered command lists — one styled CommandList per
-// registered prefix with the icon + label + description row.
-type ComposerCommandsProps = {
-  className?: string;
-};
-
-const ComposerCommands = ({ className }: ComposerCommandsProps) => {
-  const commands = useComposerCommandsMap();
-  const prefixes = Object.keys(commands);
-
-  return (
-    <>
-      {prefixes.map((prefix) => (
-        <ComposerCommandList key={prefix} prefix={prefix} className={className}>
-          <ComposerCommandLoading />
-          <ComposerCommandEmpty>
-            <span>No results found</span>
-            <ComposerCommandDismiss />
-          </ComposerCommandEmpty>
-          <ComposerCommandItems>
-            {(item) => (
-              <ComposerCommandItem value={item.value}>
-                {item.icon && (
-                  <ComposerCommandItemIcon>{CHIP_ICONS[item.icon]}</ComposerCommandItemIcon>
-                )}
-                <ComposerCommandItemLabel>{item.label}</ComposerCommandItemLabel>
-                {item.description && (
-                  <ComposerCommandItemDescription>
-                    {item.description}
-                  </ComposerCommandItemDescription>
-                )}
-              </ComposerCommandItem>
-            )}
-          </ComposerCommandItems>
-        </ComposerCommandList>
-      ))}
-    </>
-  );
-};
 
 // ---------------------------------------------------------------------------
 // AskUser (with sub-Parts) — default render for the ask-user flow registered
@@ -693,7 +652,6 @@ export const Composer = Object.assign(ComposerRoot, {
   AskUserHints: ComposerAskUserHints,
   AskUserDismiss: ComposerAskUserDismiss,
   AskUserContinue: ComposerAskUserContinue,
-  Commands: ComposerCommands,
   CommandList: ComposerCommandList,
   CommandItems: ComposerCommandItems,
   CommandLoading: ComposerCommandLoading,

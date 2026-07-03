@@ -17,6 +17,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 import { Commands } from "./commands";
 import { filterArrayItems } from "./fuzzy";
 import { useAsRef, useComposerInternals } from "./internals";
@@ -125,13 +127,25 @@ const useResolvedItems = (
 
 const EMPTY_ITEMS: CommandItemData[] = [];
 
-export type ComposerCommandListProps = {
-  prefix: string;
-  className?: string;
-  children?: ReactNode;
+export type ComposerCommandListState = {
+  /** Present as data-loading while an async items callback is in flight. */
+  loading: boolean;
+  /** Present as data-empty when nothing matches the query. */
+  empty: boolean;
 };
 
-export const ComposerCommandList = ({ prefix, className, children }: ComposerCommandListProps) => {
+export type ComposerCommandListProps = PrimitiveProps<"div", ComposerCommandListState> & {
+  prefix: string;
+};
+
+export const ComposerCommandList = ({
+  prefix,
+  className,
+  render,
+  style,
+  children,
+  ...elementProps
+}: ComposerCommandListProps) => {
   const store = useComposerStore();
   const attachments = useComposer((composer) => composer.attachments);
   const internals = useComposerInternals();
@@ -187,7 +201,6 @@ export const ComposerCommandList = ({ prefix, className, children }: ComposerCom
               label: dataItem.label ?? dataItem.value,
               value: dataItem.value,
               icon: dataItem.icon ?? null,
-              variant: dataItem.variant ?? null,
             },
           });
         if (charAfter !== " ") chain.insertContent(" ");
@@ -265,20 +278,22 @@ export const ComposerCommandList = ({ prefix, className, children }: ComposerCom
     [items, state],
   );
 
+  const element = useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      enabled: isActive,
+      state: { loading: state === "loading", empty: state === "empty" },
+      ref: registerSelect,
+      props: [{ "data-slot": "composer-command-list", children }, elementProps],
+    },
+  );
+
   if (!isActive) return null;
 
   return (
     <CommandListItemsContext value={itemsContext}>
-      <CommandListNavContext value={navContext}>
-        <div
-          ref={registerSelect}
-          data-slot="composer-command-list"
-          data-state={state}
-          className={className}
-        >
-          {children}
-        </div>
-      </CommandListNavContext>
+      <CommandListNavContext value={navContext}>{element}</CommandListNavContext>
     </CommandListItemsContext>
   );
 };
@@ -302,72 +317,117 @@ const useCommandListNav = (componentName: string): CommandListNavContextValue =>
   return context;
 };
 
-export type ComposerCommandItemsProps<Item extends CommandItemData> = {
-  className?: string;
+export type ComposerCommandItemsProps<Item extends CommandItemData> = Omit<
+  PrimitiveProps<"div">,
+  "children"
+> & {
   children: (item: Item) => ReactNode;
 };
 
 export const ComposerCommandItems = <Item extends CommandItemData>({
   className,
+  render,
+  style,
   children: renderItem,
+  ...elementProps
 }: ComposerCommandItemsProps<Item>): ReactNode => {
   const { items } = useCommandListItems<Item>();
 
-  return (
-    <div data-slot="composer-command-items" className={className}>
-      {items.map((item, index) => (
-        <Fragment key={item.value ?? `__cmd_${index}`}>{renderItem(item)}</Fragment>
-      ))}
-    </div>
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      props: [
+        {
+          "data-slot": "composer-command-items",
+          children: items.map((item, index) => (
+            <Fragment key={item.value ?? `__cmd_${index}`}>{renderItem(item)}</Fragment>
+          )),
+        },
+        elementProps,
+      ],
+    },
   );
 };
 
-export type ComposerCommandLoadingProps = ComponentProps<"div">;
+export type ComposerCommandLoadingProps = PrimitiveProps<"div">;
 
-export const ComposerCommandLoading = ({ children, ...props }: ComposerCommandLoadingProps) => (
-  <div data-slot="composer-command-loading" {...props}>
-    {children ?? "Loading…"}
-  </div>
-);
+export const ComposerCommandLoading = ({
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerCommandLoadingProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      props: [
+        { "data-slot": "composer-command-loading", children: children ?? "Loading…" },
+        elementProps,
+      ],
+    },
+  );
 
-export type ComposerCommandEmptyProps = ComponentProps<"div">;
+export type ComposerCommandEmptyProps = PrimitiveProps<"div">;
 
-export const ComposerCommandEmpty = ({ children, ...props }: ComposerCommandEmptyProps) => (
-  <div data-slot="composer-command-empty" {...props}>
-    {children ?? "No results found"}
-  </div>
-);
+export const ComposerCommandEmpty = ({
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerCommandEmptyProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      props: [
+        { "data-slot": "composer-command-empty", children: children ?? "No results found" },
+        elementProps,
+      ],
+    },
+  );
 
 // Dismisses the active token (same as Escape): closes the popup, leaves the
 // typed text in place, and keeps it dismissed until the prefix is retyped.
 // preventDefault on mousedown so the click never steals focus from the editor.
-export type ComposerCommandDismissProps = ComponentProps<"button">;
+export type ComposerCommandDismissProps = PrimitiveProps<"button">;
 
-export const ComposerCommandDismiss = ({ children, ...props }: ComposerCommandDismissProps) => {
+export const ComposerCommandDismiss = ({
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerCommandDismissProps) => {
   const navContext = useCommandListNav("CommandDismiss");
 
-  return (
-    <button
-      type="button"
-      data-slot="composer-command-dismiss"
-      onMouseDown={(event) => {
-        event.preventDefault();
-        navContext.dismiss();
-      }}
-      {...props}
-    >
-      {children ?? "Dismiss"}
-    </button>
+  return useRenderElement(
+    "button",
+    { className, render, style },
+    {
+      props: [
+        {
+          "data-slot": "composer-command-dismiss",
+          onMouseDown: (event: React.MouseEvent) => {
+            event.preventDefault();
+            navContext.dismiss();
+          },
+          children: children ?? "Dismiss",
+        },
+        elementProps,
+      ],
+    },
   );
 };
 
-export type ComposerCommandItemProps = {
+export type ComposerCommandItemProps = Omit<ComponentProps<typeof Commands.Item>, "highlighted"> & {
   value: string;
-  className?: string;
-  children?: ReactNode;
 };
 
-export const ComposerCommandItem = ({ value, className, children }: ComposerCommandItemProps) => {
+export const ComposerCommandItem = ({ value, ...props }: ComposerCommandItemProps) => {
   const navContext = useCommandListNav("CommandItem");
 
   const isHighlighted = navContext.highlightedValue === value;
@@ -377,47 +437,77 @@ export const ComposerCommandItem = ({ value, className, children }: ComposerComm
       ref={isHighlighted ? navContext.scrollHighlightedIntoView : undefined}
       data-slot="composer-command-item"
       highlighted={isHighlighted}
-      className={className}
       onMouseDown={(event) => {
         event.preventDefault();
         navContext.selectByValue(value);
       }}
       onMouseEnter={() => navContext.setHighlightedValue(value)}
-    >
-      {children}
-    </Commands.Item>
+      {...props}
+    />
   );
 };
 
-export type ComposerCommandItemIconProps = ComponentProps<"span">;
+export type ComposerCommandItemIconProps = PrimitiveProps<"span">;
 
-export const ComposerCommandItemIcon = (props: ComposerCommandItemIconProps) => (
-  <span data-slot="composer-command-item-icon" {...props} />
-);
+export const ComposerCommandItemIcon = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerCommandItemIconProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "composer-command-item-icon" }, elementProps] },
+  );
 
-export type ComposerCommandItemLabelProps = ComponentProps<"span">;
+export type ComposerCommandItemLabelProps = PrimitiveProps<"span">;
 
-export const ComposerCommandItemLabel = (props: ComposerCommandItemLabelProps) => (
-  <span data-slot="composer-command-item-label" {...props} />
-);
+export const ComposerCommandItemLabel = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerCommandItemLabelProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "composer-command-item-label" }, elementProps] },
+  );
 
-export type ComposerCommandItemDescriptionProps = ComponentProps<"span">;
+export type ComposerCommandItemDescriptionProps = PrimitiveProps<"span">;
 
-export const ComposerCommandItemDescription = (props: ComposerCommandItemDescriptionProps) => (
-  <span data-slot="composer-command-item-description" {...props} />
-);
+export const ComposerCommandItemDescription = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerCommandItemDescriptionProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "composer-command-item-description" }, elementProps] },
+  );
 
-export type ComposerCommandGroupProps = ComponentProps<"div">;
+export type ComposerCommandGroupProps = ComponentProps<typeof Commands.Group>;
 
 export const ComposerCommandGroup = (props: ComposerCommandGroupProps) => (
   <Commands.Group {...props} />
 );
 
-export type ComposerCommandGroupLabelProps = ComponentProps<"div">;
+export type ComposerCommandGroupLabelProps = PrimitiveProps<"div">;
 
-export const ComposerCommandGroupLabel = (props: ComposerCommandGroupLabelProps) => (
-  <div data-slot="composer-command-group-label" {...props} />
-);
+export const ComposerCommandGroupLabel = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ComposerCommandGroupLabelProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "composer-command-group-label" }, elementProps] },
+  );
 
 export type ComposerCommandCollectionProps<Item> = {
   items: Item[];
@@ -436,46 +526,3 @@ export const ComposerCommandCollection = <Item,>({
     ))}
   </>
 );
-
-// Default render for all registered command lists: one CommandList per
-// registered prefix with an icon + label + description row. Unstyled — the
-// styled layer ships its own default with its classes and icon map.
-export type ComposerCommandsProps = {
-  className?: string;
-};
-
-export const ComposerCommands = ({ className }: ComposerCommandsProps) => {
-  const { commands, chipIconsRef } = useComposerInternals();
-  const prefixes = Object.keys(commands);
-
-  return (
-    <>
-      {prefixes.map((prefix) => (
-        <ComposerCommandList key={prefix} prefix={prefix} className={className}>
-          <ComposerCommandLoading />
-          <ComposerCommandEmpty>
-            <span>No results found</span>
-            <ComposerCommandDismiss />
-          </ComposerCommandEmpty>
-          <ComposerCommandItems>
-            {(item) => (
-              <ComposerCommandItem value={item.value}>
-                {item.icon && (
-                  <ComposerCommandItemIcon>
-                    {chipIconsRef.current[item.icon]}
-                  </ComposerCommandItemIcon>
-                )}
-                <ComposerCommandItemLabel>{item.label}</ComposerCommandItemLabel>
-                {item.description && (
-                  <ComposerCommandItemDescription>
-                    {item.description}
-                  </ComposerCommandItemDescription>
-                )}
-              </ComposerCommandItem>
-            )}
-          </ComposerCommandItems>
-        </ComposerCommandList>
-      ))}
-    </>
-  );
-};

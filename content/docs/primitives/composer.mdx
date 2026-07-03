@@ -23,7 +23,17 @@ The bare nesting — every part is optional except `Composer` and `Container`:
   <Composer onSubmit={handleSubmit}>
     <Composer.Panel>
       <Composer.PanelItem value="command-list">
-        <Composer.Commands />
+        <Composer.CommandList prefix="@">
+          <Composer.CommandLoading />
+          <Composer.CommandEmpty />
+          <Composer.CommandItems>
+            {(item) => (
+              <Composer.CommandItem value={item.value}>
+                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+              </Composer.CommandItem>
+            )}
+          </Composer.CommandItems>
+        </Composer.CommandList>
       </Composer.PanelItem>
     </Composer.Panel>
     <Composer.Container>

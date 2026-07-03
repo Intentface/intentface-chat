@@ -5,60 +5,112 @@
 // and keyboard behavior live in the composer's command plumbing; styling belongs
 // to the styled layer. Not a public export.
 
-import type { ComponentProps } from "react";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 
-type CommandsRootProps = ComponentProps<"div">;
+type CommandsRootProps = PrimitiveProps<"div">;
 
-const CommandsRoot = (props: CommandsRootProps) => <div data-slot="command-list" {...props} />;
+const CommandsRoot = ({ className, render, style, ...elementProps }: CommandsRootProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "command-list" }, elementProps] },
+  );
 
-type CommandsGroupProps = ComponentProps<"div">;
+type CommandsGroupProps = PrimitiveProps<"div">;
 
-const CommandsGroup = (props: CommandsGroupProps) => <div data-slot="command-group" {...props} />;
+const CommandsGroup = ({ className, render, style, ...elementProps }: CommandsGroupProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "command-group" }, elementProps] },
+  );
 
-type CommandsGroupLabelProps = ComponentProps<"div">;
+type CommandsGroupLabelProps = PrimitiveProps<"div">;
 
-const CommandsGroupLabel = (props: CommandsGroupLabelProps) => (
-  <div data-slot="command-group-label" {...props} />
-);
+const CommandsGroupLabel = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: CommandsGroupLabelProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "command-group-label" }, elementProps] },
+  );
 
-export type CommandsItemProps = ComponentProps<"button"> & {
+export type CommandsItemState = {
+  /** Present as data-highlighted while keyboard/hover highlighted. */
+  highlighted: boolean;
+};
+
+export type CommandsItemProps = PrimitiveProps<"button", CommandsItemState> & {
   highlighted?: boolean;
 };
 
-const CommandsItem = ({ highlighted, ...props }: CommandsItemProps) => (
-  <button
-    type="button"
-    data-slot="command-item"
-    data-highlighted={highlighted || undefined}
-    {...props}
-  />
-);
+const CommandsItem = ({
+  highlighted = false,
+  className,
+  render,
+  style,
+  ...elementProps
+}: CommandsItemProps) =>
+  useRenderElement(
+    "button",
+    { className, render, style },
+    {
+      state: { highlighted },
+      props: [{ "data-slot": "command-item" }, elementProps],
+    },
+  );
 
-type CommandsItemLabelProps = ComponentProps<"span">;
+type CommandsItemLabelProps = PrimitiveProps<"span">;
 
-const CommandsItemLabel = (props: CommandsItemLabelProps) => (
-  <span data-slot="command-item-label" {...props} />
-);
+const CommandsItemLabel = ({ className, render, style, ...elementProps }: CommandsItemLabelProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "command-item-label" }, elementProps] },
+  );
 
-type CommandsItemDescriptionProps = ComponentProps<"span">;
+type CommandsItemDescriptionProps = PrimitiveProps<"span">;
 
-const CommandsItemDescription = (props: CommandsItemDescriptionProps) => (
-  <span data-slot="command-item-description" {...props} />
-);
+const CommandsItemDescription = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: CommandsItemDescriptionProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "command-item-description" }, elementProps] },
+  );
 
-type CommandsEmptyProps = ComponentProps<"div">;
+type CommandsEmptyProps = PrimitiveProps<"div">;
 
-const CommandsEmpty = ({ children, ...props }: CommandsEmptyProps) => (
-  <div data-slot="command-empty" {...props}>
-    {children ?? "No results"}
-  </div>
-);
+const CommandsEmpty = ({
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: CommandsEmptyProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "command-empty", children: children ?? "No results" }, elementProps] },
+  );
 
-type CommandsFooterProps = ComponentProps<"div">;
+type CommandsFooterProps = PrimitiveProps<"div">;
 
-const CommandsFooter = (props: CommandsFooterProps) => (
-  <div data-slot="command-footer" {...props} />
-);
+const CommandsFooter = ({ className, render, style, ...elementProps }: CommandsFooterProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "command-footer" }, elementProps] },
+  );
 
 export const Commands = Object.assign(CommandsRoot, {
   Group: CommandsGroup,

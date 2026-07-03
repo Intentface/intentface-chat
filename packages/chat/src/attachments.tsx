@@ -5,8 +5,11 @@
 // icons, thumbnails, and enter/exit animation belong to the styled layer.
 
 import { nanoid } from "nanoid";
-import { type ComponentProps, type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import type { PrimitiveProps } from "./internal/primitive-props";
+import type { StateAttributesMapping } from "./internal/render/getStateAttributesProps";
+import { useRenderElement } from "./internal/render/useRenderElement";
 import type { FilePart } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -122,43 +125,84 @@ export const formatFileSize = (bytes: number): string => {
 // Structural parts
 // ---------------------------------------------------------------------------
 
-export type AttachmentsRootProps = ComponentProps<"div">;
+export type AttachmentsRootProps = PrimitiveProps<"div">;
 
-const AttachmentsRoot = (props: AttachmentsRootProps) => <div data-slot="attachments" {...props} />;
+const AttachmentsRoot = ({ className, render, style, ...elementProps }: AttachmentsRootProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "attachments" }, elementProps] },
+  );
 
-export type AttachmentsItemProps = ComponentProps<"div"> & {
+export type AttachmentsItemState = {
+  /** The item's media category, surfaced as data-media-type. */
+  mediaType: "image" | "pdf" | "file";
+};
+
+const attachmentsItemStateMapping: StateAttributesMapping<AttachmentsItemState> = {
+  mediaType: (value): Record<string, string> => ({ "data-media-type": value }),
+};
+
+export type AttachmentsItemProps = PrimitiveProps<"div", AttachmentsItemState> & {
   item: AttachmentItem;
 };
 
-const AttachmentsItem = ({ item, ...props }: AttachmentsItemProps) => (
-  <div
-    data-slot="attachments-item"
-    data-media-type={
-      isImageAttachment(item.mediaType ?? "")
-        ? "image"
-        : isPdfAttachment(item.mediaType ?? "")
-          ? "pdf"
-          : "file"
-    }
-    {...props}
-  />
-);
+const AttachmentsItem = ({
+  item,
+  className,
+  render,
+  style,
+  ...elementProps
+}: AttachmentsItemProps) => {
+  const mediaType = isImageAttachment(item.mediaType ?? "")
+    ? "image"
+    : isPdfAttachment(item.mediaType ?? "")
+      ? "pdf"
+      : "file";
 
-export type AttachmentsRemoveProps = ComponentProps<"button"> & {
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      state: { mediaType },
+      stateAttributesMapping: attachmentsItemStateMapping,
+      props: [{ "data-slot": "attachments-item" }, elementProps],
+    },
+  );
+};
+
+export type AttachmentsRemoveProps = PrimitiveProps<"button"> & {
   onRemove: () => void;
 };
 
-const AttachmentsRemove = ({ onRemove, ...props }: AttachmentsRemoveProps) => (
-  <button
-    type="button"
-    aria-label="Remove attachment"
-    data-slot="attachments-remove"
-    onClick={onRemove}
-    {...props}
-  />
-);
+const AttachmentsRemove = ({
+  onRemove,
+  className,
+  render,
+  style,
+  ...elementProps
+}: AttachmentsRemoveProps) =>
+  useRenderElement(
+    "button",
+    { className, render, style },
+    {
+      props: [
+        {
+          "aria-label": "Remove attachment",
+          "data-slot": "attachments-remove",
+          onClick: onRemove,
+        },
+        elementProps,
+      ],
+    },
+  );
 
-export type AttachmentsDropzoneProps = ComponentProps<"div"> & {
+export type AttachmentsDropzoneState = {
+  /** Present as data-visible while files are dragged over the scope. */
+  visible: boolean;
+};
+
+export type AttachmentsDropzoneProps = PrimitiveProps<"div", AttachmentsDropzoneState> & {
   visible?: boolean;
   /** Keep the dropzone mounted (hidden) when not visible. */
   keepMounted?: boolean;
@@ -172,7 +216,10 @@ const AttachmentsDropzone = ({
   keepMounted = false,
   portalSelector,
   children,
-  ...props
+  className,
+  render,
+  style,
+  ...elementProps
 }: AttachmentsDropzoneProps) => {
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
 
@@ -181,29 +228,46 @@ const AttachmentsDropzone = ({
     setPortalTarget(document.querySelector(portalSelector));
   }, [portalSelector]);
 
-  if (!visible && !keepMounted) return null;
-
-  const content = (
-    <div data-slot="attachments-dropzone" data-visible={visible || undefined} {...props}>
-      {children ?? <span>Drop files here</span>}
-    </div>
+  const content = useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      enabled: visible || keepMounted,
+      state: { visible },
+      props: [
+        { "data-slot": "attachments-dropzone", children: children ?? <span>Drop files here</span> },
+        elementProps,
+      ],
+    },
   );
 
+  if (!content) return null;
   if (portalTarget) return createPortal(content, portalTarget);
   return content;
 };
 
-export type AttachmentsErrorProps = ComponentProps<"span">;
+export type AttachmentsErrorProps = PrimitiveProps<"span">;
 
-const AttachmentsError = (props: AttachmentsErrorProps) => (
-  <span data-slot="attachments-error" {...props} />
-);
+const AttachmentsError = ({ className, render, style, ...elementProps }: AttachmentsErrorProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "attachments-error" }, elementProps] },
+  );
 
-export type AttachmentsTriggerProps = ComponentProps<"button">;
+export type AttachmentsTriggerProps = PrimitiveProps<"button">;
 
-const AttachmentsTrigger = (props: AttachmentsTriggerProps) => (
-  <button type="button" data-slot="attachments-trigger" {...props} />
-);
+const AttachmentsTrigger = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AttachmentsTriggerProps) =>
+  useRenderElement(
+    "button",
+    { className, render, style },
+    { props: [{ "data-slot": "attachments-trigger" }, elementProps] },
+  );
 
 export const Attachments = Object.assign(AttachmentsRoot, {
   Dropzone: AttachmentsDropzone,

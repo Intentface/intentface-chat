@@ -4,105 +4,178 @@
 // chip-segment text parsing (with render inversion for markdown/styled chips),
 // timestamp formatting, and the text-selection subsystem. Entrance animation,
 // popovers, tooltips, icons, and thumbnails belong to the styled layer.
+//
+// Every part supports the Base UI render prop: pass a ReactElement to swap the
+// underlying element (props are merged onto it), or a function `(props, state)`
+// for full control. The root's data attributes (data-role, data-error,
+// data-last) are generated from its state object, so the render callback and
+// CSS consumers see the same state.
 
-import {
-  type ComponentProps,
-  Fragment,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { type ChipSegment, parseChipSegments } from "./chip-markdown";
+import type { PrimitiveProps } from "./internal/primitive-props";
+import { useRenderElement } from "./internal/render/useRenderElement";
 import type { MessageRole } from "./types";
 
 // ---------------------------------------------------------------------------
 // Root — data-attribute contract: data-slot="message", data-role, data-error,
-// data-last. The selection toolbar and thread spacing query these.
+// data-last, generated from MessageState. The selection toolbar and thread
+// spacing query these.
 // ---------------------------------------------------------------------------
 
-export type MessageRootProps = ComponentProps<"div"> & {
+export type MessageState = {
+  role: MessageRole;
+  /** Present as data-error when true. */
+  error: boolean;
+  /** Present as data-last when true. */
+  last: boolean;
+};
+
+export type MessageRootProps = Omit<PrimitiveProps<"div", MessageState>, "role"> & {
   role: MessageRole;
   isLast?: boolean;
   isError?: boolean;
 };
 
-const MessageRoot = ({ role, isLast, isError, ...props }: MessageRootProps) => (
-  <div
-    data-slot="message"
-    data-role={role}
-    data-error={isError ? "" : undefined}
-    data-last={isLast ? "" : undefined}
-    {...props}
-  />
-);
+const MessageRoot = ({
+  role,
+  isLast = false,
+  isError = false,
+  className,
+  render,
+  style,
+  ...elementProps
+}: MessageRootProps) => {
+  const state = useMemo<MessageState>(
+    () => ({ role, error: isError, last: isLast }),
+    [role, isError, isLast],
+  );
+
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    { state, props: [{ "data-slot": "message" }, elementProps] },
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Structural parts
 // ---------------------------------------------------------------------------
 
-export type MessageTurnProps = ComponentProps<"div">;
+export type MessageTurnProps = PrimitiveProps<"div">;
 
-const MessageTurn = (props: MessageTurnProps) => <div data-slot="message-turn" {...props} />;
+const MessageTurn = ({ className, render, style, ...elementProps }: MessageTurnProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-turn" }, elementProps] },
+  );
 
-export type MessageContentProps = ComponentProps<"div">;
+export type MessageContentProps = PrimitiveProps<"div">;
 
-const MessageContent = (props: MessageContentProps) => (
-  <div data-slot="message-content" {...props} />
-);
+const MessageContent = ({ className, render, style, ...elementProps }: MessageContentProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-content" }, elementProps] },
+  );
 
-export type MessageActionsProps = ComponentProps<"div">;
+export type MessageActionsProps = PrimitiveProps<"div">;
 
-const MessageActions = (props: MessageActionsProps) => (
-  <div data-slot="message-actions" {...props} />
-);
+const MessageActions = ({ className, render, style, ...elementProps }: MessageActionsProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-actions" }, elementProps] },
+  );
 
-export type MessageAttachmentsProps = ComponentProps<"div">;
+export type MessageAttachmentsProps = PrimitiveProps<"div">;
 
-const MessageAttachments = (props: MessageAttachmentsProps) => (
-  <div data-slot="message-attachments" {...props} />
-);
+const MessageAttachments = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: MessageAttachmentsProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-attachments" }, elementProps] },
+  );
 
-export type MessageErrorProps = ComponentProps<"div">;
+export type MessageErrorProps = PrimitiveProps<"div">;
 
-const MessageError = (props: MessageErrorProps) => <div data-slot="message-error" {...props} />;
+const MessageError = ({ className, render, style, ...elementProps }: MessageErrorProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-error" }, elementProps] },
+  );
 
-export type MessageStoppedProps = ComponentProps<"div">;
+export type MessageStoppedProps = PrimitiveProps<"div">;
 
-const MessageStopped = (props: MessageStoppedProps) => (
-  <div data-slot="message-stopped" {...props} />
-);
+const MessageStopped = ({ className, render, style, ...elementProps }: MessageStoppedProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-stopped" }, elementProps] },
+  );
 
-export type MessageLoadingProps = ComponentProps<"div">;
+export type MessageLoadingProps = PrimitiveProps<"div">;
 
-const MessageLoading = (props: MessageLoadingProps) => (
-  <div data-slot="message-loading" {...props} />
-);
+const MessageLoading = ({ className, render, style, ...elementProps }: MessageLoadingProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-loading" }, elementProps] },
+  );
 
-export type MessageSourcesProps = ComponentProps<"div">;
+export type MessageSourcesProps = PrimitiveProps<"div">;
 
-const MessageSources = (props: MessageSourcesProps) => (
-  <div data-slot="message-sources" {...props} />
-);
+const MessageSources = ({ className, render, style, ...elementProps }: MessageSourcesProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "message-sources" }, elementProps] },
+  );
 
-export type MessageSourceProps = ComponentProps<"a"> & {
+export type MessageSourceProps = PrimitiveProps<"a"> & {
   url: string;
 };
 
-const MessageSource = ({ url, ...props }: MessageSourceProps) => (
-  // biome-ignore lint/a11y/useAnchorContent: content comes from the styled layer
-  <a data-slot="message-source" href={url} target="_blank" rel="noopener noreferrer" {...props} />
-);
+const MessageSource = ({ url, className, render, style, ...elementProps }: MessageSourceProps) =>
+  useRenderElement(
+    "a",
+    { className, render, style },
+    {
+      props: [
+        {
+          "data-slot": "message-source",
+          href: url,
+          target: "_blank",
+          rel: "noopener noreferrer",
+        },
+        elementProps,
+      ],
+    },
+  );
 
 // ---------------------------------------------------------------------------
 // Timestamp
 // ---------------------------------------------------------------------------
 
-export type MessageTimestampProps = ComponentProps<"span"> & {
+export type MessageTimestampProps = PrimitiveProps<"span"> & {
   timestamp: Date | string | number;
 };
 
-const MessageTimestamp = ({ timestamp, children, ...props }: MessageTimestampProps) => {
+const MessageTimestamp = ({
+  timestamp,
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: MessageTimestampProps) => {
   const date = new Date(timestamp);
   const formattedTime = date.toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -110,10 +183,15 @@ const MessageTimestamp = ({ timestamp, children, ...props }: MessageTimestampPro
     hour12: true,
   });
 
-  return (
-    <span data-slot="message-timestamp" {...props}>
-      {children ?? formattedTime}
-    </span>
+  return useRenderElement(
+    "span",
+    { className, render, style },
+    {
+      props: [
+        { "data-slot": "message-timestamp", children: children ?? formattedTime },
+        elementProps,
+      ],
+    },
   );
 };
 
@@ -124,34 +202,41 @@ const MessageTimestamp = ({ timestamp, children, ...props }: MessageTimestampPro
 
 export type MessageChipSegment = Extract<ChipSegment, { type: "chip" }>;
 
-export type MessageTextProps = {
+export type MessageTextProps = Omit<PrimitiveProps<"span">, "children"> & {
   children: string;
-  className?: string;
   renderText?: (text: string, index: number) => ReactNode;
   renderChip?: (chip: MessageChipSegment, index: number) => ReactNode;
 };
 
-const MessageText = ({ children, className, renderText, renderChip }: MessageTextProps) => {
+const MessageText = ({
+  children,
+  className,
+  render,
+  style,
+  renderText,
+  renderChip,
+  ...elementProps
+}: MessageTextProps) => {
   const segments = parseChipSegments(children);
 
-  return (
-    <span data-slot="message-text" className={className}>
-      {segments.map((segment, index) =>
-        segment.type === "text" ? (
-          <Fragment key={index}>
-            {renderText ? renderText(segment.text, index) : segment.text}
-          </Fragment>
+  const segmentNodes = segments.map((segment, index) =>
+    segment.type === "text" ? (
+      <Fragment key={index}>{renderText ? renderText(segment.text, index) : segment.text}</Fragment>
+    ) : (
+      <Fragment key={index}>
+        {renderChip ? (
+          renderChip(segment, index)
         ) : (
-          <Fragment key={index}>
-            {renderChip ? (
-              renderChip(segment, index)
-            ) : (
-              <span data-slot="message-chip">{segment.label}</span>
-            )}
-          </Fragment>
-        ),
-      )}
-    </span>
+          <span data-slot="message-chip">{segment.label}</span>
+        )}
+      </Fragment>
+    ),
+  );
+
+  return useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "message-text", children: segmentNodes }, elementProps] },
   );
 };
 

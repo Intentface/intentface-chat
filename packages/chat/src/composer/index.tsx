@@ -24,7 +24,6 @@ import {
   ComposerCommandItems,
   ComposerCommandList,
   ComposerCommandLoading,
-  ComposerCommands,
 } from "./command-list";
 import { ComposerContainer } from "./container";
 import { ComposerPanel, ComposerPanelItem } from "./panel";
@@ -48,7 +47,6 @@ export const Composer = Object.assign(ComposerRoot, {
   AskUserHints: ComposerAskUserHints,
   AskUserDismiss: ComposerAskUserDismiss,
   AskUserContinue: ComposerAskUserContinue,
-  Commands: ComposerCommands,
   CommandList: ComposerCommandList,
   CommandItems: ComposerCommandItems,
   CommandLoading: ComposerCommandLoading,
@@ -73,7 +71,6 @@ export { composerController, useComposerController } from "./controller";
 export type { ComposerEditorState } from "./document";
 export { applySnapshotToEditor, serializeEditorContent, snapshotFromEditor } from "./document";
 export { filterArrayItems, fuzzyScore } from "./fuzzy";
-export { useComposerCommandsMap } from "./internals";
 export type { EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";

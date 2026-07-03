@@ -7,49 +7,45 @@ import {
   useMessageSelection,
   useMessageSelectionScope,
 } from "@intentface/chat/message";
-import type { FilePart, MessageRole } from "@intentface/chat/types";
+import type { FilePart } from "@intentface/chat/types";
 import { FileIcon, MessageCircleIcon, PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import { type ComponentProps, useMemo } from "react";
-import { Chip, type ChipVariant } from "@/components/ai/chip";
+import { Chip } from "@/components/ai/chip";
 import Button from "@/components/ui/button";
 import HoverCard from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
-import { CHIP_ICONS, type ChipIconKey } from "@/lib/ai/chip-icons";
+import { CHIP_ICONS, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
 import { StopIcon } from "../icons/stop";
 
-type MessageRootProps = {
-  role: MessageRole;
-  isLast: boolean;
-  isError: boolean;
-} & ComponentProps<typeof motion.div>;
-// Message wrapper with entrance animation
-const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRootProps) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      data-slot="message"
-      data-role={role}
-      data-error={isError ? "" : undefined}
-      data-last={isLast ? "" : undefined}
-      className={cn(
-        "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
-        className,
-      )}
-      {...props}
-    />
-  );
-};
+type MessageRootProps = ComponentProps<typeof MessagePrimitive>;
+
+// Message wrapper with entrance animation: the primitive owns the state/data
+// attributes and merges them onto the motion element via the render prop.
+const MessageRoot = ({ className, ...props }: MessageRootProps) => (
+  <MessagePrimitive
+    render={
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      />
+    }
+    className={cn(
+      "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
+      className,
+    )}
+    {...props}
+  />
+);
 
 // Turn wrapper — groups a user message with its trailing assistant reply. The
 // auto-scroll reserve lives on Thread's content (its last child), not here.
@@ -85,8 +81,8 @@ const MessageContent = ({
       "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border-primary-border group-data-[role=user]:bg-primary group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
       // Assistant message styling
       "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-none",
-      // Error styling
-      "group-data-[error=true]:border-destructive group-data-[error=true]:bg-destructive/10",
+      // Error styling — presence attribute (data-error=""), not a value match.
+      "group-data-error:border-destructive group-data-error:bg-destructive/10",
       className,
     )}
     {...props}
@@ -156,12 +152,12 @@ type MessageChipProps = {
   className?: string;
 };
 
-// The wire format carries variant/icon as opaque strings; narrow them to this
-// app's concrete unions here — unknown values fall back to the default look.
+// The wire format carries the icon as an opaque string; narrow it to this
+// app's concrete keys here — unknown values fall back to no icon.
 const MessageChip = ({ label, chip, className }: MessageChipProps) => {
-  const icon = chip?.icon ? CHIP_ICONS[chip.icon as ChipIconKey] : undefined;
+  const icon = chip?.icon && isChipIconKey(chip.icon) ? CHIP_ICONS[chip.icon] : undefined;
   return (
-    <Chip variant={chip?.variant as ChipVariant | undefined} className={className}>
+    <Chip className={className}>
       {icon && <Chip.Icon>{icon}</Chip.Icon>}
       <Chip.Label>{label}</Chip.Label>
     </Chip>

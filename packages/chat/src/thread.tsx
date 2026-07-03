@@ -11,7 +11,6 @@
 // can land at the top.
 
 import {
-  type ComponentProps,
   createContext,
   memo,
   type ReactNode,
@@ -23,6 +22,9 @@ import {
   useRef,
   useState,
 } from "react";
+import type { PrimitiveProps } from "./internal/primitive-props";
+import type { StateAttributesMapping } from "./internal/render/getStateAttributesProps";
+import { useRenderElement } from "./internal/render/useRenderElement";
 
 // ---------------------------------------------------------------------------
 // Thread context — a small, generic primitive surface. Auto-scroll behavior is
@@ -224,29 +226,39 @@ const useThreadInsets = () => {
 // Root
 // ---------------------------------------------------------------------------
 
-export type ThreadRootProps = ComponentProps<"div"> & {
+export type ThreadRootProps = PrimitiveProps<"div"> & {
   children?: ReactNode;
   autoScroll?: ThreadAutoScrollMode;
 };
 
-const ThreadRoot = ({ children, autoScroll = "follow", style, ...props }: ThreadRootProps) => {
+const ThreadRoot = ({
+  autoScroll = "follow",
+  className,
+  render,
+  style,
+  ...elementProps
+}: ThreadRootProps) => {
   const rootRef = useThreadInsets();
   const scroll = useThreadScroll(autoScroll);
 
-  return (
-    <ThreadContext value={scroll}>
-      <div
-        ref={rootRef}
-        data-slot="thread-root"
-        role="log"
-        // Anchors the overlays/composer and bounds the inset measurement.
-        style={{ position: "relative", overflow: "hidden", ...style }}
-        {...props}
-      >
-        {children}
-      </div>
-    </ThreadContext>
+  const element = useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      ref: rootRef,
+      props: [
+        {
+          "data-slot": "thread-root",
+          role: "log",
+          // Anchors the overlays/composer and bounds the inset measurement.
+          style: { position: "relative", overflow: "hidden" },
+        },
+        elementProps,
+      ],
+    },
   );
+
+  return <ThreadContext value={scroll}>{element}</ThreadContext>;
 };
 
 // ---------------------------------------------------------------------------
@@ -255,19 +267,38 @@ const ThreadRoot = ({ children, autoScroll = "follow", style, ...props }: Thread
 // measurement target.
 // ---------------------------------------------------------------------------
 
-export type ThreadOverlayProps = ComponentProps<"div"> & {
+export type ThreadOverlayState = {
+  /** Which edge this overlay marks, surfaced as data-thread-overlay. */
   direction: "top" | "bottom";
 };
 
-const ThreadOverlay = memo(({ direction, style, ...props }: ThreadOverlayProps) => (
-  <div
-    data-slot={`thread-overlay-${direction}`}
-    data-thread-overlay={direction}
-    // A sibling of the scroll container: never swallow wheel/drag/click.
-    style={{ position: "absolute", pointerEvents: "none", ...style }}
-    {...props}
-  />
-));
+const threadOverlayStateMapping: StateAttributesMapping<ThreadOverlayState> = {
+  direction: (value): Record<string, string> => ({ "data-thread-overlay": value }),
+};
+
+export type ThreadOverlayProps = PrimitiveProps<"div", ThreadOverlayState> & {
+  direction: "top" | "bottom";
+};
+
+const ThreadOverlay = memo(
+  ({ direction, className, render, style, ...elementProps }: ThreadOverlayProps) =>
+    useRenderElement(
+      "div",
+      { className, render, style },
+      {
+        state: { direction },
+        stateAttributesMapping: threadOverlayStateMapping,
+        props: [
+          {
+            "data-slot": `thread-overlay-${direction}`,
+            // A sibling of the scroll container: never swallow wheel/drag/click.
+            style: { position: "absolute", pointerEvents: "none" },
+          },
+          elementProps,
+        ],
+      },
+    ),
+);
 
 ThreadOverlay.displayName = "ThreadOverlay";
 
@@ -275,20 +306,24 @@ ThreadOverlay.displayName = "ThreadOverlay";
 // Viewport — the scroll container.
 // ---------------------------------------------------------------------------
 
-export type ThreadViewportProps = ComponentProps<"div">;
+export type ThreadViewportProps = PrimitiveProps<"div">;
 
-const ThreadViewport = ({ children, style, ...props }: ThreadViewportProps) => {
+const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadViewportProps) => {
   const { scrollRef } = useThread();
 
-  return (
-    <div
-      ref={scrollRef}
-      data-slot="thread-scroller"
-      style={{ overflowY: "auto", overflowX: "hidden", ...style }}
-      {...props}
-    >
-      {children}
-    </div>
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      ref: scrollRef,
+      props: [
+        {
+          "data-slot": "thread-scroller",
+          style: { overflowY: "auto", overflowX: "hidden" },
+        },
+        elementProps,
+      ],
+    },
   );
 };
 
@@ -297,16 +332,20 @@ const ThreadViewport = ({ children, style, ...props }: ThreadViewportProps) => {
 // as its sibling (outside the last-child reserve).
 // ---------------------------------------------------------------------------
 
-export type ThreadContentProps = ComponentProps<"div">;
+export type ThreadContentProps = PrimitiveProps<"div">;
 
-const ThreadContent = ({ children, ...props }: ThreadContentProps) => {
+const ThreadContent = ({ className, render, style, ...elementProps }: ThreadContentProps) => {
   const { contentRef, sentinelRef } = useThread();
+
+  const element = useRenderElement(
+    "div",
+    { className, render, style },
+    { ref: contentRef, props: [{ "data-slot": "thread-content" }, elementProps] },
+  );
 
   return (
     <>
-      <div ref={contentRef} data-slot="thread-content" {...props}>
-        {children}
-      </div>
+      {element}
       <div
         ref={sentinelRef}
         data-slot="thread-bottom"
@@ -321,17 +360,23 @@ const ThreadContent = ({ children, ...props }: ThreadContentProps) => {
 // Composer slot + Placeholder — structural markers.
 // ---------------------------------------------------------------------------
 
-export type ThreadComposerProps = ComponentProps<"div">;
+export type ThreadComposerProps = PrimitiveProps<"div">;
 
-const ThreadComposer = (props: ThreadComposerProps) => (
-  <div data-slot="thread-composer" {...props} />
-);
+const ThreadComposer = ({ className, render, style, ...elementProps }: ThreadComposerProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "thread-composer" }, elementProps] },
+  );
 
-export type ThreadPlaceholderProps = ComponentProps<"div">;
+export type ThreadPlaceholderProps = PrimitiveProps<"div">;
 
-const ThreadPlaceholder = (props: ThreadPlaceholderProps) => (
-  <div data-slot="thread-placeholder" {...props} />
-);
+const ThreadPlaceholder = ({ className, render, style, ...elementProps }: ThreadPlaceholderProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "thread-placeholder" }, elementProps] },
+  );
 
 // ---------------------------------------------------------------------------
 // Compound export

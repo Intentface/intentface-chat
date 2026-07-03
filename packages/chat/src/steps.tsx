@@ -7,6 +7,8 @@
 
 import { type ComponentProps, createContext, use, useCallback, useMemo, useState } from "react";
 import { Collapsible } from "./internal/collapsible";
+import type { PrimitiveProps } from "./internal/primitive-props";
+import { useRenderElement } from "./internal/render/useRenderElement";
 import type { ToolLabels } from "./message-utils";
 import type { AskUserInput, AskUserQuestion, ToolPart } from "./types";
 
@@ -34,7 +36,10 @@ export const useSteps = () => {
 // Root
 // ---------------------------------------------------------------------------
 
-export type StepsRootProps = Omit<ComponentProps<"div">, "defaultOpen"> & {
+export type StepsRootProps = Omit<
+  ComponentProps<typeof Collapsible>,
+  "open" | "defaultOpen" | "onOpenChange"
+> & {
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -144,25 +149,41 @@ StepsStepPanel.displayName = "StepsStepPanel";
 // Summary / SearchResults / SearchResult — structural leaves
 // ---------------------------------------------------------------------------
 
-export type StepsSummaryProps = ComponentProps<"span">;
+export type StepsSummaryProps = PrimitiveProps<"span">;
 
-const StepsSummary = (props: StepsSummaryProps) => <span data-slot="steps-summary" {...props} />;
+const StepsSummary = ({ className, render, style, ...elementProps }: StepsSummaryProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "steps-summary" }, elementProps] },
+  );
 
 StepsSummary.displayName = "StepsSummary";
 
-export type StepsSearchResultsProps = ComponentProps<"div">;
+export type StepsSearchResultsProps = PrimitiveProps<"div">;
 
-const StepsSearchResults = (props: StepsSearchResultsProps) => (
-  <div data-slot="steps-search-results" {...props} />
-);
+const StepsSearchResults = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: StepsSearchResultsProps) =>
+  useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-slot": "steps-search-results" }, elementProps] },
+  );
 
 StepsSearchResults.displayName = "StepsSearchResults";
 
-export type StepsSearchResultProps = ComponentProps<"span">;
+export type StepsSearchResultProps = PrimitiveProps<"span">;
 
-const StepsSearchResult = (props: StepsSearchResultProps) => (
-  <span data-slot="steps-search-result" {...props} />
-);
+const StepsSearchResult = ({ className, render, style, ...elementProps }: StepsSearchResultProps) =>
+  useRenderElement(
+    "span",
+    { className, render, style },
+    { props: [{ "data-slot": "steps-search-result" }, elementProps] },
+  );
 
 StepsSearchResult.displayName = "StepsSearchResult";
 

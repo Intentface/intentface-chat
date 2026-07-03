@@ -1,13 +1,13 @@
 // Wire format for inline chip references inside a message text part.
-// Shape: [Label](chip:prefix:value?variant=…&icon=…). The variant/icon ride
-// along in the token, so a rendered message reconstructs the chip from its own
-// text alone — no sidecar metadata array.
+// Shape: [Label](chip:prefix:value?icon=…). The icon rides along in the
+// token, so a rendered message reconstructs the chip from its own text
+// alone — no sidecar metadata array. Presentation that's derivable at render
+// time (e.g. a per-prefix variant) is the renderer's job, not wire data.
 
 /**
- * Opaque wire strings. The styled layer owns the concrete unions (e.g.
- * "primary" | "accent" | "warning") and narrows at its own boundary.
+ * Opaque wire string. The styled layer owns the concrete union and narrows
+ * at its own boundary.
  */
-export type ChipVariant = string;
 export type ChipIconKey = string;
 
 export const CHIP_REF_PATTERN = /\[([^\]]+)\]\(chip:([^:)]+):([^)?]+)(?:\?([^)]*))?\)/g;
@@ -17,7 +17,6 @@ export type ChipData = {
   value: string;
   label: string;
   icon?: ChipIconKey;
-  variant?: ChipVariant;
 };
 
 export type ChipSegment =
@@ -27,7 +26,6 @@ export type ChipSegment =
       label: string;
       prefix: string;
       value: string;
-      variant?: ChipVariant;
       icon?: ChipIconKey;
     };
 
@@ -46,7 +44,6 @@ const safeDecode = (value: string): string => {
 
 export const encodeChipMarkdown = (chip: ChipData): string => {
   const params = new URLSearchParams();
-  if (chip.variant) params.set("variant", chip.variant);
   if (chip.icon) params.set("icon", chip.icon);
   const query = params.toString();
   const value = encodeURIComponent(chip.value);
@@ -63,14 +60,12 @@ export const parseChipSegments = (text: string): ChipSegment[] => {
     }
     const [token, label = "", prefix = "", rawValue = "", rawQuery] = match;
     const params = new URLSearchParams(rawQuery ?? "");
-    const variant = params.get("variant");
     const icon = params.get("icon");
     segments.push({
       type: "chip",
       label,
       prefix,
       value: safeDecode(rawValue),
-      ...(variant ? { variant } : {}),
       ...(icon ? { icon } : {}),
     });
     lastIndex = start + token.length;
@@ -89,7 +84,6 @@ export type InlineNodeJSON =
         prefix: string;
         value: string;
         label: string;
-        variant?: ChipVariant;
         icon?: ChipIconKey;
       };
     };
@@ -125,7 +119,6 @@ export const chipSegmentsToParagraphJSON = (
         prefix: segment.prefix,
         value: segment.value,
         label: segment.label,
-        ...(segment.variant ? { variant: segment.variant } : {}),
         ...(segment.icon ? { icon: segment.icon } : {}),
       },
     });

@@ -58,10 +58,12 @@ export const autoScrollProps = [
 
 <PropsTable rows={autoScrollProps} />
 
-The follow is released by deliberate reading intent — a wheel, touch, or
-scroll-key gesture, or dragging the scrollbar away from the bottom — and
-re-arms when you return to the bottom. Content growth alone never releases it:
-a large code block landing at once won't drop the follow mid-stream.
+The follow is released by deliberate upward reading intent — an upward wheel,
+touch, or scroll-key gesture, or dragging the scrollbar away from the bottom —
+and re-arms when you return to the bottom. Content growth alone never releases
+it: a large code block landing at once won't drop the follow mid-stream. The
+release is immediate and decisive: once you scroll up, the follow cannot
+scroll again until you return to the bottom.
 
 ## useThread
 
@@ -86,6 +88,20 @@ per-row cost:
 ))}
 ```
 
+## useThreadVisibility
+
+Track which rows are in view — e.g. to highlight the active turn in an outline.
+Subscribing lazily creates the tracking observers; when the last subscriber
+unmounts they are torn down, so threads that never call it pay nothing. Rows
+are identified by the same `data-message-id` attribute `scrollToMessage` uses.
+
+export const visibilityMembers = [
+  { name: "visibleMessageIds", type: "string[]", description: "Rows intersecting the viewport, in document order." },
+  { name: "currentMessageId", type: "string | null", description: "The topmost visible row — the one being read." },
+];
+
+<PropsTable rows={visibilityMembers} />
+
 ## Accessibility
 
 The viewport is a focusable `role="region"` (default `aria-label="Messages"`,
@@ -96,6 +112,7 @@ page keys. The content column is a `role="log"` announcing additions.
 
 export const rootProps = [
   { name: "autoScroll", type: '"off" | "bottom" | "jump" | "follow"', default: '"follow"', description: "Landing + follow behavior (see above)." },
+  { name: "preserveScrollOnPrepend", type: "boolean", default: "false", description: "Hold the reading position when older rows load in above (history pagination). Opt-in — it attaches a passive scroll listener." },
 ];
 
 <PropsTable rows={rootProps} />

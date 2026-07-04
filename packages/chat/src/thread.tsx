@@ -16,13 +16,16 @@ import {
   memo,
   type ReactNode,
   type RefObject,
+  type TouchEvent,
   use,
   useCallback,
   useEffect,
+  useInsertionEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useSyncExternalStore,
+  type WheelEvent,
 } from "react";
 import type { PrimitiveProps } from "./internal/primitive-props";
 import type { StateAttributesMapping } from "./internal/render/getStateAttributesProps";
@@ -57,6 +60,69 @@ const createAtBottomStore = () => {
 
 type AtBottomStore = ReturnType<typeof createAtBottomStore>;
 
+// Latest-ref: read the current value from long-lived effects/callbacks without
+// re-subscribing them when it changes.
+const useAsRef = <T,>(value: T) => {
+  const ref = useRef(value);
+  useInsertionEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref;
+};
+
+// ---------------------------------------------------------------------------
+// Visibility store — which data-message-id rows intersect the viewport. Lazy
+// and ref-counted like the at-bottom store's bigger sibling: the observers
+// behind it exist only while at least one useThreadVisibility subscriber is
+// mounted, so unsubscribed threads pay nothing.
+// ---------------------------------------------------------------------------
+
+export type ThreadVisibilityState = {
+  /** data-message-id values intersecting the viewport, in document order. */
+  visibleMessageIds: string[];
+  /** The topmost visible row — the one being read. */
+  currentMessageId: string | null;
+};
+
+const EMPTY_VISIBILITY: ThreadVisibilityState = {
+  visibleMessageIds: [],
+  currentMessageId: null,
+};
+
+const visibilityStatesEqual = (a: ThreadVisibilityState, b: ThreadVisibilityState) =>
+  a.currentMessageId === b.currentMessageId &&
+  a.visibleMessageIds.length === b.visibleMessageIds.length &&
+  a.visibleMessageIds.every((id, index) => id === b.visibleMessageIds[index]);
+
+const createVisibilityStore = () => {
+  let snapshot = EMPTY_VISIBILITY;
+  const listeners = new Set<() => void>();
+  return {
+    getSnapshot: () => snapshot,
+    hasListeners: () => listeners.size > 0,
+    setSnapshot: (next: ThreadVisibilityState) => {
+      if (visibilityStatesEqual(snapshot, next)) return;
+      snapshot = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe: (
+      listener: () => void,
+      onFirstSubscribe: () => void,
+      onLastUnsubscribe: () => void,
+    ) => {
+      const wasEmpty = listeners.size === 0;
+      listeners.add(listener);
+      if (wasEmpty) onFirstSubscribe();
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0) onLastUnsubscribe();
+      };
+    },
+  };
+};
+
+type VisibilityStore = ReturnType<typeof createVisibilityStore>;
+
 // ---------------------------------------------------------------------------
 // Thread context — a small, generic primitive surface. Auto-scroll behavior is
 // driven by the <Thread autoScroll> prop; nothing here knows about chats or
@@ -71,6 +137,9 @@ export type ThreadScrollToMessageOptions = {
 
 type ThreadContextValue = {
   atBottomStore: AtBottomStore;
+  visibilityStore: VisibilityStore;
+  observeVisibility: () => void;
+  unobserveVisibility: () => void;
   scrollToBottom: (behavior?: ScrollBehavior) => void;
   scrollToTop: (behavior?: ScrollBehavior) => void;
   scrollToMessage: (messageId: string, options?: ThreadScrollToMessageOptions) => boolean;
@@ -119,6 +188,21 @@ export const useThread = () => {
   };
 };
 
+/**
+ * Which data-message-id rows are in view, plus the topmost one (the row being
+ * read). Subscribing lazily spins up the tracking observers; when the last
+ * subscriber unmounts they are torn down, so unused threads pay nothing.
+ */
+export const useThreadVisibility = (): ThreadVisibilityState => {
+  const { visibilityStore, observeVisibility, unobserveVisibility } = useThreadContext();
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      visibilityStore.subscribe(listener, observeVisibility, unobserveVisibility),
+    [visibilityStore, observeVisibility, unobserveVisibility],
+  );
+  return useSyncExternalStore(subscribe, visibilityStore.getSnapshot, visibilityStore.getSnapshot);
+};
+
 // Single place that performs the scroll, so callers just choose the behavior:
 // 'instant' for jumps that must not animate, 'smooth' for deliberate movements.
 const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavior) => {
@@ -139,35 +223,46 @@ const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavio
 // flash); it runs after useThreadInsets in ThreadRoot, so --thread-turn-area is
 // set before the reserve references it.
 //
-// The follow is released by deliberate reading intent — a wheel/touch/scroll-key
-// gesture on the viewport, or the sentinel leaving view outside a programmatic
-// scroll (a scrollbar drag) — and re-armed whenever the sentinel comes back into
-// view. Content growth alone can never release it: every scroll we start marks
-// autoScrollingRef, so the sentinel briefly leaving view mid-animation (a large
-// code block landing at once, a stream outrunning the smooth scroll) is not
-// mistaken for the user scrolling away.
+// The follow is released by deliberate upward reading intent — an upward
+// wheel/touch/scroll-key gesture on the viewport, or the sentinel leaving view
+// outside a programmatic scroll (a scrollbar drag) — and re-armed whenever the
+// sentinel comes back into view. Content growth alone can never release it:
+// every scroll we start marks autoScrollingRef, so the sentinel briefly leaving
+// view mid-animation (a large code block landing at once, a stream outrunning
+// the smooth scroll) is not mistaken for the user scrolling away. The release
+// is decisive: follow consults only the intent ref, never the (async, one
+// frame stale) at-bottom snapshot, so a released follow can never scroll.
 // ---------------------------------------------------------------------------
 
 export type ThreadAutoScrollMode = "off" | "bottom" | "jump" | "follow";
 
-// Keys that scroll the viewport and therefore count as deliberate reading
-// intent, releasing the follow.
-const USER_SCROLL_KEYS = new Set([
-  "ArrowDown",
-  "ArrowUp",
-  "End",
-  "Home",
-  "PageDown",
-  "PageUp",
-  " ",
-]);
+// Keys that scroll the viewport *upward* and therefore count as deliberate
+// reading intent, releasing the follow. Downward keys never release: at the
+// bottom they cause no scroll (and so no re-arming at-bottom transition), so
+// releasing on them would strand the view unfollowed while visually pinned.
+const USER_SCROLL_UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"]);
 
 // How long after a programmatic scroll the sentinel may leave view without
 // releasing the follow. Cleared earlier by scrollend where supported; the
 // timeout is the Safari fallback.
 const AUTO_SCROLL_SETTLE_MS = 200;
 
-const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
+// A prepend = rows were added, nothing removed, and the previously-first row
+// is still connected but no longer first (older history loading in above).
+const wasPrepended = (
+  mutations: MutationRecord[],
+  previousFirst: Element | null,
+  content: HTMLElement,
+) =>
+  previousFirst?.isConnected === true &&
+  content.firstElementChild !== previousFirst &&
+  mutations.some((m) => m.addedNodes.length > 0) &&
+  mutations.every((m) => m.removedNodes.length === 0);
+
+const useThreadScroll = (
+  mode: ThreadAutoScrollMode,
+  preserveScrollOnPrepend: boolean,
+): ThreadContextValue => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -179,6 +274,9 @@ const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
 
   // Follow intent: true while the view should track streaming growth.
   const followingRef = useRef(true);
+
+  // Read by the landing observer without re-running it (a re-run re-lands).
+  const preserveOnPrependRef = useAsRef(preserveScrollOnPrepend);
 
   // True while a scroll we started may still be in flight.
   const autoScrollingRef = useRef(false);
@@ -301,9 +399,17 @@ const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
 
     // First land (and chat switches) jump instantly; later turns animate. A
     // land is a deliberate move to the live end, so it re-arms the follow.
+    // Prepends are not new turns: when preservation is on, skip the land and
+    // let the preserve effect hold the reading position instead.
     let landed = false;
     let skipNextResize = true;
+    let firstTurn: Element | null = null;
     const land = (mutations: MutationRecord[] = []) => {
+      const previousFirst = firstTurn;
+      firstTurn = content.firstElementChild;
+      if (preserveOnPrependRef.current && wasPrepended(mutations, previousFirst, content)) {
+        return;
+      }
       const replaced = mutations.some((m) => m.removedNodes.length > 0);
       skipNextResize = true;
       followingRef.current = true;
@@ -312,15 +418,17 @@ const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
     };
 
     // Follow streaming growth, but skip the resize our own land just caused
-    // and yield once the follow is released. The `|| at bottom` keeps a
-    // gesture that never leaves the bottom (a wheel nudge at the end) from
-    // stranding the view unfollowed while visually pinned there.
+    // and yield once the follow is released. Gate on the intent ref ONLY —
+    // never on the at-bottom snapshot: IntersectionObserver reports a frame
+    // late, so a position check here would scroll on stale "at bottom" the
+    // instant after the user wheels up, hijacking their scroll and re-arming
+    // the follow in a loop they can't escape.
     const follow = () => {
       if (skipNextResize) {
         skipNextResize = false;
         return;
       }
-      if (followingRef.current || atBottomStore.getSnapshot()) {
+      if (followingRef.current) {
         scrollToBottom("smooth");
       }
     };
@@ -337,11 +445,179 @@ const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
       growth?.disconnect();
       if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
     };
-  }, [mode, scrollToBottom, atBottomStore]);
+  }, [mode, scrollToBottom]);
+
+  // Prepend preservation — hold the reading position while older history loads
+  // in above. Native scroll anchoring (Chrome/Firefox) already keeps the
+  // viewport-relative position; comparing against the captured anchor makes the
+  // restore a no-op there and corrects the engines that don't (Safari). Opt-in:
+  // the passive scroll listener (a binary search over row rects, O(log n) reads
+  // against already-computed layout) only exists while the prop is set.
+  useLayoutEffect(() => {
+    if (!preserveScrollOnPrepend) return;
+    const scroller = scrollRef.current;
+    const content = contentRef.current;
+    if (!scroller || !content) return;
+
+    // Rows are vertically ordered, so the first row crossing the viewport top
+    // is found by binary search — no full scan.
+    const findFirstVisibleRow = (): Element | null => {
+      const rows = content.children;
+      const viewportTop = scroller.getBoundingClientRect().top;
+      let low = 0;
+      let high = rows.length - 1;
+      let found: Element | null = null;
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        const row = rows[mid] as Element;
+        if (row.getBoundingClientRect().bottom > viewportTop) {
+          found = row;
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+      return found;
+    };
+
+    let anchor: { element: Element; viewportTop: number } | null = null;
+
+    const capture = () => {
+      const element = findFirstVisibleRow();
+      anchor = element
+        ? {
+            element,
+            viewportTop: element.getBoundingClientRect().top - scroller.getBoundingClientRect().top,
+          }
+        : null;
+    };
+
+    const restore = () => {
+      if (!anchor || !anchor.element.isConnected) return;
+      const delta =
+        anchor.element.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top -
+        anchor.viewportTop;
+      if (Math.abs(delta) > 0.5) scroller.scrollTop += delta;
+    };
+
+    let firstTurn: Element | null = content.firstElementChild;
+    const observer = new MutationObserver((mutations) => {
+      const previousFirst = firstTurn;
+      firstTurn = content.firstElementChild;
+      if (wasPrepended(mutations, previousFirst, content)) restore();
+      capture();
+    });
+    observer.observe(content, { childList: true });
+
+    capture();
+    scroller.addEventListener("scroll", capture, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      scroller.removeEventListener("scroll", capture);
+    };
+  }, [preserveScrollOnPrepend]);
+
+  // Visibility tracking — created lazily by the first useThreadVisibility
+  // subscriber, torn down with the last. An IntersectionObserver maintains the
+  // set of intersecting rows; snapshots are rebuilt on a coalesced frame by
+  // filtering rows in document order (a DOM query, no layout reads).
+  const visibilityStore = useRefWithInit(createVisibilityStore).current;
+  const visibleIdsRef = useRef(new Set<string>());
+  const visibilityObserverRef = useRef<IntersectionObserver | null>(null);
+  const visibilityRowsObserverRef = useRef<MutationObserver | null>(null);
+  const visibilityFrameRef = useRef<number | null>(null);
+
+  const syncVisibility = useCallback(() => {
+    if (visibilityFrameRef.current !== null) return;
+    visibilityFrameRef.current = requestAnimationFrame(() => {
+      visibilityFrameRef.current = null;
+      // A frame can outlive the last unsubscribe; recomputing would overwrite
+      // the empty snapshot teardown just wrote.
+      if (!visibilityStore.hasListeners()) return;
+      const content = contentRef.current;
+      if (!content) return;
+      const visible: string[] = [];
+      for (const row of content.querySelectorAll<HTMLElement>("[data-message-id]")) {
+        const id = row.dataset.messageId;
+        if (id && visibleIdsRef.current.has(id)) visible.push(id);
+      }
+      visibilityStore.setSnapshot({
+        visibleMessageIds: visible,
+        currentMessageId: visible[0] ?? null,
+      });
+    });
+  }, [visibilityStore]);
+
+  const observeVisibility = useCallback(() => {
+    const scroller = scrollRef.current;
+    const content = contentRef.current;
+    if (!scroller || !content) return;
+
+    visibilityObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const id = (entry.target as HTMLElement).dataset.messageId;
+          if (!id) continue;
+          if (entry.isIntersecting) visibleIdsRef.current.add(id);
+          else visibleIdsRef.current.delete(id);
+        }
+        syncVisibility();
+      },
+      { root: scroller },
+    );
+
+    // Rows mount and unmount as the transcript changes; re-observe only when
+    // the row list itself changed — streaming inside a row is ignored.
+    let observedRows: Element[] = [];
+    const reconcileRows = () => {
+      const rows = Array.from(content.querySelectorAll("[data-message-id]"));
+      if (
+        rows.length === observedRows.length &&
+        rows.every((row, index) => row === observedRows[index])
+      ) {
+        return;
+      }
+      observedRows = rows;
+      const mountedIds = new Set(rows.map((row) => (row as HTMLElement).dataset.messageId ?? ""));
+      for (const id of visibleIdsRef.current) {
+        if (!mountedIds.has(id)) visibleIdsRef.current.delete(id);
+      }
+      const io = visibilityObserverRef.current;
+      io?.disconnect();
+      for (const row of rows) io?.observe(row);
+      syncVisibility();
+    };
+
+    visibilityRowsObserverRef.current = new MutationObserver(reconcileRows);
+    visibilityRowsObserverRef.current.observe(content, { childList: true, subtree: true });
+    reconcileRows();
+  }, [syncVisibility]);
+
+  const unobserveVisibility = useCallback(() => {
+    if (visibilityFrameRef.current !== null) {
+      cancelAnimationFrame(visibilityFrameRef.current);
+      visibilityFrameRef.current = null;
+    }
+    visibilityObserverRef.current?.disconnect();
+    visibilityObserverRef.current = null;
+    visibilityRowsObserverRef.current?.disconnect();
+    visibilityRowsObserverRef.current = null;
+    visibleIdsRef.current.clear();
+    visibilityStore.setSnapshot(EMPTY_VISIBILITY);
+  }, [visibilityStore]);
+
+  // Safety net: subscribers normally tear tracking down on their own unmount,
+  // but the thread itself can unmount first.
+  useEffect(() => unobserveVisibility, [unobserveVisibility]);
 
   return useMemo(
     () => ({
       atBottomStore,
+      visibilityStore,
+      observeVisibility,
+      unobserveVisibility,
       scrollToBottom,
       scrollToTop,
       scrollToMessage,
@@ -350,7 +626,16 @@ const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
       contentRef,
       sentinelRef,
     }),
-    [atBottomStore, scrollToBottom, scrollToTop, scrollToMessage, releaseFollow],
+    [
+      atBottomStore,
+      visibilityStore,
+      observeVisibility,
+      unobserveVisibility,
+      scrollToBottom,
+      scrollToTop,
+      scrollToMessage,
+      releaseFollow,
+    ],
   );
 };
 
@@ -434,17 +719,24 @@ const useThreadInsets = () => {
 export type ThreadRootProps = PrimitiveProps<"div"> & {
   children?: ReactNode;
   autoScroll?: ThreadAutoScrollMode;
+  /**
+   * Hold the reading position when rows are prepended (history pagination).
+   * Opt-in: enabling it attaches a passive scroll listener to keep the anchor
+   * current, so leave it off unless older content actually loads in above.
+   */
+  preserveScrollOnPrepend?: boolean;
 };
 
 const ThreadRoot = ({
   autoScroll = "follow",
+  preserveScrollOnPrepend = false,
   className,
   render,
   style,
   ...elementProps
 }: ThreadRootProps) => {
   const rootRef = useThreadInsets();
-  const scroll = useThreadScroll(autoScroll);
+  const scroll = useThreadScroll(autoScroll, preserveScrollOnPrepend);
 
   const element = useRenderElement(
     "div",
@@ -508,18 +800,47 @@ ThreadOverlay.displayName = "ThreadOverlay";
 
 // ---------------------------------------------------------------------------
 // Viewport — the scroll container. A focusable region so keyboard users can
-// scroll the transcript; wheel/touch/scroll-key gestures double as the
-// deliberate reading intent that releases the follow.
+// scroll the transcript. Only *upward* gestures release the follow — a wheel
+// with negative deltaY, a downward finger drag, an up-scroll key — because an
+// upward gesture always moves the sentinel out of view, and scrolling back to
+// the bottom is what re-arms. Downward gestures never release (see
+// USER_SCROLL_UP_KEYS).
 // ---------------------------------------------------------------------------
 
 export type ThreadViewportProps = PrimitiveProps<"div">;
 
 const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadViewportProps) => {
   const { scrollRef, releaseFollow } = useThreadContext();
+  const lastTouchYRef = useRef(0);
 
+  const handleWheel = useCallback(
+    (event: WheelEvent<HTMLDivElement>) => {
+      if (event.deltaY < 0) releaseFollow();
+    },
+    [releaseFollow],
+  );
+
+  const handleTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
+    lastTouchYRef.current = event.touches[0]?.clientY ?? 0;
+  }, []);
+
+  // A finger moving down drags the content down — an upward scroll.
+  const handleTouchMove = useCallback(
+    (event: TouchEvent<HTMLDivElement>) => {
+      const y = event.touches[0]?.clientY ?? 0;
+      if (y > lastTouchYRef.current) releaseFollow();
+      lastTouchYRef.current = y;
+    },
+    [releaseFollow],
+  );
+
+  // Keys scroll the viewport only while it is the focused element; bubbled
+  // keydowns from interactive children never move it, so they must not release.
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
-      if (USER_SCROLL_KEYS.has(event.key)) releaseFollow();
+      if (event.target !== event.currentTarget) return;
+      const scrollsUp = USER_SCROLL_UP_KEYS.has(event.key) || (event.key === " " && event.shiftKey);
+      if (scrollsUp) releaseFollow();
     },
     [releaseFollow],
   );
@@ -536,8 +857,9 @@ const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadVie
           "aria-label": "Messages",
           tabIndex: 0,
           style: { overflowY: "auto", overflowX: "hidden" },
-          onWheel: releaseFollow,
-          onTouchMove: releaseFollow,
+          onWheel: handleWheel,
+          onTouchStart: handleTouchStart,
+          onTouchMove: handleTouchMove,
           onKeyDown: handleKeyDown,
         },
         elementProps,

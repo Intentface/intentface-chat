@@ -3,7 +3,9 @@
 import {
   type ThreadAutoScrollMode,
   Thread as ThreadPrimitive,
+  type ThreadVisibilityState,
   useThread,
+  useThreadVisibility,
 } from "@intentface/chat/thread";
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentProps } from "react";
@@ -13,8 +15,8 @@ import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon } from "../icons/arrow-down";
 
-export { useThread };
-export type { ThreadAutoScrollMode };
+export { useThread, useThreadVisibility };
+export type { ThreadAutoScrollMode, ThreadVisibilityState };
 
 // ---------------------------------------------------------------------------
 // Root

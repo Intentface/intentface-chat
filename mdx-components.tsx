@@ -32,7 +32,7 @@ const proseComponents: MDXComponents = {
   ),
   h2: heading(
     "h2",
-    "mt-10 mb-3 border-primary-border border-b pb-2 font-semibold text-ink-primary text-xl",
+    "mt-10 mb-3 border-secondary-border border-b pb-2 font-semibold text-ink-primary text-xl",
   ),
   h3: heading("h3", "mt-8 mb-2 font-semibold text-ink-primary text-lg"),
   h4: heading("h4", "mt-6 mb-2 font-medium text-ink-primary"),
@@ -44,6 +44,8 @@ const proseComponents: MDXComponents = {
     <ol className="my-4 ml-6 flex list-decimal flex-col gap-2 text-lg text-ink-secondary" {...props} />
   ),
   li: (props) => <li className="text-lg leading-7" {...props} />,
+  strong: (props) => <strong className="font-medium text-ink-primary" {...props} />,
+  b: (props) => <b className="font-medium text-ink-primary" {...props} />,
   a: ({ href, ...props }: ComponentProps<"a">) => (
     <Link
       href={href ?? "#"}
@@ -64,17 +66,17 @@ const proseComponents: MDXComponents = {
   ),
   th: (props) => (
     <th
-      className="border-primary-border border-b px-3 py-2 text-left font-medium text-ink-primary"
+      className="border-secondary-border border-b px-3 py-2 text-left font-medium text-ink-primary"
       {...props}
     />
   ),
   td: (props) => (
-    <td className="border-primary-border/60 border-b px-3 py-2 text-ink-secondary" {...props} />
+    <td className="border-secondary-border/60 border-b px-3 py-2 text-ink-secondary" {...props} />
   ),
   // Inline code; fenced blocks arrive as <pre><code> and are handled by `pre`.
   code: (props) => (
     <code
-      className="rounded border border-primary-border bg-secondary px-1.5 py-0.5 font-mono text-[0.85em] text-ink-primary"
+      className="rounded border border-base-border bg-base px-1.5 py-0.5 font-mono text-[0.85em] text-ink-primary"
       {...props}
     />
   ),

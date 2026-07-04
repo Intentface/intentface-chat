@@ -21,7 +21,7 @@ export const CodeBlock = async ({ code, lang = "tsx", title, className }: CodeBl
       pre: ({ className: preClassName, ...props }) => (
         <pre
           className={cn(
-            "overflow-x-auto rounded-lg border border-primary-border bg-base p-4 text-sm leading-relaxed [scrollbar-width:thin]",
+            "overflow-x-auto rounded-lg border border-base-border bg-base p-4 text-sm leading-relaxed [scrollbar-width:thin]",
             preClassName,
           )}
           {...props}

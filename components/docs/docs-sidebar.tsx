@@ -34,10 +34,10 @@ const NavLink = ({ url, name }: { url: string; name: ReactNode }) => {
     <Link
       href={url}
       className={cn(
-        "block rounded-md px-3 py-1.5 text-md font-medium transition-colors duration-0",
+        "flex h-8 items-center rounded-md px-3 text-md font-medium transition-colors duration-0",
         isActive
-          ? "bg-primary-hover text-ink-primary"
-          : "text-ink-secondary hover:bg-primary-hover hover:text-ink-primary",
+          ? "bg-secondary-hover text-ink-primary"
+          : "text-ink-secondary hover:bg-secondary-hover hover:text-ink-primary",
       )}
     >
       {name}
@@ -68,9 +68,9 @@ const TreeFolderNode = ({ node, index }: { node: TreeFolder; index: number }) =>
   }, [containsActive]);
 
   return (
-    <li key={`folder-${index}`} className="mt-3">
+    <li key={`folder-${index}`} className="mt-2">
       <Collapsible open={open} onOpenChange={setOpen}>
-        <Collapsible.Trigger className="flex w-full cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-left font-medium text-ink-tertiary text-md transition-colors duration-0 hover:bg-primary-hover hover:text-ink-secondary">
+        <Collapsible.Trigger className="flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-md px-3 text-left font-medium text-ink-tertiary text-md transition-colors duration-0 hover:bg-secondary-hover hover:text-ink-secondary">
           <span className="flex-1">{node.name}</span>
           <ChevronDownIcon
             className={cn(
@@ -94,7 +94,7 @@ const TreeNodes = ({ nodes }: { nodes: TreeNode[] }) => (
         return (
           <li
             key={`sep-${index}`}
-            className="mt-3 px-3 py-1.5 font-medium text-ink-tertiary text-md"
+            className="mt-2 flex h-8 items-center px-3 font-medium text-ink-tertiary text-md"
           >
             {node.name}
           </li>
@@ -117,7 +117,7 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
     href={href}
     target="_blank"
     rel="noreferrer"
-    className="flex items-center gap-2 rounded-md px-3 py-1.5 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-primary-hover hover:text-ink-primary"
+    className="flex h-8 items-center gap-2 rounded-md px-3 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-hover hover:text-ink-primary"
   >
     <span className="[&>svg]:size-4">{icon}</span>
     {label}
@@ -125,15 +125,15 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
 );
 
 export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
-  <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-4 overflow-y-auto border-primary-border border-r px-4 py-6 md:flex">
-    <Link href="/docs" className="px-3 text-ink-primary" aria-label="@intentface/chat">
+  <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-3 md:flex">
+    <Link href="/docs" className="flex h-8 items-center px-3 text-ink-primary" aria-label="@intentface/chat">
       <IntentfaceLogo className="size-6" />
     </Link>
     <DocsSearch />
     <nav className="flex-1">
       <TreeNodes nodes={tree.children} />
     </nav>
-    <div className="flex flex-col gap-0.5 border-primary-border border-t pt-4">
+    <div className="flex flex-col gap-0.5 border-secondary-border border-t pt-2">
       <ExternalLink
         href="https://github.com/Intentface/intentface-chat"
         icon={<GitHubIcon />}

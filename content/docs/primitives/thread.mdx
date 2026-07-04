@@ -111,6 +111,28 @@ export const visibilityMembers = [
 
 <PropsTable rows={visibilityMembers} />
 
+## Performance
+
+Thread's scroll subsystem is built to cost nothing while a reply streams — you
+don't need to optimize around it:
+
+- **No scroll handler.** At-bottom detection is an IntersectionObserver
+  sentinel, computed off the main thread. Scrolling runs zero JavaScript.
+- **Landing and follow are event-driven** — a MutationObserver for new turns, a
+  ResizeObserver for growth, one `scrollTo` per change. No per-token geometry
+  reads, no animation-frame polling.
+- **`isAtBottom` lives in an external store**, so a flip re-renders only the
+  components that render it (your scroll button) — never the Thread tree.
+- **Lazy capabilities stay free until used**: visibility tracking creates its
+  observers on the first `useThreadVisibility` subscriber and tears them down
+  with the last; the prepend-preservation scroll listener exists only when
+  `preserveScrollOnPrepend` is set.
+
+The boundary: Thread does not virtualize. Cost is O(rendered rows) of DOM, which
+holds comfortably for realistic transcripts (hundreds to low thousands of
+turns). What re-renders during a stream is decided by your message components —
+see [Streaming performance](/docs/headless/performance).
+
 ## Accessibility
 
 The viewport is a focusable `role="region"` (default `aria-label="Messages"`,

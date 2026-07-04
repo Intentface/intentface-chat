@@ -52,6 +52,45 @@ A realistic assistant turn with markdown, sources, and actions:
 </Message.Turn>
 ```
 
+## Performance
+
+Message is compositional — you pass its parts as children — which means the
+package cannot memoize rows for you: a parent re-render re-creates the children
+elements, so a `memo` inside `Message` would compare fresh trees and never
+bail. The memo boundary has to be **your row component**, the one that receives
+the message object and derives everything inside:
+
+```tsx
+const ChatMessageItem = memo(({ message, isLast, isStreaming }: ChatMessageItemProps) => {
+  const { parts } = message;
+  // segmentation, part mapping, actions — all derived in here
+  return <Message role={message.role} isLast={isLast}>{/* … */}</Message>;
+});
+
+{messages.map((message) => (
+  <ChatMessageItem
+    key={message.id}
+    message={message}
+    isLast={message.id === lastMessageId}
+    isStreaming={message.id === lastMessageId && isStreaming}
+  />
+))}
+```
+
+Three rules keep the memo effective while a reply streams:
+
+- **Pass the original message object.** Finished messages keep reference
+  identity across stream chunks; spreading (`{ parts, ...message }`) mints a
+  fresh object every render and silently defeats the memo.
+- **Make flags per-message.** `isStreaming` should mean *this message is
+  streaming* — passing the chat-wide status re-renders every row on each
+  status transition.
+- **Take callbacks from stable context inside the row**, not as inline props
+  from the map.
+
+Done right, a stream chunk re-renders exactly one row. See
+[Streaming performance](/docs/headless/performance) for the full render model.
+
 ## Props
 
 `Message` (root) takes the message's role and position; the sub-components take

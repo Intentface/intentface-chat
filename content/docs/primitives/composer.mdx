@@ -91,6 +91,35 @@ toolbars, keyboard shortcuts, status bars — create an explicit handle with
 `store.controller` (imperative) or `useComposerStore(store, selector)`
 (reactive). See [Composer state](/docs/headless/state) for the full model.
 
+## Performance
+
+Typing costs nothing outside the composer: editor state lives in the store and
+parts subscribe by slice with `useComposer(selector)`, so a keystroke
+re-renders only the parts that read the changed slice — never your app tree.
+
+The integration risk runs the other way: a streaming chat re-rendering the
+composer on every chunk. The editor is the most expensive thing to re-render
+per token, so isolate it behind a thin bridge — subscribe to your messages
+state in a small component, derive the panel props there, and hand them to a
+memoized inner composer:
+
+```tsx
+const ChatInput = () => {
+  const { messages, status } = useChatMessages();
+  const panelState = useActiveComposerState(messages, status, TOOL_LABELS);
+  return <ChatInputInner panelState={panelState} status={status} />;
+};
+
+const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => (
+  <Composer /* … the actual composer tree … */ />
+));
+```
+
+`useActiveComposerState` returns a referentially stable value while nothing
+transitioned, so the inner composer bails on every chunk except real panel
+changes. See [Streaming performance](/docs/headless/performance) for the full
+render model.
+
 ## Props
 
 export const rootProps = [

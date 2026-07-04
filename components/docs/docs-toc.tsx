@@ -51,7 +51,7 @@ export const DocsTOC = ({ items }: DocsTOCProps) => {
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-8rem)] w-56 shrink-0 overflow-y-auto pb-10 xl:block">
-      <nav className="flex flex-col gap-1 border-primary-border border-l">
+      <nav className="flex flex-col gap-1 border-secondary-border border-l">
         <a href="#overview" className={linkClass(activeId === null)}>
           Overview
         </a>

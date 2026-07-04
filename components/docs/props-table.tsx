@@ -14,10 +14,10 @@ type PropsTableProps = {
 // Hand-authored prop reference. Start manual per primitive; a type-driven
 // generator can replace the data source later without changing this markup.
 export const PropsTable = ({ rows }: PropsTableProps) => (
-  <div className="not-prose my-6 overflow-x-auto rounded-lg border border-primary-border">
+  <div className="not-prose my-6 overflow-x-auto rounded-lg border border-secondary-border">
     <table className="w-full border-collapse text-left text-sm">
       <thead>
-        <tr className="border-primary-border border-b bg-tertiary">
+        <tr className="border-secondary-border border-b bg-tertiary">
           <th className="px-4 py-2 font-medium text-ink-primary">Prop</th>
           <th className="px-4 py-2 font-medium text-ink-primary">Type</th>
           <th className="px-4 py-2 font-medium text-ink-primary">Default</th>
@@ -26,7 +26,7 @@ export const PropsTable = ({ rows }: PropsTableProps) => (
       </thead>
       <tbody>
         {rows.map((row) => (
-          <tr key={row.name} className="border-primary-border/60 border-b last:border-0">
+          <tr key={row.name} className="border-secondary-border/60 border-b last:border-0">
             <td className="px-4 py-2 align-top">
               <code className="font-mono text-ink-primary text-xs">{row.name}</code>
             </td>

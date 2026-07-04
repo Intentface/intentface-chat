@@ -342,7 +342,7 @@ const SidebarGroupLabel = ({ className, render, ...props }: useRender.ComponentP
       "data-sidebar": "group-label",
       ...props,
       className: cn(
-        "text-ink-secondary flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium outline-hidden transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-ink-tertiary flex shrink-0 items-center rounded-md px-3 py-1.5 text-md font-medium outline-hidden transition-[margin,opa] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         className,
       ),
     },
@@ -384,7 +384,7 @@ const SidebarMenu = ({ className, ...props }: ComponentProps<"ul">) => (
   <ul
     data-slot="sidebar-menu"
     data-sidebar="menu"
-    className={cn("flex w-full min-w-0 flex-col gap-1", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-0.5", className)}
     {...props}
   />
 );
@@ -401,21 +401,21 @@ const SidebarMenuItem = ({ className, ...props }: ComponentProps<"li">) => (
 const sidebarMenuButtonVariants = cva(
   [
     "peer/menu-button cursor-pointer flex w-full items-center gap-2",
-    "overflow-hidden rounded-md px-2 font-medium text-left text-sm outline-hidden",
-    "transition-[width,height,padding] focus-visible:ring-1",
-    "hover:bg-base-hover data-active:bg-base-active",
+    "overflow-hidden rounded-md px-3 h-8 font-medium text-left text-md text-ink-secondary outline-hidden",
+    "transition-[width,height,padding] transition-colors duration-0 focus-visible:ring-1",
+    "hover:bg-base-hover hover:text-ink-primary data-active:bg-base-hover data-active:text-ink-primary",
     "disabled:pointer-events-none disabled:opacity-50",
     "group-has-data-[sidebar=menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",
-    "data-[state=open]:bg-base-active",
-    "[&>span:last-child]:truncate [&_svg]:text-ink-secondary [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-ink-primary",
+    "data-[state=open]:bg-base-hover data-[state=open]:text-ink-primary",
+    "[&>span:last-child]:truncate [&_svg]:text-ink-secondary [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-ink-primary data-active:[&>svg]:text-ink-primary",
   ],
   {
     variants: {
       size: {
-        sm: "h-7 text-xs",
-        md: "h-8 text-sm",
-        lg: "h-9 text-md",
+        sm: "px-2 py-1 text-xs",
+        md: "",
+        lg: "text-lg",
       },
     },
     defaultVariants: {
@@ -493,7 +493,7 @@ const SidebarMenuAction = ({
       onClick: handleClick,
       ...props,
       className: cn(
-        "text-ink-secondary cursor-pointer hover:text-ink-primary flex aspect-square size-6 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-ink-secondary cursor-pointer hover:text-ink-primary flex aspect-square size-5 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-3.5 [&>svg]:shrink-0",
         showOnHover &&
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
         className,

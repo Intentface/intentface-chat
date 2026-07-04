@@ -29,7 +29,7 @@ export const DocsSearch = () => {
     <Dialog open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border border-primary-border bg-secondary px-3 py-1.5",
+          "flex h-8 w-full items-center gap-2 rounded-md border border-primary-border bg-primary px-3",
           "text-ink-tertiary text-sm transition-colors hover:bg-primary-hover",
         )}
       >
@@ -41,7 +41,7 @@ export const DocsSearch = () => {
       </Dialog.Trigger>
       <Dialog.Content className="top-24 max-w-lg translate-y-0 p-0">
         <Dialog.Title className="sr-only">Search documentation</Dialog.Title>
-        <div className="flex items-center gap-2 border-primary-border border-b px-4">
+        <div className="flex items-center gap-2 border-secondary-border border-b px-4">
           <SearchIcon className="size-4 shrink-0 text-ink-tertiary" />
           <input
             autoFocus
@@ -64,7 +64,7 @@ export const DocsSearch = () => {
                     href={result.url}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-primary-hover",
+                      "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary-hover",
                       result.type === "page"
                         ? "font-medium text-ink-primary"
                         : "pl-6 text-ink-secondary",

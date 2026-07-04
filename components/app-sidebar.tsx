@@ -5,6 +5,7 @@ import {
   MonitorIcon,
   MoonIcon,
   PaletteIcon,
+  PlusIcon,
   SunIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -22,7 +23,6 @@ import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useSettingsStore } from "@/lib/store/settings";
-import { EditIcon } from "./icons/edit";
 import { FileTextIcon } from "./icons/file-text";
 import { GitHubIcon } from "./icons/github";
 import { NpmIcon } from "./icons/npm";
@@ -58,9 +58,10 @@ export const AppSidebar = () => {
           <Sidebar.Menu>
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
+                isActive={pathname === "/"}
                 render={
                   <Link href="/">
-                    <EditIcon />
+                    <PlusIcon />
                     <span>New Chat</span>
                   </Link>
                 }

@@ -14,7 +14,7 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
   const [tab, setTab] = useState<"preview" | "code">("preview");
 
   return (
-    <div className="not-prose my-6 overflow-hidden rounded-xl border border-primary-border">
+    <div className="not-prose my-6 overflow-hidden rounded-xl border border-secondary-border">
       <div className="flex items-center gap-1 border-primary-border border-b bg-primary p-2">
         {(["preview", "code"] as const).map((value) => (
           <button
@@ -24,8 +24,8 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
             className={cn(
               "cursor-pointer rounded-full border px-3 py-1.5 font-medium text-sm capitalize transition-colors",
               tab === value
-                ? "border-primary-border bg-primary text-ink-primary shadow-xs"
-                : "border-transparent text-ink-tertiary hover:text-ink-secondary",
+                ? "border-secondary-border bg-secondary text-ink-primary shadow-xs"
+                : "border-transparent text-ink-tertiary hover:bg-primary-hover hover:text-ink-secondary",
             )}
           >
             {value}

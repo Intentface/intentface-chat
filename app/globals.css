@@ -281,7 +281,7 @@
 }
 
 [data-streamdown="strong"] {
-  @apply font-medium;
+  @apply font-medium text-ink-primary;
 }
 
 [data-streamdown="table-wrapper"] {

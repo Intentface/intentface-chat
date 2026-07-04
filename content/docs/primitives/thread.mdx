@@ -58,6 +58,15 @@ export const autoScrollProps = [
 
 <PropsTable rows={autoScrollProps} />
 
+### Opening position
+
+Where a saved transcript opens is a consequence of the mode — there is no
+separate `defaultScrollPosition` prop. `"bottom"` opens at the end; `"follow"`
+and `"jump"` open with the newest turn's top at the reading line (the reserve
+does this); `"off"` opens at the start. To deep-link into the middle of a
+transcript, call `scrollToMessage` on mount — it queues until the rows exist
+and overrides the landing.
+
 The follow is released by deliberate upward reading intent — an upward wheel,
 touch, or scroll-key gesture, or dragging the scrollbar away from the bottom —
 and re-arms when you return to the bottom. Content growth alone never releases
@@ -73,7 +82,7 @@ export const useThreadMembers = [
   { name: "isAtBottom", type: "boolean", description: "Whether the bottom sentinel is in view. Subscribes the caller — only components that render it re-render on flips." },
   { name: "scrollToBottom", type: "(behavior?) => void", description: "Scroll to the live end." },
   { name: "scrollToTop", type: "(behavior?) => void", description: "Scroll to the start; releases the follow." },
-  { name: "scrollToMessage", type: "(id, options?) => boolean", description: "Scroll to a row carrying data-message-id={id}. Options: align (\"start\" | \"center\" | \"end\" | \"nearest\"), behavior. Returns false when the id isn't mounted." },
+  { name: "scrollToMessage", type: "(id, options?) => boolean", description: "Scroll to a row carrying data-message-id={id}. Options: align (\"start\" | \"center\" | \"end\" | \"nearest\"), behavior. Called before the transcript loads (a deep link), the jump is queued and runs when the row mounts. Returns false only when the id is absent from a loaded transcript." },
 ];
 
 <PropsTable rows={useThreadMembers} />

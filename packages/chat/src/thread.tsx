@@ -359,11 +359,11 @@ const useThreadScroll = (
     [markAutoScrolling],
   );
 
-  // Jump to a row by its consumer-provided data-message-id. Resolved lazily at
-  // call time — no per-row registration, nothing on the hot path. Returns false
-  // when the id isn't mounted. scrollIntoView handles the alignment math and
-  // honors any scroll-margin the styled layer sets on rows.
-  const scrollToMessage = useCallback(
+  // Resolve a row by its consumer-provided data-message-id and jump to it.
+  // Resolved lazily at call time — no per-row registration, nothing on the hot
+  // path. scrollIntoView handles the alignment math and honors any
+  // scroll-margin the styled layer sets on rows.
+  const resolveMessageJump = useCallback(
     (messageId: string, options: ThreadScrollToMessageOptions = {}) => {
       const row = contentRef.current?.querySelector<HTMLElement>(
         `[data-message-id="${CSS.escape(messageId)}"]`,
@@ -379,6 +379,64 @@ const useThreadScroll = (
       return true;
     },
     [markAutoScrolling],
+  );
+
+  // Pending jump — a scrollToMessage that arrived before the transcript did
+  // (a deep link while messages load asynchronously). Held until the first
+  // rows mount, then flushed; the watching observer exists only while a jump
+  // is queued, so the queue costs nothing when unused.
+  const pendingJumpRef = useRef<{
+    messageId: string;
+    options?: ThreadScrollToMessageOptions;
+  } | null>(null);
+  const pendingJumpObserverRef = useRef<MutationObserver | null>(null);
+
+  const clearPendingJump = useCallback(() => {
+    pendingJumpRef.current = null;
+    pendingJumpObserverRef.current?.disconnect();
+    pendingJumpObserverRef.current = null;
+  }, []);
+
+  // Settle the queued jump once rows exist: jump if the id mounted, or drop
+  // the request if the transcript loaded without it — a stale or foreign id
+  // must not hijack a later chat. Keeps waiting while no rows are mounted.
+  const flushPendingJump = useCallback(() => {
+    const pending = pendingJumpRef.current;
+    const content = contentRef.current;
+    if (!pending || !content) return false;
+    if (!content.querySelector("[data-message-id]")) return false;
+    const jumped = resolveMessageJump(pending.messageId, pending.options);
+    clearPendingJump();
+    return jumped;
+  }, [resolveMessageJump, clearPendingJump]);
+
+  useEffect(() => clearPendingJump, [clearPendingJump]);
+
+  // Returns true when the jump ran or was queued; false only when the id is
+  // absent from an already-loaded transcript.
+  const scrollToMessage = useCallback(
+    (messageId: string, options: ThreadScrollToMessageOptions = {}) => {
+      if (resolveMessageJump(messageId, options)) {
+        clearPendingJump();
+        return true;
+      }
+      const content = contentRef.current;
+      // Queue only while the transcript has produced no rows yet (an async
+      // load in flight). An id missing from a loaded transcript is just absent.
+      if (!content || content.querySelector("[data-message-id]")) return false;
+      pendingJumpRef.current = { messageId, options };
+      if (!pendingJumpObserverRef.current) {
+        const observer = new MutationObserver(() => {
+          flushPendingJump();
+        });
+        // subtree: rows usually mount inside turn wrappers, not as direct
+        // children of the content column.
+        observer.observe(content, { childList: true, subtree: true });
+        pendingJumpObserverRef.current = observer;
+      }
+      return true;
+    },
+    [resolveMessageJump, clearPendingJump, flushPendingJump],
   );
 
   const releaseFollow = useCallback(() => {
@@ -409,6 +467,17 @@ const useThreadScroll = (
       firstTurn = content.firstElementChild;
       if (preserveOnPrependRef.current && wasPrepended(mutations, previousFirst, content)) {
         return;
+      }
+      // A queued deep-link jump owns the landing: landing at the bottom would
+      // race the jump the consumer asked for. Hold while the transcript is
+      // still empty; once rows exist the flush either jumps (skip the land) or
+      // drops a stale id (fall through and land normally).
+      if (pendingJumpRef.current) {
+        if (flushPendingJump()) {
+          landed = true;
+          return;
+        }
+        if (pendingJumpRef.current) return;
       }
       const replaced = mutations.some((m) => m.removedNodes.length > 0);
       skipNextResize = true;
@@ -445,7 +514,7 @@ const useThreadScroll = (
       growth?.disconnect();
       if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
     };
-  }, [mode, scrollToBottom]);
+  }, [mode, scrollToBottom, flushPendingJump]);
 
   // Prepend preservation — hold the reading position while older history loads
   // in above. Native scroll anchoring (Chrome/Firefox) already keeps the

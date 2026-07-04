@@ -19,79 +19,77 @@ behavior lives in `@intentface/chat`; the styled wrapper below is yours to edit.
 The bare nesting — every part is optional except `Composer` and `Container`:
 
 ```tsx
-<Composer.Provider>
-  <Composer onSubmit={handleSubmit}>
-    <Composer.Panel>
-      <Composer.PanelItem value="command-list">
-        <Composer.CommandList prefix="@">
-          <Composer.CommandLoading />
-          <Composer.CommandEmpty />
-          <Composer.CommandItems>
-            {(item) => (
-              <Composer.CommandItem value={item.value}>
-                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-              </Composer.CommandItem>
-            )}
-          </Composer.CommandItems>
-        </Composer.CommandList>
-      </Composer.PanelItem>
-    </Composer.Panel>
-    <Composer.Container>
-      <Composer.Textarea>
-        <Composer.Placeholder />
-      </Composer.Textarea>
-      <Composer.Actions>
-        <Composer.Submit />
-      </Composer.Actions>
-    </Composer.Container>
-  </Composer>
-</Composer.Provider>
+<Composer onSubmit={handleSubmit}>
+  <Composer.Panel>
+    <Composer.PanelItem value="command-list">
+      <Composer.CommandList prefix="@">
+        <Composer.CommandLoading />
+        <Composer.CommandEmpty />
+        <Composer.CommandItems>
+          {(item) => (
+            <Composer.CommandItem value={item.value}>
+              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+            </Composer.CommandItem>
+          )}
+        </Composer.CommandItems>
+      </Composer.CommandList>
+    </Composer.PanelItem>
+  </Composer.Panel>
+  <Composer.Container>
+    <Composer.Textarea>
+      <Composer.Placeholder />
+    </Composer.Textarea>
+    <Composer.Actions>
+      <Composer.Submit />
+    </Composer.Actions>
+  </Composer.Container>
+</Composer>
 ```
 
 A realistic message composer wiring `onSubmit` and a mention command:
 
 ```tsx
-<Composer.Provider>
-  <Composer
-    onSubmit={(data) => {
-      if (data.kind === "message") sendMessage(data.text);
-    }}
-    commands={{
-      "@": { kind: "insert", trigger: "after-whitespace", items: mentions },
-    }}
-  >
-    <Composer.Panel>
-      <Composer.PanelItem value="command-list">
-        <Composer.CommandList prefix="@">
-          <Composer.CommandEmpty />
-          <Composer.CommandItems>
-            {(item) => (
-              <Composer.CommandItem value={item.value}>
-                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-              </Composer.CommandItem>
-            )}
-          </Composer.CommandItems>
-        </Composer.CommandList>
-      </Composer.PanelItem>
-    </Composer.Panel>
-    <Composer.Container>
-      <Composer.Textarea>
-        <Composer.Placeholder placeholder="Send a message..." />
-      </Composer.Textarea>
-      <Composer.Actions>
-        <Composer.Submit />
-      </Composer.Actions>
-    </Composer.Container>
-  </Composer>
-</Composer.Provider>
+<Composer
+  onSubmit={(data) => {
+    if (data.kind === "message") sendMessage(data.text);
+  }}
+  commands={{
+    "@": { kind: "insert", trigger: "after-whitespace", items: mentions },
+  }}
+>
+  <Composer.Panel>
+    <Composer.PanelItem value="command-list">
+      <Composer.CommandList prefix="@">
+        <Composer.CommandEmpty />
+        <Composer.CommandItems>
+          {(item) => (
+            <Composer.CommandItem value={item.value}>
+              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+            </Composer.CommandItem>
+          )}
+        </Composer.CommandItems>
+      </Composer.CommandList>
+    </Composer.PanelItem>
+  </Composer.Panel>
+  <Composer.Container>
+    <Composer.Textarea>
+      <Composer.Placeholder placeholder="Send a message..." />
+    </Composer.Textarea>
+    <Composer.Actions>
+      <Composer.Submit />
+    </Composer.Actions>
+  </Composer.Container>
+</Composer>
 ```
 
 ## Multiple instances
 
-`Composer.Provider` scopes a store instance to its subtree, so several
-composers can live on one page. Without a provider, a single global instance is
-used — the zero-config path for one composer per page, and what lets
-`composerController` drive it from anywhere.
+Every `<Composer>` creates its own isolated store, so several composers can
+live on one page with no wiring. To reach a composer from outside its tree —
+toolbars, keyboard shortcuts, status bars — create an explicit handle with
+`Composer.createStore()`, pass it via the `store` prop, and use
+`store.controller` (imperative) or `useComposerStore(store, selector)`
+(reactive). See [Composer state](/docs/headless/state) for the full model.
 
 ## Props
 
@@ -100,7 +98,7 @@ export const rootProps = [
   { name: "commands", type: "ComposerCommandsMap", description: "Prefix → command config (kind, trigger, items). Drives the command lists." },
   { name: "questions", type: "AskUserQuestion[]", description: "When set, activates the ask-user flow in the panel." },
   { name: "isSubmitting", type: "boolean", default: "false", description: "Flips Submit to a stop affordance and gates re-submits." },
-  { name: "store", type: "ComposerStore", description: "An explicit store instance. Falls back to the nearest Provider, then a global default." },
+  { name: "store", type: "ComposerStore", description: "An explicit Composer.createStore() handle for cross-tree access. Defaults to an isolated per-mount instance." },
 ];
 
 <PropsTable rows={rootProps} />

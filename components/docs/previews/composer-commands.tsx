@@ -14,43 +14,41 @@ export const ComposerCommands = () => {
   const handleSubmit = (_data: ComposerSubmitData) => {};
 
   return (
-    <Composer.Provider>
-      <div className="w-full max-w-xl">
-        <Composer
-          onSubmit={handleSubmit}
-          commands={{
-            "@": { kind: "insert", trigger: "after-whitespace", items: MENTIONS },
-          }}
-        >
-          <Composer.Panel>
-            <Composer.PanelItem value="command-list">
-              <Composer.CommandList prefix="@">
-                <Composer.CommandEmpty />
-                <Composer.CommandItems>
-                  {(item) => (
-                    <Composer.CommandItem value={item.value}>
-                      <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                      {item.description && (
-                        <Composer.CommandItemDescription>
-                          {item.description}
-                        </Composer.CommandItemDescription>
-                      )}
-                    </Composer.CommandItem>
-                  )}
-                </Composer.CommandItems>
-              </Composer.CommandList>
-            </Composer.PanelItem>
-          </Composer.Panel>
-          <Composer.Container>
-            <Composer.Textarea>
-              <Composer.Placeholder placeholder="Type @ to mention a file..." />
-            </Composer.Textarea>
-            <Composer.Actions>
-              <Composer.Submit />
-            </Composer.Actions>
-          </Composer.Container>
-        </Composer>
-      </div>
-    </Composer.Provider>
+    <div className="w-full max-w-xl">
+      <Composer
+        onSubmit={handleSubmit}
+        commands={{
+          "@": { kind: "insert", trigger: "after-whitespace", items: MENTIONS },
+        }}
+      >
+        <Composer.Panel>
+          <Composer.PanelItem value="command-list">
+            <Composer.CommandList prefix="@">
+              <Composer.CommandEmpty />
+              <Composer.CommandItems>
+                {(item) => (
+                  <Composer.CommandItem value={item.value}>
+                    <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                    {item.description && (
+                      <Composer.CommandItemDescription>
+                        {item.description}
+                      </Composer.CommandItemDescription>
+                    )}
+                  </Composer.CommandItem>
+                )}
+              </Composer.CommandItems>
+            </Composer.CommandList>
+          </Composer.PanelItem>
+        </Composer.Panel>
+        <Composer.Container>
+          <Composer.Textarea>
+            <Composer.Placeholder placeholder="Type @ to mention a file..." />
+          </Composer.Textarea>
+          <Composer.Actions>
+            <Composer.Submit />
+          </Composer.Actions>
+        </Composer.Container>
+      </Composer>
+    </div>
   );
 };

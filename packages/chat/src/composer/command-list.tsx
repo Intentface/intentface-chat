@@ -23,7 +23,7 @@ import { Commands } from "./commands";
 import { filterArrayItems } from "./fuzzy";
 import { useAsRef, useComposerInternals } from "./internals";
 import { commandListPluginKey } from "./prefix-plugin";
-import { useComposer, useComposerStore } from "./store";
+import { useComposer, useComposerContextStore } from "./store";
 import type { CommandItemData, ComposerCommandsItems, PrefixOnSelectContext } from "./types";
 
 export type CommandListState = "loading" | "empty" | "ready";
@@ -146,7 +146,7 @@ export const ComposerCommandList = ({
   children,
   ...elementProps
 }: ComposerCommandListProps) => {
-  const store = useComposerStore();
+  const store = useComposerContextStore();
   const attachments = useComposer((composer) => composer.attachments);
   const internals = useComposerInternals();
 

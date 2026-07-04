@@ -8,9 +8,10 @@
 import {
   type CommandItemData as CommandItemDataPrimitive,
   Composer as ComposerPrimitive,
-  composerController,
+  type ComposerStore,
   useComposer,
   useComposerController,
+  useComposerStore,
   useComposerSubmit,
 } from "@intentface/chat/composer";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
@@ -28,7 +29,8 @@ import { useMeasure } from "@/hooks/use-measure";
 import { CHIP_ICONS, type ChipIconKey, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
 
-export { composerController, useComposer, useComposerController };
+export { useComposer, useComposerController, useComposerStore };
+export type { ComposerStore };
 
 // The wire format carries the icon as an opaque string; this app's command
 // items narrow it to the concrete union so CHIP_ICONS indexing stays typed.
@@ -637,7 +639,7 @@ const ComposerAskUserContinue = ({ className, ...props }: ComposerAskUserContinu
 // ---------------------------------------------------------------------------
 
 export const Composer = Object.assign(ComposerRoot, {
-  Provider: ComposerPrimitive.Provider,
+  createStore: ComposerPrimitive.createStore,
   Container: ComposerContainer,
   Attachments: ComposerAttachments,
   AttachmentTrigger: ComposerAttachmentTrigger,

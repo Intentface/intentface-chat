@@ -13,7 +13,7 @@ import {
 } from "../attachments";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
-import { useComposer, useComposerStore } from "./store";
+import { useComposer, useComposerContextStore } from "./store";
 
 export type ComposerAttachmentsProps = {
   accept?: string;
@@ -32,7 +32,7 @@ export const ComposerAttachments = ({
   globalDrop = false,
   children,
 }: ComposerAttachmentsProps) => {
-  const store = useComposerStore();
+  const store = useComposerContextStore();
   const attachments = useComposer((composer) => composer.attachments);
 
   store.attachmentConfigRef.current = { accept, maxFiles, maxFileSize };

@@ -28,11 +28,13 @@ import {
 import { ComposerContainer } from "./container";
 import { ComposerPanel, ComposerPanelItem } from "./panel";
 import { ComposerPlaceholder } from "./placeholder";
-import { ComposerProvider, ComposerRoot } from "./root";
+import { ComposerRoot } from "./root";
+import { createComposerStore } from "./store";
 import { ComposerTextarea } from "./textarea";
 
 export const Composer = Object.assign(ComposerRoot, {
-  Provider: ComposerProvider,
+  /** Create a standalone store handle: <Composer store={…}> + useComposerStore(store, selector) + store.controller for imperative access. */
+  createStore: createComposerStore,
   Container: ComposerContainer,
   Attachments: ComposerAttachments,
   AttachmentTrigger: ComposerAttachmentTrigger,
@@ -67,7 +69,7 @@ export type { ComposerAttachmentsProps, ComposerAttachmentTriggerProps } from ".
 export type { CommandListState, ComposerCommandListProps } from "./command-list";
 export { useCommandListItems } from "./command-list";
 export type { ComposerContainerProps } from "./container";
-export { composerController, useComposerController } from "./controller";
+export { useComposerController } from "./controller";
 export type { ComposerEditorState } from "./document";
 export { applySnapshotToEditor, serializeEditorContent, snapshotFromEditor } from "./document";
 export { filterArrayItems, fuzzyScore } from "./fuzzy";
@@ -79,7 +81,7 @@ export type { ComposerPanelItemProps, ComposerPanelProps } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
 export type { CommandListPluginState, RegisteredPrefix } from "./prefix-plugin";
 export { CLOSED_COMMAND_STATE, commandListPluginKey, detectActivePrefix } from "./prefix-plugin";
-export type { ComposerProviderProps, ComposerRootProps } from "./root";
+export type { ComposerRootProps } from "./root";
 export type {
   ComposerAskUserState,
   ComposerAttachmentsState,
@@ -88,13 +90,7 @@ export type {
   ComposerState,
   ComposerStore,
 } from "./store";
-export {
-  ComposerStoreContext,
-  createComposerStore,
-  getGlobalComposerStore,
-  useComposer,
-  useComposerStore,
-} from "./store";
+export { useComposer, useComposerStore } from "./store";
 export type { ComposerTextareaProps } from "./textarea";
 export type {
   AskUserQuestion,

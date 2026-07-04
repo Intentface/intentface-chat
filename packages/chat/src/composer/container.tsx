@@ -6,7 +6,7 @@
 
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
-import { useComposerStore } from "./store";
+import { useComposerContextStore } from "./store";
 
 export type ComposerContainerProps = PrimitiveProps<"div">;
 
@@ -16,7 +16,7 @@ export const ComposerContainer = ({
   style,
   ...elementProps
 }: ComposerContainerProps) => {
-  const store = useComposerStore();
+  const store = useComposerContextStore();
 
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement;

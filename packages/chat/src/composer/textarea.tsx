@@ -20,7 +20,7 @@ import { useAsRef, useComposerInternals } from "./internals";
 import { interpretEditorKey } from "./keyboard";
 import { createMentionChipExtension } from "./mention-chip";
 import { commandListPluginKey } from "./prefix-plugin";
-import { useComposer, useComposerStore } from "./store";
+import { useComposer, useComposerContextStore } from "./store";
 
 export type ComposerTextareaState = {
   /** Present as data-disabled while the editor is non-editable. */
@@ -55,7 +55,7 @@ export const ComposerTextarea = ({
   children,
   ...elementProps
 }: ComposerTextareaProps) => {
-  const store = useComposerStore();
+  const store = useComposerContextStore();
   const hasContent = useComposer((composer) => composer.textarea.hasContent);
   const { getRegisteredPrefixes, reportEditorUpdate } = useComposerInternals();
 

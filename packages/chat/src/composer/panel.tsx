@@ -10,7 +10,7 @@ import { Children, Fragment, isValidElement, type ReactNode, useEffect } from "r
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping } from "../internal/state-mappings";
-import { useComposer, useComposerStore } from "./store";
+import { useComposer, useComposerContextStore } from "./store";
 
 export type ComposerPanelState = {
   open: boolean;
@@ -36,7 +36,7 @@ export const ComposerPanel = ({
   style,
   ...elementProps
 }: ComposerPanelProps) => {
-  const store = useComposerStore();
+  const store = useComposerContextStore();
   const isCommandListOpen = useComposer((composer) => composer.commands.isOpen);
 
   // When a command-list prefix is active, route the panel to its

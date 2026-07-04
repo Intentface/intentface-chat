@@ -1,22 +1,16 @@
 "use client";
 
 // Composer.Root — the form element that owns the submit flow, prop→store
-// bridges, drag-drop scope, and the per-instance store resolution:
-// props.store ?? nearest <Composer.Provider> ?? the page-global singleton.
+// bridges, drag-drop scope, and the per-instance store resolution: an explicit
+// Composer.createStore() handle via the store prop, or an instance created for
+// this mount. Every bare <Composer> is fully isolated.
 
 import type { Editor } from "@tiptap/react";
-import {
-  type ReactNode,
-  use,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { AttachmentItem } from "../attachments";
 import { prepareAttachmentsForSend } from "../attachments";
 import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRefWithInit } from "../internal/render/useRefWithInit";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import {
   ComposerInternalsContext,
@@ -26,12 +20,7 @@ import {
   useComposerSnapshot,
   useDragDropFiles,
 } from "./internals";
-import {
-  type ComposerStore,
-  ComposerStoreContext,
-  createComposerStore,
-  getGlobalComposerStore,
-} from "./store";
+import { type ComposerStore, ComposerStoreContext, createComposerStore } from "./store";
 import type {
   AskUserQuestion,
   ComposerCommandsMap,
@@ -40,21 +29,6 @@ import type {
 } from "./types";
 
 const EMPTY_COMMANDS: ComposerCommandsMap = {};
-
-export type ComposerProviderProps = {
-  store?: ComposerStore;
-  children: ReactNode;
-};
-
-/**
- * Scopes a composer instance: everything inside resolves this store instead
- * of the page-global singleton. Multiple providers on one page (docs
- * previews) get fully isolated composers.
- */
-export const ComposerProvider = ({ store, children }: ComposerProviderProps) => {
-  const [instanceStore] = useState(() => store ?? createComposerStore());
-  return <ComposerStoreContext value={instanceStore}>{children}</ComposerStoreContext>;
-};
 
 export type ComposerRootState = {
   /** Present as data-submitting while a submission is in flight. */
@@ -71,7 +45,7 @@ export type ComposerRootProps = Omit<PrimitiveProps<"form", ComposerRootState>, 
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
-  /** Explicit store instance; defaults to the nearest provider, then the global. */
+  /** Explicit Composer.createStore() handle; defaults to a per-mount instance. */
   store?: ComposerStore;
 };
 
@@ -89,24 +63,29 @@ export const ComposerRoot = ({
   style,
   ...elementProps
 }: ComposerRootProps) => {
-  const contextStore = use(ComposerStoreContext);
-  const store = storeProp ?? contextStore ?? getGlobalComposerStore();
+  // Resolved once at mount (lazy-init ref, not reactive state): an explicit
+  // handle, or an instance this mount creates and owns. Swapping the store
+  // prop after mount is not supported.
+  const { store, ownsStore } = useRefWithInit(() => ({
+    store: storeProp ?? createComposerStore(),
+    ownsStore: !storeProp,
+  })).current;
 
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const onSubmitRef = useAsRef(onSubmit);
 
-  // Register this mount on the resolved store: answers submit through this
-  // mount's onSubmit, and unmounting resets all mount-scoped state so nothing
-  // leaks across route changes.
+  // Register this mount on the store: answers submit through this mount's
+  // onSubmit. Only a store this mount created gets reset on unmount — an
+  // explicit handle's state belongs to its owner and survives remounts.
   useEffect(() => {
     store.submitAnswersRef.current = (answers) =>
       onSubmitRef.current?.({ kind: "answers", answers });
     return () => {
       store.submitAnswersRef.current = null;
-      store.reset();
+      if (ownsStore) store.reset();
     };
-  }, [store]);
+  }, [store, ownsStore]);
 
   // Prop → store bridges. Actions and refs on the snapshot are identity-stable,
   // so reading them here without subscribing is safe.

@@ -9,7 +9,7 @@ type DemoMessage = { id: string; role: "user" | "assistant"; text: string };
 
 // The full chat surface: scrolling thread + docked composer. The composer
 // echoes a reply so the auto-scroll and scroll-to-bottom button are live. Its
-// own store via Composer.Provider keeps multiple demos independent on a page.
+// bare <Composer> owns an isolated store, keeping multiple demos independent.
 export const ThreadBasic = () => {
   const [messages, setMessages] = useState<DemoMessage[]>([
     {
@@ -30,42 +30,40 @@ export const ThreadBasic = () => {
   };
 
   return (
-    <Composer.Provider>
-      <div className="h-[440px] w-full max-w-xl overflow-hidden rounded-xl border border-primary-border bg-secondary [--thread-width:100%]">
-        <Thread>
-          <Thread.Viewport>
-            {messages.map((message, index) => (
-              <Message
-                key={message.id}
-                role={message.role}
-                isLast={index === messages.length - 1}
-                isError={false}
-              >
-                <Message.Content>
-                  {message.role === "user" ? (
-                    <Message.Text>{message.text}</Message.Text>
-                  ) : (
-                    <Message.Markdown>{message.text}</Message.Markdown>
-                  )}
-                </Message.Content>
-              </Message>
-            ))}
-          </Thread.Viewport>
-          <Thread.Composer>
-            <Composer onSubmit={handleSubmit}>
-              <Composer.Container>
-                <Composer.Textarea>
-                  <Composer.Placeholder placeholder="Message…" />
-                </Composer.Textarea>
-                <Composer.Actions>
-                  <Composer.Submit />
-                </Composer.Actions>
-              </Composer.Container>
-            </Composer>
-          </Thread.Composer>
-          <Thread.ScrollButton />
-        </Thread>
-      </div>
-    </Composer.Provider>
+    <div className="h-[440px] w-full max-w-xl overflow-hidden rounded-xl border border-primary-border bg-secondary [--thread-width:100%]">
+      <Thread>
+        <Thread.Viewport>
+          {messages.map((message, index) => (
+            <Message
+              key={message.id}
+              role={message.role}
+              isLast={index === messages.length - 1}
+              isError={false}
+            >
+              <Message.Content>
+                {message.role === "user" ? (
+                  <Message.Text>{message.text}</Message.Text>
+                ) : (
+                  <Message.Markdown>{message.text}</Message.Markdown>
+                )}
+              </Message.Content>
+            </Message>
+          ))}
+        </Thread.Viewport>
+        <Thread.Composer>
+          <Composer onSubmit={handleSubmit}>
+            <Composer.Container>
+              <Composer.Textarea>
+                <Composer.Placeholder placeholder="Message…" />
+              </Composer.Textarea>
+              <Composer.Actions>
+                <Composer.Submit />
+              </Composer.Actions>
+            </Composer.Container>
+          </Composer>
+        </Thread.Composer>
+        <Thread.ScrollButton />
+      </Thread>
+    </div>
   );
 };

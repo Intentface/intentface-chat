@@ -5,15 +5,17 @@
 // slice they read. Actions and refs are created once and survive every
 // update; a slice's identity changes only when that slice's data changes.
 //
-// Instance model: Composer.Root provides a store via ComposerStoreContext; any
-// hook resolves `nearest provider ?? lazy global singleton`. Zero-config
-// single-composer pages keep the drive-from-anywhere ergonomics (the global
-// instance), while multiple composers on one page each get their own store.
-// SSR-safe by invariant: every write happens in an effect or event handler
-// (client-only), so server renders only ever read the pristine snapshot.
+// Instance model: every Composer.Root owns a store (an explicit
+// Composer.createStore() handle, or one created per mount) and provides it via
+// ComposerStoreContext. Inside the tree, useComposer resolves it implicitly;
+// outside, useComposerStore(store, selector) and store.controller take an
+// explicit handle — no global fallback, so state is never read or driven by
+// accident. SSR-safe by invariant: every write happens in an effect or event
+// handler (client-only), so server renders only ever read the pristine
+// snapshot.
 
 import type { Editor } from "@tiptap/react";
-import { createContext, type ReactNode, type RefObject, use, useSyncExternalStore } from "react";
+import { createContext, type RefObject, use, useSyncExternalStore } from "react";
 import type { AskUserOptionsHandle } from "../ask-user";
 import {
   type AttachmentItem,
@@ -442,31 +444,32 @@ export const createComposerStore = (): ComposerStore => {
 };
 
 // ---------------------------------------------------------------------------
-// Instance resolution — nearest provider, else the lazy global singleton.
+// Instance resolution — the nearest <Composer>, explicitly. No global
+// fallback: outside a composer tree, state comes from an explicit
+// Composer.createStore() handle via useComposerStore.
 // ---------------------------------------------------------------------------
 
 export const ComposerStoreContext = createContext<ComposerStore | null>(null);
 
-let globalComposerStore: ComposerStore | undefined;
-
-export const getGlobalComposerStore = (): ComposerStore => {
-  globalComposerStore ??= createComposerStore();
-  return globalComposerStore;
+// Internal: parts resolve the store their Composer.Root provided.
+export const useComposerContextStore = (): ComposerStore => {
+  const store = use(ComposerStoreContext);
+  if (!store) {
+    throw new Error("Composer components must be used within <Composer>");
+  }
+  return store;
 };
 
-export const useComposerStore = (): ComposerStore =>
-  use(ComposerStoreContext) ?? getGlobalComposerStore();
-
-// Subscribe to composer state — from anywhere; resolves the nearest
-// Composer.Root's store, falling back to the page-global instance. With a
-// selector, the component re-renders only when the selected value changes
-// identity (slices are identity-stable):
-//   const askUser = useComposer((composer) => composer.askUser);
-// Without one, it returns the full snapshot and re-renders on any change.
-export const useComposer = <Selected = ComposerState>(
+// Subscribe to an explicit Composer.createStore() instance — the
+// outside-the-tree twin of useComposer (toolbars, status bars, shortcut
+// handlers). Wrap it once per instance to drop the store argument at call
+// sites:
+//   const useChatComposer = <T,>(selector: (c: ComposerState) => T) =>
+//     useComposerStore(chatComposerStore, selector);
+export const useComposerStore = <Selected = ComposerState>(
+  store: ComposerStore,
   selector?: (composer: ComposerState) => Selected,
 ): Selected => {
-  const store = useComposerStore();
   const getValue = () => {
     const state = store.getSnapshot();
     // Safe: without a selector, Selected defaults to ComposerState.
@@ -474,3 +477,12 @@ export const useComposer = <Selected = ComposerState>(
   };
   return useSyncExternalStore(store.subscribe, getValue, getValue);
 };
+
+// Subscribe to composer state from inside the tree. With a selector, the
+// component re-renders only when the selected value changes identity (slices
+// are identity-stable):
+//   const askUser = useComposer((composer) => composer.askUser);
+// Without one, it returns the full snapshot and re-renders on any change.
+export const useComposer = <Selected = ComposerState>(
+  selector?: (composer: ComposerState) => Selected,
+): Selected => useComposerStore(useComposerContextStore(), selector);

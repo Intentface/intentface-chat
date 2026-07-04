@@ -1,55 +1,72 @@
 ---
 title: Composer state
-description: One store per Composer.Provider, with a global fallback for the zero-config path.
+description: One isolated store per Composer, with explicit createStore handles for cross-tree access.
 ---
 
 The composer's state — editor content, command lists, ask-user flow, attachments
-— lives in a store. How that store is resolved is what lets a single composer
-work with zero setup while several composers coexist on one page.
+— lives in a store. Every `<Composer>` creates its own isolated instance, so a
+single composer works with zero setup and several composers coexist on one page
+without any wiring.
 
-## Resolution order
+## Resolution
 
-`Composer.Root` resolves its store in this order:
+`Composer` resolves its store once, at mount:
 
-1. an explicit `store` prop, else
-2. the nearest `Composer.Provider` in the tree, else
-3. a lazily-created **global** instance.
+1. an explicit `store` prop — a `Composer.createStore()` handle, else
+2. an instance created for this mount, owned by it and reset on unmount.
 
 ```tsx
-// Zero config — resolves the global store.
+// Zero config — an isolated instance. Two of these never interact.
 <Composer onSubmit={handleSubmit}>{/* … */}</Composer>
 
-// Scoped — its own instance, isolated from any other composer.
-<Composer.Provider>
-  <Composer onSubmit={handleSubmit}>{/* … */}</Composer>
-</Composer.Provider>
+// Explicit — a handle you own, for anything that must reach the
+// composer from outside its tree.
+const composerStore = Composer.createStore();
+
+<Composer store={composerStore} onSubmit={handleSubmit}>{/* … */}</Composer>
 ```
 
-## Why the global fallback
+## Reading state inside the tree
 
-With one composer per page — the common case — you write nothing. And because
-the global store is shared, you can drive the composer from anywhere with
-`composerController` (insert a chip, focus, clear) without threading a ref:
-
-```ts
-import { composerController } from "@/components/ai/composer";
-
-composerController.insertChip({ prefix: "@", value: fileId, label: fileName });
-```
-
-## Why the provider
-
-Two composers sharing one global store would fight over the same editor and
-command state. Wrapping each in `Composer.Provider` gives each its own instance
-— which is exactly why the docs previews on this site can render several live
-composers on one page. Inside a provider, use the `useComposer` selector hook
-and `useComposerController` to read and drive the nearest store.
-
-## Reading state
-
-`useComposer(selector)` subscribes to a slice of the resolved store:
+`useComposer(selector)` subscribes to a slice of the nearest composer's store.
+It throws outside a `<Composer>` — inside the tree, no store is ever named:
 
 ```ts
 const isSubmitting = useComposer((state) => state.isSubmitting);
 const attachments = useComposer((state) => state.attachments.items);
 ```
+
+`useComposerController()` is its imperative twin — the nearest composer's
+editor controls (focus, insert, clear) for components inside the form.
+
+## Reaching in from outside
+
+A `Composer.createStore()` handle carries the full surface. Imperative control
+needs no hook at all:
+
+```ts
+composerStore.controller.insertChip({ prefix: "@", value: fileId, label: fileName });
+composerStore.controller.focus();
+```
+
+Reactive reads go through `useComposerStore(store, selector)` — the
+outside-the-tree twin of `useComposer`:
+
+```ts
+const attachments = useComposerStore(composerStore, (state) => state.attachments.items);
+```
+
+Wrap it once per instance so call sites pass only the selector:
+
+```ts
+// lib/composer.ts — one module owns the instance
+export const chatComposerStore = Composer.createStore();
+
+export const useChatComposer = <T,>(selector: (state: ComposerState) => T) =>
+  useComposerStore(chatComposerStore, selector);
+```
+
+The rule is deliberate: **explicit at the boundary, implicit within it**. Inside
+`<Composer>`, hooks resolve by context and nothing is named; outside it,
+someone must say which composer they mean. There is no global fallback — a
+composer's state can never be read or driven by accident.

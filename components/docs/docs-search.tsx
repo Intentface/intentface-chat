@@ -5,6 +5,7 @@ import { SearchIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
+import { Kbd } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 
 export const DocsSearch = () => {
@@ -29,15 +30,20 @@ export const DocsSearch = () => {
     <Dialog open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
         className={cn(
-          "flex h-8 w-full items-center gap-2 rounded-md border border-primary-border bg-primary px-3",
-          "text-ink-tertiary text-sm transition-colors hover:bg-primary-hover",
+          "flex h-8 min-h-8 w-full shrink-0 cursor-pointer items-center gap-2 rounded-md border border-primary-border bg-primary pl-2.5 pr-1.5",
+          "text-md text-ink-tertiary transition-colors duration-0 hover:bg-primary-hover",
         )}
       >
         <SearchIcon className="size-4 shrink-0" />
-        <span className="flex-1 text-left">Search docs</span>
-        <kbd className="rounded border border-primary-border px-1.5 py-0.5 font-mono text-2xs">
-          ⌘K
-        </kbd>
+        <span className="min-w-0 flex-1 truncate text-left">Search docs</span>
+        <span className="hidden shrink-0 items-center gap-1 lg:inline-flex">
+          <Kbd size="md" className="shrink-0 border-primary-border bg-secondary">
+            ⌘
+          </Kbd>
+          <Kbd size="md" className="shrink-0 border-primary-border bg-secondary">
+            K
+          </Kbd>
+        </span>
       </Dialog.Trigger>
       <Dialog.Content className="top-24 max-w-lg translate-y-0 p-0">
         <Dialog.Title className="sr-only">Search documentation</Dialog.Title>

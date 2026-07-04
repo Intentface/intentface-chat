@@ -27,9 +27,19 @@ export const DocsTOC = ({ items }: DocsTOCProps) => {
           if (entry.isIntersecting) visible.add(entry.target.id);
           else visible.delete(entry.target.id);
         }
-        // Highest heading still in view wins; clear when none are visible (Overview).
+        // Highest heading in the trigger band wins.
         const firstVisible = headings.find((h) => visible.has(h.id));
-        setActiveId(firstVisible?.id ?? null);
+        if (firstVisible) {
+          setActiveId(firstVisible.id);
+          return;
+        }
+        // Band empty: only fall back to Overview when we're actually above the
+        // first heading. Mid-document — scrolling through a section body whose
+        // heading has left the band before the next one enters — keep the
+        // current section, so it doesn't flicker back to Overview in the gap.
+        if (headings[0].getBoundingClientRect().top > 0) {
+          setActiveId(null);
+        }
       },
       { rootMargin: "0px 0px -70% 0px", threshold: 0 },
     );
@@ -50,7 +60,7 @@ export const DocsTOC = ({ items }: DocsTOCProps) => {
     );
 
   return (
-    <aside className="sticky top-16 hidden h-[calc(100vh-8rem)] w-56 shrink-0 overflow-y-auto pb-10 xl:block">
+    <aside className="sticky top-16 hidden h-[calc(100vh-8rem)] w-56 shrink-0 overflow-y-auto xl:block">
       <nav className="flex flex-col gap-1 border-secondary-border border-l">
         <a href="#overview" className={linkClass(activeId === null)}>
           Overview

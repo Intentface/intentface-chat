@@ -324,8 +324,7 @@ export default function ComponentsPlayground() {
                 />
               </Composer.Textarea>
               {composerState === "ask-user" || composerState === "ask-user-multi" ? (
-                <Composer.Actions className="flex items-center justify-end">
-                  <Composer.AskUserHints />
+                <Composer.Actions className="flex items-center justify-end gap-2">
                   <Composer.AskUserDismiss />
                   <Composer.AskUserContinue />
                 </Composer.Actions>

@@ -2,8 +2,12 @@ import type { ComponentType } from "react";
 import { AttachmentsBasic } from "./attachments-basic";
 import { ChipBasic } from "./chip-basic";
 import { ComposerAskUser } from "./composer-ask-user";
+import { ComposerAskUserFlow } from "./composer-ask-user-flow";
+import { ComposerAttachments } from "./composer-attachments";
 import { ComposerBasic } from "./composer-basic";
 import { ComposerCommands } from "./composer-commands";
+import { ComposerControlled } from "./composer-controlled";
+import { ComposerStoreDemo } from "./composer-store";
 import { MessageBasic } from "./message-basic";
 import { ReasoningBasic } from "./reasoning-basic";
 import { StepQueueBasic } from "./step-queue-basic";
@@ -25,6 +29,16 @@ export const previews: Record<string, PreviewEntry> = {
   "composer-basic": { Component: ComposerBasic, file: `${dir}/composer-basic.tsx` },
   "composer-commands": { Component: ComposerCommands, file: `${dir}/composer-commands.tsx` },
   "composer-ask-user": { Component: ComposerAskUser, file: `${dir}/composer-ask-user.tsx` },
+  "composer-ask-user-flow": {
+    Component: ComposerAskUserFlow,
+    file: `${dir}/composer-ask-user-flow.tsx`,
+  },
+  "composer-attachments": {
+    Component: ComposerAttachments,
+    file: `${dir}/composer-attachments.tsx`,
+  },
+  "composer-controlled": { Component: ComposerControlled, file: `${dir}/composer-controlled.tsx` },
+  "composer-store": { Component: ComposerStoreDemo, file: `${dir}/composer-store.tsx` },
   "thread-basic": { Component: ThreadBasic, file: `${dir}/thread-basic.tsx` },
   "message-basic": { Component: MessageBasic, file: `${dir}/message-basic.tsx` },
   "chip-basic": { Component: ChipBasic, file: `${dir}/chip-basic.tsx` },

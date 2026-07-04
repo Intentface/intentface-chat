@@ -816,8 +816,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
           />
         </Composer.Textarea>
         {isAskUser ? (
-          <Composer.Actions className="flex items-center justify-end">
-            <Composer.AskUserHints />
+          <Composer.Actions className="flex items-center justify-end gap-2">
             <Composer.AskUserDismiss />
             <Composer.AskUserContinue />
           </Composer.Actions>

@@ -1,7 +1,16 @@
-import { defineConfig, defineDocs } from "fumadocs-mdx/config";
+import { defineConfig, defineDocs, frontmatterSchema } from "fumadocs-mdx/config";
+import { z } from "zod";
 
 export const docs = defineDocs({
   dir: "content/docs",
+  docs: {
+    // `source` is the component's path under packages/chat/src (a directory
+    // like "composer" or a file like "thread.tsx"); the page header links
+    // "View source" to it on GitHub.
+    schema: frontmatterSchema.extend({
+      source: z.string().optional(),
+    }),
+  },
 });
 
 export default defineConfig({

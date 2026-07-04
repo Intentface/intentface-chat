@@ -1,18 +1,18 @@
 ---
 title: Composer
 description: Rich-text chat input with chips, slash/mention commands, attachments, and an ask-user flow.
+source: composer
 ---
-
-The Composer is the chat input: a TipTap-backed rich-text field with inline
-chips, prefix-triggered command lists (`/`, `@`, …), attachments, and a panel
-that hosts command results, live steps, or an ask-user prompt. All of that
-behavior lives in `@intentface/chat`; the styled wrapper below is yours to edit.
 
 <ComponentPreview name="composer-basic" />
 
-## Installation
+## Usage guidelines
 
-<ManualInstall item="composer" />
+- **Chat input** — TipTap-backed rich text with inline chips and attachments.
+- **Prefix commands** — type `/`, `@`, or other prefixes to open command lists.
+- **Panel** — hosts command results, live steps, or an ask-user prompt above the field.
+- **Headless + styled** — behavior lives in `@intentface/chat`; the styled wrapper below is yours to copy and edit.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
 
 ## Anatomy
 
@@ -46,41 +46,48 @@ The bare nesting — every part is optional except `Composer` and `Container`:
 </Composer>
 ```
 
-A realistic message composer wiring `onSubmit` and a mention command:
+## Examples
 
-```tsx
-<Composer
-  onSubmit={(data) => {
-    if (data.kind === "message") sendMessage(data.text);
-  }}
-  commands={{
-    "@": { kind: "insert", trigger: "after-whitespace", items: mentions },
-  }}
->
-  <Composer.Panel>
-    <Composer.PanelItem value="command-list">
-      <Composer.CommandList prefix="@">
-        <Composer.CommandEmpty />
-        <Composer.CommandItems>
-          {(item) => (
-            <Composer.CommandItem value={item.value}>
-              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-            </Composer.CommandItem>
-          )}
-        </Composer.CommandItems>
-      </Composer.CommandList>
-    </Composer.PanelItem>
-  </Composer.Panel>
-  <Composer.Container>
-    <Composer.Textarea>
-      <Composer.Placeholder placeholder="Send a message..." />
-    </Composer.Textarea>
-    <Composer.Actions>
-      <Composer.Submit />
-    </Composer.Actions>
-  </Composer.Container>
-</Composer>
-```
+### Mention command list
+
+Type `@` to open the command list — the panel routes to it automatically while
+a prefix is active. `commands` maps each prefix to its config and items.
+
+<ComponentPreview name="composer-commands" />
+
+### Ask-user flow
+
+Setting the `questions` prop — typically from an assistant's clarifying
+question — routes the panel to an ask-user prompt. The flow steps through each
+question (single- or multi-select), and answering or skipping the last one
+fires `onSubmit` with `{ kind: "answers" }`. Passing a fresh `questions` array
+re-arms it from the first step.
+
+<ComponentPreview name="composer-ask-user-flow" />
+
+### Attachments
+
+`Composer.Attachments` renders the file strip and drop zone above the input;
+`Composer.AttachmentTrigger` opens the file dialog. Files can also be dropped
+onto the composer.
+
+<ComponentPreview name="composer-attachments" />
+
+### Controlled value
+
+`Composer.Textarea` accepts a controlled plain-text `value` with
+`onValueChange`. Here the parent's buttons drive the field and typing reports
+back.
+
+<ComponentPreview name="composer-controlled" />
+
+### External store
+
+`Composer.createStore()` returns a handle you own. Pass it via `store` and
+drive the composer from anywhere — a toolbar, a shortcut — through
+`store.controller`, with no context or ref threading.
+
+<ComponentPreview name="composer-store" />
 
 ## Multiple instances
 
@@ -120,32 +127,323 @@ transitioned, so the inner composer bails on every chunk except real panel
 changes. See [Streaming performance](/docs/headless/performance) for the full
 render model.
 
-## Props
+## Keyboard
+
+`Composer.Root` is a `<form>`, so submission and key handling follow form
+semantics. The editor interprets keys by mode — a command list being open, or
+ask-user being active, takes priority over normal typing.
+
+**Normal typing**
+
+export const normalKeys = [
+  { attribute: "Enter", description: "Submit the form (requestSubmit)." },
+  { attribute: "Shift + Enter", description: "Insert a soft line break." },
+  { attribute: "Backspace", description: "When the editor is empty and attachments exist, remove the last attachment." },
+];
+
+<AttributesTable rows={normalKeys} />
+
+**Command list open**
+
+export const commandKeys = [
+  { attribute: "ArrowUp / ArrowDown", description: "Move the highlight through the items." },
+  { attribute: "ArrowLeft / ArrowRight", description: "Move the caret within the trigger token." },
+  { attribute: "Enter / Tab", description: "Select the highlighted item." },
+  { attribute: "Escape", description: "Close the command list." },
+];
+
+<AttributesTable rows={commandKeys} />
+
+**Ask-user active**
+
+export const askUserKeys = [
+  { attribute: "ArrowUp / ArrowDown", description: "Navigate options; up past the first refocuses the editor." },
+  { attribute: "ArrowLeft / ArrowRight", description: "Go to the previous / next question." },
+  { attribute: "Enter", description: "Select the highlighted option." },
+  { attribute: "Escape", description: "Dismiss the current step." },
+  { attribute: "Any character", description: "Focus the editor and start typing a free-text answer." },
+];
+
+<AttributesTable rows={askUserKeys} />
+
+While `isSubmitting`, `Submit` (via `useComposerSubmit`) also listens document-wide
+for `Escape` to call `onStop`, unless the event was already handled.
+
+## Accessibility
+
+- **Form semantics.** The root renders a `<form>`; `Enter` submits and
+  `Submit` is a real submit button, so the composer works with standard form
+  and assistive-tech expectations.
+- **Click-to-focus.** `Container` is a focus proxy (`role="button"`,
+  `tabIndex={0}`): clicking its chrome focuses the editor, but clicks on nested
+  buttons, links, and inputs pass through.
+- **Ask-user focus.** Activating `questions` blurs the editor and moves key
+  handling to the options; typing any character returns focus to the editor for
+  a free-text answer.
+- **Submit labelling.** While generating, `Submit` sets
+  `aria-label="Stop generating"` so the morphed control is announced correctly.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+Only part-specific props and state-driven attributes are listed below. These
+tables are hand-authored from the package source.
+
+### Composer
+
+The `<form>` that owns submission, store resolution, drag-and-drop, and the
+prop → store bridges. Renders `data-slot="composer-root"`.
 
 export const rootProps = [
-  { name: "onSubmit", type: "(data: ComposerSubmitData) => void", description: "Called on message submit and on ask-user answers. Discriminate on data.kind (\"message\" | \"answers\")." },
-  { name: "commands", type: "ComposerCommandsMap", description: "Prefix → command config (kind, trigger, items). Drives the command lists." },
-  { name: "questions", type: "AskUserQuestion[]", description: "When set, activates the ask-user flow in the panel." },
+  { name: "onSubmit", type: "(data: ComposerSubmitData) => void | Promise<void>", description: "Fires on message submit and on ask-user answers. Discriminate on data.kind." },
+  { name: "commands", type: "ComposerCommandsMap", default: "{}", description: "Prefix → command config (kind, trigger, items). Drives the command lists." },
+  { name: "questions", type: "AskUserQuestion[]", description: "When set, arms the ask-user flow (blurs the editor, routes the panel)." },
   { name: "isSubmitting", type: "boolean", default: "false", description: "Flips Submit to a stop affordance and gates re-submits." },
-  { name: "store", type: "ComposerStore", description: "An explicit Composer.createStore() handle for cross-tree access. Defaults to an isolated per-mount instance." },
+  { name: "value", type: "ComposerSnapshot", description: "Controlled editor content." },
+  { name: "defaultValue", type: "ComposerSnapshot", description: "Uncontrolled initial editor content." },
+  { name: "onValueChange", type: "(snapshot: ComposerSnapshot) => void", description: "Fires on editor updates with a fresh snapshot." },
+  { name: "store", type: "ComposerStore", default: "per-mount instance", description: "An explicit Composer.createStore() handle. A per-mount instance is reset on unmount; an explicit handle is not." },
 ];
 
 <PropsTable rows={rootProps} />
 
-## Examples
+export const rootAttrs = [
+  { attribute: "data-slot", values: '"composer-root"', description: "The form element." },
+  { attribute: "data-submitting", description: "Present while isSubmitting is true." },
+  { attribute: "data-dragging", description: "Present while files are dragged over the drop scope." },
+];
 
-### Mention command list
+<AttributesTable rows={rootAttrs} />
 
-Type `@` to open the command list — the panel routes to it automatically while
-a prefix is active.
+### Composer.createStore()
 
-<ComponentPreview name="composer-commands" />
+Returns a `ComposerStore` handle. Pass it to `store`, read it with
+`useComposerStore(store, selector)`, and drive it imperatively through
+`store.controller` (`focus`, `blur`, `clear`, `insertText`, `insertChip`,
+`getText`, `setText`, `serialize`, `ensureFocus`).
 
-### Ask-user flow
+`onSubmit` receives a discriminated `ComposerSubmitData`:
 
-When the `questions` prop is set — typically from an assistant's clarifying
-question — the panel routes to an ask-user prompt. The user picks an answer and
-`onSubmit` fires with `{ kind: "answers" }`. This is the same questionnaire the
-composer renders inside its panel:
+```ts
+type ComposerSubmitData =
+  | { kind: "message"; text: string; files: FilePart[] }
+  | { kind: "answers"; answers: ComposerAnswerEntry[] };
+```
 
-<ComponentPreview name="composer-ask-user" />
+### Composer.Container
+
+Focus proxy and layout frame. Renders `data-slot="composer-container"`
+(`role="button"`, `tabIndex={0}`); clicking its chrome focuses the editor.
+
+### Composer.Textarea
+
+The rich-text editor. Renders `data-slot="composer-textarea"` wrapping the
+ProseMirror editor element (`data-slot="composer-editor"`).
+
+export const textareaProps = [
+  { name: "value", type: "string", description: "Controlled plain-text value." },
+  { name: "onValueChange", type: "(text: string) => void", description: "Fires on each editor update with plain text." },
+  { name: "disabled", type: "boolean", default: "false", description: "Makes the editor non-editable." },
+  { name: "autoFocus", type: "boolean", default: "false", description: "Focus the editor on mount." },
+  { name: "renderChip", type: "(chip: ChipData) => ReactNode", description: "Custom renderer for a committed chip." },
+  { name: "children", type: "ReactNode", description: "Placeholder overlay, shown while empty." },
+];
+
+<PropsTable rows={textareaProps} />
+
+export const textareaAttrs = [
+  { attribute: "data-slot", values: '"composer-textarea" | "composer-editor"', description: "The wrapper and the inner editor element." },
+  { attribute: "data-filled", description: "Present when the editor has content." },
+  { attribute: "data-disabled", description: "Present when disabled." },
+  { attribute: "data-command-badge", description: "On the active trigger token decoration (e.g. the leading @)." },
+  { attribute: "data-command-placeholder", description: "On the inline hint decoration after a trigger." },
+];
+
+<AttributesTable rows={textareaAttrs} />
+
+### Composer.Placeholder
+
+Static or custom placeholder. Renders `data-slot="composer-placeholder-text"`.
+Pass **either** `placeholder` or `children`, not both.
+
+export const placeholderProps = [
+  { name: "placeholder", type: "string", description: "Static placeholder text (mutually exclusive with children)." },
+  { name: "children", type: "ReactNode", description: "Custom placeholder content (mutually exclusive with placeholder)." },
+];
+
+<PropsTable rows={placeholderProps} />
+
+### Composer.ContextWindow
+
+A slot above the input, visible only when it has content and no panel is open.
+Renders `data-slot="composer-context-window"`.
+
+export const contextWindowAttrs = [
+  { attribute: "data-slot", values: '"composer-context-window"', description: "The context-window element." },
+  { attribute: "data-visible", description: "Present while the window is shown." },
+];
+
+<AttributesTable rows={contextWindowAttrs} />
+
+### Composer.Actions
+
+Layout row for buttons. Renders `data-slot="composer-actions"`. No
+part-specific props or state attributes.
+
+### Composer.Submit
+
+Submit button that morphs into a stop control while generating. Renders
+`data-slot="composer-submit"`.
+
+export const submitProps = [
+  { name: "isGenerating", type: "boolean", default: "false", description: "Morphs into a stop control: type becomes \"button\" and clicking calls onStop." },
+  { name: "onStop", type: "() => void", description: "Abort callback — on click while generating, or Escape." },
+];
+
+<PropsTable rows={submitProps} />
+
+export const submitAttrs = [
+  { attribute: "data-slot", values: '"composer-submit"', description: "The button element." },
+  { attribute: "data-generating", description: "Present while isGenerating is true." },
+];
+
+<AttributesTable rows={submitAttrs} />
+
+### Composer.Attachments
+
+Owns the hidden file input and renders the file strip / drop zone as children.
+This part does **not** take `className` / `style` / `render` and emits no
+`data-slot` of its own.
+
+export const attachmentsProps = [
+  { name: "accept", type: "string", default: "DEFAULT_ATTACHMENT_ACCEPT", description: "Accepted MIME types." },
+  { name: "maxFiles", type: "number", default: "DEFAULT_ATTACHMENT_MAX_FILES", description: "Maximum file count." },
+  { name: "maxFileSize", type: "number", default: "DEFAULT_ATTACHMENT_MAX_FILE_SIZE", description: "Maximum size per file." },
+  { name: "multiple", type: "boolean", default: "true", description: "Allow selecting multiple files." },
+  { name: "globalDrop", type: "boolean", default: "false", description: "Accept drops anywhere in the document, not just over the composer." },
+  { name: "children", type: "ReactNode", description: "The visible strip / drop zone." },
+];
+
+<PropsTable rows={attachmentsProps} />
+
+### Composer.AttachmentTrigger
+
+Button that opens the file dialog. Renders
+`data-slot="composer-attachment-trigger"`. No part-specific props.
+
+### Composer.Panel
+
+Shows the `PanelItem` whose `value` matches, and force-routes to the
+command-list item while a command prefix is open. Renders
+`data-slot="composer-panel"`.
+
+export const panelProps = [
+  { name: "value", type: "string", description: "Which PanelItem to show (overridden by an active command list)." },
+  { name: "renderContent", type: "(matched: ReactNode, hasMatch: boolean) => ReactNode", description: "Presentation hook for open/close transitions; without it the matched child renders directly." },
+];
+
+<PropsTable rows={panelProps} />
+
+export const panelAttrs = [
+  { attribute: "data-slot", values: '"composer-panel"', description: "The panel element." },
+  { attribute: "data-open / data-closed", description: "Reflects whether a panel item is open." },
+];
+
+<AttributesTable rows={panelAttrs} />
+
+### Composer.PanelItem
+
+One matchable panel view. Renders `data-slot="composer-panel-item"`.
+
+export const panelItemProps = [
+  { name: "value", type: "string", default: "(required)", description: "Match key against Panel's value or the \"command-list\" override." },
+];
+
+<PropsTable rows={panelItemProps} />
+
+### Composer.CommandList
+
+The command popup for one prefix. Renders `data-slot="composer-command-list"`
+**only while that prefix is active** (returns nothing otherwise).
+
+export const commandListProps = [
+  { name: "prefix", type: "string", default: "(required)", description: "Which trigger prefix this list serves." },
+];
+
+<PropsTable rows={commandListProps} />
+
+export const commandListAttrs = [
+  { attribute: "data-slot", values: '"composer-command-list"', description: "The list element." },
+  { attribute: "data-loading", description: "Present while async items are being fetched." },
+  { attribute: "data-empty", description: "Present when no items match." },
+];
+
+<AttributesTable rows={commandListAttrs} />
+
+### Composer.CommandItems
+
+Maps resolved items through a render-prop child. Renders
+`data-slot="composer-command-items"`.
+
+export const commandItemsProps = [
+  { name: "children", type: "(item: Item) => ReactNode", default: "(required)", description: "Row renderer, called per resolved item." },
+];
+
+<PropsTable rows={commandItemsProps} />
+
+### Composer.CommandItem
+
+One selectable row. Renders `data-slot="composer-command-item"`.
+
+export const commandItemProps = [
+  { name: "value", type: "string", default: "(required)", description: "Item identity, matched against the highlight and selection." },
+];
+
+<PropsTable rows={commandItemProps} />
+
+export const commandItemAttrs = [
+  { attribute: "data-slot", values: '"composer-command-item"', description: "The row button." },
+  { attribute: "data-highlighted", description: "Present when this row is the active highlight." },
+];
+
+<AttributesTable rows={commandItemAttrs} />
+
+### Row content & states
+
+`Composer.CommandItemIcon`, `Composer.CommandItemLabel`, and
+`Composer.CommandItemDescription` render `<span>`s with
+`data-slot="composer-command-item-{icon,label,description}"`.
+`Composer.CommandLoading` (`composer-command-loading`, default "Loading…"),
+`Composer.CommandEmpty` (`composer-command-empty`, default "No results
+found"), and `Composer.CommandDismiss` (`composer-command-dismiss`, a button)
+fill the list states. `Composer.CommandGroup` renders
+`data-slot="command-group"` (the inner primitive's slot, **not**
+`composer-`-prefixed) with `Composer.CommandGroupLabel`
+(`composer-command-group-label`). `Composer.CommandCollection` is logic-only —
+it maps `items` through a render-prop child and renders no element.
+
+### Composer.AskUser
+
+Renders the active question inside the panel (or nothing when there is no
+question). No props — it reads the store's ask-user state.
+
+### Ask-user actions
+
+`Composer.AskUserHints` renders keyboard hints (defaults to ↑↓ / ↵ / ←→ / esc).
+`Composer.AskUserDismiss` is a button (default label "Dismiss",
+`data-slot="composer-ask-user-dismiss"`). `Composer.AskUserContinue` is a
+submit button (`data-slot="composer-ask-user-continue"`) whose default label is
+"Continue", or "Submit" on the last question.
+
+### Hooks
+
+export const hooks = [
+  { name: "useComposer", type: "(selector?) => Selected", description: "Subscribe to a slice of the nearest composer's store. Throws outside <Composer>." },
+  { name: "useComposerStore", type: "(store, selector?) => Selected", description: "Same, for an explicit createStore() handle — the outside-the-tree twin." },
+  { name: "useComposerController", type: "() => ComposerEditorState", description: "The nearest composer's imperative editor controls (focus, insert, clear, …)." },
+  { name: "useComposerSubmit", type: "(options) => ComposerSubmitState", description: "Computes Submit's type/disabled/generating; auto-disables while empty or submitting; aborts on Escape." },
+  { name: "useCommandListItems", type: "() => { items, state }", description: "The resolved items and load state inside a CommandList. Throws outside one." },
+];
+
+<PropsTable rows={hooks} />

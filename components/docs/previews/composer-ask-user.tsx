@@ -31,10 +31,6 @@ export const ComposerAskUser = () => {
             </AskUser.Option>
           ))}
         </AskUser.Options>
-        <AskUser.Hints>
-          <span>↑↓ navigate</span>
-          <span>↵ select</span>
-        </AskUser.Hints>
       </AskUser>
     </div>
   );

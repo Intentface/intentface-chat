@@ -611,7 +611,6 @@ const ComposerAskUserDismiss = ({ className, ...props }: ComposerAskUserDismissP
       {...props}
     >
       Dismiss
-      <Kbd size="sm">ESC</Kbd>
     </Button>
   );
 };
@@ -629,7 +628,6 @@ const ComposerAskUserContinue = ({ className, ...props }: ComposerAskUserContinu
       {...props}
     >
       {askUser.isLastStep ? "Submit" : "Continue"}
-      <Kbd size="sm">↵</Kbd>
     </Button>
   );
 };

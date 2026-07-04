@@ -126,10 +126,16 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
 
 export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
   <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-3 md:flex">
-    <Link href="/docs" className="flex h-8 items-center px-3 text-ink-primary" aria-label="@intentface/chat">
+    <Link
+      href="/docs"
+      className="flex h-8 items-center px-3 text-ink-primary"
+      aria-label="@intentface/chat"
+    >
       <IntentfaceLogo className="size-6" />
     </Link>
-    <DocsSearch />
+    <div className="shrink-0">
+      <DocsSearch />
+    </div>
     <nav className="flex-1">
       <TreeNodes nodes={tree.children} />
     </nav>

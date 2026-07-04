@@ -121,7 +121,7 @@ type AskUserOptionProps = ComponentProps<typeof AskUserPrimitive.Option>;
 const AskUserOption = ({ className, ...props }: AskUserOptionProps) => (
   <AskUserPrimitive.Option
     className={cn(
-      "flex cursor-pointer items-start gap-2 rounded-lg p-2 transition-colors",
+      "flex cursor-pointer items-start gap-2 rounded-lg p-2 leading-tight transition-colors",
       "data-highlighted:bg-primary-hover",
       className,
     )}
@@ -162,7 +162,7 @@ const AskUserOptionRadio = ({
     <RadioGroup.Item
       value={option.value}
       className={cn(
-        "size-4 rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
+        "size-lh rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
         "data-checked:bg-tertiary-active data-checked:border-tertiary-active data-checked:text-ink-primary",
         className,
       )}
@@ -187,7 +187,7 @@ const AskUserOptionContent = ({ className, ...props }: AskUserOptionContentProps
 type AskUserOptionLabelProps = ComponentProps<typeof AskUserPrimitive.OptionLabel>;
 
 const AskUserOptionLabel = ({ className, ...props }: AskUserOptionLabelProps) => (
-  <AskUserPrimitive.OptionLabel className={cn("text-sm leading-[normal]", className)} {...props} />
+  <AskUserPrimitive.OptionLabel className={cn("text-sm leading-tight", className)} {...props} />
 );
 
 /** Option subtitle/description text. */

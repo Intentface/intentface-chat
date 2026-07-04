@@ -36,14 +36,14 @@ const proseComponents: MDXComponents = {
   ),
   h3: heading("h3", "mt-8 mb-2 font-semibold text-ink-primary text-lg"),
   h4: heading("h4", "mt-6 mb-2 font-medium text-ink-primary"),
-  p: (props) => <p className="my-4 text-ink-secondary leading-7" {...props} />,
+  p: (props) => <p className="my-4 text-lg text-ink-secondary leading-7" {...props} />,
   ul: (props) => (
-    <ul className="my-4 ml-6 flex list-disc flex-col gap-2 text-ink-secondary" {...props} />
+    <ul className="my-4 ml-6 flex list-disc flex-col gap-2 text-lg text-ink-secondary" {...props} />
   ),
   ol: (props) => (
-    <ol className="my-4 ml-6 flex list-decimal flex-col gap-2 text-ink-secondary" {...props} />
+    <ol className="my-4 ml-6 flex list-decimal flex-col gap-2 text-lg text-ink-secondary" {...props} />
   ),
-  li: (props) => <li className="leading-7" {...props} />,
+  li: (props) => <li className="text-lg leading-7" {...props} />,
   a: ({ href, ...props }: ComponentProps<"a">) => (
     <Link
       href={href ?? "#"}

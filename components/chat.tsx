@@ -1,7 +1,7 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { useActiveComposerState } from "@intentface/chat/chat-status";
+import { type ComposerPanelState, useActiveComposerState } from "@intentface/chat/chat-status";
 import {
   getAskUserInfo,
   getChainInfo,
@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import {
   Children,
   createContext,
+  memo,
   use,
   useCallback,
   useEffect,
@@ -37,14 +38,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { ArtifactCard } from "@/components/ai/artifact-card";
 import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
-import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
@@ -66,42 +65,50 @@ import { cn } from "@/lib/utils";
 import { IntentfaceLogo } from "./icons/intentface-logo";
 import { TextShimmer } from "./ui/text-shimmer";
 
-export type Artifact = {
-  id: string;
-  title: string;
-  content: string;
-};
-
 type ChatSelection = {
   id: string;
   text: string;
 };
 
-type ChatContextValue = {
+// Split contexts: the session value changes rarely (selection edits, the
+// isEmpty flip) while the messages value changes on every stream chunk.
+// Keeping them apart means the composer and layout chrome never re-render per
+// token — only ChatMessages and the thin composer bridge subscribe to the
+// volatile side.
+type ChatSessionValue = {
   chatId: string;
-  messages: AppUIMessage[];
-  status: ChatStatus;
+  /** True until the first message exists — flips once per chat. */
+  isEmpty: boolean;
   sendMessage: UseChatHelpers<AppUIMessage>["sendMessage"];
   regenerate: UseChatHelpers<AppUIMessage>["regenerate"];
   stop: UseChatHelpers<AppUIMessage>["stop"];
   setMessages: UseChatHelpers<AppUIMessage>["setMessages"];
   addToolOutput: UseChatHelpers<AppUIMessage>["addToolOutput"];
-  activeArtifact: Artifact | null;
-  isArtifactOpen: boolean;
-  openArtifact: (artifact: Artifact) => void;
-  toggleArtifact: (artifact: Artifact) => void;
-  closeArtifact: () => void;
   selections: ChatSelection[];
   addSelection: (text: string) => void;
   clearSelections: () => void;
 };
 
-const ChatContext = createContext<ChatContextValue | null>(null);
+type ChatMessagesValue = {
+  messages: AppUIMessage[];
+  status: ChatStatus;
+};
 
-export const useChatContext = (): ChatContextValue => {
-  const ctx = use(ChatContext);
+const ChatSessionContext = createContext<ChatSessionValue | null>(null);
+const ChatMessagesContext = createContext<ChatMessagesValue | null>(null);
+
+export const useChatSession = (): ChatSessionValue => {
+  const ctx = use(ChatSessionContext);
   if (!ctx) {
-    throw new Error("useChatContext must be used within a <Chat> provider");
+    throw new Error("useChatSession must be used within a <Chat> provider");
+  }
+  return ctx;
+};
+
+export const useChatMessages = (): ChatMessagesValue => {
+  const ctx = use(ChatMessagesContext);
+  if (!ctx) {
+    throw new Error("useChatMessages must be used within a <Chat> provider");
   }
   return ctx;
 };
@@ -320,8 +327,138 @@ const InterleavedSteps = ({
   );
 };
 
+type ChatMessageItemProps = {
+  message: AppUIMessage;
+  isLast: boolean;
+  /** This message is the one currently streaming. */
+  isStreaming: boolean;
+  isError: boolean;
+  skipAnimation: boolean;
+};
+
+// Memoized row boundary: finished messages keep their object identity across
+// stream chunks, so every row except the streaming one bails here and the
+// segmentation below runs once per chunk, not once per message. Do not spread
+// the message object at the call site — a fresh object defeats the memo.
+const ChatMessageItem = memo(
+  ({ message, isLast, isStreaming, isError, skipAnimation }: ChatMessageItemProps) => {
+    const { regenerate, addSelection } = useChatSession();
+    const { parts } = message;
+    const isAssistant = message.role === "assistant";
+    const isUser = message.role === "user";
+
+    const segments = getSegmentedParts(parts);
+    const textInfo = getTextInfo(segments);
+    const fileParts = getFileParts(segments);
+    const chain = getChainInfo(segments);
+    const reasoning = chain.onlyReasoning ? getReasoningInfo(segments, isStreaming) : null;
+    const askUser = getAskUserInfo(parts);
+    const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
+
+    // Only show reasoning/tools inline after the message has finished streaming
+    const shouldShowReasoning =
+      isAssistant &&
+      reasoning &&
+      reasoning.parts.length > 0 &&
+      !isStreaming &&
+      !askUser.isAwaitingInput;
+
+    const shouldShowInterleavedReasoning =
+      isAssistant && chain.hasTools && !isStreaming && !askUser.isAwaitingInput;
+
+    return (
+      <Message
+        role={message.role}
+        isError={isError}
+        isLast={isLast}
+        {...(skipAnimation && { initial: false })}
+      >
+        {/* File attachments */}
+        {isUser && fileParts.length > 0 && (
+          <Message.Attachments>
+            {fileParts.map((part, i) => (
+              <Message.Attachment key={i} attachment={part} />
+            ))}
+          </Message.Attachments>
+        )}
+
+        {/* Standalone reasoning (no tools) — suppress when panel handles it */}
+        {shouldShowReasoning && (
+          <Reasoning isStreaming={reasoning.isStreaming}>
+            <Reasoning.Trigger label={reasoning.headers} />
+            <Reasoning.Content>{reasoning.texts}</Reasoning.Content>
+          </Reasoning>
+        )}
+
+        {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
+        {shouldShowInterleavedReasoning && (
+          <InterleavedSteps segments={chain.segments} isStreaming={isStreaming} />
+        )}
+
+        {/* Message content */}
+        <Message.Content>
+          {parts.map((part, index) => {
+            switch (part.type) {
+              case "text": {
+                // Hide intermediate text between tool calls — only
+                // show text that appears after the last tool/reasoning part.
+                if (chain.hasTools) {
+                  const lastChainIdx = parts.findLastIndex(
+                    (p) =>
+                      p.type === "reasoning" ||
+                      (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
+                  );
+                  if (index <= lastChainIdx) return null;
+                }
+                if (isUser) {
+                  return <Message.Text key={index}>{part.text}</Message.Text>;
+                }
+                return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
+              }
+              default:
+                return null;
+            }
+          })}
+        </Message.Content>
+
+        {/* Selection → context affordance (assistant text only) */}
+        {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
+
+        {/* Source URL pills */}
+        {sourcesInfo?.hasSources && (
+          <Message.Sources>
+            {sourcesInfo.sources.map((source) => (
+              <Message.Source key={source.domain} url={source.url} domain={source.domain} />
+            ))}
+          </Message.Sources>
+        )}
+
+        {/* Stopped marker — assistant turn the user aborted mid-stream */}
+        {isAssistant && message.metadata?.stopped && <Message.Stopped />}
+
+        {/* Actions — hide while waiting for tool input */}
+        {!askUser.isAwaitingInput && (
+          <Message.Actions>
+            {isAssistant && (
+              <Message.Action
+                onClick={() => regenerate({ messageId: message.id })}
+                tooltip="Regenerate"
+              >
+                <RefreshIcon />
+              </Message.Action>
+            )}
+            <Message.Copy value={textInfo.text} />
+          </Message.Actions>
+        )}
+      </Message>
+    );
+  },
+);
+
+ChatMessageItem.displayName = "ChatMessageItem";
+
 const ChatMessages = () => {
-  const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
+  const { messages, status } = useChatMessages();
   const stickyMessages = useSettingsStore((s) => s.stickyMessages);
   const isError = status === "error";
   const isStreaming = status === "streaming";
@@ -340,142 +477,16 @@ const ChatMessages = () => {
     <>
       {turns.map((turn, turnIndex) => (
         <Message.Turn key={turn.key} sticky={stickyMessages}>
-          {turn.messages.map(({ parts, ...message }) => {
-            const isLastMessage = message.id === lastMessageId;
-            const isAssistant = message.role === "assistant";
-            const isUser = message.role === "user";
-            const skipAnimation = initialMessageIds.current.has(message.id);
-            const isMessageStreaming = isLastMessage && isStreaming;
-
-            const segments = getSegmentedParts(parts);
-            const textInfo = getTextInfo(segments);
-            const fileParts = getFileParts(segments);
-            const chain = getChainInfo(segments);
-            const reasoning = chain.onlyReasoning
-              ? getReasoningInfo(segments, isMessageStreaming)
-              : null;
-            const askUser = getAskUserInfo(parts);
-            const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
-
-            // Only show reasoning/tools inline after the message has finished streaming
-            const shouldShowReasoning =
-              isAssistant &&
-              reasoning &&
-              reasoning.parts.length > 0 &&
-              !isMessageStreaming &&
-              !askUser.isAwaitingInput;
-
-            const shouldShowInterleavedReasoning =
-              isAssistant && chain.hasTools && !isMessageStreaming && !askUser.isAwaitingInput;
-
-            return (
-              <Message
-                key={message.id}
-                role={message.role}
-                isError={isError}
-                isLast={isLastMessage}
-                {...(skipAnimation && { initial: false })}
-              >
-                {/* File attachments */}
-                {isUser && fileParts.length > 0 && (
-                  <Message.Attachments>
-                    {fileParts.map((part, i) => (
-                      <Message.Attachment key={i} attachment={part} />
-                    ))}
-                  </Message.Attachments>
-                )}
-
-                {/* Standalone reasoning (no tools) — suppress when panel handles it */}
-                {shouldShowReasoning && (
-                  <Reasoning isStreaming={reasoning.isStreaming}>
-                    <Reasoning.Trigger label={reasoning.headers} />
-                    <Reasoning.Content>{reasoning.texts}</Reasoning.Content>
-                  </Reasoning>
-                )}
-
-                {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
-                {shouldShowInterleavedReasoning && (
-                  <InterleavedSteps segments={chain.segments} isStreaming={isMessageStreaming} />
-                )}
-
-                {/* Message content */}
-                <Message.Content>
-                  {parts.map((part, index) => {
-                    switch (part.type) {
-                      case "text": {
-                        // Hide intermediate text between tool calls — only
-                        // show text that appears after the last tool/reasoning part.
-                        if (chain.hasTools) {
-                          const lastChainIdx = parts.findLastIndex(
-                            (p) =>
-                              p.type === "reasoning" ||
-                              (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
-                          );
-                          if (index <= lastChainIdx) return null;
-                        }
-                        if (isUser) {
-                          return <Message.Text key={index}>{part.text}</Message.Text>;
-                        }
-                        return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
-                      }
-                      case "tool-createArtifact": {
-                        const input = part.input as {
-                          title?: string;
-                          content?: string;
-                        };
-                        return (
-                          <ArtifactCard
-                            key={part.toolCallId}
-                            title={input?.title ?? "Untitled"}
-                            state={part.state}
-                            onToggle={() =>
-                              toggleArtifact({
-                                id: part.toolCallId,
-                                title: input?.title ?? "Untitled",
-                                content: input?.content ?? "",
-                              })
-                            }
-                          />
-                        );
-                      }
-                      default:
-                        return null;
-                    }
-                  })}
-                </Message.Content>
-
-                {/* Selection → context affordance (assistant text only) */}
-                {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
-
-                {/* Source URL pills */}
-                {sourcesInfo?.hasSources && (
-                  <Message.Sources>
-                    {sourcesInfo.sources.map((source) => (
-                      <Message.Source key={source.domain} url={source.url} domain={source.domain} />
-                    ))}
-                  </Message.Sources>
-                )}
-
-                {/* Stopped marker — assistant turn the user aborted mid-stream */}
-                {isAssistant && message.metadata?.stopped && <Message.Stopped />}
-
-                {/* Actions — hide while waiting for tool input */}
-                {!askUser.isAwaitingInput && (
-                  <Message.Actions>
-                    {isAssistant && (
-                      <Message.Action
-                        onClick={() => regenerate({ messageId: message.id })}
-                        tooltip="Regenerate"
-                      >
-                        <RefreshIcon />
-                      </Message.Action>
-                    )}
-                    <Message.Copy value={textInfo.text} />
-                  </Message.Actions>
-                )}
-              </Message>
-            );
-          })}
+          {turn.messages.map((message) => (
+            <ChatMessageItem
+              key={message.id}
+              message={message}
+              isLast={message.id === lastMessageId}
+              isStreaming={message.id === lastMessageId && isStreaming}
+              isError={isError}
+              skipAnimation={initialMessageIds.current.has(message.id)}
+            />
+          ))}
           {turnIndex === turns.length - 1 && isError && <Message.Error />}
         </Message.Turn>
       ))}
@@ -527,18 +538,32 @@ const MENTION_ITEMS: CommandItemData[] = [
   },
 ];
 
+// Thin bridge — the only composer piece that re-renders per stream chunk. It
+// derives the panel state (referentially stable while nothing transitioned,
+// see useActiveComposerState) so the memoized inner composer bails unless the
+// panel actually changed.
 const ChatInput = () => {
+  const { messages, status } = useChatMessages();
+  const panelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS);
+  return <ChatInputInner panelState={panelState} status={status} />;
+};
+
+type ChatInputInnerProps = {
+  panelState: ComposerPanelState;
+  status: ChatStatus;
+};
+
+const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
   const {
     chatId,
-    messages,
+    isEmpty,
     sendMessage,
-    status,
     stop,
     setMessages,
     addToolOutput,
     selections,
     clearSelections,
-  } = useChatContext();
+  } = useChatSession();
   const router = useRouter();
   const isGenerating = status === "submitted" || status === "streaming";
 
@@ -553,7 +578,7 @@ const ChatInput = () => {
   const { model, setModel } = useModelStore();
   const [isSending, setIsSending] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const isNewChat = !messages.length;
+  const isNewChat = isEmpty;
 
   // Tool toggles (web search, thinking) are app state, not the composer's —
   // we own them here and feed them into the request body at submit time.
@@ -598,7 +623,6 @@ const ChatInput = () => {
     [setTool],
   );
 
-  const panelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS);
   const isAskUser = panelState.type === "ask-user";
   const activeSteps = panelState.type === "active" ? panelState.steps : [];
   const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;
@@ -810,7 +834,9 @@ const ChatInput = () => {
       </Composer.Container>
     </Composer>
   );
-};
+});
+
+ChatInputInner.displayName = "ChatInputInner";
 
 const ChatPlaceholder = () => {
   const variants = {
@@ -848,10 +874,12 @@ const ChatPlaceholder = () => {
   );
 };
 
-const ChatDefaultLayout = () => {
-  const { messages } = useChatContext();
+// memo: ChatRoot re-renders on every stream chunk and re-creates this element;
+// with no props the memo always bails, so the Thread chrome (header, overlays,
+// composer dock) renders only when the session context actually changes.
+const ChatDefaultLayout = memo(() => {
+  const { isEmpty } = useChatSession();
   const scrollMode = useSettingsStore((s) => s.scrollMode);
-  const isEmpty = messages.length === 0;
 
   return (
     <>
@@ -876,10 +904,11 @@ const ChatDefaultLayout = () => {
         </Thread.Composer>
         <Thread.Overlay direction="bottom" />
       </Thread>
-      <ChatArtifactsPanel />
     </>
   );
-};
+});
+
+ChatDefaultLayout.displayName = "ChatDefaultLayout";
 
 type ChatProps = {
   chatId: string;
@@ -889,31 +918,6 @@ type ChatProps = {
 const ChatRoot = ({ chatId, children }: ChatProps) => {
   const { messages, status, sendMessage, regenerate, stop, setMessages, addToolOutput } =
     useChatInstance(chatId);
-
-  // Artifact panel state — local to this chat, resets on remount
-  const [activeArtifact, setActiveArtifact] = useState<Artifact | null>(null);
-  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
-
-  const openArtifact = useCallback((artifact: Artifact) => {
-    setActiveArtifact(artifact);
-    setIsArtifactOpen(true);
-  }, []);
-
-  const toggleArtifact = useCallback(
-    (artifact: Artifact) => {
-      if (isArtifactOpen && activeArtifact?.id === artifact.id) {
-        setIsArtifactOpen(false);
-      } else {
-        setActiveArtifact(artifact);
-        setIsArtifactOpen(true);
-      }
-    },
-    [activeArtifact?.id, isArtifactOpen],
-  );
-
-  const closeArtifact = useCallback(() => {
-    setIsArtifactOpen(false);
-  }, []);
 
   // Thread selections (Message.SelectionToolbar) — chat-level state: written
   // from the messages, read by the composer input at submit time.
@@ -925,30 +929,52 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
     setSelections([]);
   }, []);
 
-  const value: ChatContextValue = {
-    chatId,
-    messages,
-    status,
-    sendMessage,
-    regenerate,
-    stop,
-    setMessages,
-    addToolOutput,
-    activeArtifact,
-    isArtifactOpen,
-    openArtifact,
-    toggleArtifact,
-    closeArtifact,
-    selections,
-    addSelection,
-    clearSelections,
-  };
+  const isEmpty = messages.length === 0;
 
-  return <ChatContext value={value}>{children ?? <ChatDefaultLayout />}</ChatContext>;
+  // Memoized so its identity survives the per-chunk ChatRoot re-render —
+  // stream chunks change `messages`, not any of these deps.
+  const session = useMemo<ChatSessionValue>(
+    () => ({
+      chatId,
+      isEmpty,
+      sendMessage,
+      regenerate,
+      stop,
+      setMessages,
+      addToolOutput,
+      selections,
+      addSelection,
+      clearSelections,
+    }),
+    [
+      chatId,
+      isEmpty,
+      sendMessage,
+      regenerate,
+      stop,
+      setMessages,
+      addToolOutput,
+      selections,
+      addSelection,
+      clearSelections,
+    ],
+  );
+
+  const messagesValue = useMemo<ChatMessagesValue>(
+    () => ({ messages, status }),
+    [messages, status],
+  );
+
+  return (
+    <ChatSessionContext value={session}>
+      <ChatMessagesContext value={messagesValue}>
+        {children ?? <ChatDefaultLayout />}
+      </ChatMessagesContext>
+    </ChatSessionContext>
+  );
 };
 
 export const Chat = Object.assign(ChatRoot, {
   Messages: ChatMessages,
   Input: ChatInput,
-  Artifacts: ChatArtifactsPanel,
 });

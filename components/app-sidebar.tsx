@@ -23,6 +23,9 @@ import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useSettingsStore } from "@/lib/store/settings";
 import { EditIcon } from "./icons/edit";
+import { FileTextIcon } from "./icons/file-text";
+import { GitHubIcon } from "./icons/github";
+import { NpmIcon } from "./icons/npm";
 
 export const AppSidebar = () => {
   const { theme, setTheme } = useTheme();
@@ -91,6 +94,44 @@ export const AppSidebar = () => {
       </Sidebar.Content>
       <Sidebar.Footer>
         <Sidebar.Menu>
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton
+              render={
+                <Link href="/docs">
+                  <FileTextIcon />
+                  <span>Docs</span>
+                </Link>
+              }
+            />
+          </Sidebar.MenuItem>
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton
+              render={
+                <a
+                  href="https://github.com/Intentface/intentface-chat"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <GitHubIcon />
+                  <span>GitHub</span>
+                </a>
+              }
+            />
+          </Sidebar.MenuItem>
+          <Sidebar.MenuItem>
+            <Sidebar.MenuButton
+              render={
+                <a
+                  href="https://www.npmjs.com/package/@intentface/chat"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <NpmIcon />
+                  <span>npm</span>
+                </a>
+              }
+            />
+          </Sidebar.MenuItem>
           <Sidebar.MenuItem>
             <DropdownMenu>
               <DropdownMenu.Trigger

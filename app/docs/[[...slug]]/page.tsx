@@ -15,9 +15,9 @@ export default async function DocsPage(props: PageProps) {
   const MDXContent = page.data.body;
 
   return (
-    <div className="flex w-full gap-10">
-      <article className="min-w-0 flex-1 pb-16">
-        <header className="mb-8 flex flex-col gap-2">
+    <div className="mx-auto flex w-fit max-w-full gap-10">
+      <article className="w-full max-w-3xl shrink-0 pb-16">
+        <header id="overview" className="mb-8 flex flex-col gap-2">
           <h1 className="font-semibold text-2xl text-ink-primary tracking-tight">
             {page.data.title}
           </h1>

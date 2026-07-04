@@ -4,9 +4,11 @@ import { source } from "@/lib/docs/source";
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="mx-auto flex w-full max-w-7xl gap-8 px-4 md:px-6">
+    <div className="flex min-h-screen bg-primary">
       <DocsSidebar tree={source.pageTree} />
-      <main className="min-w-0 flex-1 pt-10">{children}</main>
+      <div className="min-w-0 flex-1">
+        <main className="mx-auto w-full px-4 pt-10 md:px-6">{children}</main>
+      </div>
     </div>
   );
 }

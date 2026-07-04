@@ -15,17 +15,17 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
 
   return (
     <div className="not-prose my-6 overflow-hidden rounded-xl border border-primary-border">
-      <div className="flex items-center gap-1 border-primary-border border-b bg-tertiary px-2 py-1.5">
+      <div className="flex items-center gap-1 border-primary-border border-b bg-primary p-2">
         {(["preview", "code"] as const).map((value) => (
           <button
             key={value}
             type="button"
             onClick={() => setTab(value)}
             className={cn(
-              "rounded-md px-3 py-1 font-medium text-sm capitalize transition-colors",
+              "cursor-pointer rounded-full border px-3 py-1.5 font-medium text-sm capitalize transition-colors",
               tab === value
-                ? "bg-secondary text-ink-primary shadow-xs"
-                : "text-ink-tertiary hover:text-ink-secondary",
+                ? "border-primary-border bg-primary text-ink-primary shadow-xs"
+                : "border-transparent text-ink-tertiary hover:text-ink-secondary",
             )}
           >
             {value}

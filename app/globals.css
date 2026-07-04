@@ -19,9 +19,9 @@
      In light, signs are negative so hover/active/border sink toward
      darker. Surfaces sit near white; a positive Δ would clamp at #fff.
      The .dark block below flips signs so states lift toward white. */
-  --state-hover: calc(-0.16 * var(--con));
-  --state-active: calc(-0.18 * var(--con));
-  --state-border: calc(-0.2 * var(--con));
+  --state-hover: calc(-0.08 * var(--con));
+  --state-active: calc(-0.16 * var(--con));
+  --state-border: calc(-0.24 * var(--con));
 
   /* Surface lightness steps. Each tier offsets from --bg by step ×
      --con. Positive lifts above bg; negative sinks below.
@@ -85,7 +85,6 @@
 
   --sidebar-width: 224px;
   --thread-width: 672px;
-  --artifacts-panel-width: 512px;
 }
 
 .dark {

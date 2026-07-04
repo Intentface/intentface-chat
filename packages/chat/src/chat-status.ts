@@ -64,7 +64,7 @@ const deriveComposerState = (
   status: ChatStatus,
   labels?: ToolLabels,
 ): ComposerPanelState => {
-  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  const lastAssistant = messages.findLast((m) => m.role === "assistant");
 
   // Check for ask-user awaiting input regardless of status — the chat goes
   // "ready" while the tool waits for user input, so we must detect it early.

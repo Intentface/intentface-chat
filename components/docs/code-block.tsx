@@ -21,7 +21,7 @@ export const CodeBlock = async ({ code, lang = "tsx", title, className }: CodeBl
       pre: ({ className: preClassName, ...props }) => (
         <pre
           className={cn(
-            "overflow-x-auto rounded-lg border border-primary-border bg-secondary p-4 text-sm leading-relaxed [scrollbar-width:thin]",
+            "overflow-x-auto rounded-lg border border-primary-border bg-base p-4 text-sm leading-relaxed [scrollbar-width:thin]",
             preClassName,
           )}
           {...props}
@@ -33,7 +33,7 @@ export const CodeBlock = async ({ code, lang = "tsx", title, className }: CodeBl
   return (
     <div className={cn("not-prose flex flex-col overflow-hidden", className)}>
       {title && (
-        <div className="rounded-t-lg border border-primary-border border-b-0 bg-tertiary px-4 py-2 font-mono text-ink-tertiary text-xs">
+        <div className="rounded-t-lg border border-primary-border border-b-0 bg-primary px-4 py-2 font-mono text-ink-tertiary text-xs">
           {title}
         </div>
       )}

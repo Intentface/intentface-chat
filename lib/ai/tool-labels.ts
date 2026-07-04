@@ -7,10 +7,6 @@ export const DEFAULT_TOOL_LABELS: ToolLabels = {
     active: (i) => `Searching for '${i.query ?? ""}'`,
     complete: (i) => `Searched for '${i.query ?? ""}'`,
   },
-  createArtifact: {
-    active: (i) => `Creating '${i.title ?? "Untitled"}'`,
-    complete: (i) => `Created '${i.title ?? "Untitled"}'`,
-  },
   listDataSources: {
     active: () => "Discovering data sources",
     complete: () => "Discovered data sources",

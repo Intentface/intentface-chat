@@ -17,7 +17,12 @@
 import type { Editor } from "@tiptap/react";
 import { createContext, type RefObject, use, useSyncExternalStore } from "react";
 import type { AskUserOptionsHandle } from "../ask-user";
-import { type AttachmentItem, revokeAttachmentUrl, toAttachmentItem } from "../attachments";
+import {
+  type AttachmentErrorCode,
+  type AttachmentItem,
+  revokeAttachmentUrl,
+  toAttachmentItem,
+} from "../attachments";
 import {
   type AnswerEntry,
   type AskUserAction,
@@ -45,7 +50,7 @@ export type ComposerAttachmentsState = {
   add: (files: File[] | FileList) => void;
   remove: (id: string) => void;
   openFileDialog: () => void;
-  error: string | null;
+  error: AttachmentErrorCode | null;
   isDragging: boolean;
   fileInputRef: RefObject<HTMLInputElement | null>;
   globalDropRef: RefObject<boolean>;

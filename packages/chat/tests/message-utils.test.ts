@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  getSegmentedParts,
-  getSourcesInfo,
-  groupTurns,
-  splitReasoningByHeaders,
-} from "../src/message-utils";
+import { getSegmentedParts, groupTurns } from "../src/message-utils";
 import type { ChatMessage, MessagePart } from "../src/types";
 
 describe("getSegmentedParts", () => {
@@ -55,36 +50,6 @@ describe("groupTurns", () => {
   });
 });
 
-// getAskUserInfo moved to the app (lib/ai/steps-info.ts) — ask-user extraction
-// is the consumer's tool contract, not the package's.
-
-describe("getSourcesInfo", () => {
-  test("deduplicates by hostname and strips www", () => {
-    const parts: MessagePart[] = [
-      { type: "source-url", sourceId: "1", url: "https://www.example.com/a" },
-      { type: "source-url", sourceId: "2", url: "https://example.com/b" },
-      { type: "source-url", sourceId: "3", url: "not a url" },
-      { type: "text", text: "ignored" },
-    ];
-    const info = getSourcesInfo(parts);
-
-    expect(info.sources).toEqual([{ url: "https://www.example.com/a", domain: "example.com" }]);
-    expect(info.hasSources).toBe(true);
-  });
-});
-
-describe("splitReasoningByHeaders", () => {
-  test("splits on standalone bold header lines", () => {
-    const sections = splitReasoningByHeaders(["**Plan**\ndo things", "**Check**\nverify things"]);
-
-    expect(sections).toEqual([
-      { header: "Plan", body: "do things" },
-      { header: "Check", body: "verify things" },
-    ]);
-  });
-
-  test("body before any header keeps a null header", () => {
-    const sections = splitReasoningByHeaders(["intro text"]);
-    expect(sections).toEqual([{ header: null, body: "intro text" }]);
-  });
-});
+// getAskUserInfo, getSourcesInfo, splitReasoningByHeaders, getChainInfo, and
+// getReasoningInfo moved to the app (lib/ai/steps-info.ts, lib/ai/message-info.ts)
+// — tool contracts, header conventions, and dedup rules are the consumer's.

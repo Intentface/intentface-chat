@@ -33,13 +33,13 @@ describe("attachmentReducer", () => {
     const pdf = new File(["x"], "doc.pdf", { type: "application/pdf" });
     const next = attachmentReducer(INITIAL_ATTACHMENT_STATE, { type: "add", files: [pdf] }, config);
     expect(next.items).toHaveLength(0);
-    expect(next.error).toBe("No files match the accepted types.");
+    expect(next.error).toBe("accept");
   });
 
   test("add rejects oversized files", () => {
     const big = imageFile("big.png", 4096);
     const next = attachmentReducer(INITIAL_ATTACHMENT_STATE, { type: "add", files: [big] }, config);
-    expect(next.error).toBe("All files exceed the maximum size.");
+    expect(next.error).toBe("max_file_size");
   });
 
   test("add caps at maxFiles and reports overflow", () => {
@@ -49,7 +49,7 @@ describe("attachmentReducer", () => {
       config,
     );
     expect(next.items).toHaveLength(2);
-    expect(next.error).toBe("Too many files. Some were not added.");
+    expect(next.error).toBe("max_files");
   });
 
   test("remove deletes by id and clears the error", () => {

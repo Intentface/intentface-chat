@@ -38,8 +38,7 @@
     "./ask-user": "./src/ask-user.tsx",
     "./message": "./src/message.tsx",
     "./message-utils": "./src/message-utils.ts",
-    "./chip-markdown": "./src/chip-markdown.ts",
-    "./chat-status": "./src/chat-status.ts"
+    "./chip-markdown": "./src/chip-markdown.ts"
   },
   "scripts": {
     "build": "bunup",
@@ -118,10 +117,6 @@
       "./chip-markdown": {
         "types": "./dist/src/chip-markdown.d.ts",
         "default": "./dist/src/chip-markdown.js"
-      },
-      "./chat-status": {
-        "types": "./dist/src/chat-status.d.ts",
-        "default": "./dist/src/chat-status.js"
       }
     }
   }

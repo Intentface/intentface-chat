@@ -1,17 +1,12 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
-import { type ComposerPanelState, useActiveComposerState } from "@intentface/chat/chat-status";
 import {
-  getChainInfo,
   getFileParts,
-  getReasoningInfo,
   getSegmentedParts,
-  getSourcesInfo,
   getTextInfo,
   groupTurns,
   type MessageSegment,
-  splitReasoningByHeaders,
 } from "@intentface/chat/message-utils";
 import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
 import type { ChatStatus } from "ai";
@@ -36,7 +31,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
+import {
+  COMMAND_LIST_PANEL_VALUE,
+  type CommandItemData,
+  Composer,
+  type ComposerSubmitData,
+} from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { StepQueue } from "@/components/ai/step-queue";
@@ -52,7 +52,14 @@ import { ModelSelector } from "@/components/model-selector";
 import { Markdown } from "@/components/ui/markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { prepareAttachmentsForSend } from "@/lib/ai/attachments";
+import { type ComposerPanelState, useActiveComposerState } from "@/lib/ai/chat-status";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
+import {
+  getChainInfo,
+  getReasoningInfo,
+  getSourcesInfo,
+  splitReasoningByHeaders,
+} from "@/lib/ai/message-info";
 import { getAskUserInfo, getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/steps-info";
 import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
 import type { AppUIMessage, AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
@@ -421,7 +428,7 @@ const ChatMessageItem = memo(
         </Message.Content>
 
         {/* Selection → context affordance (assistant text only) */}
-        {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
+        {isAssistant && <Message.Selection onAdd={addSelection} />}
 
         {/* Source URL pills */}
         {sourcesInfo?.hasSources && (
@@ -461,10 +468,6 @@ const ChatMessages = () => {
   const stickyMessages = useSettingsStore((s) => s.stickyMessages);
   const isError = status === "error";
   const isStreaming = status === "streaming";
-
-  // Derive panel state to know what the panel is handling
-  // const panelState = useActiveComposerState(messages, status);
-  // const panelActive = panelState.type !== "idle";
 
   // Track messages present at mount — skip entrance animation for these
   const initialMessageIds = useRef(new Set(messages.map((m) => m.id)));
@@ -537,8 +540,8 @@ const MENTION_ITEMS: CommandItemData[] = [
   },
 ];
 
-// This app's panel-state union: the package's generic state (idle / active
-// steps, tool-agnostic) plus the app-owned ask-user arm for its askUser tool.
+// This app's panel-state union: the step derivation's state (idle / active
+// steps, lib/ai/chat-status) plus the ask-user arm for its askUser tool.
 type AskUserPanelState = {
   type: "ask-user";
   toolCallId: string;
@@ -589,17 +592,13 @@ const useAskUserPanelState = (
 // Thin bridge — the only composer piece that re-renders per stream chunk. It
 // derives the panel state (referentially stable while nothing transitioned)
 // so the memoized inner composer bails unless the panel actually changed. The
-// askUser tool is excluded from the generic step derivation and overlaid as
-// this app's own ask-user arm.
-const ASK_USER_EXCLUDE = ["tool-askUser"];
-
+// askUser tool is excluded from the step derivation (lib/ai/chat-status) and
+// overlaid as this app's own ask-user arm.
 const ChatInput = () => {
   const { messages, status } = useChatMessages();
-  const genericPanelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS, {
-    excludeParts: ASK_USER_EXCLUDE,
-  });
+  const stepPanelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS);
   const askUserPanelState = useAskUserPanelState(messages, status);
-  return <ChatInputInner panelState={askUserPanelState ?? genericPanelState} status={status} />;
+  return <ChatInputInner panelState={askUserPanelState ?? stepPanelState} status={status} />;
 };
 
 type ChatInputInnerProps = {
@@ -712,7 +711,9 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
               .join("\n"),
           )
           .join("\n\n");
-        const text = quoted ? `${quoted}\n\n${data.text}` : data.text;
+        // Attachments-only submits arrive with empty text — this app's copy.
+        const messageText = data.text || "Sent with attachments";
+        const text = quoted ? `${quoted}\n\n${messageText}` : messageText;
 
         // The composer submits generic attachment items; adapt them to AI SDK
         // file parts (inlining blob URLs) at this app boundary.
@@ -767,7 +768,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
       questions={askUserQuestions ?? undefined}
     >
       <Composer.Panel value={panelState.type}>
-        <Composer.PanelItem value="command-list">
+        <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
           <Composer.CommandList prefix="@">
             <Composer.CommandLoading />
             <Composer.CommandEmpty />
@@ -976,7 +977,7 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
   const { messages, status, sendMessage, regenerate, stop, setMessages, addToolOutput } =
     useChatInstance(chatId);
 
-  // Thread selections (Message.SelectionToolbar) — chat-level state: written
+  // Thread selections (Message.Selection) — chat-level state: written
   // from the messages, read by the composer input at submit time.
   const [selections, setSelections] = useState<ChatSelection[]>([]);
   const addSelection = useCallback((text: string) => {

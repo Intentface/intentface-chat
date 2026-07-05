@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 
 export { useComposer, useComposerController, useComposerStore };
 export type { ComposerStore };
+export { COMMAND_LIST_PANEL_VALUE } from "@intentface/chat/composer";
 
 // The wire format carries the icon as an opaque string; this app's command
 // items narrow it to the concrete union so CHIP_ICONS indexing stays typed.
@@ -147,7 +148,7 @@ const ComposerAttachments = ({
           </motion.div>
         )}
       </AnimatePresence>
-      <Attachments.Error />
+      <Attachments.Error code={attachments.error} />
     </ComposerPrimitive.Attachments>
   );
 };
@@ -430,6 +431,7 @@ const ComposerCommandItems = <Item extends CommandItemDataPrimitive = CommandIte
 
 const ComposerCommandLoading = ({
   className,
+  children = "Loading…",
   ...props
 }: ComponentProps<typeof ComposerPrimitive.CommandLoading>) => (
   <ComposerPrimitive.CommandLoading
@@ -439,11 +441,14 @@ const ComposerCommandLoading = ({
       className,
     )}
     {...props}
-  />
+  >
+    {children}
+  </ComposerPrimitive.CommandLoading>
 );
 
 const ComposerCommandEmpty = ({
   className,
+  children = "No results found",
   ...props
 }: ComponentProps<typeof ComposerPrimitive.CommandEmpty>) => (
   <ComposerPrimitive.CommandEmpty
@@ -455,17 +460,22 @@ const ComposerCommandEmpty = ({
       className,
     )}
     {...props}
-  />
+  >
+    {children}
+  </ComposerPrimitive.CommandEmpty>
 );
 
 const ComposerCommandDismiss = ({
   className,
+  children = "Dismiss",
   ...props
 }: ComponentProps<typeof ComposerPrimitive.CommandDismiss>) => (
   <ComposerPrimitive.CommandDismiss
     className={cn("cursor-pointer text-ink-tertiary hover:text-ink-primary", className)}
     {...props}
-  />
+  >
+    {children}
+  </ComposerPrimitive.CommandDismiss>
 );
 
 type ComposerCommandItemProps = ComponentProps<typeof ComposerPrimitive.CommandItem>;

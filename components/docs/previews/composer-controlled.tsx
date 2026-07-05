@@ -25,7 +25,11 @@ export const ComposerControlled = () => {
         </Composer.Container>
       </Composer>
       <div className="flex items-center gap-2">
-        <button type="button" className={previewButtonClass} onClick={() => setText("Summarize this thread")}>
+        <button
+          type="button"
+          className={previewButtonClass}
+          onClick={() => setText("Summarize this thread")}
+        >
           Set prompt
         </button>
         <button type="button" className={previewButtonClass} onClick={() => setText("")}>

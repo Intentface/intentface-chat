@@ -71,129 +71,11 @@ const MessageTurn = ({ className, render, style, ...elementProps }: MessageTurnP
     { props: [{ "data-slot": "message-turn" }, elementProps] },
   );
 
-export type MessageContentProps = PrimitiveProps<"div">;
-
-const MessageContent = ({ className, render, style, ...elementProps }: MessageContentProps) =>
-  useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "message-content" }, elementProps] },
-  );
-
-export type MessageActionsProps = PrimitiveProps<"div">;
-
-const MessageActions = ({ className, render, style, ...elementProps }: MessageActionsProps) =>
-  useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "message-actions" }, elementProps] },
-  );
-
-export type MessageAttachmentsProps = PrimitiveProps<"div">;
-
-const MessageAttachments = ({
-  className,
-  render,
-  style,
-  ...elementProps
-}: MessageAttachmentsProps) =>
-  useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "message-attachments" }, elementProps] },
-  );
-
-export type MessageErrorProps = PrimitiveProps<"div">;
-
-const MessageError = ({ className, render, style, ...elementProps }: MessageErrorProps) =>
-  useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "message-error" }, elementProps] },
-  );
-
-export type MessageStoppedProps = PrimitiveProps<"div">;
-
-const MessageStopped = ({ className, render, style, ...elementProps }: MessageStoppedProps) =>
-  useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "message-stopped" }, elementProps] },
-  );
-
-export type MessageLoadingProps = PrimitiveProps<"div">;
-
-const MessageLoading = ({ className, render, style, ...elementProps }: MessageLoadingProps) =>
-  useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "message-loading" }, elementProps] },
-  );
-
-export type MessageSourcesProps = PrimitiveProps<"div">;
-
-const MessageSources = ({ className, render, style, ...elementProps }: MessageSourcesProps) =>
-  useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "message-sources" }, elementProps] },
-  );
-
-export type MessageSourceProps = PrimitiveProps<"a"> & {
-  url: string;
-};
-
-const MessageSource = ({ url, className, render, style, ...elementProps }: MessageSourceProps) =>
-  useRenderElement(
-    "a",
-    { className, render, style },
-    {
-      props: [
-        {
-          "data-slot": "message-source",
-          href: url,
-          target: "_blank",
-          rel: "noopener noreferrer",
-        },
-        elementProps,
-      ],
-    },
-  );
-
-// ---------------------------------------------------------------------------
-// Timestamp
-// ---------------------------------------------------------------------------
-
-export type MessageTimestampProps = PrimitiveProps<"span"> & {
-  timestamp: Date | string | number;
-};
-
-const MessageTimestamp = ({
-  timestamp,
-  children,
-  className,
-  render,
-  style,
-  ...elementProps
-}: MessageTimestampProps) => {
-  const date = new Date(timestamp);
-  const formattedTime = date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  return useRenderElement(
-    "span",
-    { className, render, style },
-    {
-      props: [
-        { "data-slot": "message-timestamp", children: children ?? formattedTime },
-        elementProps,
-      ],
-    },
-  );
-};
+// Layout/marker slots (content, actions, attachments, sources, error, stopped,
+// loading) and timestamps are the consumer's — plain elements with a data-slot
+// carry no mechanism, and link targets, copy, and date formatting are product
+// policy. The package keeps only Root (state attributes), Turn (the grouping
+// contract), and Text (chip reconstruction).
 
 // ---------------------------------------------------------------------------
 // Text — parses inline chip tokens; the styled layer supplies renderers for
@@ -319,14 +201,5 @@ export const useMessageSelectionScope = () => {
 
 export const Message = Object.assign(MessageRoot, {
   Turn: MessageTurn,
-  Content: MessageContent,
-  Actions: MessageActions,
-  Attachments: MessageAttachments,
   Text: MessageText,
-  Error: MessageError,
-  Stopped: MessageStopped,
-  Loading: MessageLoading,
-  Timestamp: MessageTimestamp,
-  Sources: MessageSources,
-  Source: MessageSource,
 });

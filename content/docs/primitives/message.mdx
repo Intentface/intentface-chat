@@ -11,7 +11,7 @@ source: message.tsx
 - **One turn's content** — a role-aware bubble composed from plain message fields (role, text, attachments, sources).
 - **Rich text** — `Message.Markdown` for assistant markdown; `Message.Text` reconstructs inline chips from the wire format.
 - **Affordances** — copy, regenerate and other actions, source pills, timestamps, and error / stopped / loading markers.
-- **Selection → chat** — `Message.SelectionToolbar` lifts highlighted text back into the composer.
+- **Selection → chat** — `Message.Selection` lifts highlighted text back into the composer.
 - **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
 
 ## Anatomy
@@ -100,8 +100,10 @@ Done right, a stream chunk re-renders exactly one row. See
 
 ## API reference
 
-Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+Every part accepts `className` and `style` and emits a `data-slot` unless
+noted. The headless-backed parts — `Message`, `Message.Turn`, `Message.Text` —
+also accept `render` (see [PrimitiveProps](/docs/headless/types)); the rest are
+consumer-owned styled parts you edit directly.
 
 ### Message
 
@@ -189,16 +191,6 @@ export const sourceProps = [
 
 <PropsTable rows={sourceProps} />
 
-### Message.Timestamp
-
-Formatted send time. Renders `data-slot="message-timestamp"`.
-
-export const timestampProps = [
-  { name: "timestamp", type: "Date | string | number", default: "(required)", description: "The time to format (children override the formatted value)." },
-];
-
-<PropsTable rows={timestampProps} />
-
 ### Message.Attachment
 
 A read-only attachment chip (image hover-card or file icon).
@@ -209,7 +201,7 @@ export const attachmentProps = [
 
 <PropsTable rows={attachmentProps} />
 
-### Message.SelectionToolbar
+### Message.Selection
 
 A floating toolbar over a text selection within this message.
 
@@ -222,10 +214,12 @@ export const toolbarProps = [
 ### Structural parts
 
 `Message.Content`, `Message.Actions`, `Message.Attachments`, `Message.Sources`,
-`Message.Error`, `Message.Stopped`, and `Message.Loading` are layout/marker
-slots taking only `children`; they render `data-slot="message-content"`,
-`"message-actions"`, `"message-attachments"`, `"message-sources"`,
-`"message-error"`, `"message-stopped"`, and `"message-loading"` respectively.
+`Message.Error`, `Message.Stopped`, and `Message.Loading` are consumer-owned
+layout/marker slots taking only `children`; they render
+`data-slot="message-content"`, `"message-actions"`, `"message-attachments"`,
+`"message-sources"`, `"message-error"`, `"message-stopped"`, and
+`"message-loading"` respectively — plain styled elements in your copy of the
+component, not package primitives.
 
 ### Hooks
 

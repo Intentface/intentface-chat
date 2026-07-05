@@ -137,9 +137,10 @@ export const ComposerRoot = ({
     const trimmedText = serialized.text.trim();
     if (!trimmedText && !attachments.items.length) return;
 
-    const submitText = trimmedText || "Sent with attachments";
     // Emit the generic attachment descriptors; the consumer's onSubmit adapts
     // them to its wire format (e.g. FilePart via prepareAttachmentsForSend).
+    // Text may be empty on an attachments-only submit — any placeholder copy
+    // is the consumer's.
     const files = attachments.items;
 
     store.resetAttachments();
@@ -147,7 +148,7 @@ export const ComposerRoot = ({
 
     await onSubmitRef.current?.({
       kind: "message",
-      text: submitText,
+      text: trimmedText,
       files,
     });
   };

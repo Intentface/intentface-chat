@@ -717,22 +717,25 @@ const DEFAULT_BOTTOM_OFFSET = 128;
 // Breathing room between the last line of content and the composer dock. The
 // bottom overlay spans it in the styled layer.
 const COMPOSER_GAP = 32;
-const DOCK_SELECTOR = '[data-slot="composer-context-window"], [data-slot="composer-container"]';
+const DEFAULT_DOCK_SELECTOR =
+  '[data-slot="composer-context-window"], [data-slot="composer-container"]';
 
 /**
- * Height (px) to reserve at the bottom for the composer dock (context window +
- * attachments + input) — but NOT the command-list / ask-user panel. The
- * composer is bottom-anchored, so the dock sits in a fixed region while the
- * panel grows upward above it; measuring from the dock's top to the root's
+ * Height (px) to reserve at the bottom for the dock parts matching
+ * `dockSelector` — but NOT the command-list / ask-user panel. The dock is
+ * bottom-anchored, so it sits in a fixed region while the panel grows upward
+ * above it; measuring from the bottom-most matched part's top to the root's
  * bottom captures the former and ignores the latter. Returns null when no dock
  * is mounted yet.
  */
-const measureComposerInset = (root: HTMLElement): number | null => {
-  const dock = root.querySelector('[data-slot="composer-container"]');
-  if (!dock) return null;
-  return Math.round(
-    root.getBoundingClientRect().bottom - dock.getBoundingClientRect().top + COMPOSER_GAP,
-  );
+const measureDockInset = (root: HTMLElement, dockSelector: string): number | null => {
+  let dockTop: number | null = null;
+  for (const part of root.querySelectorAll(dockSelector)) {
+    const top = part.getBoundingClientRect().top;
+    if (dockTop === null || top > dockTop) dockTop = top;
+  }
+  if (dockTop === null) return null;
+  return Math.round(root.getBoundingClientRect().bottom - dockTop + COMPOSER_GAP);
 };
 
 // Top inset reserved by the top overlay, measured straight off the rendered
@@ -749,7 +752,7 @@ const measureTopInset = (root: HTMLElement): number =>
  *   (--thread-turn-min-height) to it; otherwise the reserve falls back to 0.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
-const useThreadInsets = () => {
+const useThreadInsets = (dockSelector: string) => {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -757,7 +760,7 @@ const useThreadInsets = () => {
     if (!root) return;
 
     const apply = () => {
-      const bottomInset = measureComposerInset(root);
+      const bottomInset = measureDockInset(root, dockSelector);
       if (bottomInset !== null) {
         root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
       }
@@ -772,11 +775,11 @@ const useThreadInsets = () => {
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(root);
-    for (const part of root.querySelectorAll(DOCK_SELECTOR)) {
+    for (const part of root.querySelectorAll(dockSelector)) {
       observer.observe(part);
     }
     return () => observer.disconnect();
-  }, []);
+  }, [dockSelector]);
 
   return rootRef;
 };
@@ -794,17 +797,25 @@ export type ThreadRootProps = PrimitiveProps<"div"> & {
    * current, so leave it off unless older content actually loads in above.
    */
   preserveScrollOnPrepend?: boolean;
+  /**
+   * CSS selector for the bottom-docked parts the thread reserves space for.
+   * Every match is observed for resize; the inset is measured from the
+   * bottom-most match's top edge. Defaults to the styled composer's dock
+   * slots.
+   */
+  dockSelector?: string;
 };
 
 const ThreadRoot = ({
   autoScroll = "follow",
   preserveScrollOnPrepend = false,
+  dockSelector = DEFAULT_DOCK_SELECTOR,
   className,
   render,
   style,
   ...elementProps
 }: ThreadRootProps) => {
-  const rootRef = useThreadInsets();
+  const rootRef = useThreadInsets(dockSelector);
   const scroll = useThreadScroll(autoScroll, preserveScrollOnPrepend);
 
   const element = useRenderElement(

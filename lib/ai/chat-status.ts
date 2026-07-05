@@ -1,20 +1,23 @@
 "use client";
 
-// Derives the composer panel's state (idle / active steps) from the message
-// list and chat status. Pure derivation plus a memoizing hook — no rendering,
-// no styling. Tool-agnostic: it knows no tool names. An app that routes a
-// specific tool to its own panel (e.g. an ask-user prompt) excludes that
-// tool's part type via options.excludeParts and overlays its own state.
+// App-owned composer panel derivation: maps the message list + chat status to
+// the composer panel's state (idle / active steps). This is product policy —
+// which steps to show, how to label them, which tools are routed elsewhere —
+// so it lives in the app, built on the package's generic part contracts.
 
-import { useRef } from "react";
-import type { ToolLabels } from "./message-utils";
 import {
   type ChatMessage,
   type ChatStatus,
   isReasoningPart,
   isToolPart,
   type ToolPart,
-} from "./types";
+} from "@intentface/chat/types";
+import { useRef } from "react";
+import type { ToolLabels } from "@/lib/ai/tool-labels";
+
+// Tools this app routes to their own panel (the ask-user overlay in
+// components/chat.tsx) instead of the generic step list.
+const EXCLUDED_PART_TYPES = ["tool-askUser"];
 
 // ---------------------------------------------------------------------------
 // State types
@@ -27,12 +30,6 @@ export type ComposerStepItem = {
 };
 
 export type ComposerPanelState = { type: "idle" } | { type: "active"; steps: ComposerStepItem[] };
-
-export type ComposerStateOptions = {
-  // Part types (e.g. "tool-askUser") to leave out of the derivation entirely —
-  // for tools the app routes to its own panel instead of the step list.
-  excludeParts?: readonly string[];
-};
 
 // ---------------------------------------------------------------------------
 // Structural equality — avoids new object refs when nothing changed
@@ -59,9 +56,7 @@ const deriveComposerState = (
   messages: readonly ChatMessage[],
   status: ChatStatus,
   labels?: ToolLabels,
-  options?: ComposerStateOptions,
 ): ComposerPanelState => {
-  const excluded = options?.excludeParts;
   const lastAssistant = messages.findLast((m) => m.role === "assistant");
 
   // Idle / error → idle
@@ -85,9 +80,7 @@ const deriveComposerState = (
     };
   }
 
-  const parts = excluded?.length
-    ? lastAssistant.parts.filter((p) => !excluded.includes(p.type))
-    : lastAssistant.parts;
+  const parts = lastAssistant.parts.filter((p) => !EXCLUDED_PART_TYPES.includes(p.type));
 
   // 1. Check for active tool parts (input-streaming / input-available)
   const toolParts = parts.filter(
@@ -165,10 +158,9 @@ export const useActiveComposerState = (
   messages: readonly ChatMessage[],
   status: ChatStatus,
   labels?: ToolLabels,
-  options?: ComposerStateOptions,
 ): ComposerPanelState => {
   const prevRef = useRef<ComposerPanelState>({ type: "idle" });
-  const next = deriveComposerState(messages, status, labels, options);
+  const next = deriveComposerState(messages, status, labels);
   if (stateEqual(prevRef.current, next)) return prevRef.current;
   prevRef.current = next;
   return next;

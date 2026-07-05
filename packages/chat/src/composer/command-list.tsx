@@ -363,10 +363,7 @@ export const ComposerCommandLoading = ({
     "div",
     { className, render, style },
     {
-      props: [
-        { "data-slot": "composer-command-loading", children: children ?? "Loading…" },
-        elementProps,
-      ],
+      props: [{ "data-slot": "composer-command-loading", children }, elementProps],
     },
   );
 
@@ -383,10 +380,7 @@ export const ComposerCommandEmpty = ({
     "div",
     { className, render, style },
     {
-      props: [
-        { "data-slot": "composer-command-empty", children: children ?? "No results found" },
-        elementProps,
-      ],
+      props: [{ "data-slot": "composer-command-empty", children }, elementProps],
     },
   );
 
@@ -415,7 +409,7 @@ export const ComposerCommandDismiss = ({
             event.preventDefault();
             navContext.dismiss();
           },
-          children: children ?? "Dismiss",
+          children,
         },
         elementProps,
       ],

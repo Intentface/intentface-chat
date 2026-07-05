@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-  chipSegmentsToParagraphJSON,
-  encodeChipMarkdown,
-  parseChipSegments,
-} from "../src/chip-markdown";
+import { encodeChipMarkdown, parseChipSegments } from "../src/chip-markdown";
+import { chipSegmentsToParagraphJSON } from "../src/composer/document";
 
 describe("encodeChipMarkdown / parseChipSegments round trip", () => {
   test("plain chip", () => {

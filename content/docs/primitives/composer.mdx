@@ -21,7 +21,7 @@ The bare nesting — every part is optional except `Composer` and `Container`:
 ```tsx
 <Composer onSubmit={handleSubmit}>
   <Composer.Panel>
-    <Composer.PanelItem value="command-list">
+    <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
       <Composer.CommandList prefix="@">
         <Composer.CommandLoading />
         <Composer.CommandEmpty />
@@ -122,7 +122,9 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => (
 ));
 ```
 
-`useActiveComposerState` returns a referentially stable value while nothing
+`useActiveComposerState` is app code (`lib/ai/chat-status.ts` in the registry) —
+which steps to show and how to label them is your product's policy, so you own
+and edit the derivation. It returns a referentially stable value while nothing
 transitioned, so the inner composer bails on every chunk except real panel
 changes. See [Streaming performance](/docs/headless/performance) for the full
 render model.
@@ -340,9 +342,9 @@ Button that opens the file dialog. Renders
 
 ### Composer.Panel
 
-Shows the `PanelItem` whose `value` matches, and force-routes to the
-command-list item while a command prefix is open. Renders
-`data-slot="composer-panel"`.
+Shows the `PanelItem` whose `value` matches, and force-routes to the item
+with the exported `COMMAND_LIST_PANEL_VALUE` while a command prefix is open.
+Renders `data-slot="composer-panel"`.
 
 export const panelProps = [
   { name: "value", type: "string", description: "Which PanelItem to show (overridden by an active command list)." },
@@ -364,7 +366,7 @@ export const panelAttrs = [
 One matchable panel view. Renders `data-slot="composer-panel-item"`.
 
 export const panelItemProps = [
-  { name: "value", type: "string", default: "(required)", description: "Match key against Panel's value or the \"command-list\" override." },
+  { name: "value", type: "string", default: "(required)", description: "Match key against Panel's value or the COMMAND_LIST_PANEL_VALUE override." },
 ];
 
 <PropsTable rows={panelItemProps} />
@@ -421,10 +423,10 @@ export const commandItemAttrs = [
 `Composer.CommandItemIcon`, `Composer.CommandItemLabel`, and
 `Composer.CommandItemDescription` render `<span>`s with
 `data-slot="composer-command-item-{icon,label,description}"`.
-`Composer.CommandLoading` (`composer-command-loading`, default "Loading…"),
-`Composer.CommandEmpty` (`composer-command-empty`, default "No results
-found"), and `Composer.CommandDismiss` (`composer-command-dismiss`, a button)
-fill the list states. `Composer.CommandGroup` renders
+`Composer.CommandLoading` (`composer-command-loading`),
+`Composer.CommandEmpty` (`composer-command-empty`), and
+`Composer.CommandDismiss` (`composer-command-dismiss`, a button) fill the list
+states — all render only your children, so you supply the copy. `Composer.CommandGroup` renders
 `data-slot="command-group"` (the inner primitive's slot, **not**
 `composer-`-prefixed) with `Composer.CommandGroupLabel`
 (`composer-command-group-label`). `Composer.CommandCollection` is logic-only —
@@ -437,11 +439,12 @@ question). No props — it reads the store's ask-user state.
 
 ### Ask-user actions
 
-`Composer.AskUserHints` renders keyboard hints (defaults to ↑↓ / ↵ / ←→ / esc).
-`Composer.AskUserDismiss` is a button (default label "Dismiss",
-`data-slot="composer-ask-user-dismiss"`). `Composer.AskUserContinue` is a
-submit button (`data-slot="composer-ask-user-continue"`) whose default label is
-"Continue", or "Submit" on the last question.
+`Composer.AskUserHints` is the structural slot for keyboard hints.
+`Composer.AskUserDismiss` is a button wired to dismiss the current step
+(`data-slot="composer-ask-user-dismiss"`). `Composer.AskUserContinue` is a
+submit button (`data-slot="composer-ask-user-continue"`). None ship copy —
+supply the labels as children; read `useComposer((c) => c.askUser.isLastStep)`
+to switch continue/submit wording.
 
 ### Hooks
 

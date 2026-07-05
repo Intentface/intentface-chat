@@ -1,6 +1,11 @@
 "use client";
 
-import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
+import {
+  COMMAND_LIST_PANEL_VALUE,
+  type CommandItemData,
+  Composer,
+  type ComposerSubmitData,
+} from "@/components/ai/composer";
 
 const MENTIONS: CommandItemData[] = [
   { value: "readme", label: "README.md", description: "Project overview" },
@@ -24,7 +29,7 @@ export const ComposerCommands = () => {
         }}
       >
         <Composer.Panel>
-          <Composer.PanelItem value="command-list">
+          <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
             <Composer.CommandList prefix="@">
               <Composer.CommandEmpty />
               <Composer.CommandItems>

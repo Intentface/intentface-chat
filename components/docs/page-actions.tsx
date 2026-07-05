@@ -33,7 +33,11 @@ export const PageActions = ({ slug, source }: PageActionsProps) => (
         variant="ghost"
         className={actionButtonClass}
         render={
-          <a href={`${REPO}/tree/main/packages/chat/src/${source}`} target="_blank" rel="noreferrer">
+          <a
+            href={`${REPO}/tree/main/packages/chat/src/${source}`}
+            target="_blank"
+            rel="noreferrer"
+          >
             <GitHubIcon />
             View source
           </a>

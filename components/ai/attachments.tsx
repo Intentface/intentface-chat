@@ -1,6 +1,6 @@
 "use client";
 
-import type { AttachmentItem } from "@intentface/chat/attachments";
+import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
 import { FileIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
@@ -16,7 +16,6 @@ import { PaperClipIcon } from "../icons/paperclip";
 // module: the generic mechanics from the headless package, and this app's
 // policy/taxonomy/send strategy from the app helpers.
 export {
-  type AttachmentError,
   type AttachmentErrorCode,
   type AttachmentItem,
   matchesAccept,
@@ -190,17 +189,28 @@ const AttachmentsDropzone = ({
   return content;
 };
 
-type AttachmentsErrorProps = {
-  className?: string;
+// This app's copy for the machine's structured validation codes.
+const ERROR_COPY: Record<AttachmentErrorCode, string> = {
+  accept: "No files match the accepted types.",
+  max_file_size: "All files exceed the maximum size.",
+  max_files: "Too many files. Some were not added.",
 };
 
-const AttachmentsError = ({ className, ...props }: AttachmentsErrorProps) => (
-  <span
-    data-slot="attachments-error"
-    className={cn("text-xs text-red-500", className)}
-    {...props}
-  />
-);
+type AttachmentsErrorProps = {
+  code?: AttachmentErrorCode | null;
+  className?: string;
+  children?: ReactNode;
+};
+
+const AttachmentsError = ({ code, className, children }: AttachmentsErrorProps) => {
+  const content = children ?? (code ? ERROR_COPY[code] : null);
+  if (!content) return null;
+  return (
+    <span data-slot="attachments-error" className={cn("text-xs text-red-500", className)}>
+      {content}
+    </span>
+  );
+};
 
 type AttachmentsTriggerProps = ComponentProps<typeof IconButton>;
 

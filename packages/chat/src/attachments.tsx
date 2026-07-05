@@ -28,12 +28,9 @@ export type AttachmentItem = {
   fileSize?: number;
 };
 
+// Structured validation reasons — the machine emits codes, never copy; the
+// consumer maps codes to their own (localized) messages.
 export type AttachmentErrorCode = "accept" | "max_file_size" | "max_files";
-
-export type AttachmentError = {
-  code: AttachmentErrorCode;
-  message: string;
-};
 
 // ---------------------------------------------------------------------------
 // Default ingestion — platform-native, no policy: a picked File becomes an
@@ -171,10 +168,7 @@ const AttachmentsDropzone = ({
     {
       enabled: visible || keepMounted,
       state: { visible },
-      props: [
-        { "data-slot": "attachments-dropzone", children: children ?? <span>Drop files here</span> },
-        elementProps,
-      ],
+      props: [{ "data-slot": "attachments-dropzone", children }, elementProps],
     },
   );
 

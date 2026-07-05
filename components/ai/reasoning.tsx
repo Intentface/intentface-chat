@@ -1,11 +1,11 @@
 "use client";
 
-import { splitReasoningByHeaders } from "@intentface/chat/message-utils";
 import { Reasoning as ReasoningPrimitive, useReasoning } from "@intentface/chat/reasoning";
 import { AnimatePresence, motion } from "motion/react";
 import { type ComponentProps, memo, type ReactNode } from "react";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Markdown } from "@/components/ui/markdown";
+import { splitReasoningByHeaders } from "@/lib/ai/message-info";
 import { cn } from "@/lib/utils";
 import { BrainIcon } from "../icons/brain";
 import { TextShimmer } from "../ui/text-shimmer";

@@ -69,23 +69,11 @@ export const ComposerAskUser = () => {
 
 export type ComposerAskUserHintsProps = ComponentProps<typeof AskUser.Hints>;
 
-export const ComposerAskUserHints = ({ children, ...props }: ComposerAskUserHintsProps) => {
-  const askUser = useComposer((composer) => composer.askUser);
-  const totalQuestions = askUser.questions?.length ?? 0;
-
-  return (
-    <AskUser.Hints {...props}>
-      {children ?? (
-        <>
-          <span>↑↓ navigate</span>
-          <span>↵ select</span>
-          {!askUser.isSingle && totalQuestions > 1 && <span>←→ between questions</span>}
-          <span>esc skip</span>
-        </>
-      )}
-    </AskUser.Hints>
-  );
-};
+// Structural slot only — the keyboard-hint copy is the consumer's. Read
+// `useComposer((c) => c.askUser)` in your children to branch on step count.
+export const ComposerAskUserHints = (props: ComposerAskUserHintsProps) => (
+  <AskUser.Hints {...props} />
+);
 
 export type ComposerAskUserDismissProps = PrimitiveProps<"button">;
 
@@ -106,7 +94,7 @@ export const ComposerAskUserDismiss = ({
         {
           "data-slot": "composer-ask-user-dismiss",
           onClick: askUser.dismissStep,
-          children: children ?? "Dismiss",
+          children,
         },
         elementProps,
       ],
@@ -116,16 +104,16 @@ export const ComposerAskUserDismiss = ({
 
 export type ComposerAskUserContinueProps = PrimitiveProps<"button">;
 
+// Structural slot only — supply the label yourself (read
+// `useComposer((c) => c.askUser.isLastStep)` to switch continue/submit copy).
 export const ComposerAskUserContinue = ({
   children,
   className,
   render,
   style,
   ...elementProps
-}: ComposerAskUserContinueProps) => {
-  const askUser = useComposer((composer) => composer.askUser);
-
-  return useRenderElement(
+}: ComposerAskUserContinueProps) =>
+  useRenderElement(
     "button",
     { className, render, style },
     {
@@ -133,10 +121,9 @@ export const ComposerAskUserContinue = ({
         {
           type: "submit" as const,
           "data-slot": "composer-ask-user-continue",
-          children: children ?? (askUser.isLastStep ? "Submit" : "Continue"),
+          children,
         },
         elementProps,
       ],
     },
   );
-};

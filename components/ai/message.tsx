@@ -70,11 +70,9 @@ const MessageTurn = ({ sticky, className, ...props }: MessageTurnProps) => (
 );
 
 // Message content container with role-based styling
-const MessageContent = ({
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Content>) => (
-  <MessagePrimitive.Content
+const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-content"
     className={cn(
       "flex flex-col gap-4 overflow-hidden border",
       // User message styling
@@ -90,13 +88,10 @@ const MessageContent = ({
 );
 
 // Actions container (for copy, regenerate, etc.)
-const MessageActions = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Actions>) => (
+const MessageActions = ({ children, className, ...props }: ComponentProps<"div">) => (
   <Tooltip.Provider>
-    <MessagePrimitive.Actions
+    <div
+      data-slot="message-actions"
       className={cn(
         "inline-flex items-center justify-start gap-1 transition-opacity",
         // Hidden by default
@@ -110,7 +105,7 @@ const MessageActions = ({
       {...props}
     >
       {children}
-    </MessagePrimitive.Actions>
+    </div>
   </Tooltip.Provider>
 );
 
@@ -179,12 +174,9 @@ const MessageText = ({ children, className }: MessageTextProps) => (
 );
 
 // Error message display
-const MessageError = ({
-  children,
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Error>) => (
-  <MessagePrimitive.Error
+const MessageError = ({ children, className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-error"
     className={cn("flex items-start gap-2 text-sm text-destructive", className)}
     {...props}
   >
@@ -202,46 +194,34 @@ const MessageError = ({
       />
     </svg>
     <div className="flex-1">{children}</div>
-  </MessagePrimitive.Error>
+  </div>
 );
 
 // Stopped indicator — a centered badge on an assistant turn the user aborted
-// mid-stream. The SelectionToolbar is scoped to message-content, so this marker
+// mid-stream. Message.Selection is scoped to message-content, so this marker
 // (a sibling outside it) never triggers the "Add to chat" popover.
-const MessageStopped = ({
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Stopped>) => (
-  <MessagePrimitive.Stopped className={cn("flex w-full justify-center", className)} {...props}>
+const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-stopped"
+    className={cn("flex w-full justify-center", className)}
+    {...props}
+  >
     <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-border bg-primary px-2.5 py-1 text-xs text-ink-secondary">
       <StopIcon className="size-3 shrink-0" />
       Stopped
     </span>
-  </MessagePrimitive.Stopped>
+  </div>
 );
 
 // Loading indicator with animated dots
-const MessageLoading = ({
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Loading>) => (
-  <MessagePrimitive.Loading
+const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-loading"
     className={cn("flex items-start gap-1 text-sm text-muted-foreground", className)}
     {...props}
   >
     <span>Loading...</span>
-  </MessagePrimitive.Loading>
-);
-
-// Timestamp display
-const MessageTimestamp = ({
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Timestamp>) => (
-  <MessagePrimitive.Timestamp
-    className={cn("text-xs text-muted-foreground", className)}
-    {...props}
-  />
+  </div>
 );
 
 // Copy button with individual state
@@ -273,11 +253,12 @@ const MessageCopy = ({
 };
 
 // Attachments container for message history (read-only)
-const MessageAttachments = ({
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Attachments>) => (
-  <MessagePrimitive.Attachments className={cn("flex flex-wrap gap-2", className)} {...props} />
+const MessageAttachments = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-attachments"
+    className={cn("flex flex-wrap gap-2", className)}
+    {...props}
+  />
 );
 
 // Individual attachment display (read-only, no remove button). Categorization
@@ -336,17 +317,17 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
 };
 
 // ---------------------------------------------------------------------------
-// Message.SelectionToolbar — floating "Add to chat" bar above a text selection
+// Message.Selection — floating "Add to chat" bar above a text selection
 // within this message's content. The selection detection and content scoping
 // live in the headless package; this wrapper anchors the popover UI.
 // ---------------------------------------------------------------------------
 
-type MessageSelectionToolbarProps = {
+type MessageSelectionProps = {
   onAdd: (text: string) => void;
   className?: string;
 };
 
-const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarProps) => {
+const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
   const { anchorRef, contentElement } = useMessageSelectionScope();
   const selection = useMessageSelection(contentElement);
 
@@ -388,7 +369,7 @@ const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarPr
             sideOffset={8}
           >
             <PopoverPrimitive.Popup
-              data-slot="message-selection-toolbar"
+              data-slot="message-selection"
               role="toolbar"
               aria-label="Selection actions"
               initialFocus={false}
@@ -424,12 +405,10 @@ const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarPr
   );
 };
 
-// Source pills container
-const MessageSources = ({
-  className,
-  ...props
-}: ComponentProps<typeof MessagePrimitive.Sources>) => (
-  <MessagePrimitive.Sources className={cn("flex flex-wrap gap-1.5", className)} {...props} />
+// Source pills container. App-owned — which sources show and how they link is
+// product policy, so there is no package primitive behind these.
+const MessageSources = ({ className, ...props }: ComponentProps<"div">) => (
+  <div data-slot="message-sources" className={cn("flex flex-wrap gap-1.5", className)} {...props} />
 );
 
 // Individual source pill with favicon + domain
@@ -439,8 +418,11 @@ const MessageSource = ({
   className,
   ...props
 }: { url: string; domain: string } & ComponentProps<"a">) => (
-  <MessagePrimitive.Source
-    url={url}
+  <a
+    data-slot="message-source"
+    href={url}
+    target="_blank"
+    rel="noopener noreferrer"
     className={cn(
       "inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary px-2 py-1 text-xs text-ink-secondary transition-colors hover:bg-primary-hover",
       className,
@@ -455,7 +437,7 @@ const MessageSource = ({
       className="shrink-0"
     />
     {domain}
-  </MessagePrimitive.Source>
+  </a>
 );
 
 // Composed Message component
@@ -473,8 +455,7 @@ export const Message = Object.assign(MessageRoot, {
   Error: MessageError,
   Stopped: MessageStopped,
   Loading: MessageLoading,
-  Timestamp: MessageTimestamp,
   Sources: MessageSources,
   Source: MessageSource,
-  SelectionToolbar: MessageSelectionToolbar,
+  Selection: MessageSelection,
 });

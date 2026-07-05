@@ -100,7 +100,7 @@ const CommandsEmpty = ({
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "command-empty", children: children ?? "No results" }, elementProps] },
+    { props: [{ "data-slot": "command-empty", children }, elementProps] },
   );
 
 type CommandsFooterProps = PrimitiveProps<"div">;

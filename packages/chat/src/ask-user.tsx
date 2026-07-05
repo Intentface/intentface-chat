@@ -100,7 +100,7 @@ const AskUserStepLabel = ({
     { className, render, style },
     {
       props: [
-        { "data-slot": "ask-user-step-label", children: children ?? `${current} of ${total}` },
+        { "data-slot": "ask-user-step-label", children: children ?? `${current} / ${total}` },
         elementProps,
       ],
     },

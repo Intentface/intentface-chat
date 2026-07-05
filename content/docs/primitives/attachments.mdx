@@ -115,6 +115,9 @@ export const dropzoneAttrs = [
 ### Attachments.Error
 
 Validation message slot. Renders `<span data-slot="attachments-error">`.
+Validation emits a structured `AttachmentErrorCode` (`"accept"`,
+`"max_file_size"`, `"max_files"`) on the composer's attachments state — you map
+codes to your own (localized) copy; the package ships no messages.
 
 ### Attachments.Trigger
 

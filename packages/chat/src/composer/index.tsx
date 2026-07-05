@@ -78,6 +78,7 @@ export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";
 export { createMentionChipExtension } from "./mention-chip";
 export type { ComposerPanelItemProps, ComposerPanelProps } from "./panel";
+export { COMMAND_LIST_PANEL_VALUE } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
 export type { CommandListPluginState, RegisteredPrefix } from "./prefix-plugin";
 export { CLOSED_COMMAND_STATE, commandListPluginKey, detectActivePrefix } from "./prefix-plugin";

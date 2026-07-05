@@ -2,11 +2,13 @@
 // the drag-and-drop handler factory. The store owns the state cell; this owns
 // the rules.
 
-import { type AttachmentItem, matchesAccept } from "../attachments";
+import { type AttachmentErrorCode, type AttachmentItem, matchesAccept } from "../attachments";
 
 export type AttachmentStoreState = {
   items: AttachmentItem[];
-  error: string | null;
+  // Structured reason, not copy — the consumer maps codes to their own
+  // (localized) messages.
+  error: AttachmentErrorCode | null;
 };
 
 export type AttachmentStoreAction =
@@ -42,19 +44,19 @@ export const attachmentReducer = (
 
       const accepted = incoming.filter((file) => matchesAccept(file, config.accept));
       if (!accepted.length) {
-        return { ...state, error: "No files match the accepted types." };
+        return { ...state, error: "accept" };
       }
 
       const sized = accepted.filter((file) => file.size <= config.maxFileSize);
       if (!sized.length) {
-        return { ...state, error: "All files exceed the maximum size." };
+        return { ...state, error: "max_file_size" };
       }
 
       const capacity = Math.max(0, config.maxFiles - state.items.length);
       const capped = sized.slice(0, capacity);
 
-      const overCapacityError =
-        sized.length > capacity ? "Too many files. Some were not added." : null;
+      const overCapacityError: AttachmentErrorCode | null =
+        sized.length > capacity ? "max_files" : null;
 
       if (!capped.length) {
         return { ...state, error: overCapacityError ?? state.error };

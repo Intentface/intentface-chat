@@ -126,6 +126,39 @@
       ]
     },
     {
+      "name": "ai-chat-status",
+      "type": "registry:lib",
+      "hidden": true,
+      "dependencies": [
+        "@intentface/chat"
+      ],
+      "registryDependencies": [
+        "tool-labels"
+      ],
+      "files": [
+        {
+          "sourcePath": "lib/ai/chat-status.ts",
+          "targetPath": "lib/ai/chat-status.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "ai-message-info",
+      "type": "registry:lib",
+      "hidden": true,
+      "dependencies": [
+        "@intentface/chat"
+      ],
+      "files": [
+        {
+          "sourcePath": "lib/ai/message-info.ts",
+          "targetPath": "lib/ai/message-info.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "chip",
       "type": "registry:component",
       "title": "Chip",
@@ -788,6 +821,7 @@
         "motion"
       ],
       "registryDependencies": [
+        "ai-message-info",
         "markdown",
         "text-shimmer",
         "utils",

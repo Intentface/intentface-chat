@@ -172,6 +172,7 @@ subsystem and measures the composer dock. Renders `data-slot="thread-root"`.
 export const rootProps = [
   { name: "autoScroll", type: '"off" | "bottom" | "jump" | "follow"', default: '"follow"', description: "Landing + follow behavior (see Auto-scroll)." },
   { name: "preserveScrollOnPrepend", type: "boolean", default: "false", description: "Hold the reading position when older rows load in above (history pagination). Opt-in — it attaches a passive scroll listener." },
+  { name: "dockSelector", type: "string", default: 'composer dock slots', description: "CSS selector for the bottom-docked parts the thread reserves space for. Every match is observed for resize; the inset is measured from the bottom-most match." },
 ];
 
 <PropsTable rows={rootProps} />

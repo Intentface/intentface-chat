@@ -21,7 +21,6 @@ export default defineConfig({
     "src/message.tsx",
     "src/message-utils.ts",
     "src/chip-markdown.ts",
-    "src/chat-status.ts",
   ],
   format: ["esm"],
   dts: true,

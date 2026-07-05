@@ -76,53 +76,6 @@ export const parseChipSegments = (text: string): ChipSegment[] => {
   return segments;
 };
 
-export type InlineNodeJSON =
-  | { type: "text"; text: string }
-  | {
-      type: "mentionChip";
-      attrs: {
-        prefix: string;
-        value: string;
-        label: string;
-        icon?: ChipIconKey;
-      };
-    };
-
-export type ParagraphNodeJSON = {
-  type: "paragraph";
-  content?: InlineNodeJSON[];
-};
-
-export const chipSegmentsToParagraphJSON = (
-  segments: readonly ChipSegment[],
-): ParagraphNodeJSON[] => {
-  const paragraphs: ParagraphNodeJSON[] = [{ type: "paragraph", content: [] }];
-  const pushInline = (node: InlineNodeJSON) => {
-    const target = paragraphs.at(-1);
-    if (!target) return;
-    target.content = target.content ?? [];
-    target.content.push(node);
-  };
-
-  for (const segment of segments) {
-    if (segment.type === "text") {
-      const lines = segment.text.split("\n");
-      lines.forEach((line, lineIndex) => {
-        if (lineIndex > 0) paragraphs.push({ type: "paragraph", content: [] });
-        if (line.length > 0) pushInline({ type: "text", text: line });
-      });
-      continue;
-    }
-    pushInline({
-      type: "mentionChip",
-      attrs: {
-        prefix: segment.prefix,
-        value: segment.value,
-        label: segment.label,
-        ...(segment.icon ? { icon: segment.icon } : {}),
-      },
-    });
-  }
-
-  return paragraphs.filter((p) => (p.content?.length ?? 0) > 0);
-};
+// Editor-node building (mentionChip / paragraph ProseMirror JSON) lives with
+// the editor schema in composer/document.ts — this module is only the neutral
+// wire format.

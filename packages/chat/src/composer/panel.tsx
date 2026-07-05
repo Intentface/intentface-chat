@@ -12,6 +12,12 @@ import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping } from "../internal/state-mappings";
 import { useComposer, useComposerContextStore } from "./store";
 
+/**
+ * Reserved `Composer.PanelItem` value the panel routes to while a command-list
+ * prefix is active. Give your command-list panel item this value.
+ */
+export const COMMAND_LIST_PANEL_VALUE = "command-list";
+
 export type ComposerPanelState = {
   open: boolean;
 };
@@ -40,8 +46,8 @@ export const ComposerPanel = ({
   const isCommandListOpen = useComposer((composer) => composer.commands.isOpen);
 
   // When a command-list prefix is active, route the panel to its
-  // "command-list" item regardless of what the consumer passed.
-  const effectiveValue = isCommandListOpen ? "command-list" : value;
+  // command-list item regardless of what the consumer passed.
+  const effectiveValue = isCommandListOpen ? COMMAND_LIST_PANEL_VALUE : value;
 
   const matchedChild = effectiveValue
     ? Children.toArray(children).find(

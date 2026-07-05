@@ -3,7 +3,6 @@
 import type { UseChatHelpers } from "@ai-sdk/react";
 import { type ComposerPanelState, useActiveComposerState } from "@intentface/chat/chat-status";
 import {
-  getAskUserInfo,
   getChainInfo,
   getFileParts,
   getReasoningInfo,
@@ -14,8 +13,7 @@ import {
   type MessageSegment,
   splitReasoningByHeaders,
 } from "@intentface/chat/message-utils";
-import type { StepStatus } from "@intentface/chat/steps";
-import type { ToolPart } from "@intentface/chat/types";
+import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
 import type { ChatStatus } from "ai";
 import {
   CircleDotIcon,
@@ -53,10 +51,11 @@ import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
 import { Markdown } from "@/components/ui/markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
+import { prepareAttachmentsForSend } from "@/lib/ai/attachments";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
-import { getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/steps-info";
+import { getAskUserInfo, getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/steps-info";
 import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
-import type { AppUIMessage } from "@/lib/ai/types";
+import type { AppUIMessage, AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
 import { applyStopToMessages } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
@@ -538,18 +537,73 @@ const MENTION_ITEMS: CommandItemData[] = [
   },
 ];
 
+// This app's panel-state union: the package's generic state (idle / active
+// steps, tool-agnostic) plus the app-owned ask-user arm for its askUser tool.
+type AskUserPanelState = {
+  type: "ask-user";
+  toolCallId: string;
+  questions: AskUserQuestion[];
+};
+
+type AppComposerPanelState = ComposerPanelState | AskUserPanelState;
+
+// App overlay: routes the panel to ask-user while this app's askUser tool
+// awaits input. Detection runs on ready AND streaming — the chat goes "ready"
+// while the tool waits. Referentially stable (same memo discipline as
+// useActiveComposerState) so the memoized inner composer bails per chunk.
+const useAskUserPanelState = (
+  messages: readonly AppUIMessage[],
+  status: ChatStatus,
+): AskUserPanelState | null => {
+  const prevRef = useRef<AskUserPanelState | null>(null);
+
+  const lastAssistant =
+    status === "ready" || status === "streaming"
+      ? messages.findLast((m) => m.role === "assistant")
+      : undefined;
+  // Widen to the package's structural part contract so the guard can narrow.
+  const parts: readonly UnknownPart[] = lastAssistant?.parts ?? [];
+  const part = parts.find(
+    (p): p is ToolPart =>
+      isToolPart(p) && p.type === "tool-askUser" && p.state === "input-available",
+  );
+
+  const next = part
+    ? {
+        type: "ask-user" as const,
+        toolCallId: part.toolCallId,
+        questions: ((part.input as AskUserInput | undefined)?.questions ?? []) as AskUserQuestion[],
+      }
+    : null;
+
+  if (
+    prevRef.current?.toolCallId === next?.toolCallId &&
+    (prevRef.current === null) === (next === null)
+  ) {
+    return prevRef.current;
+  }
+  prevRef.current = next;
+  return next;
+};
+
 // Thin bridge — the only composer piece that re-renders per stream chunk. It
-// derives the panel state (referentially stable while nothing transitioned,
-// see useActiveComposerState) so the memoized inner composer bails unless the
-// panel actually changed.
+// derives the panel state (referentially stable while nothing transitioned)
+// so the memoized inner composer bails unless the panel actually changed. The
+// askUser tool is excluded from the generic step derivation and overlaid as
+// this app's own ask-user arm.
+const ASK_USER_EXCLUDE = ["tool-askUser"];
+
 const ChatInput = () => {
   const { messages, status } = useChatMessages();
-  const panelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS);
-  return <ChatInputInner panelState={panelState} status={status} />;
+  const genericPanelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS, {
+    excludeParts: ASK_USER_EXCLUDE,
+  });
+  const askUserPanelState = useAskUserPanelState(messages, status);
+  return <ChatInputInner panelState={askUserPanelState ?? genericPanelState} status={status} />;
 };
 
 type ChatInputInnerProps = {
-  panelState: ComposerPanelState;
+  panelState: AppComposerPanelState;
   status: ChatStatus;
 };
 
@@ -660,9 +714,13 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
           .join("\n\n");
         const text = quoted ? `${quoted}\n\n${data.text}` : data.text;
 
+        // The composer submits generic attachment items; adapt them to AI SDK
+        // file parts (inlining blob URLs) at this app boundary.
+        const fileParts = await prepareAttachmentsForSend(data.files);
+
         await sendMessage(
           {
-            parts: [...data.files, { type: "text", text }],
+            parts: [...fileParts, { type: "text", text }],
           },
           {
             body: {

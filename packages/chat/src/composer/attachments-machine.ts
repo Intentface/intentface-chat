@@ -2,13 +2,7 @@
 // the drag-and-drop handler factory. The store owns the state cell; this owns
 // the rules.
 
-import {
-  type AttachmentItem,
-  matchesAccept,
-  revokeAllAttachmentUrls,
-  revokeAttachmentUrl,
-  toAttachmentItem,
-} from "../attachments";
+import { type AttachmentItem, matchesAccept } from "../attachments";
 
 export type AttachmentStoreState = {
   items: AttachmentItem[];
@@ -24,6 +18,11 @@ export type AttachmentStoreConfig = {
   accept: string;
   maxFiles: number;
   maxFileSize: number;
+  // Injected ingestion — how a File becomes an item (blob URL vs upload, id
+  // scheme, …). The package owns no file strategy.
+  convert: (file: File) => AttachmentItem;
+  // Injected cleanup for a removed/cleared item (e.g. revoking a blob URL).
+  destroy: (item: AttachmentItem) => void;
 };
 
 export const INITIAL_ATTACHMENT_STATE: AttachmentStoreState = {
@@ -62,20 +61,20 @@ export const attachmentReducer = (
       }
 
       return {
-        items: [...state.items, ...capped.map(toAttachmentItem)],
+        items: [...state.items, ...capped.map(config.convert)],
         error: overCapacityError,
       };
     }
     case "remove": {
       const found = state.items.find((item) => item.id === action.id);
-      if (found) revokeAttachmentUrl(found);
+      if (found) config.destroy(found);
       return {
         items: state.items.filter((item) => item.id !== action.id),
         error: null,
       };
     }
     case "reset": {
-      revokeAllAttachmentUrls(state.items);
+      for (const item of state.items) config.destroy(item);
       return INITIAL_ATTACHMENT_STATE;
     }
   }

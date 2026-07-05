@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-  getAskUserInfo,
   getSegmentedParts,
   getSourcesInfo,
   groupTurns,
@@ -56,25 +55,8 @@ describe("groupTurns", () => {
   });
 });
 
-describe("getAskUserInfo", () => {
-  test("detects awaiting input and parses answered exchanges", () => {
-    const parts: MessagePart[] = [
-      {
-        type: "tool-askUser",
-        toolCallId: "call-1",
-        state: "output-available",
-        input: { questions: [{ question: "Q?", options: [{ label: "A", description: "d" }] }] },
-        output: JSON.stringify({ "Q?": "A" }),
-      },
-      { type: "tool-askUser", toolCallId: "call-2", state: "input-available" },
-    ];
-    const info = getAskUserInfo(parts);
-
-    expect(info.isAwaitingInput).toBe(true);
-    expect(info.answered).toHaveLength(1);
-    expect(info.answered[0]?.answers).toEqual({ "Q?": "A" });
-  });
-});
+// getAskUserInfo moved to the app (lib/ai/steps-info.ts) — ask-user extraction
+// is the consumer's tool contract, not the package's.
 
 describe("getSourcesInfo", () => {
   test("deduplicates by hostname and strips www", () => {

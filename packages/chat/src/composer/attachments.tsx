@@ -6,16 +6,19 @@
 // useComposer((c) => c.attachments) and the Attachments primitives.
 
 import type { ChangeEvent, ReactNode } from "react";
-import {
-  DEFAULT_ATTACHMENT_ACCEPT,
-  DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
-  DEFAULT_ATTACHMENT_MAX_FILES,
-} from "../attachments";
+import { type AttachmentItem, revokeAttachmentUrl, toAttachmentItem } from "../attachments";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { useComposer, useComposerContextStore } from "./store";
 
 export type ComposerAttachmentsProps = {
+  // Converts a picked/dropped/pasted File into an item. Defaults to the
+  // platform blob ingestion; override (with destroy) for custom ids, extra
+  // fields, or upload-backed items.
+  convert?: (file: File) => AttachmentItem;
+  // Cleanup for a removed item. Defaults to revoking blob URLs.
+  destroy?: (item: AttachmentItem) => void;
+  // Policy — the package imposes none: accept everything, no caps.
   accept?: string;
   maxFiles?: number;
   maxFileSize?: number;
@@ -25,9 +28,11 @@ export type ComposerAttachmentsProps = {
 };
 
 export const ComposerAttachments = ({
-  accept = DEFAULT_ATTACHMENT_ACCEPT,
-  maxFiles = DEFAULT_ATTACHMENT_MAX_FILES,
-  maxFileSize = DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
+  convert = toAttachmentItem,
+  destroy = revokeAttachmentUrl,
+  accept = "",
+  maxFiles = Number.POSITIVE_INFINITY,
+  maxFileSize = Number.POSITIVE_INFINITY,
   multiple = true,
   globalDrop = false,
   children,
@@ -35,7 +40,7 @@ export const ComposerAttachments = ({
   const store = useComposerContextStore();
   const attachments = useComposer((composer) => composer.attachments);
 
-  store.attachmentConfigRef.current = { accept, maxFiles, maxFileSize };
+  store.attachmentConfigRef.current = { accept, maxFiles, maxFileSize, convert, destroy };
   attachments.globalDropRef.current = globalDrop;
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {

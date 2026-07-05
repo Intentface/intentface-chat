@@ -7,8 +7,6 @@
 
 import type { Editor } from "@tiptap/react";
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
-import type { AttachmentItem } from "../attachments";
-import { prepareAttachmentsForSend } from "../attachments";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
 import { useRenderElement } from "../internal/render/useRenderElement";
@@ -140,8 +138,9 @@ export const ComposerRoot = ({
     if (!trimmedText && !attachments.items.length) return;
 
     const submitText = trimmedText || "Sent with attachments";
-    const fileItems: AttachmentItem[] = attachments.items;
-    const fileParts = fileItems.length > 0 ? await prepareAttachmentsForSend(fileItems) : [];
+    // Emit the generic attachment descriptors; the consumer's onSubmit adapts
+    // them to its wire format (e.g. FilePart via prepareAttachmentsForSend).
+    const files = attachments.items;
 
     store.resetAttachments();
     store.controller.clear();
@@ -149,7 +148,7 @@ export const ComposerRoot = ({
     await onSubmitRef.current?.({
       kind: "message",
       text: submitText,
-      files: fileParts,
+      files,
     });
   };
 

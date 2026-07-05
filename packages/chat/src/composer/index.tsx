@@ -93,6 +93,7 @@ export type {
 export { useComposer, useComposerStore } from "./store";
 export type { ComposerTextareaProps } from "./textarea";
 export type {
+  AskUserOption,
   AskUserQuestion,
   AttachmentsApi,
   ChipData,

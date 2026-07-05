@@ -2,8 +2,23 @@
 // command configs, submit payloads, the opaque editor snapshot, and the
 // imperative editor/attachments APIs.
 
+import type { AttachmentItem } from "../attachments";
 import type { ChipData, ChipIconKey } from "../chip-markdown";
-import type { AskUserQuestion, FilePart } from "../types";
+
+// The composer's ask-user question contract — the minimal shape the flow needs
+// to step through questions, toggle options, and compile answers. It carries no
+// app-tool schema: richer consumer types (extra fields like a tab header)
+// satisfy it structurally.
+export type AskUserOption = {
+  label: string;
+  description?: string;
+};
+
+export type AskUserQuestion = {
+  question: string;
+  options: AskUserOption[];
+  multiSelect?: boolean;
+};
 
 export type CommandItemKind = "insert" | "execute";
 
@@ -47,7 +62,7 @@ export type ComposerSnapshot = {
 export type ComposerMessageSubmit = {
   kind: "message";
   text: string;
-  files: FilePart[];
+  files: AttachmentItem[];
 };
 
 export type ComposerAnswerEntry =
@@ -77,5 +92,3 @@ export type ComposerCommandsConfig = {
 };
 
 export type ComposerCommandsMap = Record<string, ComposerCommandsConfig>;
-
-export type { AskUserQuestion };

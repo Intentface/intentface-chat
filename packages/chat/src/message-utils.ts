@@ -3,8 +3,6 @@
 // these so they stay decoupled from concrete part shapes.
 
 import {
-  type AskUserInput,
-  type AskUserQuestion,
   type ChatMessage,
   type FilePart,
   isFilePart,
@@ -105,11 +103,14 @@ export type Turn<Message extends ChatMessage<unknown, UnknownPart> = ChatMessage
  */
 export const groupTurns = <Message extends ChatMessage<unknown, UnknownPart>>(
   messages: readonly Message[],
+  // The role that starts a new turn — opaque, so consumers with a different
+  // role set can group correctly.
+  turnStartRole = "user",
 ): Turn<Message>[] => {
   const turns: Turn<Message>[] = [];
   for (const message of messages) {
     const currentTurn = turns.at(-1);
-    if (message.role === "user" || !currentTurn) {
+    if (message.role === turnStartRole || !currentTurn) {
       turns.push({ key: message.id, messages: [message] });
     } else {
       currentTurn.messages.push(message);
@@ -199,63 +200,8 @@ export const getReasoningInfo = (
     ?.map((h) => h.replace(/\*\*/g, ""));
   return { parts, texts, headers, isStreaming };
 };
-
-// ---------------------------------------------------------------------------
-// Ask-user helpers
-// ---------------------------------------------------------------------------
-
-/** A single answered ask-user exchange with parsed questions and answers. */
-export type AskUserAnswered = {
-  toolCallId: string;
-  questions: AskUserQuestion[];
-  answers: Record<string, string>;
-};
-
-/** Ask-user tool call info for a message. */
-export type AskUserInfo = {
-  /** True when at least one ask-user tool is waiting for user input. */
-  isAwaitingInput: boolean;
-  /** Answered ask-user exchanges with parsed Q&A pairs. */
-  answered: AskUserAnswered[];
-};
-
-/**
- * Extracts ask-user tool parts and returns structured info:
- * whether any are awaiting input, and parsed Q&A pairs for answered ones.
- */
-export const getAskUserInfo = (allParts: readonly UnknownPart[]): AskUserInfo => {
-  const parts = allParts.filter(
-    (p): p is ToolPart =>
-      isToolPart(p) &&
-      p.type === "tool-askUser" &&
-      (p.state === "input-available" || p.state === "output-available"),
-  );
-
-  const answered: AskUserAnswered[] = parts
-    .filter((p) => p.state === "output-available")
-    .map((p) => {
-      const input = p.input as AskUserInput | undefined;
-      let answers: Record<string, string> = {};
-      try {
-        answers = JSON.parse(p.output as string) as Record<string, string>;
-      } catch (error) {
-        console.error("Failed to parse askUser output", {
-          output: p.output,
-          error,
-        });
-      }
-      return {
-        toolCallId: p.toolCallId,
-        questions: input?.questions ?? [],
-        answers,
-      };
-    });
-
-  return {
-    isAwaitingInput: parts.some((p) => p.state === "input-available"),
-    answered,
-  };
-};
+// Ask-user extraction is the consuming app's concern — it knows its own tool's
+// name and wire schema. This package only ships the generic ToolPart contract.
 
 // ---------------------------------------------------------------------------
 // Source URL helpers

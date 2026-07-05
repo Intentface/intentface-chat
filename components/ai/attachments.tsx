@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  type AttachmentItem,
-  formatFileSize,
-  isImageAttachment,
-  isPdfAttachment,
-} from "@intentface/chat/attachments";
+import type { AttachmentItem } from "@intentface/chat/attachments";
 import { FileIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
@@ -13,25 +8,31 @@ import type { ComponentProps, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconButton } from "@/components/ui/icon-button";
+import { formatFileSize, isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
 import { cn } from "@/lib/utils";
 import { PaperClipIcon } from "../icons/paperclip";
 
-// The attachment logic (types, accept matching, blob-URL lifecycle, send
-// preparation) lives in the headless package; re-export it so consumers keep
-// importing everything from this module.
+// Re-export the attachment surface so consumers import everything from this
+// module: the generic mechanics from the headless package, and this app's
+// policy/taxonomy/send strategy from the app helpers.
 export {
   type AttachmentError,
   type AttachmentErrorCode,
   type AttachmentItem,
-  DEFAULT_ATTACHMENT_ACCEPT,
-  DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
-  DEFAULT_ATTACHMENT_MAX_FILES,
   matchesAccept,
-  prepareAttachmentsForSend,
   revokeAllAttachmentUrls,
   revokeAttachmentUrl,
   toAttachmentItem,
 } from "@intentface/chat/attachments";
+export {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_MAX_FILE_SIZE,
+  ATTACHMENT_MAX_FILES,
+  formatFileSize,
+  isImageAttachment,
+  isPdfAttachment,
+  prepareAttachmentsForSend,
+} from "@/lib/ai/attachments";
 
 type AttachmentsRootProps = {
   children: ReactNode;

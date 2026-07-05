@@ -1,14 +1,14 @@
 "use client";
 
-// Derives the composer panel's state (idle / active steps / ask-user) from the
-// message list and chat status. Pure derivation plus a memoizing hook — no
-// rendering, no styling.
+// Derives the composer panel's state (idle / active steps) from the message
+// list and chat status. Pure derivation plus a memoizing hook — no rendering,
+// no styling. Tool-agnostic: it knows no tool names. An app that routes a
+// specific tool to its own panel (e.g. an ask-user prompt) excludes that
+// tool's part type via options.excludeParts and overlays its own state.
 
 import { useRef } from "react";
 import type { ToolLabels } from "./message-utils";
 import {
-  type AskUserInput,
-  type AskUserQuestion,
   type ChatMessage,
   type ChatStatus,
   isReasoningPart,
@@ -26,15 +26,13 @@ export type ComposerStepItem = {
   kind: "thinking" | "tool";
 };
 
-export type ComposerPanelState =
-  | { type: "idle" }
-  | { type: "active"; steps: ComposerStepItem[] }
-  | {
-      type: "ask-user";
-      toolCallId: string;
-      questions: AskUserQuestion[];
-      isAnswered: boolean;
-    };
+export type ComposerPanelState = { type: "idle" } | { type: "active"; steps: ComposerStepItem[] };
+
+export type ComposerStateOptions = {
+  // Part types (e.g. "tool-askUser") to leave out of the derivation entirely —
+  // for tools the app routes to its own panel instead of the step list.
+  excludeParts?: readonly string[];
+};
 
 // ---------------------------------------------------------------------------
 // Structural equality — avoids new object refs when nothing changed
@@ -43,8 +41,6 @@ export type ComposerPanelState =
 const stateEqual = (a: ComposerPanelState, b: ComposerPanelState): boolean => {
   if (a.type !== b.type) return false;
   if (a.type === "idle") return true;
-  if (a.type === "ask-user" && b.type === "ask-user")
-    return a.toolCallId === b.toolCallId && a.isAnswered === b.isAnswered;
   if (a.type === "active" && b.type === "active") {
     if (a.steps.length !== b.steps.length) return false;
     return a.steps.every((step, index) => {
@@ -63,26 +59,10 @@ const deriveComposerState = (
   messages: readonly ChatMessage[],
   status: ChatStatus,
   labels?: ToolLabels,
+  options?: ComposerStateOptions,
 ): ComposerPanelState => {
+  const excluded = options?.excludeParts;
   const lastAssistant = messages.findLast((m) => m.role === "assistant");
-
-  // Check for ask-user awaiting input regardless of status — the chat goes
-  // "ready" while the tool waits for user input, so we must detect it early.
-  if ((status === "ready" || status === "streaming") && lastAssistant) {
-    const askUserPart = lastAssistant.parts.find(
-      (p): p is ToolPart =>
-        isToolPart(p) && p.type === "tool-askUser" && p.state === "input-available",
-    );
-    if (askUserPart) {
-      const input = askUserPart.input as AskUserInput | undefined;
-      return {
-        type: "ask-user",
-        toolCallId: askUserPart.toolCallId,
-        questions: input?.questions ?? [],
-        isAnswered: false,
-      };
-    }
-  }
 
   // Idle / error → idle
   if (status === "ready" || status === "error") {
@@ -105,15 +85,14 @@ const deriveComposerState = (
     };
   }
 
-  const { parts } = lastAssistant;
+  const parts = excluded?.length
+    ? lastAssistant.parts.filter((p) => !excluded.includes(p.type))
+    : lastAssistant.parts;
 
-  // 1. Ask-user check already handled above (works for both ready + streaming)
-
-  // 2. Check for active tool parts (input-streaming / input-available)
+  // 1. Check for active tool parts (input-streaming / input-available)
   const toolParts = parts.filter(
     (p): p is ToolPart =>
       isToolPart(p) &&
-      p.type !== "tool-askUser" &&
       (p.state === "input-streaming" ||
         p.state === "input-available" ||
         p.state === "output-available"),
@@ -161,7 +140,7 @@ const deriveComposerState = (
     }
   }
 
-  // 3. Check if last part is reasoning
+  // 2. Check if last part is reasoning
   const lastPart = parts.at(-1);
   if (lastPart && isReasoningPart(lastPart)) {
     // Extract label from reasoning headers
@@ -174,7 +153,7 @@ const deriveComposerState = (
     };
   }
 
-  // 4. Last part is text (user sees inline) → idle
+  // 3. Last part is text (user sees inline) → idle
   return { type: "idle" };
 };
 
@@ -186,9 +165,10 @@ export const useActiveComposerState = (
   messages: readonly ChatMessage[],
   status: ChatStatus,
   labels?: ToolLabels,
+  options?: ComposerStateOptions,
 ): ComposerPanelState => {
   const prevRef = useRef<ComposerPanelState>({ type: "idle" });
-  const next = deriveComposerState(messages, status, labels);
+  const next = deriveComposerState(messages, status, labels, options);
   if (stateEqual(prevRef.current, next)) return prevRef.current;
   prevRef.current = next;
   return next;

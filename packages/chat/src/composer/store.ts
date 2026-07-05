@@ -17,13 +17,7 @@
 import type { Editor } from "@tiptap/react";
 import { createContext, type RefObject, use, useSyncExternalStore } from "react";
 import type { AskUserOptionsHandle } from "../ask-user";
-import {
-  type AttachmentItem,
-  DEFAULT_ATTACHMENT_ACCEPT,
-  DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
-  DEFAULT_ATTACHMENT_MAX_FILES,
-} from "../attachments";
-import type { AskUserQuestion } from "../types";
+import { type AttachmentItem, revokeAttachmentUrl, toAttachmentItem } from "../attachments";
 import {
   type AnswerEntry,
   type AskUserAction,
@@ -40,7 +34,7 @@ import {
 } from "./attachments-machine";
 import { type ComposerEditorState, createEditorController } from "./document";
 import { interpretAskUserKey } from "./keyboard";
-import type { ComposerAnswerEntry } from "./types";
+import type { AskUserQuestion, ComposerAnswerEntry } from "./types";
 
 // ---------------------------------------------------------------------------
 // State slices
@@ -161,11 +155,16 @@ export const createComposerStore = (): ComposerStore => {
   const optionsRef: RefObject<AskUserOptionsHandle | null> = { current: null };
   const fileInputRef: RefObject<HTMLInputElement | null> = { current: null };
   const globalDropRef: RefObject<boolean> = { current: false };
+  // Permissive defaults: accept everything, no caps, platform-default blob
+  // ingestion. Composer.Attachments overwrites this with the consumer's
+  // policy and any custom convert/destroy.
   const attachmentConfigRef: RefObject<AttachmentStoreConfig> = {
     current: {
-      accept: DEFAULT_ATTACHMENT_ACCEPT,
-      maxFiles: DEFAULT_ATTACHMENT_MAX_FILES,
-      maxFileSize: DEFAULT_ATTACHMENT_MAX_FILE_SIZE,
+      accept: "",
+      maxFiles: Number.POSITIVE_INFINITY,
+      maxFileSize: Number.POSITIVE_INFINITY,
+      convert: toAttachmentItem,
+      destroy: revokeAttachmentUrl,
     },
   };
   const submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null> = {

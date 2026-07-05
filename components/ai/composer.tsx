@@ -26,6 +26,11 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
 import { useMeasure } from "@/hooks/use-measure";
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_MAX_FILE_SIZE,
+  ATTACHMENT_MAX_FILES,
+} from "@/lib/ai/attachments";
 import { CHIP_ICONS, type ChipIconKey, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
 
@@ -97,11 +102,23 @@ type ComposerAttachmentsProps = {
   globalDrop?: boolean;
 };
 
-const ComposerAttachments = ({ className, ...props }: ComposerAttachmentsProps) => {
+// The primitive imposes no policy; this app's accept/limits are applied here.
+const ComposerAttachments = ({
+  className,
+  accept = ATTACHMENT_ACCEPT,
+  maxFiles = ATTACHMENT_MAX_FILES,
+  maxFileSize = ATTACHMENT_MAX_FILE_SIZE,
+  ...props
+}: ComposerAttachmentsProps) => {
   const attachments = useComposer((composer) => composer.attachments);
 
   return (
-    <ComposerPrimitive.Attachments {...props}>
+    <ComposerPrimitive.Attachments
+      accept={accept}
+      maxFiles={maxFiles}
+      maxFileSize={maxFileSize}
+      {...props}
+    >
       <AnimatePresence initial={false}>
         {(attachments.isDragging || attachments.items.length > 0) && (
           <motion.div

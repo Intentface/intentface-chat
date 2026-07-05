@@ -108,7 +108,7 @@ Every part accepts `className`, `style`, and `render` (see
 The root: role-aware container. Renders `data-slot="message"`.
 
 export const rootProps = [
-  { name: "role", type: '"system" | "user" | "assistant"', default: "(required)", description: "Drives role-based styling via data-role." },
+  { name: "role", type: "string", default: "(required)", description: "Opaque role string surfaced as data-role; you own the set (commonly system / user / assistant)." },
   { name: "isLast", type: "boolean", default: "false", description: "Marks the last message (data-last) — a streaming/animation hook." },
   { name: "isError", type: "boolean", default: "false", description: "Renders the error surface (data-error)." },
 ];
@@ -117,7 +117,7 @@ export const rootProps = [
 
 export const rootAttrs = [
   { attribute: "data-slot", values: '"message"', description: "The message root." },
-  { attribute: "data-role", values: '"system" | "user" | "assistant"', description: "The message role." },
+  { attribute: "data-role", values: "string", description: "The message role you passed (commonly system / user / assistant)." },
   { attribute: "data-error", description: "Present when isError is true." },
   { attribute: "data-last", description: "Present when isLast is true." },
 ];
@@ -204,7 +204,7 @@ export const timestampProps = [
 A read-only attachment chip (image hover-card or file icon).
 
 export const attachmentProps = [
-  { name: "attachment", type: "FilePart", default: "(required)", description: "The attachment to render." },
+  { name: "attachment", type: "{ url; mediaType?; filename? }", default: "(required)", description: "The attachment to render — a minimal structural shape (an AI SDK FilePart satisfies it)." },
 ];
 
 <PropsTable rows={attachmentProps} />

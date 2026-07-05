@@ -122,6 +122,10 @@ The file-picker button. Renders `<button data-slot="attachments-trigger">`.
 
 ## Utilities
 
-The wrapper re-exports the package's attachment helpers so you import them from
-one place: `toAttachmentItem`, `matchesAccept`, `prepareAttachmentsForSend`,
-`revokeAttachmentUrl`, and the `DEFAULT_ATTACHMENT_*` limits.
+The wrapper re-exports the attachment surface so you import everything from one
+place. From the package (generic mechanics): `toAttachmentItem` (the default
+blob ingestion), `matchesAccept`, and `revokeAttachmentUrl`. From the app
+(policy, taxonomy, send strategy): the `ATTACHMENT_*` accept/limit policy,
+`isImageAttachment` / `isPdfAttachment`, `formatFileSize`, and
+`prepareAttachmentsForSend` — the adapter that turns submitted items into AI
+SDK file parts. The package imposes none of these; they're yours to change.

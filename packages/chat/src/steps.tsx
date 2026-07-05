@@ -41,7 +41,9 @@ const NestedContext = createContext(false);
 // Status inherited by Icon / Label from the nearest Item.
 const StepStatusContext = createContext<StepStatus | null>(null);
 
-export type StepStatus = "complete" | "active" | "pending";
+// Opaque status string — the consumer owns the concrete set (commonly
+// "complete" | "active" | "pending"). Surfaced as data-status for styling.
+export type StepStatus = string;
 
 const useStepStatus = (status?: StepStatus): StepStatus => {
   const inherited = use(StepStatusContext);
@@ -97,13 +99,7 @@ export type StepsIconProps = PrimitiveProps<"span", { status: StepStatus }> & {
   status?: StepStatus;
 };
 
-const StepsIcon = ({
-  status,
-  className,
-  render,
-  style,
-  ...elementProps
-}: StepsIconProps) => {
+const StepsIcon = ({ status, className, render, style, ...elementProps }: StepsIconProps) => {
   const resolvedStatus = useStepStatus(status);
 
   return useRenderElement(
@@ -111,10 +107,7 @@ const StepsIcon = ({
     { className, render, style },
     {
       state: { status: resolvedStatus },
-      props: [
-        { "data-slot": "steps-icon", "aria-hidden": true },
-        elementProps,
-      ],
+      props: [{ "data-slot": "steps-icon", "aria-hidden": true }, elementProps],
     },
   );
 };
@@ -125,13 +118,7 @@ export type StepsLabelProps = PrimitiveProps<"span", { status: StepStatus }> & {
   status?: StepStatus;
 };
 
-const StepsLabel = ({
-  status,
-  className,
-  render,
-  style,
-  ...elementProps
-}: StepsLabelProps) => {
+const StepsLabel = ({ status, className, render, style, ...elementProps }: StepsLabelProps) => {
   const resolvedStatus = useStepStatus(status);
 
   return useRenderElement(

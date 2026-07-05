@@ -7,7 +7,6 @@ import { type AttachmentItem, Attachments } from "@/components/ai/attachments";
 // needed; the strip collapses when the last item is removed.
 const INITIAL: AttachmentItem[] = [
   {
-    type: "file",
     id: "1",
     filename: "quarterly-report.pdf",
     mediaType: "application/pdf",
@@ -15,7 +14,6 @@ const INITIAL: AttachmentItem[] = [
     fileSize: 248_000,
   },
   {
-    type: "file",
     id: "2",
     filename: "meeting-notes.txt",
     mediaType: "text/plain",

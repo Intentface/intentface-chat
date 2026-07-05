@@ -53,9 +53,10 @@ A timeline is a top-level item whose panel holds rows; a row is an `Icon` +
 
 ## Status
 
-`StepStatus` is `"complete" | "active" | "pending"`. `Steps.Item` takes a
-`status` prop and publishes it through context; `Steps.Icon` and `Steps.Label`
-inherit it, or override with their own `status` prop. Resolution is
+`status` is an opaque `string` — you own the set (commonly `"complete"`,
+`"active"`, `"pending"`, but add `"error"`/`"skipped"`/anything). `Steps.Item`
+takes a `status` and publishes it through context; `Steps.Icon` and
+`Steps.Label` inherit it, or override with their own `status`. Resolution is
 *own prop → inherited → `"complete"`*. Every status-aware part reflects it as
 `data-status` for styling.
 
@@ -73,7 +74,7 @@ The timeline root. Renders `data-slot="steps"`. No part-specific props.
 One node of the tree (a disclosure). Renders `data-slot="steps-item"`.
 
 export const itemProps = [
-  { name: "status", type: '"complete" | "active" | "pending"', default: '"complete"', description: "Node status; seeds context for Icon/Label and drives data-status." },
+  { name: "status", type: "string", default: '"complete"', description: "Node status (commonly complete / active / pending); seeds context for Icon/Label and drives data-status." },
   { name: "defaultOpen", type: "boolean", default: "status === active", description: "Uncontrolled initial open state — open by default while active." },
   { name: "open", type: "boolean", description: "Controlled open state." },
   { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on toggle." },
@@ -83,7 +84,7 @@ export const itemProps = [
 
 export const itemAttrs = [
   { attribute: "data-slot", values: '"steps-item"', description: "The item element." },
-  { attribute: "data-status", values: '"complete" | "active" | "pending"', description: "The item's status." },
+  { attribute: "data-status", values: "string", description: "The item's status (commonly complete / active / pending)." },
   { attribute: "data-nested", values: '"true"', description: "Present when the item is inside another item (indent rail)." },
   { attribute: "data-open", description: "Present while open." },
   { attribute: "data-closed", description: "Present while closed." },
@@ -124,14 +125,14 @@ export const panelAttrs = [
 Status indicator. Renders `<span data-slot="steps-icon" aria-hidden>`.
 
 export const iconProps = [
-  { name: "status", type: '"complete" | "active" | "pending"', description: "Overrides the inherited status for this icon." },
+  { name: "status", type: "string", description: "Overrides the inherited status for this icon." },
 ];
 
 <PropsTable rows={iconProps} />
 
 export const iconAttrs = [
   { attribute: "data-slot", values: '"steps-icon"', description: "The icon element." },
-  { attribute: "data-status", values: '"complete" | "active" | "pending"', description: "Resolved status, for styling." },
+  { attribute: "data-status", values: "string", description: "Resolved status, for styling." },
 ];
 
 <AttributesTable rows={iconAttrs} />
@@ -141,14 +142,14 @@ export const iconAttrs = [
 Row text. Renders `<span data-slot="steps-label">`.
 
 export const labelProps = [
-  { name: "status", type: '"complete" | "active" | "pending"', description: "Overrides the inherited status for this label." },
+  { name: "status", type: "string", description: "Overrides the inherited status for this label." },
 ];
 
 <PropsTable rows={labelProps} />
 
 export const labelAttrs = [
   { attribute: "data-slot", values: '"steps-label"', description: "The label element." },
-  { attribute: "data-status", values: '"complete" | "active" | "pending"', description: "Resolved status, for styling." },
+  { attribute: "data-status", values: "string", description: "Resolved status, for styling." },
 ];
 
 <AttributesTable rows={labelAttrs} />

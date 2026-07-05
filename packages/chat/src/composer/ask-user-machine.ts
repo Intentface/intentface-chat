@@ -2,8 +2,7 @@
 // step plus a map of per-step answers; every transition is an immutable map
 // operation, so the store only owns the state cell and the effect execution.
 
-import type { AskUserQuestion } from "../types";
-import type { ComposerAnswerEntry } from "./types";
+import type { AskUserQuestion, ComposerAnswerEntry } from "./types";
 
 export type AnswerEntry = {
   selected: Set<string>;

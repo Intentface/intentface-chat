@@ -6,7 +6,7 @@ import {
   isLastStep,
   transitionAskUser,
 } from "../src/composer/ask-user-machine";
-import type { AskUserQuestion } from "../src/types";
+import type { AskUserQuestion } from "../src/composer/types";
 
 const questions: AskUserQuestion[] = [
   { question: "Q1?", options: [{ label: "A", description: "a" }] },

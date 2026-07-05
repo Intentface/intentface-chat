@@ -7,7 +7,6 @@ import {
   useMessageSelection,
   useMessageSelectionScope,
 } from "@intentface/chat/message";
-import type { FilePart } from "@intentface/chat/types";
 import { FileIcon, MessageCircleIcon, PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
@@ -19,6 +18,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
+import { isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
 import { CHIP_ICONS, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
@@ -280,17 +280,16 @@ const MessageAttachments = ({
   <MessagePrimitive.Attachments className={cn("flex flex-wrap gap-2", className)} {...props} />
 );
 
-// Individual attachment display (read-only, no remove button)
-const isImage = (mediaType: string) => mediaType.startsWith("image/");
-
+// Individual attachment display (read-only, no remove button). Categorization
+// reuses the package's shared media helpers instead of a third local copy.
 type MessageAttachmentProps = {
-  attachment: FilePart;
+  attachment: { url: string; mediaType?: string; filename?: string };
 } & ComponentProps<"div">;
 
 const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmentProps) => {
   const mediaType = attachment.mediaType ?? "";
   const filename = attachment.filename ?? "Attachment";
-  const Icon = mediaType === "application/pdf" ? FileIcon : PaperclipIcon;
+  const Icon = isPdfAttachment(mediaType) ? FileIcon : PaperclipIcon;
 
   return (
     <div
@@ -300,7 +299,7 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
       )}
       {...props}
     >
-      {isImage(mediaType) ? (
+      {isImageAttachment(mediaType) ? (
         <HoverCard>
           <HoverCard.Trigger className="shrink-0">
             <Image

@@ -15,7 +15,6 @@ import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useState } f
 import { type ChipSegment, parseChipSegments } from "./chip-markdown";
 import type { PrimitiveProps } from "./internal/primitive-props";
 import { useRenderElement } from "./internal/render/useRenderElement";
-import type { MessageRole } from "./types";
 
 // ---------------------------------------------------------------------------
 // Root — data-attribute contract: data-slot="message", data-role, data-error,
@@ -24,7 +23,8 @@ import type { MessageRole } from "./types";
 // ---------------------------------------------------------------------------
 
 export type MessageState = {
-  role: MessageRole;
+  /** Opaque role string; the consumer owns the concrete set. Surfaced as data-role. */
+  role: string;
   /** Present as data-error when true. */
   error: boolean;
   /** Present as data-last when true. */
@@ -32,7 +32,7 @@ export type MessageState = {
 };
 
 export type MessageRootProps = Omit<PrimitiveProps<"div", MessageState>, "role"> & {
-  role: MessageRole;
+  role: string;
   isLast?: boolean;
   isError?: boolean;
 };

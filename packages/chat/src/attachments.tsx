@@ -1,22 +1,32 @@
 "use client";
 
-// Headless attachments: the file-handling logic (accept matching, blob-URL
-// lifecycle, send preparation) plus unstyled structural parts. Card visuals,
-// icons, thumbnails, and enter/exit animation belong to the styled layer.
+// Headless attachments: generic structural parts, accept matching, and the
+// platform-default ingestion (blob URL + generated id — the browser-native way
+// to reference a picked File; override via Composer.Attachments' create/destroy
+// for upload-to-storage etc.). Policy (accepted types, counts, sizes), media
+// taxonomy, send serialization, and copy are the consumer's. Card visuals
+// belong to the styled layer.
 
 import { nanoid } from "nanoid";
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { PrimitiveProps } from "./internal/primitive-props";
-import type { StateAttributesMapping } from "./internal/render/getStateAttributesProps";
 import { useRenderElement } from "./internal/render/useRenderElement";
-import type { FilePart } from "./types";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type AttachmentItem = FilePart & { id: string; fileSize?: number };
+// A minimal, generic file descriptor — NOT welded to the AI SDK FilePart wire
+// format. `mediaType` is a raw string (whatever the source set); categorization
+// into image/pdf/file is the consumer's job in their styled layer.
+export type AttachmentItem = {
+  id: string;
+  url: string;
+  filename?: string;
+  mediaType?: string;
+  fileSize?: number;
+};
 
 export type AttachmentErrorCode = "accept" | "max_file_size" | "max_files";
 
@@ -26,15 +36,32 @@ export type AttachmentError = {
 };
 
 // ---------------------------------------------------------------------------
-// Constants
+// Default ingestion — platform-native, no policy: a picked File becomes an
+// item referencing it by blob URL. Overridable per composer (create/destroy).
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_ATTACHMENT_ACCEPT = "image/*,application/pdf,text/*";
-export const DEFAULT_ATTACHMENT_MAX_FILES = 5;
-export const DEFAULT_ATTACHMENT_MAX_FILE_SIZE = 10 * 1024 * 1024;
+export const toAttachmentItem = (file: File): AttachmentItem => ({
+  id: nanoid(),
+  url: URL.createObjectURL(file),
+  filename: file.name,
+  mediaType: file.type,
+  fileSize: file.size,
+});
+
+export const revokeAttachmentUrl = (item: Pick<AttachmentItem, "url">) => {
+  if (item.url?.startsWith("blob:")) {
+    URL.revokeObjectURL(item.url);
+  }
+};
+
+export const revokeAllAttachmentUrls = (items: Pick<AttachmentItem, "url">[]) => {
+  for (const item of items) {
+    revokeAttachmentUrl(item);
+  }
+};
 
 // ---------------------------------------------------------------------------
-// Utilities
+// Accept matching — standard HTML `accept` semantics.
 // ---------------------------------------------------------------------------
 
 export const matchesAccept = (file: File, accept: string): boolean => {
@@ -56,71 +83,6 @@ export const matchesAccept = (file: File, accept: string): boolean => {
   });
 };
 
-export const toAttachmentItem = (file: File): AttachmentItem => ({
-  filename: file.name,
-  fileSize: file.size,
-  id: nanoid(),
-  mediaType: file.type,
-  type: "file",
-  url: URL.createObjectURL(file),
-});
-
-export const revokeAttachmentUrl = (item: Pick<AttachmentItem, "url">) => {
-  if (item.url?.startsWith("blob:")) {
-    URL.revokeObjectURL(item.url);
-  }
-};
-
-export const revokeAllAttachmentUrls = (items: AttachmentItem[]) => {
-  for (const item of items) {
-    revokeAttachmentUrl(item);
-  }
-};
-
-const convertBlobUrlToDataUrl = async (url: string): Promise<string | null> => {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-};
-
-export const prepareAttachmentsForSend = async (
-  attachments: AttachmentItem[],
-): Promise<FilePart[]> => {
-  return Promise.all(
-    attachments.map(async ({ id: _id, ...attachment }) => {
-      if (attachment.url.startsWith("blob:")) {
-        const converted = await convertBlobUrlToDataUrl(attachment.url);
-        return {
-          ...attachment,
-          url: converted ?? attachment.url,
-        };
-      }
-
-      return attachment;
-    }),
-  );
-};
-
-export const isImageAttachment = (mediaType: string) => mediaType.startsWith("image/");
-
-export const isPdfAttachment = (mediaType: string) => mediaType === "application/pdf";
-
-export const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
 // ---------------------------------------------------------------------------
 // Structural parts
 // ---------------------------------------------------------------------------
@@ -134,42 +96,17 @@ const AttachmentsRoot = ({ className, render, style, ...elementProps }: Attachme
     { props: [{ "data-slot": "attachments" }, elementProps] },
   );
 
-export type AttachmentsItemState = {
-  /** The item's media category, surfaced as data-media-type. */
-  mediaType: "image" | "pdf" | "file";
-};
+export type AttachmentsItemProps = PrimitiveProps<"div">;
 
-const attachmentsItemStateMapping: StateAttributesMapping<AttachmentsItemState> = {
-  mediaType: (value): Record<string, string> => ({ "data-media-type": value }),
-};
-
-export type AttachmentsItemProps = PrimitiveProps<"div", AttachmentsItemState> & {
-  item: AttachmentItem;
-};
-
-const AttachmentsItem = ({
-  item,
-  className,
-  render,
-  style,
-  ...elementProps
-}: AttachmentsItemProps) => {
-  const mediaType = isImageAttachment(item.mediaType ?? "")
-    ? "image"
-    : isPdfAttachment(item.mediaType ?? "")
-      ? "pdf"
-      : "file";
-
-  return useRenderElement(
+// Generic structural slot for one attachment. It carries no media taxonomy —
+// categorization (image/pdf/file, icons, thumbnails) belongs to the styled
+// layer, which reads the item's raw mediaType however it wants.
+const AttachmentsItem = ({ className, render, style, ...elementProps }: AttachmentsItemProps) =>
+  useRenderElement(
     "div",
     { className, render, style },
-    {
-      state: { mediaType },
-      stateAttributesMapping: attachmentsItemStateMapping,
-      props: [{ "data-slot": "attachments-item" }, elementProps],
-    },
+    { props: [{ "data-slot": "attachments-item" }, elementProps] },
   );
-};
 
 export type AttachmentsRemoveProps = PrimitiveProps<"button"> & {
   onRemove: () => void;

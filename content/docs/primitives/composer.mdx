@@ -227,9 +227,13 @@ Returns a `ComposerStore` handle. Pass it to `store`, read it with
 
 ```ts
 type ComposerSubmitData =
-  | { kind: "message"; text: string; files: FilePart[] }
+  | { kind: "message"; text: string; files: AttachmentItem[] }
   | { kind: "answers"; answers: ComposerAnswerEntry[] };
 ```
+
+`files` are the generic attachment descriptors — your `onSubmit` adapts them to
+your wire format (this app inlines blob URLs into AI SDK file parts with its
+`prepareAttachmentsForSend` helper).
 
 ### Composer.Container
 
@@ -317,9 +321,11 @@ This part does **not** take `className` / `style` / `render` and emits no
 `data-slot` of its own.
 
 export const attachmentsProps = [
-  { name: "accept", type: "string", default: "DEFAULT_ATTACHMENT_ACCEPT", description: "Accepted MIME types." },
-  { name: "maxFiles", type: "number", default: "DEFAULT_ATTACHMENT_MAX_FILES", description: "Maximum file count." },
-  { name: "maxFileSize", type: "number", default: "DEFAULT_ATTACHMENT_MAX_FILE_SIZE", description: "Maximum size per file." },
+  { name: "convert", type: "(file: File) => AttachmentItem", default: "blob ingestion", description: "Converts a picked/dropped/pasted File into an item. Override (with destroy) for custom ids, extra fields, or upload-backed items." },
+  { name: "destroy", type: "(item: AttachmentItem) => void", default: "revoke blob URL", description: "Cleanup for a removed item." },
+  { name: "accept", type: "string", default: '"" (everything)', description: "Accepted MIME types — the package imposes no policy; pass yours." },
+  { name: "maxFiles", type: "number", default: "unlimited", description: "Maximum file count." },
+  { name: "maxFileSize", type: "number", default: "unlimited", description: "Maximum size per file." },
   { name: "multiple", type: "boolean", default: "true", description: "Allow selecting multiple files." },
   { name: "globalDrop", type: "boolean", default: "false", description: "Accept drops anywhere in the document, not just over the composer." },
   { name: "children", type: "ReactNode", description: "The visible strip / drop zone." },

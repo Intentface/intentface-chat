@@ -1,7 +1,7 @@
 "use client";
 
-import type { MessageRole } from "@intentface/chat/types";
 import { Message } from "@/components/ai/message";
+import type { MessageRole } from "@/lib/ai/types";
 
 // A user question and an assistant reply with a copy action. Self-contained —
 // plain message data, no chat transport.

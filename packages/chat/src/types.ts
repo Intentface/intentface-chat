@@ -13,8 +13,6 @@ declare module "react" {
   }
 }
 
-export type MessageRole = "system" | "user" | "assistant";
-
 /**
  * The minimal part contract. Every part has a `type`; parts this package does
  * not understand (e.g. `step-start`, `dynamic-tool`, future additions) are
@@ -80,7 +78,9 @@ export type MessagePart =
 
 export type ChatMessage<Metadata = unknown, Part extends UnknownPart = MessagePart> = {
   id: string;
-  role: MessageRole;
+  // Opaque role string — consumers own the concrete union (e.g. system/user/
+  // assistant). AI SDK message shapes satisfy this structurally.
+  role: string;
   metadata?: Metadata;
   parts: Part[];
 };
@@ -91,22 +91,6 @@ export type ChatStatus = "submitted" | "streaming" | "ready" | "error";
 // ---------------------------------------------------------------------------
 // Ask-user contract
 // ---------------------------------------------------------------------------
-
-export type AskUserOption = {
-  label: string;
-  description: string;
-};
-
-export type AskUserQuestion = {
-  question: string;
-  header?: string;
-  options: AskUserOption[];
-  multiSelect?: boolean;
-};
-
-export type AskUserInput = {
-  questions: AskUserQuestion[];
-};
 
 // ---------------------------------------------------------------------------
 // Part guards

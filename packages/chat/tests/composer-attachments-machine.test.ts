@@ -5,7 +5,14 @@ import {
   INITIAL_ATTACHMENT_STATE,
 } from "../src/composer/attachments-machine";
 
-const config = { accept: "image/*", maxFiles: 2, maxFileSize: 1024 };
+// Injected ingestion: hermetic test item factory + destroy spy target.
+const config = {
+  accept: "image/*",
+  maxFiles: 2,
+  maxFileSize: 1024,
+  convert: (file: File) => ({ id: file.name, url: `test:${file.name}`, filename: file.name }),
+  destroy: () => {},
+};
 
 const imageFile = (name: string, size = 10) =>
   new File([new Uint8Array(size)], name, { type: "image/png" });

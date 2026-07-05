@@ -5,8 +5,8 @@ description: Install the headless package, then copy the styled components you w
 
 Intentface chat comes in two layers. The **headless package** — behavior, state,
 and wire formats — installs from npm. The **styled components** are copy-paste:
-each component page shows the dependencies to install and the source to drop into
-your project, so you own every class from the start.
+each component page links to its source, which you copy into your project, so
+you own every class from the start.
 
 ## Prerequisites
 
@@ -37,10 +37,11 @@ behavior through context hooks and render props. See the
 ## Styled components
 
 If you want the Intentface look rather than styling from scratch, copy the styled
-components. Every component page has an **Installation** block that lists the
-exact dependencies to `bun add` and shows the source to copy into your project —
-for example, the [Composer](/docs/primitives/composer). Copy the file, plus any
-components it lists as also-needed, and the styling is yours to edit.
+components. Every component page has a **View source** link at the top, pointing
+to the component's source on GitHub — for example, the
+[Composer](/docs/primitives/composer). Copy that file into your project, along
+with any components and icons it imports; its import statements are its
+dependencies. The styling is then yours to edit.
 
 ## Theme
 

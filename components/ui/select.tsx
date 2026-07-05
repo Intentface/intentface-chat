@@ -174,7 +174,7 @@ const SelectItem = ({ className, children, ...props }: SelectPrimitive.Item.Prop
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-md text-sm flex w-full items-center gap-2",
+        "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-md text-sm font-book flex w-full items-center gap-2",
         // Focus states
         "data-highlighted:bg-primary-hover",
         "not-data-[variant=destructive]:focus:**:text-accent-foreground",

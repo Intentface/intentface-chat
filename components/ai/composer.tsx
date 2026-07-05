@@ -180,11 +180,11 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       "max-h-32 min-h-8 overflow-y-auto py-2 px-3 text-md",
       "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
       // The editor element — ProseMirror-owned DOM, out of JSX reach.
-      "**:data-[slot=composer-editor]:w-full **:data-[slot=composer-editor]:max-w-none **:data-[slot=composer-editor]:font-[450] **:data-[slot=composer-editor]:leading-[1.7] [&_[data-slot=composer-editor]:focus]:outline-none",
+      "**:data-[slot=composer-editor]:w-full **:data-[slot=composer-editor]:max-w-none **:data-[slot=composer-editor]:font-book **:data-[slot=composer-editor]:leading-[1.7] [&_[data-slot=composer-editor]:focus]:outline-none",
       // Active-prefix badge: same inline text-flow surface as a committed chip
       // (CHIP_SURFACE_CLASS in chip.tsx) so the badge and the chip it becomes
       // share one baseline — no jump on commit.
-      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-[450] **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
+      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
       // Type-to-filter hint while the command query is empty.
       "[&_[data-command-placeholder]::after]:content-['Type_to_filter'] [&_[data-command-placeholder]::after]:pointer-events-none [&_[data-command-placeholder]::after]:whitespace-nowrap [&_[data-command-placeholder]::after]:text-ink-tertiary",
       disabled && "opacity-50 cursor-not-allowed",
@@ -216,7 +216,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
 
   if (!isLooping && items.length === 1) {
     return (
-      <div className={cn("min-h-lh text-ink-tertiary font-[450] leading-[1.7]", className)}>
+      <div className={cn("min-h-lh text-ink-tertiary font-book leading-[1.7]", className)}>
         {items[0]}
       </div>
     );
@@ -233,7 +233,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className={cn("text-ink-tertiary font-[450] leading-[1.7]", className)}
+          className={cn("text-ink-tertiary font-book leading-[1.7]", className)}
         >
           {typeof items[0] === "string" ? currentItem : items[key % items.length]}
         </motion.span>
@@ -456,7 +456,7 @@ type ComposerCommandItemProps = ComponentProps<typeof ComposerPrimitive.CommandI
 const ComposerCommandItem = ({ className, ...props }: ComposerCommandItemProps) => (
   <ComposerPrimitive.CommandItem
     className={cn(
-      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm text-ink-primary cursor-pointer data-highlighted:bg-primary-hover",
+      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm font-book text-ink-primary cursor-pointer data-highlighted:bg-primary-hover",
       className,
     )}
     {...props}
@@ -480,7 +480,7 @@ const ComposerCommandItemLabel = ({
   className,
   ...props
 }: ComponentProps<typeof ComposerPrimitive.CommandItemLabel>) => (
-  <ComposerPrimitive.CommandItemLabel className={cn("text-sm", className)} {...props} />
+  <ComposerPrimitive.CommandItemLabel className={cn("text-sm font-book", className)} {...props} />
 );
 
 const ComposerCommandItemDescription = ({

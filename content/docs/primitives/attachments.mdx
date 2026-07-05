@@ -1,18 +1,18 @@
 ---
 title: Attachments
 description: The file-attachment tray — item chips, a remove affordance, and inline or global drop zones.
+source: attachments.tsx
 ---
-
-Attachments renders the pending-file tray that sits above the composer input. It
-ships the attachment model (accept matching, blob-URL lifecycle, send
-preparation) in the package; the styled tray animates items in and out and can
-project a global drop zone anywhere in the app.
 
 <ComponentPreview name="attachments-basic" />
 
-## Installation
+## Usage guidelines
 
-<ManualInstall item="attachments" />
+- **Pending-file tray** — the strip above the composer input, showing attachment chips with a remove affordance.
+- **Model included** — accept matching, blob-URL lifecycle, and send preparation ship in the package; the styled tray animates items in and out.
+- **Media-aware** — each item exposes `data-media-type` (`image` / `pdf` / `file`) for per-type styling.
+- **Drop + pick** — a `Dropzone` overlay (inline, or `global` to project into the app shell) plus a `Trigger` file picker.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
 
 ## Anatomy
 
@@ -42,17 +42,83 @@ With a drop zone and a picker trigger:
 </>
 ```
 
-## Props
+## Accessibility
 
-export const partProps = [
-  { name: "Root", type: "show?: boolean", default: "true", description: "Animates the tray open/closed." },
-  { name: "Item", type: "item: AttachmentItem", description: "One attachment chip; data-media-type is image | pdf | file." },
-  { name: "Remove", type: "onRemove: () => void", description: "Removal affordance shown on hover." },
-  { name: "Dropzone", type: 'visible?: boolean; variant?: "inline" | "global"', description: "Drop overlay; global portals into the app shell." },
-  { name: "Trigger", type: "(IconButton props)", description: "The file-picker button." },
+`Attachments.Remove` renders a `<button aria-label="Remove attachment">`, and
+`Attachments.Trigger` is a real button — both operable and labelled for
+assistive tech.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+
+### Attachments
+
+The tray container; animates open/closed. Renders `data-slot="attachments"`.
+
+export const rootProps = [
+  { name: "show", type: "boolean", default: "true", description: "Animates the tray open or closed." },
 ];
 
-<PropsTable rows={partProps} />
+<PropsTable rows={rootProps} />
+
+### Attachments.Item
+
+One attachment chip. Renders `data-slot="attachments-item"`.
+
+export const itemProps = [
+  { name: "item", type: "AttachmentItem", default: "(required)", description: "The attachment to render." },
+];
+
+<PropsTable rows={itemProps} />
+
+export const itemAttrs = [
+  { attribute: "data-slot", values: '"attachments-item"', description: "The chip." },
+  { attribute: "data-media-type", values: '"image" | "pdf" | "file"', description: "The item's media category, for per-type styling." },
+];
+
+<AttributesTable rows={itemAttrs} />
+
+### Attachments.Remove
+
+Removal affordance, shown on hover. Renders `<button data-slot="attachments-remove"
+aria-label="Remove attachment">`.
+
+export const removeProps = [
+  { name: "onRemove", type: "() => void", default: "(required)", description: "Called when the button is clicked." },
+];
+
+<PropsTable rows={removeProps} />
+
+### Attachments.Dropzone
+
+Drop overlay. Renders `data-slot="attachments-dropzone"`. `variant="global"`
+portals it into the app shell so files can be dropped anywhere.
+
+export const dropzoneProps = [
+  { name: "visible", type: "boolean", default: "false", description: "Show the overlay (while files are dragged over the scope)." },
+  { name: "variant", type: '"inline" | "global"', description: "Inline sits in place; global portals into the app shell." },
+  { name: "keepMounted", type: "boolean", default: "false", description: "Keep it mounted (hidden) when not visible." },
+  { name: "portalSelector", type: "string", description: "CSS selector to portal into (the mechanism behind global)." },
+];
+
+<PropsTable rows={dropzoneProps} />
+
+export const dropzoneAttrs = [
+  { attribute: "data-slot", values: '"attachments-dropzone"', description: "The overlay." },
+  { attribute: "data-visible", description: "Present while visible is true." },
+];
+
+<AttributesTable rows={dropzoneAttrs} />
+
+### Attachments.Error
+
+Validation message slot. Renders `<span data-slot="attachments-error">`.
+
+### Attachments.Trigger
+
+The file-picker button. Renders `<button data-slot="attachments-trigger">`.
 
 ## Utilities
 

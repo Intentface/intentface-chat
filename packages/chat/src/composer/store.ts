@@ -323,6 +323,16 @@ export const createComposerStore = (): ComposerStore => {
     controller.blur();
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // This is a document-level listener, so scope it to this composer:
+      // ignore keystrokes aimed at another editable (e.g. a second composer on
+      // the same page). Options/body focus (no editable host) still counts as
+      // ours, so the "type to answer" path keeps working.
+      const target = event.target as HTMLElement | null;
+      const editableHost = target?.closest<HTMLElement>(
+        'input, textarea, [contenteditable="true"]',
+      );
+      if (editableHost && editableHost !== editorRef.current?.view.dom) return;
+
       const optionsHandle = optionsRef.current;
       const action = interpretAskUserKey(
         {

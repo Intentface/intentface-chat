@@ -1,91 +1,154 @@
 ---
 title: Steps
 description: A collapsible timeline of a run — reasoning, tool calls, and answered questions as chronological steps.
+source: steps.tsx
 ---
-
-Steps is a recursive disclosure tree: every node is an `Item` with a `Trigger`
-and a `Panel`, and panels can contain further items, so timelines nest
-arbitrarily. Nested items surface `data-nested` for rail styling; sibling
-facts (the last connector) are plain CSS. Row helpers ship as named exports —
-`StepsStep` is the high-level row (label, status, icon), and `StepsToolCall` /
-`StepsAskUser` derive a label, status, and summary from a tool part, so you
-pass the part and they render the row.
 
 <ComponentPreview name="steps-basic" />
 
-## Installation
+## Usage guidelines
 
-<ManualInstall item="steps" />
+- **Recursive disclosure tree** — every node is a `Steps.Item` with a `Trigger` and a `Panel`, and panels can hold further items, so timelines nest arbitrarily.
+- **Status-driven** — each item's `status` (`complete` / `active` / `pending`) flows to its `Icon` and `Label` via context; active items open by default.
+- **Nesting** — a nested item surfaces `data-nested` for the indent rail; a static row is just an `Icon` + `Label` in a `<div>`.
+- **You compose the rows** — the primitive ships the disclosure + status plumbing; row content (icons, tool-call summaries) is yours to render.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
 
 ## Anatomy
 
-The bare nesting — a timeline is a top-level item whose panel holds the rows:
+A timeline is a top-level item whose panel holds rows; a row is an `Icon` +
+`Label`, and a row that expands is itself a nested `Steps.Item`:
 
 ```tsx
 <Steps>
-  <Steps.Item>
-    <Steps.Trigger>Steps</Steps.Trigger>
+  <Steps.Item defaultOpen>
+    <Steps.Trigger>
+      <span>Worked for 3 seconds</span>
+    </Steps.Trigger>
     <Steps.Panel>
-      <StepsStep label="Read the request" status="complete" />
+      {/* a static, complete row */}
+      <div>
+        <Steps.Icon>{checkIcon}</Steps.Icon>
+        <Steps.Label>Read the request</Steps.Label>
+      </div>
+
+      {/* a nested, expandable row */}
+      <Steps.Item defaultOpen>
+        <Steps.Trigger>
+          <Steps.Icon>{checkIcon}</Steps.Icon>
+          <Steps.Label>Searched the web</Steps.Label>
+        </Steps.Trigger>
+        <Steps.Panel>Found three relevant sources and skimmed each.</Steps.Panel>
+      </Steps.Item>
+
+      {/* an in-progress row — status overrides icon + label styling */}
+      <div>
+        <Steps.Icon status="active">{spinnerIcon}</Steps.Icon>
+        <Steps.Label status="active">Writing the answer</Steps.Label>
+      </div>
     </Steps.Panel>
   </Steps.Item>
 </Steps>
 ```
 
-Driven from message segments — tool parts render themselves:
+## Status
 
-```tsx
-<Steps>
-  <Steps.Item defaultOpen={isStreaming}>
-    <Steps.Trigger>{header}</Steps.Trigger>
-    <Steps.Panel>
-      {segments.map((seg) =>
-        seg.type === "reasoning" ? (
-          <StepsStep label={seg.header} status="complete">
-            <StepsBody>{seg.body}</StepsBody>
-          </StepsStep>
-        ) : seg.part.type === "tool-askUser" ? (
-          <StepsAskUser part={seg.part} />
-        ) : (
-          <StepsToolCall part={seg.part} />
-        ),
-      )}
-    </Steps.Panel>
-  </Steps.Item>
-</Steps>
-```
+`StepStatus` is `"complete" | "active" | "pending"`. `Steps.Item` takes a
+`status` prop and publishes it through context; `Steps.Icon` and `Steps.Label`
+inherit it, or override with their own `status` prop. Resolution is
+*own prop → inherited → `"complete"`*. Every status-aware part reflects it as
+`data-status` for styling.
 
-## Props
+## API reference
 
-export const rootProps = [
-  { name: "toolLabels", type: "ToolLabels", description: "Maps tool names to active/complete label text. Defaults to the app's DEFAULT_TOOL_LABELS." },
-];
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
 
-<PropsTable rows={rootProps} />
+### Steps
+
+The timeline root. Renders `data-slot="steps"`. No part-specific props.
+
+### Steps.Item
+
+One node of the tree (a disclosure). Renders `data-slot="steps-item"`.
 
 export const itemProps = [
-  { name: "status", type: '"complete" | "active" | "pending"', default: '"complete"', description: "Surfaced as data-status; active items open by default." },
-  { name: "defaultOpen", type: "boolean", description: "Uncontrolled initial open state. Defaults to true while status is active." },
+  { name: "status", type: '"complete" | "active" | "pending"', default: '"complete"', description: "Node status; seeds context for Icon/Label and drives data-status." },
+  { name: "defaultOpen", type: "boolean", default: "status === active", description: "Uncontrolled initial open state — open by default while active." },
   { name: "open", type: "boolean", description: "Controlled open state." },
   { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on toggle." },
 ];
 
 <PropsTable rows={itemProps} />
 
-export const partProps = [
-  { name: "Trigger", type: "children", description: "Toggles the nearest item; carries data-open / data-closed for the chevron." },
-  { name: "Panel", type: "children", description: "The nearest item's disclosure area — lays out the timeline column." },
+export const itemAttrs = [
+  { attribute: "data-slot", values: '"steps-item"', description: "The item element." },
+  { attribute: "data-status", values: '"complete" | "active" | "pending"', description: "The item's status." },
+  { attribute: "data-nested", values: '"true"', description: "Present when the item is inside another item (indent rail)." },
+  { attribute: "data-open", description: "Present while open." },
+  { attribute: "data-closed", description: "Present while closed." },
 ];
 
-<PropsTable rows={partProps} />
+<AttributesTable rows={itemAttrs} />
 
-Row helpers (named exports):
+### Steps.Trigger
 
-export const helperProps = [
-  { name: "StepsStep", type: 'label: string; status?: "complete" | "active" | "pending"; icon?', description: "A timeline row; with children it becomes collapsible." },
-  { name: "StepsBody", type: "children: string", description: "Markdown detail inside a step's expanded area." },
-  { name: "StepsToolCall", type: "part: ToolPart", description: "Renders a tool invocation as a step (label/status/summary/sources derived)." },
-  { name: "StepsAskUser", type: "part: ToolPart", description: "Renders an answered ask-user exchange as a step." },
+Toggles the nearest item. Renders a `<button data-slot="steps-trigger">`
+(`aria-expanded`, `aria-controls`). Carries `data-open`/`data-closed` for the
+chevron. The styled layer groups it as `group/steps-trigger` so children read
+`group-data-open/steps-trigger:…`.
+
+### Steps.Panel
+
+The nearest item's disclosure area — lays out the timeline column. Renders
+`data-slot="steps-panel"`.
+
+export const panelProps = [
+  { name: "keepMounted", type: "boolean", default: "false", description: "Keep the panel in the DOM (hidden) when closed." },
 ];
 
-<PropsTable rows={helperProps} />
+<PropsTable rows={panelProps} />
+
+export const panelAttrs = [
+  { attribute: "data-slot", values: '"steps-panel"', description: "The panel." },
+  { attribute: "data-open", description: "Present while open." },
+  { attribute: "data-closed", description: "Present while closed." },
+  { attribute: "data-starting-style", description: "Present on the first open frame (enter transition)." },
+  { attribute: "data-ending-style", description: "Present while the exit animation runs." },
+];
+
+<AttributesTable rows={panelAttrs} />
+
+### Steps.Icon
+
+Status indicator. Renders `<span data-slot="steps-icon" aria-hidden>`.
+
+export const iconProps = [
+  { name: "status", type: '"complete" | "active" | "pending"', description: "Overrides the inherited status for this icon." },
+];
+
+<PropsTable rows={iconProps} />
+
+export const iconAttrs = [
+  { attribute: "data-slot", values: '"steps-icon"', description: "The icon element." },
+  { attribute: "data-status", values: '"complete" | "active" | "pending"', description: "Resolved status, for styling." },
+];
+
+<AttributesTable rows={iconAttrs} />
+
+### Steps.Label
+
+Row text. Renders `<span data-slot="steps-label">`.
+
+export const labelProps = [
+  { name: "status", type: '"complete" | "active" | "pending"', description: "Overrides the inherited status for this label." },
+];
+
+<PropsTable rows={labelProps} />
+
+export const labelAttrs = [
+  { attribute: "data-slot", values: '"steps-label"', description: "The label element." },
+  { attribute: "data-status", values: '"complete" | "active" | "pending"', description: "Resolved status, for styling." },
+];
+
+<AttributesTable rows={labelAttrs} />

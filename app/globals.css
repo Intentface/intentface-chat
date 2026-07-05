@@ -129,6 +129,8 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
   /* Background */
   --color-base: var(--base);
   --color-base-hover: var(--base-hover);
@@ -216,8 +218,14 @@
   }
 
   body {
-    @apply bg-base text-ink-primary;
+    @apply bg-base font-sans text-ink-primary;
+    font-synthesis: none;
   }
+}
+
+@utility font-book {
+  font-weight: 450;
+  font-variation-settings: "wght" 450;
 }
 
 /* Streamdown element styles */

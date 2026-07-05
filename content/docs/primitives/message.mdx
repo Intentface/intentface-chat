@@ -1,18 +1,18 @@
 ---
 title: Message
 description: Renders a single chat message — role-aware bubble, markdown, chips, attachments, sources, and actions.
+source: message.tsx
 ---
-
-Message renders one turn's content with role-based styling. It reads plain
-message fields (role, text, attachments, sources) and composes them; the text
-segmenter reconstructs inline chips from the wire format, and a selection
-toolbar can add highlighted text back to the chat.
 
 <ComponentPreview name="message-basic" />
 
-## Installation
+## Usage guidelines
 
-<ManualInstall item="message" />
+- **One turn's content** — a role-aware bubble composed from plain message fields (role, text, attachments, sources).
+- **Rich text** — `Message.Markdown` for assistant markdown; `Message.Text` reconstructs inline chips from the wire format.
+- **Affordances** — copy, regenerate and other actions, source pills, timestamps, and error / stopped / loading markers.
+- **Selection → chat** — `Message.SelectionToolbar` lifts highlighted text back into the composer.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
 
 ## Anatomy
 
@@ -91,26 +91,147 @@ Three rules keep the memo effective while a reply streams:
 Done right, a stream chunk re-renders exactly one row. See
 [Streaming performance](/docs/headless/performance) for the full render model.
 
-## Props
+## Accessibility
 
-`Message` (root) takes the message's role and position; the sub-components take
-only what they render.
+- **Role** drives `data-role`, and error/last state drive `data-error`/`data-last`
+  on the root, so styling and assistive context stay in sync.
+- **Sources** render as `<a target="_blank" rel="noopener noreferrer">`.
+- **Actions** are real buttons; `Message.Action` pairs with a tooltip label.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+
+### Message
+
+The root: role-aware container. Renders `data-slot="message"`.
 
 export const rootProps = [
-  { name: "role", type: '"system" | "user" | "assistant"', description: "Drives the role-based styling via data-role." },
-  { name: "isLast", type: "boolean", description: "Marks the last message (data-last) — used for streaming/animation hooks." },
-  { name: "isError", type: "boolean", description: "Renders the error surface (data-error)." },
+  { name: "role", type: '"system" | "user" | "assistant"', default: "(required)", description: "Drives role-based styling via data-role." },
+  { name: "isLast", type: "boolean", default: "false", description: "Marks the last message (data-last) — a streaming/animation hook." },
+  { name: "isError", type: "boolean", default: "false", description: "Renders the error surface (data-error)." },
 ];
 
 <PropsTable rows={rootProps} />
 
-export const partProps = [
-  { name: "Text", type: "children: string", description: "Segments inline chips out of the text and renders them; plain text otherwise." },
-  { name: "Markdown", type: "children: string", description: "Renders assistant markdown via Streamdown." },
-  { name: "Copy", type: "value: string", description: "Copy-to-clipboard action with copied state." },
-  { name: "Source", type: "url: string; domain: string", description: "A source pill with favicon + domain." },
-  { name: "Attachment", type: "attachment: FilePart", description: "Read-only attachment chip (image hover-card or file icon)." },
-  { name: "SelectionToolbar", type: "onAdd: (text: string) => void", description: "Floating toolbar over a text selection within this message." },
+export const rootAttrs = [
+  { attribute: "data-slot", values: '"message"', description: "The message root." },
+  { attribute: "data-role", values: '"system" | "user" | "assistant"', description: "The message role." },
+  { attribute: "data-error", description: "Present when isError is true." },
+  { attribute: "data-last", description: "Present when isLast is true." },
 ];
 
-<PropsTable rows={partProps} />
+<AttributesTable rows={rootAttrs} />
+
+### Message.Turn
+
+Groups a role's messages into one visual turn. Renders `data-slot="message-turn"`.
+
+export const turnProps = [
+  { name: "sticky", type: "boolean", description: "Pins the turn header while its content scrolls." },
+];
+
+<PropsTable rows={turnProps} />
+
+### Message.Text
+
+Plain/segmented text: reconstructs inline chips from the wire format. Renders
+`data-slot="message-text"`.
+
+export const textProps = [
+  { name: "children", type: "string", default: "(required)", description: "The message text; chip tokens are parsed out and rendered." },
+  { name: "renderText", type: "(text, index) => ReactNode", description: "Custom renderer for plain text runs." },
+  { name: "renderChip", type: "(chip, index) => ReactNode", description: "Custom renderer for reconstructed chips." },
+];
+
+<PropsTable rows={textProps} />
+
+### Message.Markdown
+
+Renders assistant markdown (via the shared Markdown renderer).
+
+export const markdownProps = [
+  { name: "children", type: "string", default: "(required)", description: "Markdown source." },
+];
+
+<PropsTable rows={markdownProps} />
+
+### Message.Copy
+
+Copy-to-clipboard action with a copied state.
+
+export const copyProps = [
+  { name: "value", type: "string", default: "(required)", description: "Text copied to the clipboard." },
+];
+
+<PropsTable rows={copyProps} />
+
+### Message.Action
+
+An action button with a tooltip (styled `IconButton`).
+
+export const actionProps = [
+  { name: "tooltip", type: "string", description: "Tooltip label; also the accessible name." },
+];
+
+<PropsTable rows={actionProps} />
+
+### Message.Source
+
+A source pill linking out. Renders `data-slot="message-source"` as
+`<a target="_blank" rel="noopener noreferrer">`.
+
+export const sourceProps = [
+  { name: "url", type: "string", default: "(required)", description: "The source URL." },
+  { name: "domain", type: "string", description: "Display domain (with favicon)." },
+];
+
+<PropsTable rows={sourceProps} />
+
+### Message.Timestamp
+
+Formatted send time. Renders `data-slot="message-timestamp"`.
+
+export const timestampProps = [
+  { name: "timestamp", type: "Date | string | number", default: "(required)", description: "The time to format (children override the formatted value)." },
+];
+
+<PropsTable rows={timestampProps} />
+
+### Message.Attachment
+
+A read-only attachment chip (image hover-card or file icon).
+
+export const attachmentProps = [
+  { name: "attachment", type: "FilePart", default: "(required)", description: "The attachment to render." },
+];
+
+<PropsTable rows={attachmentProps} />
+
+### Message.SelectionToolbar
+
+A floating toolbar over a text selection within this message.
+
+export const toolbarProps = [
+  { name: "onAdd", type: "(text: string) => void", default: "(required)", description: "Called with the selected text — e.g. to add it to the composer as context." },
+];
+
+<PropsTable rows={toolbarProps} />
+
+### Structural parts
+
+`Message.Content`, `Message.Actions`, `Message.Attachments`, `Message.Sources`,
+`Message.Error`, `Message.Stopped`, and `Message.Loading` are layout/marker
+slots taking only `children`; they render `data-slot="message-content"`,
+`"message-actions"`, `"message-attachments"`, `"message-sources"`,
+`"message-error"`, `"message-stopped"`, and `"message-loading"` respectively.
+
+### Hooks
+
+export const hooks = [
+  { name: "useMessageSelection", type: "(scope) => MessageSelection | null", description: "Subscribe to the text selection scoped to a message element (settles on mouseup/keyup)." },
+  { name: "useMessageSelectionScope", type: "() => { anchorRef, contentElement }", description: "Resolve the owning message's content element from an anchor rendered inside it." },
+];
+
+<PropsTable rows={hooks} />

@@ -64,7 +64,7 @@ const SettingsRow = ({ className, children, ...props }: ComponentProps<"div">) =
 const SettingsLabel = ({ className, children, ...props }: ComponentProps<"span">) => (
   <span
     data-slot="settings-label"
-    className={cn("text-sm text-ink-primary font-[450]", className)}
+    className={cn("text-sm text-ink-primary font-book", className)}
     {...props}
   >
     {children}

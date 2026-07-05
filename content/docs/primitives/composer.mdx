@@ -347,7 +347,8 @@ export const panelProps = [
 
 export const panelAttrs = [
   { attribute: "data-slot", values: '"composer-panel"', description: "The panel element." },
-  { attribute: "data-open / data-closed", description: "Reflects whether a panel item is open." },
+  { attribute: "data-open", description: "Present while a panel item is open." },
+  { attribute: "data-closed", description: "Present while closed." },
 ];
 
 <AttributesTable rows={panelAttrs} />

@@ -34,12 +34,13 @@ export const fuzzyScore = (query: string, target: string): number => {
 
 export const filterArrayItems = (items: CommandItemData[], query: string): CommandItemData[] => {
   if (!query) return items;
-  return items
-    .map((item) => {
-      const target = `${item.label ?? item.value ?? ""} ${item.keywords ?? ""}`.trim();
-      return { item, score: fuzzyScore(query, target) };
-    })
-    .filter(({ score }) => score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map(({ item }) => item);
+  // Score and filter in a single pass, then sort by score.
+  const scored: { item: CommandItemData; score: number }[] = [];
+  for (const item of items) {
+    const target = `${item.label ?? item.value ?? ""} ${item.keywords ?? ""}`.trim();
+    const score = fuzzyScore(query, target);
+    if (score > 0) scored.push({ item, score });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map(({ item }) => item);
 };

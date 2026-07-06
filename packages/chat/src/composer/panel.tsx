@@ -181,7 +181,6 @@ export const ComposerPopover = ({
     "div",
     { className, render, style },
     {
-      enabled: isOpen,
       ref: elementRef,
       state: { open: isOpen },
       stateAttributesMapping: openStateMapping,
@@ -201,6 +200,9 @@ export const ComposerPopover = ({
     },
   );
 
-  if (!element) return null;
+  // Stays mounted (positioning only runs while open, so a closed popover just
+  // holds its last position). Open/closed is exposed as data-open/data-closed
+  // for the styled layer to animate against — same as the other parts.
+  if (typeof document === "undefined") return null;
   return createPortal(element, document.body);
 };

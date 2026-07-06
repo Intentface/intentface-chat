@@ -132,6 +132,11 @@ export type ComposerStore = {
   editorRef: RefObject<Editor | null>;
   controller: ComposerEditorState;
   registerEditor: (editor: Editor) => () => void;
+  // The mounted Composer.Container's element, registered by its render ref.
+  // Composer.Popover anchors to the active command badge inside the editor, but
+  // observes this box to reposition — the badge moves when the container grows
+  // (attachments strip, multi-line input).
+  containerRef: RefObject<HTMLElement | null>;
   // Co-located refs the mounted Composer wires up at runtime.
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
@@ -157,6 +162,7 @@ export const createComposerStore = (): ComposerStore => {
   };
 
   // Imperative refs co-located with the store; not reactive.
+  const containerRef: RefObject<HTMLElement | null> = { current: null };
   const optionsRef: RefObject<AskUserOptionsHandle | null> = { current: null };
   const fileInputRef: RefObject<HTMLInputElement | null> = { current: null };
   const globalDropRef: RefObject<boolean> = { current: false };
@@ -451,6 +457,7 @@ export const createComposerStore = (): ComposerStore => {
     editorRef,
     controller,
     registerEditor,
+    containerRef,
     attachmentConfigRef,
     submitAnswersRef,
     commandSelectRef,

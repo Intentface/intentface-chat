@@ -36,6 +36,8 @@ export const ComposerContainer = ({
     "div",
     { className, render, style },
     {
+      // Register the element so Composer.Popover can observe it for repositioning.
+      ref: store.containerRef,
       props: [
         {
           role: "button",

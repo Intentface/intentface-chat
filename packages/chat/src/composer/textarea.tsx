@@ -209,6 +209,13 @@ export const ComposerTextarea = ({
     onFocus: () => {
       store.getSnapshot().askUser.optionsRef.current?.clearHighlight();
     },
+    // Losing focus dismisses an open command list (click-outside, tab-away).
+    // Command items and the popover chrome preventDefault their mousedown, so
+    // interacting with the list keeps focus and never triggers this.
+    onBlur: ({ editor: instance }) => {
+      if (!commandListPluginKey.getState(instance.state)?.isOpen) return;
+      instance.view.dispatch(instance.state.tr.setMeta(commandListPluginKey, { close: true }));
+    },
     onMount: ({ editor: instance }) => {
       store.editorRef.current = instance;
     },

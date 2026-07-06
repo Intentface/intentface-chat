@@ -26,7 +26,7 @@ import {
   ComposerCommandLoading,
 } from "./command-list";
 import { ComposerContainer } from "./container";
-import { ComposerPanel, ComposerPanelItem } from "./panel";
+import { ComposerPanel, ComposerPanelItem, ComposerPopover } from "./panel";
 import { ComposerPlaceholder } from "./placeholder";
 import { ComposerRoot } from "./root";
 import { createComposerStore } from "./store";
@@ -44,6 +44,7 @@ export const Composer = Object.assign(ComposerRoot, {
   Submit: ComposerSubmit,
   Panel: ComposerPanel,
   PanelItem: ComposerPanelItem,
+  Popover: ComposerPopover,
   Textarea: ComposerTextarea,
   AskUser: ComposerAskUser,
   AskUserHints: ComposerAskUserHints,
@@ -77,7 +78,7 @@ export type { EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";
 export { createMentionChipExtension } from "./mention-chip";
-export type { ComposerPanelItemProps, ComposerPanelProps } from "./panel";
+export type { ComposerPanelItemProps, ComposerPanelProps, ComposerPopoverProps } from "./panel";
 export { COMMAND_LIST_PANEL_VALUE } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
 export type { CommandListPluginState, RegisteredPrefix } from "./prefix-plugin";

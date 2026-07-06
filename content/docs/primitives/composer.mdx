@@ -55,6 +55,16 @@ a prefix is active. `commands` maps each prefix to its config and items.
 
 <ComponentPreview name="composer-commands" />
 
+### Floating command popover
+
+`Composer.Popover` is the floating alternative to `Composer.Panel`. It takes the
+same `CommandList` children but portals them above the field, anchored to the
+active trigger token — so the list overlays instead of growing the composer, and
+needs no reserved height. Mount one or the other; the command wiring is
+identical.
+
+<ComponentPreview name="composer-popover" />
+
 ### Ask-user flow
 
 Setting the `questions` prop — typically from an assistant's clarifying
@@ -370,6 +380,22 @@ export const panelItemProps = [
 ];
 
 <PropsTable rows={panelItemProps} />
+
+### Composer.Popover
+
+Floating alternative to `Composer.Panel` for command lists. While a command
+prefix is open it portals its children above the field, anchored to the active
+trigger token and opening upward — overlaying instead of growing the composer.
+Positioning is deterministic (no floating library); it repositions on scroll,
+resize, and composer growth. Renders nothing while closed. Takes the same
+`CommandList` children as `Panel`. No part-specific props.
+
+export const popoverAttrs = [
+  { attribute: "data-slot", values: '"composer-popover"', description: "The portaled popover element." },
+  { attribute: "data-open", description: "Present while the popover is open (it is unmounted when closed)." },
+];
+
+<AttributesTable rows={popoverAttrs} />
 
 ### Composer.CommandList
 

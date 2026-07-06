@@ -398,6 +398,34 @@ const ComposerPanelItem = ({ value, children, ...props }: ComposerPanelItemProps
 );
 
 // ---------------------------------------------------------------------------
+// Popover — the floating alternative to Panel. Takes the same CommandList
+// children but lifts them into a portal above the field, anchored to the
+// active command badge. Just the visual shell here; open/close and dismissal
+// (Escape, editor blur) are wired in the package.
+// ---------------------------------------------------------------------------
+
+type ComposerPopoverProps = ComponentProps<typeof ComposerPrimitive.Popover>;
+
+const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => (
+  <ComposerPrimitive.Popover
+    className={cn(
+      // Floating shell — same material as the in-flow panel, scaled down and
+      // lifted above the anchor token with a stronger shadow for depth.
+      "z-50 mb-2 w-72 overflow-hidden border border-primary-border bg-primary rounded-2xl shadow-lg [corner-shape:squircle]",
+      className,
+    )}
+    render={
+      <motion.div
+        initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      />
+    }
+    {...props}
+  />
+);
+
+// ---------------------------------------------------------------------------
 // CommandList family
 // ---------------------------------------------------------------------------
 
@@ -674,6 +702,7 @@ export const Composer = Object.assign(ComposerRoot, {
   Submit: ComposerSubmit,
   Panel: ComposerPanel,
   PanelItem: ComposerPanelItem,
+  Popover: ComposerPopover,
   Textarea: ComposerTextarea,
   AskUser: ComposerAskUser,
   AskUserHints: ComposerAskUserHints,

@@ -19,9 +19,9 @@
      In light, signs are negative so hover/active/border sink toward
      darker. Surfaces sit near white; a positive Δ would clamp at #fff.
      The .dark block below flips signs so states lift toward white. */
-  --state-hover: calc(-0.16 * var(--con));
-  --state-active: calc(-0.18 * var(--con));
-  --state-border: calc(-0.2 * var(--con));
+  --state-hover: calc(-0.08 * var(--con));
+  --state-active: calc(-0.16 * var(--con));
+  --state-border: calc(-0.24 * var(--con));
 
   /* Surface lightness steps. Each tier offsets from --bg by step ×
      --con. Positive lifts above bg; negative sinks below.
@@ -85,7 +85,6 @@
 
   --sidebar-width: 224px;
   --thread-width: 672px;
-  --artifacts-panel-width: 512px;
 }
 
 .dark {
@@ -130,6 +129,8 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
   /* Background */
   --color-base: var(--base);
   --color-base-hover: var(--base-hover);
@@ -217,8 +218,14 @@
   }
 
   body {
-    @apply bg-base text-ink-primary;
+    @apply bg-base font-sans text-ink-primary;
+    font-synthesis: none;
   }
+}
+
+@utility font-book {
+  font-weight: 450;
+  font-variation-settings: "wght" 450;
 }
 
 /* Streamdown element styles */
@@ -282,7 +289,7 @@
 }
 
 [data-streamdown="strong"] {
-  @apply font-medium;
+  @apply font-medium text-ink-primary;
 }
 
 [data-streamdown="table-wrapper"] {
@@ -306,4 +313,19 @@
 
 [data-streamdown="image"] {
   @apply max-w-full rounded-md;
+}
+
+/* ─── Shiki dual-theme code blocks ───
+   CodeBlock highlights with { light: github-light, dark: github-dark } and
+   defaultColor:false, so shiki emits per-token CSS variables instead of a fixed
+   color. Activate light by default and swap to dark under the .dark class. Only
+   the text color switches — the <pre> keeps its own bg-secondary surface. */
+.shiki,
+.shiki span {
+  color: var(--shiki-light);
+}
+
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark);
 }

@@ -1,118 +1,37 @@
 "use client";
 
-import type { FileUIPart } from "ai";
+import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
 import { FileIcon, PaperclipIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { nanoid } from "nanoid";
 import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconButton } from "@/components/ui/icon-button";
+import { formatFileSize, isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
 import { cn } from "@/lib/utils";
 import { PaperClipIcon } from "../icons/paperclip";
-// Types
-export type AttachmentItem = FileUIPart & { id: string; fileSize?: number };
 
-export type AttachmentErrorCode = "accept" | "max_file_size" | "max_files";
-
-export interface AttachmentError {
-  code: AttachmentErrorCode;
-  message: string;
-}
-
-// Constants
-export const DEFAULT_ATTACHMENT_ACCEPT = "image/*,application/pdf,text/*";
-export const DEFAULT_ATTACHMENT_MAX_FILES = 5;
-export const DEFAULT_ATTACHMENT_MAX_FILE_SIZE = 10 * 1024 * 1024;
-
-// Utilities
-
-export const matchesAccept = (file: File, accept: string): boolean => {
-  if (!accept || accept.trim() === "") {
-    return true;
-  }
-
-  const patterns = accept
-    .split(",")
-    .map((pattern) => pattern.trim())
-    .filter(Boolean);
-
-  return patterns.some((pattern) => {
-    if (pattern.endsWith("/*")) {
-      const prefix = pattern.slice(0, -1);
-      return file.type.startsWith(prefix);
-    }
-    return file.type === pattern;
-  });
-};
-
-export const toAttachmentItem = (file: File): AttachmentItem => ({
-  filename: file.name,
-  fileSize: file.size,
-  id: nanoid(),
-  mediaType: file.type,
-  type: "file",
-  url: URL.createObjectURL(file),
-});
-
-export const revokeAttachmentUrl = (item: Pick<AttachmentItem, "url">) => {
-  if (item.url?.startsWith("blob:")) {
-    URL.revokeObjectURL(item.url);
-  }
-};
-
-export const revokeAllAttachmentUrls = (items: AttachmentItem[]) => {
-  for (const item of items) {
-    revokeAttachmentUrl(item);
-  }
-};
-
-const convertBlobUrlToDataUrl = async (url: string): Promise<string | null> => {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-};
-
-export const prepareAttachmentsForSend = async (
-  attachments: AttachmentItem[],
-): Promise<FileUIPart[]> => {
-  return Promise.all(
-    attachments.map(async ({ id: _id, ...attachment }) => {
-      if (attachment.url.startsWith("blob:")) {
-        const converted = await convertBlobUrlToDataUrl(attachment.url);
-        return {
-          ...attachment,
-          url: converted ?? attachment.url,
-        };
-      }
-
-      return attachment;
-    }),
-  );
-};
-
-// Display components
-
-const isImage = (mediaType: string) => mediaType.startsWith("image/");
-
-const isPdf = (mediaType: string) => mediaType === "application/pdf";
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
+// Re-export the attachment surface so consumers import everything from this
+// module: the generic mechanics from the headless package, and this app's
+// policy/taxonomy/send strategy from the app helpers.
+export {
+  type AttachmentErrorCode,
+  type AttachmentItem,
+  matchesAccept,
+  revokeAllAttachmentUrls,
+  revokeAttachmentUrl,
+  toAttachmentItem,
+} from "@intentface/chat/attachments";
+export {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_MAX_FILE_SIZE,
+  ATTACHMENT_MAX_FILES,
+  formatFileSize,
+  isImageAttachment,
+  isPdfAttachment,
+  prepareAttachmentsForSend,
+} from "@/lib/ai/attachments";
 
 type AttachmentsRootProps = {
   children: ReactNode;
@@ -130,7 +49,7 @@ const AttachmentsRoot = ({ children, className, show = true }: AttachmentsRootPr
         transition={{ duration: 0.2, ease: "easeOut" }}
         className="overflow-hidden"
       >
-        <div className={cn("flex flex-wrap gap-2 px-2 pt-2", className)}>
+        <div data-slot="attachments" className={cn("flex flex-wrap gap-2 px-2 pt-2", className)}>
           <AnimatePresence initial={false}>{children}</AnimatePresence>
         </div>
       </motion.div>
@@ -146,7 +65,7 @@ type AttachmentsItemProps = {
 };
 
 const getFileIcon = (mediaType: string) => {
-  if (isPdf(mediaType)) return FileIcon;
+  if (isPdfAttachment(mediaType)) return FileIcon;
   return PaperclipIcon;
 };
 
@@ -164,12 +83,16 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
         duration: 0.15,
         layout: { duration: 0.2, ease: "easeOut" },
       }}
+      data-slot="attachments-item"
+      data-media-type={
+        isImageAttachment(mediaType) ? "image" : isPdfAttachment(mediaType) ? "pdf" : "file"
+      }
       className={cn(
         "group relative flex h-12 max-w-48 items-center gap-2 rounded-lg border border-secondary-border bg-secondary px-2",
         className,
       )}
     >
-      {isImage(mediaType) ? (
+      {isImageAttachment(mediaType) ? (
         <Image
           width={32}
           height={32}
@@ -253,6 +176,7 @@ const AttachmentsDropzone = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.15, ease: "easeOut" }}
+          data-slot="attachments-dropzone"
           className={cn(dropzoneVariants[variant], className)}
         >
           {children ?? <span className="text-sm font-medium">Drop files here</span>}
@@ -265,13 +189,28 @@ const AttachmentsDropzone = ({
   return content;
 };
 
-type AttachmentsErrorProps = {
-  className?: string;
+// This app's copy for the machine's structured validation codes.
+const ERROR_COPY: Record<AttachmentErrorCode, string> = {
+  accept: "No files match the accepted types.",
+  max_file_size: "All files exceed the maximum size.",
+  max_files: "Too many files. Some were not added.",
 };
 
-const AttachmentsError = ({ className, ...props }: AttachmentsErrorProps) => (
-  <span className={cn("text-xs text-red-500", className)} {...props} />
-);
+type AttachmentsErrorProps = {
+  code?: AttachmentErrorCode | null;
+  className?: string;
+  children?: ReactNode;
+};
+
+const AttachmentsError = ({ code, className, children }: AttachmentsErrorProps) => {
+  const content = children ?? (code ? ERROR_COPY[code] : null);
+  if (!content) return null;
+  return (
+    <span data-slot="attachments-error" className={cn("text-xs text-red-500", className)}>
+      {content}
+    </span>
+  );
+};
 
 type AttachmentsTriggerProps = ComponentProps<typeof IconButton>;
 

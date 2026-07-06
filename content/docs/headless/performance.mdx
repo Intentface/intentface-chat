@@ -1,0 +1,68 @@
+---
+title: Streaming performance
+description: What should re-render on a stream chunk, and how to verify that it does.
+---
+
+A streaming reply updates your messages state on every chunk. The render target
+is strict: **one chunk re-renders the streaming row, the transcript wrapper it
+sits in, and nothing else**. Not the composer, not finished messages, not the
+thread chrome. Everything on this page serves that target.
+
+The primitives hold up their side — see the Performance sections on
+[Thread](/docs/primitives/thread#performance),
+[Message](/docs/primitives/message#performance), and
+[Composer](/docs/primitives/composer#performance) for what each already
+handles and the one recipe each needs from you. This page covers the part that
+belongs to your app: how the chat state reaches the tree.
+
+## Split the volatile state from the stable state
+
+The classic failure mode is one context that bundles per-chunk `messages` with
+stable actions. Every consumer re-renders per chunk regardless of what it
+reads — the composer's editor, the layout, every finished message.
+
+Keep two contexts. The session side changes rarely and is memoized; the
+messages side changes per chunk and has exactly two subscribers:
+
+```tsx
+type ChatSessionValue = {
+  chatId: string;
+  isEmpty: boolean; // flips once per chat — layout reads this, not messages
+  sendMessage: SendMessage;
+  regenerate: Regenerate;
+  // …actions: stable identities
+};
+
+type ChatMessagesValue = {
+  messages: UIMessage[]; // changes per chunk
+  status: ChatStatus;
+};
+```
+
+- **Layout chrome** reads `isEmpty` from the session side — the thread frame,
+  header, and composer dock render zero times during a stream.
+- **The transcript** reads the messages side and maps rows — see the
+  [memoized row recipe](/docs/primitives/message#performance).
+- **The composer bridge** reads the messages side, derives identity-stable
+  panel state, and hands it to a memoized inner composer — see
+  [Composer performance](/docs/primitives/composer#performance).
+
+Two details make or break the split: the session value must be built with
+`useMemo` so its identity survives the per-chunk provider re-render, and any
+component that is a direct child of the provider needs `memo` (a re-rendering
+parent re-creates child elements even when context values are stable).
+
+## Verify with react-scan
+
+Don't trust the architecture — watch it. Run
+[react-scan](https://github.com/aidenybai/react-scan) while streaming a long
+reply. The healthy signature:
+
+- counting up: the root holding your chat state, the transcript component, the
+  streaming row and its markdown renderer, and the thin composer bridge
+- at zero: the thread frame and viewport, the composer editor, the header, and
+  every finished message row
+
+If a finished row counts up, its memo is being defeated — almost always a
+spread (`{ ...message }`) minting a fresh object, or an inline callback prop.
+If the composer editor counts up, the bridge is passing unstable props.

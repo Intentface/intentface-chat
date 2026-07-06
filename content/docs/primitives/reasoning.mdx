@@ -1,0 +1,123 @@
+---
+title: Reasoning
+description: A collapsible "chain of thought" disclosure that tracks streaming duration and splits text into labelled sections.
+source: reasoning.tsx
+---
+
+<ComponentPreview name="reasoning-basic" />
+
+## Usage guidelines
+
+- **Chain-of-thought disclosure** — a collapsible block for a model's thinking.
+- **Live label** — shimmers "Thinking…" while streaming and settles to "Thought for Ns" when it stops; the duration is tracked for you.
+- **Sectioned content** — bold `**Header**` lines split the text into labelled sections, rendered as markdown.
+- **State via `useReasoning`** — read streaming, open, and duration from anywhere inside.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+
+## Anatomy
+
+```tsx
+<Reasoning isStreaming={isStreaming}>
+  <Reasoning.Trigger />
+  <Reasoning.Content>{reasoningText}</Reasoning.Content>
+</Reasoning>
+```
+
+Driven from a streaming message, passing the reasoning parts' text:
+
+```tsx
+<Reasoning isStreaming={isLast && isStreaming} defaultOpen={false}>
+  <Reasoning.Trigger label={headers} />
+  <Reasoning.Content>{texts}</Reasoning.Content>
+</Reasoning>
+```
+
+## useReasoning
+
+Read the disclosure state from anywhere inside `<Reasoning>`:
+
+export const hookMembers = [
+  { name: "isStreaming", type: "boolean", description: "Whether reasoning is still streaming in." },
+  { name: "isOpen", type: "boolean", description: "Whether the panel is open." },
+  { name: "setIsOpen", type: "(open: boolean) => void", description: "Toggle the panel." },
+  { name: "duration", type: "number | undefined", description: "Tracked streaming duration in seconds." },
+];
+
+<PropsTable rows={hookMembers} />
+
+## Accessibility
+
+Built on a disclosure: `Reasoning.Trigger` is a `<button>` with `aria-expanded`
+and `aria-controls` pointing at the panel, so screen readers announce the
+collapsed/expanded state and the relationship.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+
+### Reasoning
+
+The disclosure root. Renders `data-slot="reasoning"`.
+
+export const rootProps = [
+  { name: "isStreaming", type: "boolean", default: "false", description: "While true the trigger shimmers; the streamed duration is captured when it flips false." },
+  { name: "duration", type: "number", description: "Override the tracked streaming duration (seconds)." },
+  { name: "defaultOpen", type: "boolean", default: "false", description: "Uncontrolled initial open state." },
+  { name: "open", type: "boolean", description: "Controlled open state." },
+  { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on toggle." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const rootAttrs = [
+  { attribute: "data-slot", values: '"reasoning"', description: "The disclosure root." },
+  { attribute: "data-streaming", description: "Present while isStreaming is true." },
+  { attribute: "data-open", description: "Present while open." },
+  { attribute: "data-closed", description: "Present while closed." },
+];
+
+<AttributesTable rows={rootAttrs} />
+
+### Reasoning.Trigger
+
+The toggle. Renders a `<button>` with `data-slot="reasoning-trigger"`. Without
+children it shows the default thinking/thought message.
+
+export const triggerProps = [
+  { name: "label", type: "string[]", description: "Streaming section headers; the last one labels the live \"Thinking…\" message." },
+  { name: "getThinkingMessage", type: "(isStreaming, duration?, label?) => { key, component }", description: "Override the animated trigger label." },
+  { name: "children", type: "ReactNode", description: "Replaces the default trigger content entirely." },
+];
+
+<PropsTable rows={triggerProps} />
+
+export const triggerAttrs = [
+  { attribute: "data-slot", values: '"reasoning-trigger"', description: "The toggle button." },
+  { attribute: "data-open", description: "Present while open." },
+  { attribute: "data-closed", description: "Present while closed." },
+];
+
+<AttributesTable rows={triggerAttrs} />
+
+### Reasoning.Content
+
+The collapsible panel. Renders `data-slot="reasoning-content"`. Bold `**Header**`
+lines split the text into sections rendered as markdown.
+
+export const contentProps = [
+  { name: "children", type: "string | string[]", default: "(required)", description: "Reasoning text; bold headers split it into sections." },
+  { name: "keepMounted", type: "boolean", default: "false", description: "Keep the panel in the DOM (hidden) when closed." },
+];
+
+<PropsTable rows={contentProps} />
+
+export const contentAttrs = [
+  { attribute: "data-slot", values: '"reasoning-content"', description: "The panel." },
+  { attribute: "data-open", description: "Present while open." },
+  { attribute: "data-closed", description: "Present while closed." },
+  { attribute: "data-starting-style", description: "Present on the first open frame (enter transition)." },
+  { attribute: "data-ending-style", description: "Present while the exit animation runs." },
+];
+
+<AttributesTable rows={contentAttrs} />

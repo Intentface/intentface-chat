@@ -1,0 +1,236 @@
+---
+title: Thread
+description: The scrolling message viewport with auto-follow, a docked composer, overlays, and a scroll-to-bottom button.
+source: thread.tsx
+---
+
+<ComponentPreview name="thread-basic" />
+
+## Usage guidelines
+
+- **Scroll surface** — lands the newest turn, follows the stream while you're at the bottom, and yields the moment you scroll up.
+- **Auto-scroll modes** — `off` / `bottom` / `jump` / `follow` via the `autoScroll` prop (see below).
+- **Composer inset** — measures the docked composer to reserve space; the overlays fade the top and bottom edges.
+- **Owns no data** — you map your messages in; rows are addressable by a `data-message-id` attribute.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+
+## Anatomy
+
+The bare nesting — `Thread` provides the scroll context its parts read:
+
+```tsx
+<Thread>
+  <Thread.Viewport>{/* messages */}</Thread.Viewport>
+  <Thread.Composer>{/* composer */}</Thread.Composer>
+  <Thread.ScrollButton />
+</Thread>
+```
+
+A realistic surface with overlays and a message list:
+
+```tsx
+<Thread autoScroll="follow">
+  <Thread.Overlay direction="top" />
+  <Thread.Viewport>
+    {turns.map((turn) => (
+      <Message.Turn key={turn.key} data-message-id={turn.id}>{/* … */}</Message.Turn>
+    ))}
+  </Thread.Viewport>
+  <Thread.Composer>
+    <Composer onSubmit={sendMessage}>{/* … */}</Composer>
+  </Thread.Composer>
+  <Thread.ScrollButton />
+  <Thread.Overlay direction="bottom" />
+</Thread>
+```
+
+## Auto-scroll
+
+`autoScroll` controls how the newest turn lands and whether the view follows a
+stream. `Thread.Viewport` maps `--thread-turn-min-height` onto its last child,
+so the reserve that lets the newest turn land at the top is wired for you.
+
+export const autoScrollModes = [
+  { name: '"follow"', type: "default", description: "Newest lands at the top; the view follows the stream (ChatGPT-style)." },
+  { name: '"bottom"', type: "", description: "Newest lands at the bottom; the view follows the stream (Codex-style)." },
+  { name: '"jump"', type: "", description: "Newest lands at the top; the view does not follow." },
+  { name: '"off"', type: "", description: "A plain scroll area — no landing, no follow, no reserve." },
+];
+
+<PropsTable rows={autoScrollModes} />
+
+### Opening position
+
+Where a saved transcript opens is a consequence of the mode — there is no
+separate `defaultScrollPosition` prop. `"bottom"` opens at the end; `"follow"`
+and `"jump"` open with the newest turn's top at the reading line (the reserve
+does this); `"off"` opens at the start. To deep-link into the middle of a
+transcript, call `scrollToMessage` on mount — it queues until the rows exist
+and overrides the landing.
+
+The follow is released by deliberate upward reading intent and re-arms when you
+return to the bottom (see [Keyboard](#keyboard)). Content growth alone never
+releases it: a large code block landing at once won't drop the follow
+mid-stream. Once you scroll up, the follow can't scroll again until you return
+to the bottom.
+
+## useThread
+
+Read the scroll state and issue commands from anywhere inside `<Thread>`:
+
+export const useThreadMembers = [
+  { name: "isAtBottom", type: "boolean", description: "Whether the bottom sentinel is in view. Subscribes the caller — only components that render it re-render on flips." },
+  { name: "scrollToBottom", type: "(behavior?) => void", description: "Scroll to the live end." },
+  { name: "scrollToTop", type: "(behavior?) => void", description: "Scroll to the start; releases the follow." },
+  { name: "scrollToMessage", type: "(id, options?) => boolean", description: "Scroll to a row carrying data-message-id={id}. Options: align (\"start\" | \"center\" | \"end\" | \"nearest\"), behavior. Called before the transcript loads (a deep link), the jump is queued and runs when the row mounts. Returns false only when the id is absent from a loaded transcript." },
+];
+
+<PropsTable rows={useThreadMembers} />
+
+`scrollToMessage` resolves rows lazily by the `data-message-id` attribute — put
+it on each row you want addressable; there is no wrapper component and no
+per-row cost:
+
+```tsx
+{turns.map((turn) => (
+  <Message.Turn key={turn.key} data-message-id={turn.id}>{/* … */}</Message.Turn>
+))}
+```
+
+## useThreadVisibility
+
+Track which rows are in view — e.g. to highlight the active turn in an outline.
+Subscribing lazily creates the tracking observers; when the last subscriber
+unmounts they are torn down, so threads that never call it pay nothing. Rows
+are identified by the same `data-message-id` attribute `scrollToMessage` uses.
+
+export const visibilityMembers = [
+  { name: "visibleMessageIds", type: "string[]", description: "Rows intersecting the viewport, in document order." },
+  { name: "currentMessageId", type: "string | null", description: "The topmost visible row — the one being read." },
+];
+
+<PropsTable rows={visibilityMembers} />
+
+## Performance
+
+Thread's scroll subsystem is built to cost nothing while a reply streams — you
+don't need to optimize around it:
+
+- **No scroll handler.** At-bottom detection is an IntersectionObserver
+  sentinel, computed off the main thread. Scrolling runs zero JavaScript.
+- **Landing and follow are event-driven** — a MutationObserver for new turns, a
+  ResizeObserver for growth, one `scrollTo` per change. No per-token geometry
+  reads, no animation-frame polling.
+- **`isAtBottom` lives in an external store**, so a flip re-renders only the
+  components that render it (your scroll button) — never the Thread tree.
+- **Lazy capabilities stay free until used**: visibility tracking creates its
+  observers on the first `useThreadVisibility` subscriber and tears them down
+  with the last; the prepend-preservation scroll listener exists only when
+  `preserveScrollOnPrepend` is set.
+
+The boundary: Thread does not virtualize. Cost is O(rendered rows) of DOM, which
+holds comfortably for realistic transcripts (hundreds to low thousands of
+turns). What re-renders during a stream is decided by your message components —
+see [Streaming performance](/docs/headless/performance).
+
+## Keyboard
+
+The viewport is focusable, so keyboard users can Tab to it and scroll. Upward
+gestures also release auto-follow; downward ones never do (releasing at the
+bottom would strand the view unfollowed while pinned there).
+
+export const keyboard = [
+  { attribute: "Tab", description: "Focus the viewport (a focusable region)." },
+  { attribute: "ArrowUp / PageUp / Home", description: "Scroll up — and release auto-follow." },
+  { attribute: "ArrowDown / PageDown / End / Space", description: "Scroll down. Does not release follow." },
+];
+
+<AttributesTable rows={keyboard} />
+
+An upward wheel or a downward touch-drag releases the follow the same way; a
+scrollbar drag away from the bottom releases it via the sentinel.
+
+## Accessibility
+
+- **Viewport** is a focusable `role="region"` with a default
+  `aria-label="Messages"` (overridable), so it's reachable and scrollable by
+  keyboard.
+- **Content column** is a `role="log"` with `aria-relevant="additions"`, so new
+  turns are announced as they stream in.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+Only part-specific props and state-driven attributes are listed below.
+
+### Thread
+
+The root: a positioned, overflow-clipped container that owns the scroll
+subsystem and measures the composer dock. Renders `data-slot="thread-root"`.
+
+export const rootProps = [
+  { name: "autoScroll", type: '"off" | "bottom" | "jump" | "follow"', default: '"follow"', description: "Landing + follow behavior (see Auto-scroll)." },
+  { name: "preserveScrollOnPrepend", type: "boolean", default: "false", description: "Hold the reading position when older rows load in above (history pagination). Opt-in — it attaches a passive scroll listener." },
+  { name: "dockSelector", type: "string", default: 'composer dock slots', description: "CSS selector for the bottom-docked parts the thread reserves space for. Every match is observed for resize; the inset is measured from the bottom-most match." },
+];
+
+<PropsTable rows={rootProps} />
+
+### Thread.Overlay
+
+A positioned fade strip at the top or bottom edge. The top overlay's height is
+also the top inset the viewport reserves.
+
+export const overlayProps = [
+  { name: "direction", type: '"top" | "bottom"', default: "(required)", description: "Which edge the overlay marks." },
+];
+
+<PropsTable rows={overlayProps} />
+
+export const overlayAttrs = [
+  { attribute: "data-slot", values: '"thread-overlay-top" | "thread-overlay-bottom"', description: "The overlay element (the top one is also the top-inset measurement target)." },
+  { attribute: "data-thread-overlay", values: '"top" | "bottom"', description: "Which edge, for styling the fade direction." },
+];
+
+<AttributesTable rows={overlayAttrs} />
+
+### Thread.Viewport
+
+The scroll container plus the measured content column and the at-bottom
+sentinel. Focusable so keyboard users can scroll it.
+
+export const viewportAttrs = [
+  { attribute: "data-slot", values: '"thread-scroller"', description: "The scroll container (role=region, tabIndex 0, aria-label \"Messages\")." },
+  { attribute: "data-slot", values: '"thread-content"', description: "The content column (role=log, aria-relevant=\"additions\") where your messages render." },
+  { attribute: "data-slot", values: '"thread-bottom"', description: "The 1px at-bottom sentinel the IntersectionObserver watches." },
+];
+
+<AttributesTable rows={viewportAttrs} />
+
+### Thread.Composer
+
+Bottom-docked slot; its height is measured to inset the viewport. Renders
+`data-slot="thread-composer"`.
+
+### Thread.Placeholder
+
+Empty-state slot, shown when there are no messages. Renders
+`data-slot="thread-placeholder"`.
+
+### Thread.ScrollButton
+
+Scroll-to-bottom affordance, shown only when not at the bottom (reads
+`useThread().isAtBottom`). Styled-layer part composed over the hook.
+
+### CSS variables
+
+The styled layer exposes layout knobs you can override:
+
+export const cssVars = [
+  { attribute: "--thread-width", values: "672px", description: "Max width of the content column and overlays." },
+  { attribute: "--thread-overlay-top-height", values: "4rem", description: "Top overlay height and top inset." },
+  { attribute: "--thread-overlay-bottom-height", values: "8rem", description: "Bottom overlay height and bottom inset (also measured from the composer dock at runtime)." },
+];
+
+<AttributesTable rows={cssVars} />

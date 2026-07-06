@@ -1,333 +1,138 @@
 "use client";
 
-import { ChevronLeftIcon, ChevronRightIcon, CircleHelpIcon } from "lucide-react";
 import {
-  type ComponentProps,
-  createContext,
-  type RefObject,
-  use,
-  useCallback,
-  useId,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+  type AskUserOptionsHandle,
+  AskUser as AskUserPrimitive,
+  useAskUserOption,
+  useAskUserOptions,
+} from "@intentface/chat/ask-user";
+import { ChevronLeftIcon, ChevronRightIcon, CircleHelpIcon } from "lucide-react";
+import { type ComponentProps, type RefObject, useState } from "react";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible } from "@/components/ui/collapsible";
 import { RadioGroup } from "@/components/ui/radio-group";
+import type { AskUserQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
-import type { AskUserQuestion } from "@/tools/ask-user";
+
+export type { AskUserOptionsHandle };
 
 /** AskUser root container. Stateless — consumers manage all state externally. */
-type AskUserRootProps = ComponentProps<"div">;
+type AskUserRootProps = ComponentProps<typeof AskUserPrimitive>;
 
 const AskUserRoot = ({ className, ...props }: AskUserRootProps) => (
-  <div className={cn("flex flex-col gap-2 p-2", className)} {...props} />
+  <AskUserPrimitive className={cn("flex flex-col gap-2 p-2", className)} {...props} />
 );
 
 /** Question heading text. */
-type AskUserLabelProps = ComponentProps<"p">;
+type AskUserLabelProps = ComponentProps<typeof AskUserPrimitive.Label>;
 
 const AskUserLabel = ({ className, ...props }: AskUserLabelProps) => (
-  <p
+  <AskUserPrimitive.Label
     className={cn("min-w-0 flex-1 px-2 text-sm font-medium leading-tight", className)}
     {...props}
   />
 );
 
 /** Row container for `Label` and optional `Navigation`. */
-type AskUserHeaderProps = ComponentProps<"div">;
+type AskUserHeaderProps = ComponentProps<typeof AskUserPrimitive.Header>;
 
 const AskUserHeader = ({ className, ...props }: AskUserHeaderProps) => (
-  <div className={cn("flex h-7 items-center gap-2", className)} {...props} />
+  <AskUserPrimitive.Header className={cn("flex h-7 items-center gap-2", className)} {...props} />
 );
 
 /** Row container for `Previous`, `StepLabel`, and `Next`. */
-type AskUserNavigationProps = ComponentProps<"div">;
+type AskUserNavigationProps = ComponentProps<typeof AskUserPrimitive.Navigation>;
 
 const AskUserNavigation = ({ className, ...props }: AskUserNavigationProps) => (
-  <div className={cn("flex items-center gap-1 shrink-0", className)} {...props} />
+  <AskUserPrimitive.Navigation
+    className={cn("flex items-center gap-1 shrink-0", className)}
+    {...props}
+  />
 );
 
+const navigationButtonClasses =
+  "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30";
+
 /** Navigate to the previous step. */
-type AskUserPreviousProps = ComponentProps<"button">;
+type AskUserPreviousProps = ComponentProps<typeof AskUserPrimitive.Previous>;
 
 const AskUserPrevious = ({ className, ...props }: AskUserPreviousProps) => (
-  <button
-    type="button"
-    className={cn(
-      "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30",
-      className,
-    )}
-    {...props}
-  >
+  <AskUserPrimitive.Previous className={cn(navigationButtonClasses, className)} {...props}>
     <ChevronLeftIcon className="size-3.5" />
-  </button>
+  </AskUserPrimitive.Previous>
 );
 
 /** Navigate to the next step. */
-type AskUserNextProps = ComponentProps<"button">;
+type AskUserNextProps = ComponentProps<typeof AskUserPrimitive.Next>;
 
 const AskUserNext = ({ className, ...props }: AskUserNextProps) => (
-  <button
-    type="button"
-    className={cn(
-      "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30",
-      className,
-    )}
-    {...props}
-  >
+  <AskUserPrimitive.Next className={cn(navigationButtonClasses, className)} {...props}>
     <ChevronRightIcon className="size-3.5" />
-  </button>
+  </AskUserPrimitive.Next>
 );
 
 /** Displays "{current} of {total}" step indicator. Supports custom children to override the default text. */
-type AskUserStepLabelProps = ComponentProps<"span"> & {
-  current: number;
-  total: number;
-};
+type AskUserStepLabelProps = ComponentProps<typeof AskUserPrimitive.StepLabel>;
 
-const AskUserStepLabel = ({
-  current,
-  total,
-  className,
-  children,
-  ...props
-}: AskUserStepLabelProps) => (
-  <span className={cn("text-2xs tabular-nums text-ink-tertiary", className)} {...props}>
-    {children ?? `${current} of ${total}`}
-  </span>
+const AskUserStepLabel = ({ className, ...props }: AskUserStepLabelProps) => (
+  <AskUserPrimitive.StepLabel
+    className={cn("text-2xs tabular-nums text-ink-tertiary", className)}
+    {...props}
+  />
 );
 
-/** Fieldset wrapper for `Option` items. Provides `multiSelect`, `groupName`, and highlight state to child `OptionInput` components via context. Items self-register on mount (cmdk pattern). When `multiSelect` is false, wraps children in a `RadioGroup`. */
-type OptionsContextValue = {
-  multiSelect: boolean;
-  groupName: string;
-  highlightedValue: string | null;
-  items: RefObject<string[]>;
-  register: (value: string) => () => void;
-  onItemHover: (value: string) => void;
-};
-
-const OptionsContext = createContext<OptionsContextValue>({
-  multiSelect: false,
-  groupName: "",
-  highlightedValue: null,
-  items: { current: [] },
-  register: () => () => {},
-  onItemHover: () => {},
-});
-
-/** Imperative handle exposed by `AskUserOptions` for keyboard navigation. */
-export type AskUserOptionsHandle = {
-  /** Move highlight by direction. Returns the new highlighted value (null = past the list boundary). */
-  navigate: (direction: number) => string | null;
-  select: () => { value: string } | null;
-  clearHighlight: () => void;
-  resetHighlight: () => void;
-  highlightedValue: string | null;
-};
-
-type AskUserOptionsProps = Omit<ComponentProps<"fieldset">, "value" | "ref"> & {
-  /** When true, `OptionInput` renders as checkboxes. When false (default), renders as radio buttons inside a `RadioGroup`. */
-  multiSelect?: boolean;
-  /** Shared `name` attribute for all `OptionInput` elements in this group. */
-  groupName?: string;
+/** Fieldset wrapper for `Option` items. When `multiSelect` is false, wraps children in a `RadioGroup`. */
+type AskUserOptionsProps = ComponentProps<typeof AskUserPrimitive.Options> & {
   /** The currently selected value (used as RadioGroup value when not multiSelect). */
   value?: string;
   /** Called when the RadioGroup value changes (single-select mode only). */
   onValueChange?: (value: string) => void;
-  /** Imperative ref for keyboard navigation (navigate, select, clearHighlight, resetHighlight). */
   ref?: RefObject<AskUserOptionsHandle | null>;
 };
 
 const AskUserOptions = ({
   multiSelect = false,
-  groupName = "",
   value,
   onValueChange,
-  ref,
   className,
-  children,
   ...props
 }: AskUserOptionsProps) => {
-  const registeredItems = useRef<string[]>([]);
-  const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
-
-  // Track highlight in a ref so imperative methods see latest value without re-binding
-  const highlightedValueRef = useRef(highlightedValue);
-  highlightedValueRef.current = highlightedValue;
-
-  const register = useCallback((itemValue: string) => {
-    registeredItems.current = [...registeredItems.current, itemValue];
-    // Auto-highlight whenever an item registers while nothing is highlighted.
-    // Using length === 1 here is fragile: during a step transition, React can
-    // interleave old-item cleanups with new-item setups, so the new first
-    // option may arrive when the list is not exactly length 1.
-    if (highlightedValueRef.current === null) {
-      highlightedValueRef.current = itemValue;
-      setHighlightedValue(itemValue);
-    }
-    return () => {
-      registeredItems.current = registeredItems.current.filter((v) => v !== itemValue);
-      // Clear highlight when the highlighted item deregisters — allows auto-highlight
-      // to fire for the next set of items (e.g. on step change)
-      if (highlightedValueRef.current === itemValue) {
-        highlightedValueRef.current = null;
-        setHighlightedValue(null);
-      }
-    };
-  }, []);
-
-  const onItemHover = useCallback((itemValue: string) => {
-    setHighlightedValue(itemValue);
-  }, []);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      navigate: (direction: number): string | null => {
-        const items = registeredItems.current;
-        if (items.length === 0) return null;
-        const previous = highlightedValueRef.current;
-        let next: string | null;
-        if (previous === null) {
-          next = direction > 0 ? items[0] : items[items.length - 1];
-        } else {
-          const currentIndex = items.indexOf(previous);
-          const nextIndex = currentIndex + direction;
-          if (nextIndex >= items.length || nextIndex < 0) next = null;
-          else next = items[nextIndex];
-        }
-        highlightedValueRef.current = next;
-        setHighlightedValue(next);
-        return next;
-      },
-      select: () => {
-        const current = highlightedValueRef.current;
-        if (current === null) return null;
-        return { value: current };
-      },
-      clearHighlight: () => {
-        highlightedValueRef.current = null;
-        setHighlightedValue(null);
-      },
-      resetHighlight: () => {
-        // Clear synchronously — the auto-highlight path in `register` will pick
-        // up the first new item when it mounts after a step change.
-        highlightedValueRef.current = null;
-        setHighlightedValue(null);
-      },
-      get highlightedValue() {
-        return highlightedValueRef.current;
-      },
-    }),
-    [],
-  );
-
   const content = (
-    <fieldset className={cn("flex flex-col gap-1.5", className)} {...props}>
-      {children}
-    </fieldset>
+    <AskUserPrimitive.Options
+      multiSelect={multiSelect}
+      className={cn("flex flex-col gap-1.5", className)}
+      {...props}
+    />
   );
+
+  if (multiSelect) return content;
 
   return (
-    <OptionsContext
-      value={{
-        multiSelect,
-        groupName,
-        highlightedValue,
-        items: registeredItems,
-        register,
-        onItemHover,
-      }}
-    >
-      {multiSelect ? (
-        content
-      ) : (
-        <RadioGroup value={value} onValueChange={onValueChange} className="gap-0">
-          {content}
-        </RadioGroup>
-      )}
-    </OptionsContext>
+    <RadioGroup value={value} onValueChange={onValueChange} className="gap-0">
+      {content}
+    </RadioGroup>
   );
 };
 
-/** Selectable card. Self-registers with parent `Options` on mount (cmdk pattern). Derives highlight state from context. Compose with `OptionInput`, `OptionContent`, `OptionLabel`, and `OptionDescription`. */
-type OptionContextValue = {
-  id: string;
-  value: string;
-  selected: boolean;
-  onSelect?: () => void;
-};
+/** Selectable card. Self-registers with parent `Options` on mount (cmdk pattern). */
+type AskUserOptionProps = ComponentProps<typeof AskUserPrimitive.Option>;
 
-const OptionContext = createContext<OptionContextValue>({
-  id: "",
-  value: "",
-  selected: false,
-  onSelect: () => {},
-});
-
-type AskUserOptionProps = ComponentProps<"label"> & {
-  value?: string;
-  selected?: boolean;
-  onSelect?: () => void;
-};
-
-const AskUserOption = ({
-  value = "",
-  selected = false,
-  onSelect,
-  className,
-  children,
-  ...props
-}: AskUserOptionProps) => {
-  const id = useId();
-  const { highlightedValue, register, onItemHover } = use(OptionsContext);
-  const isHighlighted = value === highlightedValue;
-
-  // Self-register on mount, deregister on unmount (true subscription side effect)
-  const registerRef = useRef(register);
-  registerRef.current = register;
-  useItemRegistration(value, registerRef);
-
-  return (
-    <OptionContext value={{ id, value, selected, onSelect }}>
-      <label
-        htmlFor={id}
-        data-highlighted={isHighlighted || undefined}
-        onMouseMove={() => onItemHover(value)}
-        className={cn(
-          "flex cursor-pointer items-start gap-2 rounded-lg p-2 transition-colors",
-          "data-highlighted:bg-primary-hover",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </label>
-    </OptionContext>
-  );
-};
-
-/** Registers an item value with the parent Options container synchronously before paint and deregisters on unmount. */
-const useItemRegistration = (
-  value: string,
-  registerRef: RefObject<(value: string) => () => void>,
-) => {
-  // useLayoutEffect ensures items are registered before paint so the initial highlight resolves immediately
-  // biome-ignore lint/correctness/useExhaustiveDependencies: register is ref-stable
-  useLayoutEffect(() => {
-    return registerRef.current(value);
-  }, [value]);
-};
+const AskUserOption = ({ className, ...props }: AskUserOptionProps) => (
+  <AskUserPrimitive.Option
+    className={cn(
+      "flex cursor-pointer items-start gap-2 rounded-lg p-2 leading-tight transition-colors",
+      "data-highlighted:bg-primary-hover",
+      className,
+    )}
+    {...props}
+  />
+);
 
 /** Renders a `Checkbox` or native radio based on the parent `Options` `multiSelect` prop. Reads all state from context. */
 const AskUserOptionInput = () => {
-  const options = use(OptionsContext);
-  const option = use(OptionContext);
+  const options = useAskUserOptions();
+  const option = useAskUserOption();
 
   return options.multiSelect ? (
     <AskUserOptionCheckbox id={option.id} />
@@ -340,7 +145,7 @@ const AskUserOptionInput = () => {
 const AskUserOptionCheckbox = (
   props: Omit<Parameters<typeof Checkbox>[0], "checked" | "onCheckedChange">,
 ) => {
-  const option = use(OptionContext);
+  const option = useAskUserOption();
   return <Checkbox checked={option.selected} onCheckedChange={option.onSelect} {...props} />;
 };
 
@@ -349,15 +154,15 @@ const AskUserOptionRadio = ({
   className,
   ...props
 }: Omit<Parameters<typeof RadioGroup.Item>[0], "value" | "children">) => {
-  const option = use(OptionContext);
-  const { items } = use(OptionsContext);
+  const option = useAskUserOption();
+  const { items } = useAskUserOptions();
   const index = items.current.indexOf(option.value) + 1;
 
   return (
     <RadioGroup.Item
       value={option.value}
       className={cn(
-        "size-4 rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
+        "size-lh rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
         "data-checked:bg-tertiary-active data-checked:border-tertiary-active data-checked:text-ink-primary",
         className,
       )}
@@ -369,24 +174,30 @@ const AskUserOptionRadio = ({
 };
 
 /** Flex column wrapper for `OptionLabel` and `OptionDescription`. */
-type AskUserOptionContentProps = ComponentProps<"span">;
+type AskUserOptionContentProps = ComponentProps<typeof AskUserPrimitive.OptionContent>;
 
 const AskUserOptionContent = ({ className, ...props }: AskUserOptionContentProps) => (
-  <span className={cn("flex min-w-0 flex-1 gap-1 flex-col", className)} {...props} />
+  <AskUserPrimitive.OptionContent
+    className={cn("flex min-w-0 flex-1 gap-1 flex-col", className)}
+    {...props}
+  />
 );
 
 /** Option title text. */
-type AskUserOptionLabelProps = ComponentProps<"span">;
+type AskUserOptionLabelProps = ComponentProps<typeof AskUserPrimitive.OptionLabel>;
 
 const AskUserOptionLabel = ({ className, ...props }: AskUserOptionLabelProps) => (
-  <span className={cn("text-sm leading-[normal]", className)} {...props} />
+  <AskUserPrimitive.OptionLabel className={cn("text-sm leading-tight", className)} {...props} />
 );
 
 /** Option subtitle/description text. */
-type AskUserOptionDescriptionProps = ComponentProps<"span">;
+type AskUserOptionDescriptionProps = ComponentProps<typeof AskUserPrimitive.OptionDescription>;
 
 const AskUserOptionDescription = ({ className, ...props }: AskUserOptionDescriptionProps) => (
-  <span className={cn("text-ink-secondary text-xs leading-tight", className)} {...props} />
+  <AskUserPrimitive.OptionDescription
+    className={cn("text-ink-secondary text-xs leading-tight", className)}
+    {...props}
+  />
 );
 
 /** Collapsible read-only summary of answered questions. Used for completed tool calls. */
@@ -437,11 +248,10 @@ const AskUserSummary = ({ questions, answers, className, ...props }: AskUserSumm
 };
 
 /** Keyboard shortcut hints displayed below the ask-user options. */
-type AskUserHintsProps = ComponentProps<"div">;
+type AskUserHintsProps = ComponentProps<typeof AskUserPrimitive.Hints>;
 
 const AskUserHints = ({ className, ...props }: AskUserHintsProps) => (
-  <div
-    data-slot="ask-user-hints"
+  <AskUserPrimitive.Hints
     className={cn("flex items-center gap-3 px-2 pt-1 text-2xs text-ink-tertiary", className)}
     {...props}
   />

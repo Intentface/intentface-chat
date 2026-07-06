@@ -1,0 +1,79 @@
+---
+title: Chip
+description: An inline, text-flowing token — used for mentions in the composer and reconstructed chips in messages.
+source: chip.tsx
+---
+
+<ComponentPreview name="chip-basic" />
+
+## Usage guidelines
+
+- **Inline token** — flows with the surrounding text instead of breaking the line box.
+- **Two homes** — backs the composer's mention decorations and the chips a message reconstructs from its wire format.
+- **Variants** — `primary` / `accent` / `warning` tint the surface.
+- **Hover preview** — a `Chip.Preview` child promotes the chip to a hover card and is never rendered inline.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+
+## Anatomy
+
+```tsx
+<Chip variant="accent">
+  <Chip.Icon>{icon}</Chip.Icon>
+  <Chip.Label>{label}</Chip.Label>
+</Chip>
+```
+
+With a hover preview — the `Chip.Preview` child is lifted into a hover card and
+never rendered inline:
+
+```tsx
+<Chip>
+  <Chip.Label>{label}</Chip.Label>
+  <Chip.Preview>
+    <SourceCard source={source} />
+  </Chip.Preview>
+</Chip>
+```
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+
+### Chip
+
+The inline token surface. Renders `data-slot="chip"`. A `Chip.Preview` child
+wraps it in a hover card.
+
+export const rootProps = [
+  { name: "variant", type: '"primary" | "accent" | "warning"', default: '"primary"', description: "Tints the chip surface." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const rootAttrs = [
+  { attribute: "data-slot", values: '"chip"', description: "The token element." },
+  { attribute: "data-variant", values: '"primary" | "accent" | "warning"', description: "The active variant, for styling." },
+];
+
+<AttributesTable rows={rootAttrs} />
+
+### Chip.Icon
+
+Leading inline icon, baseline-aligned to the label and `aria-hidden`. Renders
+`data-slot="chip-icon"`.
+
+### Chip.Label
+
+The chip text. Renders `data-slot="chip-label"`.
+
+### Chip.Preview
+
+Marker child — its content becomes the hover-card body. **Renders nothing
+inline** (logic-only); the root lifts it into the preview surface.
+
+export const previewProps = [
+  { name: "children", type: "ReactNode", default: "(required)", description: "The hover-card body." },
+];
+
+<PropsTable rows={previewProps} />

@@ -1,7 +1,8 @@
 "use client";
 
+import { StepQueue as StepQueuePrimitive, useStepQueue } from "@intentface/chat/step-queue";
 import { AnimatePresence, motion } from "motion/react";
-import { Children, type ComponentProps, useCallback, useState } from "react";
+import { Children, type ComponentProps, type ReactNode } from "react";
 import { TextShimmer } from "@/components/ui/text-shimmer";
 import { cn } from "@/lib/utils";
 
@@ -17,50 +18,33 @@ const MAX_HEIGHT = MAX_VISIBLE * ITEM_HEIGHT + (MAX_VISIBLE - 1) * ITEM_GAP;
 // ---------------------------------------------------------------------------
 // Root
 //
-// Always renders all children. Single motion.div container animates height
-// between one item (collapsed) and full content (expanded, capped).
-// `justify-end` keeps the last item visible when collapsed.
+// Always renders all children. The inner container animates height between one
+// item (collapsed) and full content (expanded, capped). `justify-end` keeps
+// the last item visible when collapsed. Open state comes from the primitive.
 // ---------------------------------------------------------------------------
 
-type StepQueueRootProps = ComponentProps<"div"> & {
-  open?: boolean;
-  defaultOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-};
+type StepQueueRootProps = ComponentProps<typeof StepQueuePrimitive>;
 
-const StepQueueRoot = ({
-  open: controlledOpen,
-  defaultOpen = false,
-  onOpenChange,
-  className,
-  children,
-  ...props
-}: StepQueueRootProps) => {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  const isControlled = controlledOpen !== undefined;
-  const isOpen = isControlled ? controlledOpen : internalOpen;
-  const childCount = Children.count(children);
-  const shouldUseMask = childCount > 1;
-
-  const toggle = useCallback(() => {
-    const next = !isOpen;
-    if (!isControlled) setInternalOpen(next);
-    onOpenChange?.(next);
-  }, [isOpen, isControlled, onOpenChange]);
+const StepQueueHeightContainer = ({ children }: { children: ReactNode }) => {
+  const { isOpen } = useStepQueue();
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      data-slot="step-queue"
-      data-open={isOpen || undefined}
-      onClick={toggle}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggle();
-        }
-      }}
+      className="relative flex flex-col justify-end gap-2"
+      style={{ maxHeight: MAX_HEIGHT, height: isOpen ? "auto" : ITEM_HEIGHT }}
+    >
+      <AnimatePresence mode="popLayout" initial={false}>
+        {children}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const StepQueueRoot = ({ className, children, ...props }: StepQueueRootProps) => {
+  const shouldUseMask = Children.count(children) > 1;
+
+  return (
+    <StepQueuePrimitive
       className={cn(
         "not-prose relative w-full cursor-pointer p-3",
         shouldUseMask &&
@@ -69,15 +53,8 @@ const StepQueueRoot = ({
       )}
       {...props}
     >
-      <div
-        className="relative flex flex-col justify-end gap-2"
-        style={{ maxHeight: MAX_HEIGHT, height: isOpen ? "auto" : ITEM_HEIGHT }}
-      >
-        <AnimatePresence mode="popLayout" initial={false}>
-          {children}
-        </AnimatePresence>
-      </div>
-    </div>
+      <StepQueueHeightContainer>{children}</StepQueueHeightContainer>
+    </StepQueuePrimitive>
   );
 };
 
@@ -123,19 +100,14 @@ StepQueueItem.displayName = "StepQueueItem";
 // Icon — renders inside an Item, swaps between a custom icon and a default
 // ---------------------------------------------------------------------------
 
-type StepQueueIconProps = ComponentProps<"span">;
+type StepQueueIconProps = ComponentProps<typeof StepQueuePrimitive.Icon>;
 
-const StepQueueIcon = ({ className, children, ...props }: StepQueueIconProps) => {
-  return (
-    <span
-      data-slot="step-queue-icon"
-      className={cn("flex shrink-0 items-center justify-center", className)}
-      {...props}
-    >
-      {children}
-    </span>
-  );
-};
+const StepQueueIcon = ({ className, ...props }: StepQueueIconProps) => (
+  <StepQueuePrimitive.Icon
+    className={cn("flex shrink-0 items-center justify-center", className)}
+    {...props}
+  />
+);
 
 StepQueueIcon.displayName = "StepQueueIcon";
 
@@ -143,21 +115,17 @@ StepQueueIcon.displayName = "StepQueueIcon";
 // Label — text content inside an Item, shimmer when active
 // ---------------------------------------------------------------------------
 
-type StepQueueLabelProps = ComponentProps<"span"> & {
-  active?: boolean;
-};
+type StepQueueLabelProps = ComponentProps<typeof StepQueuePrimitive.Label>;
 
-const StepQueueLabel = ({ active = false, className, children, ...props }: StepQueueLabelProps) => {
-  return (
-    <span
-      data-slot="step-queue-label"
-      className={cn("min-w-0 flex-1 truncate", className)}
-      {...props}
-    >
-      {active ? <TextShimmer>{children}</TextShimmer> : children}
-    </span>
-  );
-};
+const StepQueueLabel = ({ active = false, className, children, ...props }: StepQueueLabelProps) => (
+  <StepQueuePrimitive.Label
+    active={active}
+    className={cn("min-w-0 flex-1 truncate", className)}
+    {...props}
+  >
+    {active ? <TextShimmer>{children}</TextShimmer> : children}
+  </StepQueuePrimitive.Label>
+);
 
 StepQueueLabel.displayName = "StepQueueLabel";
 

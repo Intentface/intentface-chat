@@ -21,7 +21,10 @@
       "type": "registry:lib",
       "title": "Utilities",
       "hidden": true,
-      "dependencies": ["clsx", "tailwind-merge"],
+      "dependencies": [
+        "clsx",
+        "tailwind-merge"
+      ],
       "files": [
         {
           "sourcePath": "lib/utils.ts",
@@ -95,33 +98,115 @@
       "name": "ai-types",
       "type": "registry:lib",
       "hidden": true,
+      "dependencies": [
+        "@intentface/chat",
+        "ai"
+      ],
       "files": [
         {
-          "sourcePath": "components/ai/types.ts",
-          "targetPath": "components/ai/types.ts",
+          "sourcePath": "lib/ai/types.ts",
+          "targetPath": "lib/ai/types.ts",
           "type": "registry:lib"
         }
       ]
     },
     {
-      "name": "message-utils",
+      "name": "ai-attachments",
       "type": "registry:lib",
       "hidden": true,
-      "dependencies": ["ai"],
-      "registryDependencies": ["ai-types"],
+      "dependencies": [
+        "@intentface/chat"
+      ],
       "files": [
         {
-          "sourcePath": "lib/message-utils.ts",
-          "targetPath": "lib/message-utils.ts",
+          "sourcePath": "lib/ai/attachments.ts",
+          "targetPath": "lib/ai/attachments.ts",
           "type": "registry:lib"
         }
       ]
     },
     {
-      "name": "questionnaire",
+      "name": "ai-chat-status",
+      "type": "registry:lib",
+      "hidden": true,
+      "dependencies": [
+        "@intentface/chat"
+      ],
+      "registryDependencies": [
+        "tool-labels"
+      ],
+      "files": [
+        {
+          "sourcePath": "lib/ai/chat-status.ts",
+          "targetPath": "lib/ai/chat-status.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "ai-message-info",
+      "type": "registry:lib",
+      "hidden": true,
+      "dependencies": [
+        "@intentface/chat"
+      ],
+      "files": [
+        {
+          "sourcePath": "lib/ai/message-info.ts",
+          "targetPath": "lib/ai/message-info.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "chip",
+      "type": "registry:component",
+      "title": "Chip",
+      "dependencies": [
+        "@intentface/chat",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "hover-card",
+        "utils",
+        "icons"
+      ],
+      "files": [
+        {
+          "sourcePath": "components/ai/chip.tsx",
+          "targetPath": "components/ai/chip.tsx",
+          "type": "registry:component"
+        },
+        {
+          "sourcePath": "lib/ai/chip-icons.tsx",
+          "targetPath": "lib/ai/chip-icons.tsx",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "tool-labels",
+      "type": "registry:lib",
+      "hidden": true,
+      "dependencies": [
+        "@intentface/chat"
+      ],
+      "files": [
+        {
+          "sourcePath": "lib/ai/tool-labels.ts",
+          "targetPath": "lib/ai/tool-labels.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "ask-user",
       "type": "registry:component",
       "hidden": true,
-      "dependencies": ["lucide-react"],
+      "dependencies": [
+        "@intentface/chat",
+        "lucide-react"
+      ],
       "registryDependencies": [
         "ai-types",
         "checkbox",
@@ -132,8 +217,8 @@
       ],
       "files": [
         {
-          "sourcePath": "components/questionnaire.tsx",
-          "targetPath": "components/ai/questionnaire.tsx",
+          "sourcePath": "components/ai/ask-user.tsx",
+          "targetPath": "components/ai/ask-user.tsx",
           "type": "registry:component"
         }
       ]
@@ -142,8 +227,14 @@
       "name": "button",
       "type": "registry:component",
       "title": "Button",
-      "dependencies": ["@base-ui/react", "class-variance-authority"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/button.tsx",
@@ -156,8 +247,13 @@
       "name": "icon-button",
       "type": "registry:component",
       "title": "Icon Button",
-      "dependencies": ["@base-ui/react", "class-variance-authority"],
-      "registryDependencies": ["button", "utils"],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/icon-button.tsx",
@@ -170,8 +266,13 @@
       "name": "input",
       "type": "registry:component",
       "title": "Input",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/input.tsx",
@@ -184,7 +285,10 @@
       "name": "textarea",
       "type": "registry:component",
       "title": "Textarea",
-      "registryDependencies": ["intentface-theme", "utils"],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/textarea.tsx",
@@ -197,8 +301,14 @@
       "name": "checkbox",
       "type": "registry:component",
       "title": "Checkbox",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils", "icons"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils",
+        "icons"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/checkbox.tsx",
@@ -211,8 +321,13 @@
       "name": "radio-group",
       "type": "registry:component",
       "title": "Radio Group",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/radio-group.tsx",
@@ -225,8 +340,16 @@
       "name": "select",
       "type": "registry:component",
       "title": "Select",
-      "dependencies": ["@base-ui/react", "class-variance-authority", "lucide-react"],
-      "registryDependencies": ["intentface-theme", "utils", "icons"],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils",
+        "icons"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/select.tsx",
@@ -239,8 +362,14 @@
       "name": "dropdown-menu",
       "type": "registry:component",
       "title": "Dropdown Menu",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils", "icons"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils",
+        "icons"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/dropdown-menu.tsx",
@@ -253,8 +382,13 @@
       "name": "collapsible",
       "type": "registry:component",
       "title": "Collapsible",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/collapsible.tsx",
@@ -267,8 +401,13 @@
       "name": "dialog",
       "type": "registry:component",
       "title": "Dialog",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/dialog.tsx",
@@ -281,8 +420,13 @@
       "name": "drawer",
       "type": "registry:component",
       "title": "Drawer",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/drawer.tsx",
@@ -295,8 +439,13 @@
       "name": "tooltip",
       "type": "registry:component",
       "title": "Tooltip",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/tooltip.tsx",
@@ -309,8 +458,13 @@
       "name": "hover-card",
       "type": "registry:component",
       "title": "Hover Card",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/hover-card.tsx",
@@ -323,8 +477,14 @@
       "name": "separator",
       "type": "registry:component",
       "title": "Separator",
-      "dependencies": ["@base-ui/react", "class-variance-authority"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/separator.tsx",
@@ -337,7 +497,10 @@
       "name": "skeleton",
       "type": "registry:component",
       "title": "Skeleton",
-      "registryDependencies": ["intentface-theme", "utils"],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/skeleton.tsx",
@@ -350,8 +513,13 @@
       "name": "kbd",
       "type": "registry:component",
       "title": "Kbd",
-      "dependencies": ["class-variance-authority"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/kbd.tsx",
@@ -364,8 +532,13 @@
       "name": "markdown",
       "type": "registry:component",
       "title": "Markdown",
-      "dependencies": ["streamdown"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "streamdown"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/markdown.tsx",
@@ -378,8 +551,13 @@
       "name": "progressive-blur",
       "type": "registry:component",
       "title": "Progressive Blur",
-      "dependencies": ["motion"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "motion"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/progressive-blur.tsx",
@@ -392,7 +570,10 @@
       "name": "text-shimmer",
       "type": "registry:component",
       "title": "Text Shimmer",
-      "registryDependencies": ["intentface-theme", "utils"],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/text-shimmer.tsx",
@@ -405,8 +586,13 @@
       "name": "text-loop",
       "type": "registry:component",
       "title": "Text Loop",
-      "dependencies": ["motion"],
-      "registryDependencies": ["hooks-use-loop", "utils"],
+      "dependencies": [
+        "motion"
+      ],
+      "registryDependencies": [
+        "hooks-use-loop",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/text-loop.tsx",
@@ -419,8 +605,13 @@
       "name": "slider",
       "type": "registry:component",
       "title": "Slider",
-      "dependencies": ["@base-ui/react"],
-      "registryDependencies": ["intentface-theme", "utils"],
+      "dependencies": [
+        "@base-ui/react"
+      ],
+      "registryDependencies": [
+        "intentface-theme",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/slider.tsx",
@@ -433,8 +624,14 @@
       "name": "input-group",
       "type": "registry:component",
       "title": "Input Group",
-      "dependencies": ["class-variance-authority"],
-      "registryDependencies": ["input", "textarea", "utils"],
+      "dependencies": [
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "input",
+        "textarea",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/input-group.tsx",
@@ -447,8 +644,14 @@
       "name": "button-group",
       "type": "registry:component",
       "title": "Button Group",
-      "dependencies": ["@base-ui/react", "class-variance-authority"],
-      "registryDependencies": ["separator", "utils"],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority"
+      ],
+      "registryDependencies": [
+        "separator",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ui/button-group.tsx",
@@ -461,7 +664,11 @@
       "name": "sidebar",
       "type": "registry:component",
       "title": "Sidebar",
-      "dependencies": ["@base-ui/react", "class-variance-authority", "lucide-react"],
+      "dependencies": [
+        "@base-ui/react",
+        "class-variance-authority",
+        "lucide-react"
+      ],
       "registryDependencies": [
         "drawer",
         "input",
@@ -480,25 +687,20 @@
       ]
     },
     {
-      "name": "commands",
-      "type": "registry:component",
-      "title": "Commands",
-      "dependencies": ["react"],
-      "registryDependencies": ["intentface-theme", "utils"],
-      "files": [
-        {
-          "sourcePath": "components/ai/commands.tsx",
-          "targetPath": "components/ai/commands.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
       "name": "attachments",
       "type": "registry:component",
       "title": "Attachments",
-      "dependencies": ["ai", "lucide-react", "motion", "nanoid"],
-      "registryDependencies": ["icon-button", "utils", "icons"],
+      "dependencies": [
+        "@intentface/chat",
+        "lucide-react",
+        "motion"
+      ],
+      "registryDependencies": [
+        "ai-attachments",
+        "icon-button",
+        "utils",
+        "icons"
+      ],
       "files": [
         {
           "sourcePath": "components/ai/attachments.tsx",
@@ -512,27 +714,21 @@
       "type": "registry:component",
       "title": "Composer",
       "dependencies": [
-        "@tiptap/core",
-        "@tiptap/extension-document",
-        "@tiptap/extension-paragraph",
-        "@tiptap/extension-text",
-        "@tiptap/pm",
-        "@tiptap/react",
-        "ai",
+        "@intentface/chat",
         "motion"
       ],
       "registryDependencies": [
+        "ai-attachments",
         "attachments",
-        "commands",
-        "questionnaire",
+        "chip",
+        "ask-user",
         "button",
         "icon-button",
         "kbd",
         "hooks-use-loop",
         "hooks-use-measure",
         "utils",
-        "icons",
-        "ai-types"
+        "icons"
       ],
       "files": [
         {
@@ -546,8 +742,16 @@
       "name": "message",
       "type": "registry:component",
       "title": "Message",
-      "dependencies": ["ai", "lucide-react", "motion"],
+      "dependencies": [
+        "@base-ui/react",
+        "@intentface/chat",
+        "lucide-react",
+        "motion"
+      ],
       "registryDependencies": [
+        "ai-attachments",
+        "button",
+        "chip",
         "hover-card",
         "icon-button",
         "markdown",
@@ -568,8 +772,16 @@
       "name": "thread",
       "type": "registry:component",
       "title": "Thread",
-      "dependencies": ["motion"],
-      "registryDependencies": ["icon-button", "progressive-blur", "utils", "icons"],
+      "dependencies": [
+        "@intentface/chat",
+        "motion"
+      ],
+      "registryDependencies": [
+        "button",
+        "progressive-blur",
+        "utils",
+        "icons"
+      ],
       "files": [
         {
           "sourcePath": "components/ai/thread.tsx",
@@ -582,14 +794,15 @@
       "name": "steps",
       "type": "registry:component",
       "title": "Steps",
-      "dependencies": ["lucide-react"],
+      "dependencies": [
+        "@intentface/chat",
+        "lucide-react"
+      ],
       "registryDependencies": [
-        "collapsible",
         "markdown",
-        "message-utils",
+        "tool-labels",
         "utils",
-        "icons",
-        "ai-types"
+        "icons"
       ],
       "files": [
         {
@@ -603,12 +816,14 @@
       "name": "reasoning",
       "type": "registry:component",
       "title": "Reasoning",
-      "dependencies": ["motion"],
+      "dependencies": [
+        "@intentface/chat",
+        "motion"
+      ],
       "registryDependencies": [
-        "collapsible",
+        "ai-message-info",
         "markdown",
         "text-shimmer",
-        "message-utils",
         "utils",
         "icons"
       ],
@@ -624,8 +839,14 @@
       "name": "step-queue",
       "type": "registry:component",
       "title": "Step Queue",
-      "dependencies": ["motion"],
-      "registryDependencies": ["text-shimmer", "utils"],
+      "dependencies": [
+        "@intentface/chat",
+        "motion"
+      ],
+      "registryDependencies": [
+        "text-shimmer",
+        "utils"
+      ],
       "files": [
         {
           "sourcePath": "components/ai/step-queue.tsx",
@@ -633,119 +854,6 @@
           "type": "registry:component"
         }
       ]
-    },
-    {
-      "name": "shimmer",
-      "type": "registry:component",
-      "title": "Shimmer",
-      "dependencies": ["motion"],
-      "registryDependencies": ["utils"],
-      "files": [
-        {
-          "sourcePath": "components/ai/shimmer.tsx",
-          "targetPath": "components/ai/shimmer.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "artifact-card",
-      "type": "registry:component",
-      "title": "Artifact Card",
-      "dependencies": ["lucide-react", "motion"],
-      "registryDependencies": ["utils"],
-      "files": [
-        {
-          "sourcePath": "components/ai/artifact-card.tsx",
-          "targetPath": "components/ai/artifact-card.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "artifacts-panel",
-      "type": "registry:component",
-      "title": "Artifacts Panel",
-      "dependencies": ["lucide-react", "motion"],
-      "registryDependencies": [
-        "icon-button",
-        "markdown",
-        "tooltip",
-        "hooks-use-copy",
-        "utils",
-        "icons"
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/artifacts-panel.tsx",
-          "targetPath": "components/ai/artifacts-panel.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "chat-demo",
-      "type": "registry:component",
-      "title": "Chat Demo",
-      "hidden": true,
-      "registryDependencies": ["composer", "message", "thread"],
-      "files": [
-        {
-          "sourcePath": "packages/intentface/registry/examples/chat-demo.tsx",
-          "targetPath": "components/intentface-chat-demo.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "ui-primitives",
-      "type": "registry:bundle",
-      "title": "UI primitives",
-      "registryDependencies": [
-        "button",
-        "button-group",
-        "checkbox",
-        "collapsible",
-        "dialog",
-        "drawer",
-        "dropdown-menu",
-        "hover-card",
-        "icon-button",
-        "input",
-        "input-group",
-        "kbd",
-        "markdown",
-        "progressive-blur",
-        "radio-group",
-        "select",
-        "separator",
-        "sidebar",
-        "skeleton",
-        "slider",
-        "textarea",
-        "text-loop",
-        "text-shimmer",
-        "tooltip"
-      ]
-    },
-    {
-      "name": "chat-primitives",
-      "type": "registry:bundle",
-      "title": "AI chat primitives",
-      "registryDependencies": [
-        "artifact-card",
-        "artifacts-panel",
-        "attachments",
-        "commands",
-        "composer",
-        "message",
-        "reasoning",
-        "shimmer",
-        "step-queue",
-        "steps",
-        "thread"
-      ],
-      "exampleDependencies": ["chat-demo"]
     }
   ]
 }

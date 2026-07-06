@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  # Paused during initial development — run manually from the Actions tab.
+  # Re-enable automatic checks by restoring these triggers:
+  #   push:
+  #     branches: [main]
+  #   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Generates .source (postinstall: fumadocs-mdx) so the docs build compiles.
+      - run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bunx biome check
+
+      - name: Typecheck
+        run: bunx tsc --noEmit
+
+      # Validates the registry manifest (deps + files metadata for the docs'
+      # manual-install blocks); its closure check fails the job on a stale manifest.
+      - name: Registry validate
+        run: bun run intentface:validate
+
+      - name: Registry tests
+        run: bun run intentface:test
+
+      - name: Package tests
+        run: bun test
+        working-directory: packages/chat
+
+      - name: Package build (publint gate)
+        working-directory: packages/chat
+        run: |
+          bun run build
+          bunx publint
+
+      # The chat API route reads OPENAI_API_KEY at request time only; a dummy
+      # value keeps the production build self-contained.
+      - name: App build
+        run: bun run build
+        env:
+          OPENAI_API_KEY: sk-ci-placeholder

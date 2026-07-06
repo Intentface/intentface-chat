@@ -1,41 +1,69 @@
 "use client";
 
 import type { UseChatHelpers } from "@ai-sdk/react";
+import {
+  getFileParts,
+  getSegmentedParts,
+  getTextInfo,
+  groupTurns,
+  type MessageSegment,
+} from "@intentface/chat/message-utils";
+import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
 import type { ChatStatus } from "ai";
-import { CircleDotIcon, Loader, TextQuoteIcon, XIcon } from "lucide-react";
+import {
+  CircleDotIcon,
+  CircleHelpIcon,
+  CircleIcon,
+  Loader,
+  TextQuoteIcon,
+  XIcon,
+} from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
-import { createContext, use, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArtifactCard } from "@/components/ai/artifact-card";
-import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
+import {
+  Children,
+  createContext,
+  memo,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  COMMAND_LIST_PANEL_VALUE,
+  type CommandItemData,
+  Composer,
+  type ComposerSubmitData,
+} from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
-import { ChatArtifactsPanel } from "@/components/artifacts-panel";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
+import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
+import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
-import { useActiveComposerState } from "@/hooks/use-active-composer-state";
+import { Markdown } from "@/components/ui/markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
+import { prepareAttachmentsForSend } from "@/lib/ai/attachments";
+import { type ComposerPanelState, useActiveComposerState } from "@/lib/ai/chat-status";
 import { CHIP_ICONS } from "@/lib/ai/chip-icons";
-import type { AppUIMessage } from "@/lib/ai/types";
-import { applyStopToMessages } from "@/lib/chat-instance";
 import {
-  getAskUserInfo,
   getChainInfo,
-  getFileParts,
   getReasoningInfo,
-  getSegmentedParts,
   getSourcesInfo,
-  getTextInfo,
-  groupTurns,
-  type MessageSegment,
   splitReasoningByHeaders,
-} from "@/lib/message-utils";
+} from "@/lib/ai/message-info";
+import { getAskUserInfo, getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/steps-info";
+import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
+import type { AppUIMessage, AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
+import { applyStopToMessages } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
 import { useSettingsStore } from "@/lib/store/settings";
@@ -43,42 +71,50 @@ import { cn } from "@/lib/utils";
 import { IntentfaceLogo } from "./icons/intentface-logo";
 import { TextShimmer } from "./ui/text-shimmer";
 
-export type Artifact = {
-  id: string;
-  title: string;
-  content: string;
-};
-
 type ChatSelection = {
   id: string;
   text: string;
 };
 
-type ChatContextValue = {
+// Split contexts: the session value changes rarely (selection edits, the
+// isEmpty flip) while the messages value changes on every stream chunk.
+// Keeping them apart means the composer and layout chrome never re-render per
+// token — only ChatMessages and the thin composer bridge subscribe to the
+// volatile side.
+type ChatSessionValue = {
   chatId: string;
-  messages: AppUIMessage[];
-  status: ChatStatus;
+  /** True until the first message exists — flips once per chat. */
+  isEmpty: boolean;
   sendMessage: UseChatHelpers<AppUIMessage>["sendMessage"];
   regenerate: UseChatHelpers<AppUIMessage>["regenerate"];
   stop: UseChatHelpers<AppUIMessage>["stop"];
   setMessages: UseChatHelpers<AppUIMessage>["setMessages"];
   addToolOutput: UseChatHelpers<AppUIMessage>["addToolOutput"];
-  activeArtifact: Artifact | null;
-  isArtifactOpen: boolean;
-  openArtifact: (artifact: Artifact) => void;
-  toggleArtifact: (artifact: Artifact) => void;
-  closeArtifact: () => void;
   selections: ChatSelection[];
   addSelection: (text: string) => void;
   clearSelections: () => void;
 };
 
-const ChatContext = createContext<ChatContextValue | null>(null);
+type ChatMessagesValue = {
+  messages: AppUIMessage[];
+  status: ChatStatus;
+};
 
-export const useChatContext = (): ChatContextValue => {
-  const ctx = use(ChatContext);
+const ChatSessionContext = createContext<ChatSessionValue | null>(null);
+const ChatMessagesContext = createContext<ChatMessagesValue | null>(null);
+
+export const useChatSession = (): ChatSessionValue => {
+  const ctx = use(ChatSessionContext);
   if (!ctx) {
-    throw new Error("useChatContext must be used within a <Chat> provider");
+    throw new Error("useChatSession must be used within a <Chat> provider");
+  }
+  return ctx;
+};
+
+export const useChatMessages = (): ChatMessagesValue => {
+  const ctx = use(ChatMessagesContext);
+  if (!ctx) {
+    throw new Error("useChatMessages must be used within a <Chat> provider");
   }
   return ctx;
 };
@@ -86,6 +122,116 @@ export const useChatContext = (): ChatContextValue => {
 // ---------------------------------------------------------------------------
 // InterleavedSteps — renders reasoning + tools chronologically
 // ---------------------------------------------------------------------------
+
+type IconComponent = React.ComponentType<{ className?: string }>;
+
+const statusIcons: Record<StepStatus, IconComponent> = {
+  complete: CheckMarkMediumIcon,
+  active: CircleIcon,
+  pending: CircleIcon,
+};
+
+// A timeline row: static when it has no detail, collapsible (icon morphs to a
+// chevron) when it does. App-owned — composed over the Steps primitive.
+const TimelineStep = ({
+  label,
+  status = "complete",
+  icon,
+  children,
+}: {
+  label: string;
+  status?: StepStatus;
+  icon?: IconComponent;
+  children?: React.ReactNode;
+}) => {
+  const Icon = icon ?? statusIcons[status];
+  const hasDetail = Children.toArray(children).length > 0;
+
+  const iconClasses = cn(
+    status === "complete" && "text-ink-secondary",
+    status === "active" && "text-ink-primary",
+    status === "pending" && "text-slate-9",
+  );
+  const labelClasses = cn(
+    "text-sm text-left",
+    status === "active" && "text-ink-primary font-medium",
+    status === "complete" && "text-ink-secondary",
+    status === "pending" && "text-slate-9",
+  );
+
+  if (!hasDetail) {
+    return (
+      <Steps.Item status={status}>
+        <div className="flex items-center gap-2 py-0.5">
+          <span className={cn("flex size-4 shrink-0 items-center justify-center", iconClasses)}>
+            <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
+          </span>
+          <span className={labelClasses}>{label}</span>
+        </div>
+      </Steps.Item>
+    );
+  }
+
+  return (
+    <Steps.Item status={status}>
+      <Steps.Trigger>
+        <span
+          className={cn("relative flex size-4 shrink-0 items-center justify-center", iconClasses)}
+        >
+          <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
+            <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
+          </span>
+          <ChevronDownIcon className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
+        </span>
+        <span className={labelClasses}>{label}</span>
+      </Steps.Trigger>
+      <Steps.Panel>{children}</Steps.Panel>
+    </Steps.Item>
+  );
+};
+
+const TimelineToolCall = ({ part }: { part: ToolPart }) => {
+  const { label, status, summary, sources } = getToolCallInfo(part, DEFAULT_TOOL_LABELS);
+
+  return (
+    <TimelineStep label={label} status={status}>
+      {summary && <span className="text-xs text-ink-secondary">{summary}</span>}
+      {sources.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {sources.map((source, index) => (
+            <span
+              key={index}
+              className="inline-flex items-center rounded-md border border-primary-border bg-primary px-2 py-0.5 text-xs text-ink-secondary"
+            >
+              {source.domain}
+            </span>
+          ))}
+        </div>
+      )}
+    </TimelineStep>
+  );
+};
+
+const TimelineAskUser = ({ part }: { part: ToolPart }) => {
+  const { label, status, questions, answers, isComplete } = getAskUserStepInfo(part);
+
+  return (
+    <TimelineStep label={label} status={status} icon={CircleHelpIcon}>
+      <div className="flex flex-col gap-1.5">
+        {questions.map((q) => (
+          <div key={q.question} className="flex flex-col gap-0.5">
+            <span className="text-xs font-medium leading-tight text-ink-primary">{q.question}</span>
+            {isComplete && (
+              <span className="text-xs leading-tight text-ink-secondary">
+                {answers[q.question] ?? "—"}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </TimelineStep>
+  );
+};
 
 const InterleavedSteps = ({
   segments,
@@ -140,53 +286,188 @@ const InterleavedSteps = ({
   );
 
   return (
-    <Steps defaultOpen={isStreaming}>
-      <Steps.Header>{header}</Steps.Header>
-      <Steps.Content>
-        {segments.map((seg, i) => {
-          if (seg.type === "reasoning") {
-            const text = seg.parts.map((p) => p.text).join("");
-            const lastPart = seg.parts.at(-1);
-            const streaming = isStreaming && lastPart === segments.at(-1);
+    <Steps>
+      <Steps.Item defaultOpen={isStreaming}>
+        <Steps.Trigger>
+          <span className="flex-1 text-left">{header}</span>
+          <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
+        </Steps.Trigger>
+        <Steps.Panel>
+          {segments.map((seg, i) => {
+            if (seg.type === "reasoning") {
+              const text = seg.parts.map((p) => p.text).join("");
+              const lastPart = seg.parts.at(-1);
+              const streaming = isStreaming && lastPart === segments.at(-1);
 
-            const sections = splitReasoningByHeaders([text]);
+              const sections = splitReasoningByHeaders([text]);
 
-            return sections.map((section, j) => (
-              <Steps.Step
-                key={`r-${i}-${j}`}
-                label={section.header ?? "Thinking"}
-                status={streaming && j === sections.length - 1 ? "active" : "complete"}
-                icon={BrainIcon}
-              >
-                {section.body && <Steps.Body>{section.body}</Steps.Body>}
-              </Steps.Step>
-            ));
-          }
-          if (seg.type === "tool") {
-            return seg.parts.map((part, j) =>
-              part.type === "tool-askUser" ? (
-                <Steps.AskUser key={`a-${i}-${j}`} part={part} />
-              ) : (
-                <Steps.ToolCall key={`t-${i}-${j}`} part={part} />
-              ),
-            );
-          }
-          return null;
-        })}
-      </Steps.Content>
+              return sections.map((section, j) => (
+                <TimelineStep
+                  key={`r-${i}-${j}`}
+                  label={section.header ?? "Thinking"}
+                  status={streaming && j === sections.length - 1 ? "active" : "complete"}
+                  icon={BrainIcon}
+                >
+                  {section.body && (
+                    <Markdown className="text-sm leading-tight text-ink-secondary [&_p]:mb-0">
+                      {section.body}
+                    </Markdown>
+                  )}
+                </TimelineStep>
+              ));
+            }
+            if (seg.type === "tool") {
+              return seg.parts.map((part, j) =>
+                part.type === "tool-askUser" ? (
+                  <TimelineAskUser key={`a-${i}-${j}`} part={part} />
+                ) : (
+                  <TimelineToolCall key={`t-${i}-${j}`} part={part} />
+                ),
+              );
+            }
+            return null;
+          })}
+        </Steps.Panel>
+      </Steps.Item>
     </Steps>
   );
 };
 
+type ChatMessageItemProps = {
+  message: AppUIMessage;
+  isLast: boolean;
+  /** This message is the one currently streaming. */
+  isStreaming: boolean;
+  isError: boolean;
+  skipAnimation: boolean;
+};
+
+// Memoized row boundary: finished messages keep their object identity across
+// stream chunks, so every row except the streaming one bails here and the
+// segmentation below runs once per chunk, not once per message. Do not spread
+// the message object at the call site — a fresh object defeats the memo.
+const ChatMessageItem = memo(
+  ({ message, isLast, isStreaming, isError, skipAnimation }: ChatMessageItemProps) => {
+    const { regenerate, addSelection } = useChatSession();
+    const { parts } = message;
+    const isAssistant = message.role === "assistant";
+    const isUser = message.role === "user";
+
+    const segments = getSegmentedParts(parts);
+    const textInfo = getTextInfo(segments);
+    const fileParts = getFileParts(segments);
+    const chain = getChainInfo(segments);
+    const reasoning = chain.onlyReasoning ? getReasoningInfo(segments, isStreaming) : null;
+    const askUser = getAskUserInfo(parts);
+    const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
+
+    // Only show reasoning/tools inline after the message has finished streaming
+    const shouldShowReasoning =
+      isAssistant &&
+      reasoning &&
+      reasoning.parts.length > 0 &&
+      !isStreaming &&
+      !askUser.isAwaitingInput;
+
+    const shouldShowInterleavedReasoning =
+      isAssistant && chain.hasTools && !isStreaming && !askUser.isAwaitingInput;
+
+    return (
+      <Message
+        role={message.role}
+        isError={isError}
+        isLast={isLast}
+        {...(skipAnimation && { initial: false })}
+      >
+        {/* File attachments */}
+        {isUser && fileParts.length > 0 && (
+          <Message.Attachments>
+            {fileParts.map((part, i) => (
+              <Message.Attachment key={i} attachment={part} />
+            ))}
+          </Message.Attachments>
+        )}
+
+        {/* Standalone reasoning (no tools) — suppress when panel handles it */}
+        {shouldShowReasoning && (
+          <Reasoning isStreaming={reasoning.isStreaming}>
+            <Reasoning.Trigger label={reasoning.headers} />
+            <Reasoning.Content>{reasoning.texts}</Reasoning.Content>
+          </Reasoning>
+        )}
+
+        {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
+        {shouldShowInterleavedReasoning && (
+          <InterleavedSteps segments={chain.segments} isStreaming={isStreaming} />
+        )}
+
+        {/* Message content */}
+        <Message.Content>
+          {parts.map((part, index) => {
+            switch (part.type) {
+              case "text": {
+                // Hide intermediate text between tool calls — only
+                // show text that appears after the last tool/reasoning part.
+                if (chain.hasTools) {
+                  const lastChainIdx = parts.findLastIndex(
+                    (p) =>
+                      p.type === "reasoning" ||
+                      (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
+                  );
+                  if (index <= lastChainIdx) return null;
+                }
+                if (isUser) {
+                  return <Message.Text key={index}>{part.text}</Message.Text>;
+                }
+                return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
+              }
+              default:
+                return null;
+            }
+          })}
+        </Message.Content>
+
+        {/* Selection → context affordance (assistant text only) */}
+        {isAssistant && <Message.Selection onAdd={addSelection} />}
+
+        {/* Source URL pills */}
+        {sourcesInfo?.hasSources && (
+          <Message.Sources>
+            {sourcesInfo.sources.map((source) => (
+              <Message.Source key={source.domain} url={source.url} domain={source.domain} />
+            ))}
+          </Message.Sources>
+        )}
+
+        {/* Stopped marker — assistant turn the user aborted mid-stream */}
+        {isAssistant && message.metadata?.stopped && <Message.Stopped />}
+
+        {/* Actions — hide while waiting for tool input */}
+        {!askUser.isAwaitingInput && (
+          <Message.Actions>
+            {isAssistant && (
+              <Message.Action
+                onClick={() => regenerate({ messageId: message.id })}
+                tooltip="Regenerate"
+              >
+                <RefreshIcon />
+              </Message.Action>
+            )}
+            <Message.Copy value={textInfo.text} />
+          </Message.Actions>
+        )}
+      </Message>
+    );
+  },
+);
+
+ChatMessageItem.displayName = "ChatMessageItem";
+
 const ChatMessages = () => {
-  const { messages, status, regenerate, toggleArtifact, addSelection } = useChatContext();
+  const { messages, status } = useChatMessages();
   const stickyMessages = useSettingsStore((s) => s.stickyMessages);
   const isError = status === "error";
   const isStreaming = status === "streaming";
-
-  // Derive panel state to know what the panel is handling
-  // const panelState = useActiveComposerState(messages, status);
-  // const panelActive = panelState.type !== "idle";
 
   // Track messages present at mount — skip entrance animation for these
   const initialMessageIds = useRef(new Set(messages.map((m) => m.id)));
@@ -198,142 +479,16 @@ const ChatMessages = () => {
     <>
       {turns.map((turn, turnIndex) => (
         <Message.Turn key={turn.key} sticky={stickyMessages}>
-          {turn.messages.map(({ parts, ...message }) => {
-            const isLastMessage = message.id === lastMessageId;
-            const isAssistant = message.role === "assistant";
-            const isUser = message.role === "user";
-            const skipAnimation = initialMessageIds.current.has(message.id);
-            const isMessageStreaming = isLastMessage && isStreaming;
-
-            const segments = getSegmentedParts(parts);
-            const textInfo = getTextInfo(segments);
-            const fileParts = getFileParts(segments);
-            const chain = getChainInfo(segments);
-            const reasoning = chain.onlyReasoning
-              ? getReasoningInfo(segments, isMessageStreaming)
-              : null;
-            const askUser = getAskUserInfo(parts);
-            const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
-
-            // Only show reasoning/tools inline after the message has finished streaming
-            const shouldShowReasoning =
-              isAssistant &&
-              reasoning &&
-              reasoning.parts.length > 0 &&
-              !isMessageStreaming &&
-              !askUser.isAwaitingInput;
-
-            const shouldShowInterleavedReasoning =
-              isAssistant && chain.hasTools && !isMessageStreaming && !askUser.isAwaitingInput;
-
-            return (
-              <Message
-                key={message.id}
-                role={message.role}
-                isError={isError}
-                isLast={isLastMessage}
-                {...(skipAnimation && { initial: false })}
-              >
-                {/* File attachments */}
-                {isUser && fileParts.length > 0 && (
-                  <Message.Attachments>
-                    {fileParts.map((part, i) => (
-                      <Message.Attachment key={i} attachment={part} />
-                    ))}
-                  </Message.Attachments>
-                )}
-
-                {/* Standalone reasoning (no tools) — suppress when panel handles it */}
-                {shouldShowReasoning && (
-                  <Reasoning isStreaming={reasoning.isStreaming}>
-                    <Reasoning.Trigger label={reasoning.headers} />
-                    <Reasoning.Content>{reasoning.texts}</Reasoning.Content>
-                  </Reasoning>
-                )}
-
-                {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
-                {shouldShowInterleavedReasoning && (
-                  <InterleavedSteps segments={chain.segments} isStreaming={isMessageStreaming} />
-                )}
-
-                {/* Message content */}
-                <Message.Content>
-                  {parts.map((part, index) => {
-                    switch (part.type) {
-                      case "text": {
-                        // Hide intermediate text between tool calls — only
-                        // show text that appears after the last tool/reasoning part.
-                        if (chain.hasTools) {
-                          const lastChainIdx = parts.findLastIndex(
-                            (p) =>
-                              p.type === "reasoning" ||
-                              (p.type.startsWith("tool-") && p.type !== "tool-askUser"),
-                          );
-                          if (index <= lastChainIdx) return null;
-                        }
-                        if (isUser) {
-                          return <Message.Text key={index}>{part.text}</Message.Text>;
-                        }
-                        return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
-                      }
-                      case "tool-createArtifact": {
-                        const input = part.input as {
-                          title?: string;
-                          content?: string;
-                        };
-                        return (
-                          <ArtifactCard
-                            key={part.toolCallId}
-                            title={input?.title ?? "Untitled"}
-                            state={part.state}
-                            onToggle={() =>
-                              toggleArtifact({
-                                id: part.toolCallId,
-                                title: input?.title ?? "Untitled",
-                                content: input?.content ?? "",
-                              })
-                            }
-                          />
-                        );
-                      }
-                      default:
-                        return null;
-                    }
-                  })}
-                </Message.Content>
-
-                {/* Selection → context affordance (assistant text only) */}
-                {isAssistant && <Message.SelectionToolbar onAdd={addSelection} />}
-
-                {/* Source URL pills */}
-                {sourcesInfo?.hasSources && (
-                  <Message.Sources>
-                    {sourcesInfo.sources.map((source) => (
-                      <Message.Source key={source.domain} url={source.url} domain={source.domain} />
-                    ))}
-                  </Message.Sources>
-                )}
-
-                {/* Stopped marker — assistant turn the user aborted mid-stream */}
-                {isAssistant && message.metadata?.stopped && <Message.Stopped />}
-
-                {/* Actions — hide while waiting for tool input */}
-                {!askUser.isAwaitingInput && (
-                  <Message.Actions>
-                    {isAssistant && (
-                      <Message.Action
-                        onClick={() => regenerate({ messageId: message.id })}
-                        tooltip="Regenerate"
-                      >
-                        <RefreshIcon />
-                      </Message.Action>
-                    )}
-                    <Message.Copy value={textInfo.text} />
-                  </Message.Actions>
-                )}
-              </Message>
-            );
-          })}
+          {turn.messages.map((message) => (
+            <ChatMessageItem
+              key={message.id}
+              message={message}
+              isLast={message.id === lastMessageId}
+              isStreaming={message.id === lastMessageId && isStreaming}
+              isError={isError}
+              skipAnimation={initialMessageIds.current.has(message.id)}
+            />
+          ))}
           {turnIndex === turns.length - 1 && isError && <Message.Error />}
         </Message.Turn>
       ))}
@@ -385,18 +540,83 @@ const MENTION_ITEMS: CommandItemData[] = [
   },
 ];
 
+// This app's panel-state union: the step derivation's state (idle / active
+// steps, lib/ai/chat-status) plus the ask-user arm for its askUser tool.
+type AskUserPanelState = {
+  type: "ask-user";
+  toolCallId: string;
+  questions: AskUserQuestion[];
+};
+
+type AppComposerPanelState = ComposerPanelState | AskUserPanelState;
+
+// App overlay: routes the panel to ask-user while this app's askUser tool
+// awaits input. Detection runs on ready AND streaming — the chat goes "ready"
+// while the tool waits. Referentially stable (same memo discipline as
+// useActiveComposerState) so the memoized inner composer bails per chunk.
+const useAskUserPanelState = (
+  messages: readonly AppUIMessage[],
+  status: ChatStatus,
+): AskUserPanelState | null => {
+  const prevRef = useRef<AskUserPanelState | null>(null);
+
+  const lastAssistant =
+    status === "ready" || status === "streaming"
+      ? messages.findLast((m) => m.role === "assistant")
+      : undefined;
+  // Widen to the package's structural part contract so the guard can narrow.
+  const parts: readonly UnknownPart[] = lastAssistant?.parts ?? [];
+  const part = parts.find(
+    (p): p is ToolPart =>
+      isToolPart(p) && p.type === "tool-askUser" && p.state === "input-available",
+  );
+
+  const next = part
+    ? {
+        type: "ask-user" as const,
+        toolCallId: part.toolCallId,
+        questions: ((part.input as AskUserInput | undefined)?.questions ?? []) as AskUserQuestion[],
+      }
+    : null;
+
+  if (
+    prevRef.current?.toolCallId === next?.toolCallId &&
+    (prevRef.current === null) === (next === null)
+  ) {
+    return prevRef.current;
+  }
+  prevRef.current = next;
+  return next;
+};
+
+// Thin bridge — the only composer piece that re-renders per stream chunk. It
+// derives the panel state (referentially stable while nothing transitioned)
+// so the memoized inner composer bails unless the panel actually changed. The
+// askUser tool is excluded from the step derivation (lib/ai/chat-status) and
+// overlaid as this app's own ask-user arm.
 const ChatInput = () => {
+  const { messages, status } = useChatMessages();
+  const stepPanelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS);
+  const askUserPanelState = useAskUserPanelState(messages, status);
+  return <ChatInputInner panelState={askUserPanelState ?? stepPanelState} status={status} />;
+};
+
+type ChatInputInnerProps = {
+  panelState: AppComposerPanelState;
+  status: ChatStatus;
+};
+
+const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
   const {
     chatId,
-    messages,
+    isEmpty,
     sendMessage,
-    status,
     stop,
     setMessages,
     addToolOutput,
     selections,
     clearSelections,
-  } = useChatContext();
+  } = useChatSession();
   const router = useRouter();
   const isGenerating = status === "submitted" || status === "streaming";
 
@@ -411,7 +631,7 @@ const ChatInput = () => {
   const { model, setModel } = useModelStore();
   const [isSending, setIsSending] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const isNewChat = !messages.length;
+  const isNewChat = isEmpty;
 
   // Tool toggles (web search, thinking) are app state, not the composer's —
   // we own them here and feed them into the request body at submit time.
@@ -456,7 +676,6 @@ const ChatInput = () => {
     [setTool],
   );
 
-  const panelState = useActiveComposerState(messages, status);
   const isAskUser = panelState.type === "ask-user";
   const activeSteps = panelState.type === "active" ? panelState.steps : [];
   const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;
@@ -492,11 +711,17 @@ const ChatInput = () => {
               .join("\n"),
           )
           .join("\n\n");
-        const text = quoted ? `${quoted}\n\n${data.text}` : data.text;
+        // Attachments-only submits arrive with empty text — this app's copy.
+        const messageText = data.text || "Sent with attachments";
+        const text = quoted ? `${quoted}\n\n${messageText}` : messageText;
+
+        // The composer submits generic attachment items; adapt them to AI SDK
+        // file parts (inlining blob URLs) at this app boundary.
+        const fileParts = await prepareAttachmentsForSend(data.files);
 
         await sendMessage(
           {
-            parts: [...data.files, { type: "text", text }],
+            parts: [...fileParts, { type: "text", text }],
           },
           {
             body: {
@@ -543,7 +768,7 @@ const ChatInput = () => {
       questions={askUserQuestions ?? undefined}
     >
       <Composer.Panel value={panelState.type}>
-        <Composer.PanelItem value="command-list">
+        <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
           <Composer.CommandList prefix="@">
             <Composer.CommandLoading />
             <Composer.CommandEmpty />
@@ -650,8 +875,7 @@ const ChatInput = () => {
           />
         </Composer.Textarea>
         {isAskUser ? (
-          <Composer.Actions className="flex items-center justify-end">
-            <Composer.AskUserHints />
+          <Composer.Actions className="flex items-center justify-end gap-2">
             <Composer.AskUserDismiss />
             <Composer.AskUserContinue />
           </Composer.Actions>
@@ -668,7 +892,9 @@ const ChatInput = () => {
       </Composer.Container>
     </Composer>
   );
-};
+});
+
+ChatInputInner.displayName = "ChatInputInner";
 
 const ChatPlaceholder = () => {
   const variants = {
@@ -706,10 +932,12 @@ const ChatPlaceholder = () => {
   );
 };
 
-const ChatDefaultLayout = () => {
-  const { messages } = useChatContext();
+// memo: ChatRoot re-renders on every stream chunk and re-creates this element;
+// with no props the memo always bails, so the Thread chrome (header, overlays,
+// composer dock) renders only when the session context actually changes.
+const ChatDefaultLayout = memo(() => {
+  const { isEmpty } = useChatSession();
   const scrollMode = useSettingsStore((s) => s.scrollMode);
-  const isEmpty = messages.length === 0;
 
   return (
     <>
@@ -734,10 +962,11 @@ const ChatDefaultLayout = () => {
         </Thread.Composer>
         <Thread.Overlay direction="bottom" />
       </Thread>
-      <ChatArtifactsPanel />
     </>
   );
-};
+});
+
+ChatDefaultLayout.displayName = "ChatDefaultLayout";
 
 type ChatProps = {
   chatId: string;
@@ -748,32 +977,7 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
   const { messages, status, sendMessage, regenerate, stop, setMessages, addToolOutput } =
     useChatInstance(chatId);
 
-  // Artifact panel state — local to this chat, resets on remount
-  const [activeArtifact, setActiveArtifact] = useState<Artifact | null>(null);
-  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
-
-  const openArtifact = useCallback((artifact: Artifact) => {
-    setActiveArtifact(artifact);
-    setIsArtifactOpen(true);
-  }, []);
-
-  const toggleArtifact = useCallback(
-    (artifact: Artifact) => {
-      if (isArtifactOpen && activeArtifact?.id === artifact.id) {
-        setIsArtifactOpen(false);
-      } else {
-        setActiveArtifact(artifact);
-        setIsArtifactOpen(true);
-      }
-    },
-    [activeArtifact?.id, isArtifactOpen],
-  );
-
-  const closeArtifact = useCallback(() => {
-    setIsArtifactOpen(false);
-  }, []);
-
-  // Thread selections (Message.SelectionToolbar) — chat-level state: written
+  // Thread selections (Message.Selection) — chat-level state: written
   // from the messages, read by the composer input at submit time.
   const [selections, setSelections] = useState<ChatSelection[]>([]);
   const addSelection = useCallback((text: string) => {
@@ -783,30 +987,52 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
     setSelections([]);
   }, []);
 
-  const value: ChatContextValue = {
-    chatId,
-    messages,
-    status,
-    sendMessage,
-    regenerate,
-    stop,
-    setMessages,
-    addToolOutput,
-    activeArtifact,
-    isArtifactOpen,
-    openArtifact,
-    toggleArtifact,
-    closeArtifact,
-    selections,
-    addSelection,
-    clearSelections,
-  };
+  const isEmpty = messages.length === 0;
 
-  return <ChatContext value={value}>{children ?? <ChatDefaultLayout />}</ChatContext>;
+  // Memoized so its identity survives the per-chunk ChatRoot re-render —
+  // stream chunks change `messages`, not any of these deps.
+  const session = useMemo<ChatSessionValue>(
+    () => ({
+      chatId,
+      isEmpty,
+      sendMessage,
+      regenerate,
+      stop,
+      setMessages,
+      addToolOutput,
+      selections,
+      addSelection,
+      clearSelections,
+    }),
+    [
+      chatId,
+      isEmpty,
+      sendMessage,
+      regenerate,
+      stop,
+      setMessages,
+      addToolOutput,
+      selections,
+      addSelection,
+      clearSelections,
+    ],
+  );
+
+  const messagesValue = useMemo<ChatMessagesValue>(
+    () => ({ messages, status }),
+    [messages, status],
+  );
+
+  return (
+    <ChatSessionContext value={session}>
+      <ChatMessagesContext value={messagesValue}>
+        {children ?? <ChatDefaultLayout />}
+      </ChatMessagesContext>
+    </ChatSessionContext>
+  );
 };
 
 export const Chat = Object.assign(ChatRoot, {
   Messages: ChatMessages,
   Input: ChatInput,
-  Artifacts: ChatArtifactsPanel,
 });

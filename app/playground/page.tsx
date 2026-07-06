@@ -9,15 +9,16 @@ import {
   ScanIcon,
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { type CommandItemData, Composer } from "@/components/ai/composer";
+import { COMMAND_LIST_PANEL_VALUE, type CommandItemData, Composer } from "@/components/ai/composer";
 import { StepQueue } from "@/components/ai/step-queue";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
 import { IconButton } from "@/components/ui/icon-button";
+import { CHIP_ICONS } from "@/lib/ai/chip-icons";
+import type { AskUserQuestion } from "@/lib/ai/types";
 import { useModelStore } from "@/lib/store/model";
 import { cn } from "@/lib/utils";
-import type { AskUserQuestion } from "@/tools/ask-user";
 
 // ---------------------------------------------------------------------------
 // Composer States panel — needs useComposer() so must be inside <Composer>
@@ -219,146 +220,174 @@ export default function ComponentsPlayground() {
       </div>
 
       <div>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-xs font-medium uppercase tracking-wider text-ink-tertiary">Composer</p>
-          <div className="flex items-center gap-2">
-            {(["idle", "active", "ask-user", "ask-user-multi"] as const).map((state) => (
-              <button
-                key={state}
-                type="button"
-                onClick={() => {
-                  if (state === "active") {
-                    if (composerState === "active") {
-                      const next = stepLabels[composerSteps.length % stepLabels.length];
-                      setComposerSteps((prev) => [...prev, next]);
-                      return;
-                    }
-                    setComposerSteps(stepLabels.slice(0, 1));
-                  }
-                  setComposerState(state);
+        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-ink-tertiary">
+          Composer
+        </p>
+        <div className="flex min-h-[640px] items-end justify-center rounded-lg border border-secondary-border bg-secondary p-4">
+          <div className="flex w-full max-w-xl flex-col items-center">
+            <div className="relative w-full">
+              <Composer
+                onSubmit={(data) => {
+                  if (data.kind === "answers") setComposerState("idle");
                 }}
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs border border-primary-border bg-primary text-ink-secondary hover:bg-primary-hover font-medium transition-colors",
-                  composerState === state && "bg-primary-active text-slate-1",
-                )}
+                commands={{
+                  "@": {
+                    kind: "insert",
+                    trigger: "after-whitespace",
+                    items: PLAYGROUND_MENTIONS,
+                  },
+                  "/": {
+                    kind: "execute",
+                    trigger: "doc-start",
+                    items: playgroundCommands,
+                  },
+                  "#": {
+                    kind: "insert",
+                    trigger: "after-whitespace",
+                    items: fetchPlaygroundIssues,
+                  },
+                }}
+                questions={questions}
               >
-                {state === "idle"
-                  ? "Idle"
-                  : state === "active"
-                    ? "Active"
-                    : state === "ask-user"
-                      ? "Ask User"
-                      : "Ask Multi"}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex min-h-[448px] items-end rounded-lg border border-secondary-border bg-secondary p-4">
-          <Composer
-            onSubmit={(data) => {
-              if (data.kind === "answers") setComposerState("idle");
-            }}
-            commands={{
-              "@": {
-                kind: "insert",
-                trigger: "after-whitespace",
-                items: PLAYGROUND_MENTIONS,
-              },
-              "/": {
-                kind: "execute",
-                trigger: "doc-start",
-                items: playgroundCommands,
-              },
-              "#": {
-                kind: "insert",
-                trigger: "after-whitespace",
-                items: fetchPlaygroundIssues,
-              },
-            }}
-            questions={questions}
-          >
-            <Composer.Panel value={panelValue}>
-              <Composer.PanelItem value="command-list">
-                <Composer.Commands />
-              </Composer.PanelItem>
-              <Composer.PanelItem value="active">
-                <StepQueue>
-                  {composerSteps.map((step, i, arr) => (
-                    <StepQueue.Item key={`${step}-${i}`}>
-                      <StepQueue.Icon>
-                        {i === arr.length - 1 ? (
-                          <Loader className="size-3.5 animate-spin" />
-                        ) : (
-                          <CircleDotIcon className="size-3.5" />
-                        )}
-                      </StepQueue.Icon>
-                      <StepQueue.Label active={i === arr.length - 1}>{step}</StepQueue.Label>
-                    </StepQueue.Item>
-                  ))}
-                </StepQueue>
-              </Composer.PanelItem>
-              <Composer.PanelItem value="ask-user">
-                <Composer.AskUser />
-              </Composer.PanelItem>
-            </Composer.Panel>
+                <Composer.Panel
+                  value={panelValue}
+                  className="absolute bottom-full left-0 right-0 z-10 mb-2 w-full data-open:pb-0"
+                >
+                  <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
+                    {["@", "/", "#"].map((prefix) => (
+                      <Composer.CommandList key={prefix} prefix={prefix}>
+                        <Composer.CommandLoading />
+                        <Composer.CommandEmpty />
+                        <Composer.CommandItems>
+                          {(item) => (
+                            <Composer.CommandItem value={item.value}>
+                              {item.icon && (
+                                <Composer.CommandItemIcon>
+                                  {CHIP_ICONS[item.icon]}
+                                </Composer.CommandItemIcon>
+                              )}
+                              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                              {item.description && (
+                                <Composer.CommandItemDescription>
+                                  {item.description}
+                                </Composer.CommandItemDescription>
+                              )}
+                            </Composer.CommandItem>
+                          )}
+                        </Composer.CommandItems>
+                      </Composer.CommandList>
+                    ))}
+                  </Composer.PanelItem>
+                  <Composer.PanelItem value="active">
+                    <StepQueue>
+                      {composerSteps.map((step, i, arr) => (
+                        <StepQueue.Item key={`${step}-${i}`}>
+                          <StepQueue.Icon>
+                            {i === arr.length - 1 ? (
+                              <Loader className="size-3.5 animate-spin" />
+                            ) : (
+                              <CircleDotIcon className="size-3.5" />
+                            )}
+                          </StepQueue.Icon>
+                          <StepQueue.Label active={i === arr.length - 1}>{step}</StepQueue.Label>
+                        </StepQueue.Item>
+                      ))}
+                    </StepQueue>
+                  </Composer.PanelItem>
+                  <Composer.PanelItem value="ask-user">
+                    <Composer.AskUser />
+                  </Composer.PanelItem>
+                </Composer.Panel>
 
-            <Composer.ContextWindow>
-              {showContextWindow && (
-                <div data-slot="context-files" className="flex items-center gap-1.5">
-                  {DEMO_CONTEXT_FILES.map((file) => (
-                    <span
-                      key={file.id}
-                      className="inline-flex items-center gap-1 rounded-md bg-primary-hover px-1.5 py-0.5 text-ink-secondary"
-                    >
-                      <file.icon className="size-3.5 text-ink-tertiary" />
-                      {file.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </Composer.ContextWindow>
-            <Composer.Container>
-              <Composer.Attachments />
-              <Composer.Textarea>
-                <Composer.Placeholder
-                  placeholder={
-                    composerState === "ask-user" || composerState === "ask-user-multi"
-                      ? "Or type your own answer..."
-                      : ["Ask me anything...", "Search the web...", "Generate a report..."]
-                  }
-                />
-              </Composer.Textarea>
-              {composerState === "ask-user" || composerState === "ask-user-multi" ? (
-                <Composer.Actions className="flex items-center justify-end">
-                  <Composer.AskUserHints />
-                  <Composer.AskUserDismiss />
-                  <Composer.AskUserContinue />
-                </Composer.Actions>
-              ) : (
-                <Composer.Actions className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <ToolsMenu tools={toolValues} onToolsChange={setToolValues} />
-                    <ModelSelector value={model} onValueChange={setModel} />
-                    <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <IconButton
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      aria-pressed={showContextWindow}
-                      aria-label="Toggle workspace context"
-                      onClick={() => setShowContextWindow((previous) => !previous)}
-                      className={cn(showContextWindow && "bg-primary-hover text-ink-primary")}
-                    >
-                      <ScanIcon />
-                    </IconButton>
-                    <Composer.Submit />
-                  </div>
-                </Composer.Actions>
-              )}
-            </Composer.Container>
-          </Composer>
+                <Composer.ContextWindow>
+                  {showContextWindow && (
+                    <div data-slot="context-files" className="flex items-center gap-1.5">
+                      {DEMO_CONTEXT_FILES.map((file) => (
+                        <span
+                          key={file.id}
+                          className="inline-flex items-center gap-1 rounded-md bg-primary-hover px-1.5 py-0.5 text-ink-secondary"
+                        >
+                          <file.icon className="size-3.5 text-ink-tertiary" />
+                          {file.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </Composer.ContextWindow>
+                <Composer.Container>
+                  <Composer.Attachments />
+                  <Composer.Textarea>
+                    <Composer.Placeholder
+                      placeholder={
+                        composerState === "ask-user" || composerState === "ask-user-multi"
+                          ? "Or type your own answer..."
+                          : ["Ask me anything...", "Search the web...", "Generate a report..."]
+                      }
+                    />
+                  </Composer.Textarea>
+                  {composerState === "ask-user" || composerState === "ask-user-multi" ? (
+                    <Composer.Actions className="flex items-center justify-end gap-2">
+                      <Composer.AskUserDismiss />
+                      <Composer.AskUserContinue />
+                    </Composer.Actions>
+                  ) : (
+                    <Composer.Actions className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <ToolsMenu tools={toolValues} onToolsChange={setToolValues} />
+                        <ModelSelector value={model} onValueChange={setModel} />
+                        <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <IconButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          aria-pressed={showContextWindow}
+                          aria-label="Toggle workspace context"
+                          onClick={() => setShowContextWindow((previous) => !previous)}
+                          className={cn(showContextWindow && "bg-primary-hover text-ink-primary")}
+                        >
+                          <ScanIcon />
+                        </IconButton>
+                        <Composer.Submit />
+                      </div>
+                    </Composer.Actions>
+                  )}
+                </Composer.Container>
+              </Composer>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              {(["idle", "active", "ask-user", "ask-user-multi"] as const).map((state) => (
+                <button
+                  key={state}
+                  type="button"
+                  onClick={() => {
+                    if (state === "active") {
+                      if (composerState === "active") {
+                        const next = stepLabels[composerSteps.length % stepLabels.length];
+                        setComposerSteps((prev) => [...prev, next]);
+                        return;
+                      }
+                      setComposerSteps(stepLabels.slice(0, 1));
+                    }
+                    setComposerState(state);
+                  }}
+                  className={cn(
+                    "rounded-full border border-primary-border bg-primary px-4 py-1.5 text-sm text-ink-secondary font-medium transition-colors hover:bg-primary-hover",
+                    composerState === state && "bg-primary-active text-slate-1",
+                  )}
+                >
+                  {state === "idle"
+                    ? "Idle"
+                    : state === "active"
+                      ? "Active"
+                      : state === "ask-user"
+                        ? "Ask User"
+                        : "Ask Multi"}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </main>

@@ -1,246 +1,41 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
-import type { ComponentProps, ReactNode, RefObject } from "react";
 import {
-  createContext,
-  memo,
-  use,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+  type ThreadAutoScrollMode,
+  Thread as ThreadPrimitive,
+  type ThreadVisibilityState,
+  useThread,
+  useThreadVisibility,
+} from "@intentface/chat/thread";
+import { AnimatePresence, motion } from "motion/react";
+import type { ComponentProps } from "react";
+import { memo, useCallback } from "react";
 import Button from "@/components/ui/button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon } from "../icons/arrow-down";
 
-// ---------------------------------------------------------------------------
-// Thread context — a small, generic primitive surface. Auto-scroll behavior is
-// driven by the <Thread autoScroll> prop; nothing here knows about chats or messages.
-// ---------------------------------------------------------------------------
-
-type ThreadContextValue = {
-  isAtBottom: boolean;
-  scrollToBottom: (behavior?: ScrollBehavior) => void;
-  scrollRef: RefObject<HTMLDivElement | null>;
-  contentRef: RefObject<HTMLDivElement | null>;
-  sentinelRef: RefObject<HTMLDivElement | null>;
-};
-
-const ThreadContext = createContext<ThreadContextValue | null>(null);
-
-export const useThread = () => {
-  const ctx = use(ThreadContext);
-  if (!ctx) throw new Error("useThread must be used within <Thread>");
-  return ctx;
-};
-
-// Single place that performs the scroll, so callers just choose the behavior:
-// 'instant' for jumps that must not animate, 'smooth' for deliberate movements.
-const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavior) => {
-  el.scrollTo({ top, behavior });
-};
+export { useThread, useThreadVisibility };
+export type { ThreadAutoScrollMode, ThreadVisibilityState };
 
 // ---------------------------------------------------------------------------
-// useThreadScroll — owns the thread's scroll subsystem: the scroll/content/
-// sentinel refs, at-bottom detection, scrollToBottom, and the autoScroll
-// landing/follow behavior. Returns the value for ThreadContext. autoScroll modes:
-//   "off"    no landing, no follow, no reserve — a plain scroll area.
-//   "bottom" newest lands at the bottom and the view follows the stream (Codex).
-//   "jump"   newest lands at the top (reserve); the view does not follow.
-//   "follow" newest lands at the top and the view follows the stream (ChatGPT).
-// Every active mode lands the newest turn on send; the reserve lifts the landing
-// point to the top, follow tracks streaming growth. The landing runs in a layout
-// effect so the initial land + reserve apply before paint (no top-then-jump
-// flash); it runs after useThreadInsets in ThreadRoot, so --thread-turn-area is
-// set before the reserve references it.
+// Root
 // ---------------------------------------------------------------------------
 
-export type ThreadAutoScrollMode = "off" | "bottom" | "jump" | "follow";
+export type ThreadRootProps = ComponentProps<typeof ThreadPrimitive>;
 
-const useThreadScroll = (mode: ThreadAutoScrollMode): ThreadContextValue => {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  // "At the bottom" = the bottom sentinel is in view. IntersectionObserver
-  // computes it off the main thread (no scrollTop/scrollHeight reads); it drives
-  // the scroll button and, when autoScroll is active, gates the follow.
-  const [isAtBottom, setIsAtBottom] = useState(true);
-
-  useEffect(() => {
-    const root = scrollRef.current;
-    const sentinel = sentinelRef.current;
-    if (!root || !sentinel) return;
-    const io = new IntersectionObserver(([entry]) => setIsAtBottom(entry.isIntersecting), { root });
-    io.observe(sentinel);
-    return () => io.disconnect();
-  }, []);
-
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    const el = scrollRef.current;
-    if (el) scrollContainerTo(el, el.scrollHeight, behavior);
-  }, []);
-
-  // Mirror at-bottom into a ref so the follow observer reads it without
-  // re-subscribing each time it flips.
-  const atBottomRef = useRef(isAtBottom);
-  atBottomRef.current = isAtBottom;
-
-  useLayoutEffect(() => {
-    const content = contentRef.current;
-    if (!content || mode === "off") return;
-
-    const landsAtTop = mode !== "bottom";
-    const followsStream = mode !== "jump";
-
-    // Reserve a viewport on the last turn so the newest lands at the top.
-    if (landsAtTop) {
-      content.style.setProperty("--thread-turn-min-height", "var(--thread-turn-area)");
-    }
-
-    // First land (and chat switches) jump instantly; later turns animate.
-    let landed = false;
-    let skipNextResize = true;
-    const land = (mutations: MutationRecord[] = []) => {
-      const replaced = mutations.some((m) => m.removedNodes.length > 0);
-      skipNextResize = true;
-      scrollToBottom(landed && !replaced ? "smooth" : "instant");
-      landed = true;
-    };
-
-    // Follow streaming growth, but skip the resize our own land just caused and
-    // yield the moment the user scrolls up.
-    const follow = () => {
-      if (skipNextResize) {
-        skipNextResize = false;
-        return;
-      }
-      if (atBottomRef.current) scrollToBottom("smooth");
-    };
-
-    land();
-    const turns = new MutationObserver(land);
-    turns.observe(content, { childList: true });
-
-    const growth = followsStream ? new ResizeObserver(follow) : null;
-    growth?.observe(content);
-
-    return () => {
-      turns.disconnect();
-      growth?.disconnect();
-      if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
-    };
-  }, [mode, scrollToBottom]);
-
-  return { isAtBottom, scrollToBottom, scrollRef, contentRef, sentinelRef };
-};
+const ThreadRoot = ({ className, ...props }: ThreadRootProps) => (
+  <ThreadPrimitive
+    className={cn(
+      "relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
+      className,
+    )}
+    {...props}
+  />
+);
 
 // ---------------------------------------------------------------------------
-// ThreadRoot
-// ---------------------------------------------------------------------------
-
-export type ThreadRootProps = ComponentProps<"div"> & {
-  children?: ReactNode;
-  autoScroll?: ThreadAutoScrollMode;
-};
-
-// Fallback (px) until the composer is measured; matches the 8rem class default.
-const DEFAULT_BOTTOM_OFFSET = 128;
-// Breathing room between the last line of content and the composer dock. The
-// bottom blur overlay spans it, so this doubles as the visible progressive-blur
-// band that peeks above the composer.
-const COMPOSER_GAP = 32;
-const DOCK_SELECTOR = '[data-slot="composer-context-window"], [data-slot="composer-container"]';
-
-/**
- * Height (px) to reserve at the bottom for the composer dock (context window +
- * attachments + input) — but NOT the command-list / ask-user panel. The
- * composer is bottom-anchored, so the dock sits in a fixed region while the
- * panel grows upward above it; measuring from the dock's top to the root's
- * bottom captures the former and ignores the latter. Returns null when no dock
- * is mounted yet.
- */
-const measureComposerInset = (root: HTMLElement): number | null => {
-  const dock = root.querySelector('[data-slot="composer-container"]');
-  if (!dock) return null;
-  return Math.round(
-    root.getBoundingClientRect().bottom - dock.getBoundingClientRect().top + COMPOSER_GAP,
-  );
-};
-
-// Top inset reserved by the top overlay, measured straight off the rendered
-// element (px) — no getComputedStyle / rem→px conversion. 0 if no top overlay.
-const measureTopInset = (root: HTMLElement): number =>
-  root.querySelector('[data-slot="thread-overlay-top"]')?.getBoundingClientRect().height ?? 0;
-
-/**
- * Writes the measured insets to CSS vars on the root via a ResizeObserver — no
- * React state, so composer growth never re-renders the thread:
- *   --thread-overlay-bottom-height drives the bottom overlay + viewport padding;
- *   --thread-turn-area is the visible thread area (root − top − bottom). When an
- *   auto-scroll mode is active, useThreadScroll maps the last turn's reserve
- *   (--thread-turn-min-height) to it; otherwise the reserve falls back to 0.
- * Recomputes only on root (window) / composer-dock resize — never per token.
- */
-const useThreadInsets = () => {
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    const apply = () => {
-      const bottomInset = measureComposerInset(root);
-      if (bottomInset !== null) {
-        root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
-      }
-      const topInset = measureTopInset(root);
-      const area = Math.max(
-        0,
-        Math.round(root.clientHeight - topInset - (bottomInset ?? DEFAULT_BOTTOM_OFFSET)),
-      );
-      root.style.setProperty("--thread-turn-area", `${area}px`);
-    };
-
-    apply();
-    const observer = new ResizeObserver(apply);
-    observer.observe(root);
-    for (const part of root.querySelectorAll(DOCK_SELECTOR)) {
-      observer.observe(part);
-    }
-    return () => observer.disconnect();
-  }, []);
-
-  return rootRef;
-};
-
-const ThreadRoot = ({ children, className, autoScroll = "follow", ...props }: ThreadRootProps) => {
-  const rootRef = useThreadInsets();
-  const scroll = useThreadScroll(autoScroll);
-
-  return (
-    <ThreadContext value={scroll}>
-      <div
-        ref={rootRef}
-        data-slot="thread-root"
-        className={cn(
-          "relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
-          className,
-        )}
-        role="log"
-        {...props}
-      >
-        {children}
-      </div>
-    </ThreadContext>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// ThreadOverlay
+// Overlay
 // ---------------------------------------------------------------------------
 
 export type ThreadOverlayProps = ComponentProps<typeof ProgressiveBlur> & {
@@ -248,17 +43,12 @@ export type ThreadOverlayProps = ComponentProps<typeof ProgressiveBlur> & {
 };
 
 const ThreadOverlay = memo(({ className, direction, ...props }: ThreadOverlayProps) => (
-  <div
-    data-slot={`thread-overlay-${direction}`}
-    data-thread-overlay={direction}
+  <ThreadPrimitive.Overlay
+    direction={direction}
     className={cn(
-      // pointer-events-none: the overlay is a sibling of the scroll
-      // container, so without this it would swallow wheel/drag/click events
-      // over its strip instead of letting them through to the content.
       "group/thread-overlay pointer-events-none absolute right-0 left-0 z-1 mx-auto w-full max-w-(--thread-width)",
       'data-[thread-overlay="top"]:h-(--thread-overlay-top-height) data-[thread-overlay="top"]:top-0',
       'data-[thread-overlay="bottom"]:h-(--thread-overlay-bottom-height) data-[thread-overlay="bottom"]:bottom-0',
-
       className,
     )}
   >
@@ -271,74 +61,49 @@ const ThreadOverlay = memo(({ className, direction, ...props }: ThreadOverlayPro
       )}
       {...props}
     />
-  </div>
+  </ThreadPrimitive.Overlay>
 ));
 
 ThreadOverlay.displayName = "ThreadOverlay";
 
 // ---------------------------------------------------------------------------
-// ThreadViewport
+// Viewport
 // ---------------------------------------------------------------------------
 
-export type ThreadViewportProps = ComponentProps<"div"> & {
-  children?: ReactNode;
-};
+export type ThreadViewportProps = ComponentProps<"div">;
 
-const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => {
-  const { scrollRef, contentRef, sentinelRef } = useThread();
-
-  return (
+const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => (
+  <ThreadPrimitive.Viewport className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--color-ink-tertiary)_transparent] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50">
     <div
-      ref={scrollRef}
-      className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--color-ink-tertiary)_transparent]"
+      data-slot="thread-viewport"
+      className={cn(
+        "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
+        "min-h-full",
+        "has-data-[slot=thread-placeholder]:h-full",
+        className,
+      )}
+      {...props}
     >
-      <div
-        data-slot="thread-viewport"
-        className={cn(
-          "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
-          "min-h-full",
-          "has-data-[slot=thread-placeholder]:h-full",
-          className,
-        )}
-        {...props}
-      >
-        <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
-          {/* Content column — children are direct, so the auto-scroll reserve
-              lives here as the last child's min-height. Consumers don't wire it:
-              the autoScroll prop sets --thread-turn-min-height (0 when off/unset). */}
-          <div
-            ref={contentRef}
-            data-slot="thread-content"
-            className="mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)"
-          >
-            {children}
-          </div>
-          {/* Bottom sentinel — sibling of the content (not a child), so it stays
-              out of the :last-child reserve. The IntersectionObserver watches it
-              for at-bottom. */}
-          <div
-            ref={sentinelRef}
-            data-slot="thread-bottom"
-            aria-hidden
-            className="h-px w-full shrink-0"
-          />
-        </div>
+      <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
+        {/* Content column — children are direct, so the auto-scroll reserve
+            lives here as the last child's min-height. Consumers don't wire it:
+            the autoScroll prop sets --thread-turn-min-height (0 when off/unset). */}
+        <ThreadPrimitive.Content className="mx-auto px-4 flex min-h-full w-full max-w-(--thread-width) flex-col gap-4 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)">
+          {children}
+        </ThreadPrimitive.Content>
       </div>
     </div>
-  );
-};
+  </ThreadPrimitive.Viewport>
+);
 
 // ---------------------------------------------------------------------------
-// ThreadComposer
+// Composer
 // ---------------------------------------------------------------------------
 
-export type ThreadComposerProps = ComponentProps<"div"> & {
-  children?: ReactNode;
-};
+export type ThreadComposerProps = ComponentProps<"div">;
 
 const ThreadComposer = ({ className, children, ...props }: ThreadComposerProps) => (
-  <div
-    data-slot="thread-composer"
+  <ThreadPrimitive.Composer
     className={cn(
       "absolute inset-x-0 bottom-0 mx-auto w-full z-2 max-w-(--thread-width)",
       className,
@@ -348,11 +113,12 @@ const ThreadComposer = ({ className, children, ...props }: ThreadComposerProps) 
     <div className="relative flex w-full flex-col items-center px-4 pb-4 @lg/thread-viewport:px-0">
       {children}
     </div>
-  </div>
+  </ThreadPrimitive.Composer>
 );
 
 // ---------------------------------------------------------------------------
-// ThreadScrollButton (arrow to scroll to bottom — no auto-stick)
+// ScrollButton (arrow to scroll to bottom — no auto-stick). Composed from the
+// package's useThread hook so the motion enter/exit stays exactly as designed.
 // ---------------------------------------------------------------------------
 
 export type ThreadScrollButtonProps = ComponentProps<typeof motion.div>;
@@ -394,25 +160,16 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
 };
 
 // ---------------------------------------------------------------------------
-// ThreadPlaceholder
+// Placeholder
 // ---------------------------------------------------------------------------
-
-export type ThreadEmptyStateProps = ComponentProps<"div"> & {
-  title?: string;
-  description?: string;
-  icon?: React.ReactNode;
-};
 
 export type ThreadPlaceholderProps = ComponentProps<"div">;
 
-const ThreadPlaceholder = ({ children, className, ...props }: ThreadPlaceholderProps) => (
-  <div
-    data-slot="thread-placeholder"
+const ThreadPlaceholder = ({ className, ...props }: ThreadPlaceholderProps) => (
+  <ThreadPrimitive.Placeholder
     className={cn("flex flex-1 flex-col items-center justify-center gap-4", className)}
     {...props}
-  >
-    {children}
-  </div>
+  />
 );
 
 // ---------------------------------------------------------------------------

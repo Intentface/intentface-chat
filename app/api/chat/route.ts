@@ -5,7 +5,6 @@ import { aggregateData } from "@/tools/aggregate-data";
 import { askUser } from "@/tools/ask-user";
 import { computeStats } from "@/tools/compute-stats";
 import { connectDataSource } from "@/tools/connect-data-source";
-import { createArtifact } from "@/tools/create-artifact";
 import { createVisualization } from "@/tools/create-visualization";
 import { detectAnomalies } from "@/tools/detect-anomalies";
 import { exportReport } from "@/tools/export-report";
@@ -70,7 +69,6 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages),
     tools: {
       askUser,
-      createArtifact,
       listDataSources,
       connectDataSource,
       queryData,

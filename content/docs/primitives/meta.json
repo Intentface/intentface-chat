@@ -1,0 +1,13 @@
+{
+  "title": "Primitives",
+  "pages": [
+    "composer",
+    "message",
+    "thread",
+    "steps",
+    "reasoning",
+    "chip",
+    "attachments",
+    "step-queue"
+  ]
+}

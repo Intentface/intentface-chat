@@ -1,55 +1,55 @@
 "use client";
 
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import type { FileUIPart, UIMessage } from "ai";
+import type { ChipData } from "@intentface/chat/chip-markdown";
+import {
+  Message as MessagePrimitive,
+  useMessageSelection,
+  useMessageSelectionScope,
+} from "@intentface/chat/message";
 import { FileIcon, MessageCircleIcon, PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { type ComponentProps, Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { type ComponentProps, useMemo } from "react";
 import { Chip } from "@/components/ai/chip";
-import type { ChipData } from "@/components/ai/composer";
 import Button from "@/components/ui/button";
 import HoverCard from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import { Markdown } from "@/components/ui/markdown";
 import Tooltip from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
-import { CHIP_ICONS } from "@/lib/ai/chip-icons";
-import { parseChipSegments } from "@/lib/ai/chip-markdown";
+import { isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
+import { CHIP_ICONS, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
 import { StopIcon } from "../icons/stop";
 
-type MessageRootProps = {
-  role: UIMessage["role"];
-  isLast: boolean;
-  isError: boolean;
-} & ComponentProps<typeof motion.div>;
-// Message wrapper with entrance animation
-const MessageRoot = ({ role, isLast, isError, className, ...props }: MessageRootProps) => {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      data-slot="message"
-      data-role={role}
-      data-error={isError ? "" : undefined}
-      data-last={isLast ? "" : undefined}
-      className={cn(
-        "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
-        className,
-      )}
-      {...props}
-    />
-  );
-};
+type MessageRootProps = ComponentProps<typeof MessagePrimitive>;
+
+// Message wrapper with entrance animation: the primitive owns the state/data
+// attributes and merges them onto the motion element via the render prop.
+const MessageRoot = ({ className, ...props }: MessageRootProps) => (
+  <MessagePrimitive
+    render={
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+      />
+    }
+    className={cn(
+      "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
+      className,
+    )}
+    {...props}
+  />
+);
 
 // Turn wrapper — groups a user message with its trailing assistant reply. The
 // auto-scroll reserve lives on Thread's content (its last child), not here.
-type MessageTurnProps = ComponentProps<"div"> & {
+type MessageTurnProps = ComponentProps<typeof MessagePrimitive.Turn> & {
   // Pin this turn's user message at the top, above the blur overlay (z-2 > the
   // overlay's z-1), so the assistant reply fades out under the blur as it scrolls
   // up to meet the header — instead of colliding with a bubble in the readable
@@ -59,8 +59,7 @@ type MessageTurnProps = ComponentProps<"div"> & {
 };
 
 const MessageTurn = ({ sticky, className, ...props }: MessageTurnProps) => (
-  <div
-    data-slot="message-turn"
+  <MessagePrimitive.Turn
     className={cn(
       "flex w-full flex-col gap-4 [overflow-anchor:none]",
       sticky && "*:data-[role=user]:sticky *:data-[role=user]:top-4 *:data-[role=user]:z-2",
@@ -80,8 +79,8 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
       "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border-primary-border group-data-[role=user]:bg-primary group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
       // Assistant message styling
       "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-none",
-      // Error styling
-      "group-data-[error=true]:border-destructive group-data-[error=true]:bg-destructive/10",
+      // Error styling — presence attribute (data-error=""), not a value match.
+      "group-data-error:border-destructive group-data-error:bg-destructive/10",
       className,
     )}
     {...props}
@@ -148,33 +147,31 @@ type MessageChipProps = {
   className?: string;
 };
 
-const MessageChip = ({ label, chip, className }: MessageChipProps) => (
-  <Chip variant={chip?.variant} className={className}>
-    {chip?.icon && <Chip.Icon>{CHIP_ICONS[chip.icon]}</Chip.Icon>}
-    <Chip.Label>{label}</Chip.Label>
-  </Chip>
-);
+// The wire format carries the icon as an opaque string; narrow it to this
+// app's concrete keys here — unknown values fall back to no icon.
+const MessageChip = ({ label, chip, className }: MessageChipProps) => {
+  const icon = chip?.icon && isChipIconKey(chip.icon) ? CHIP_ICONS[chip.icon] : undefined;
+  return (
+    <Chip className={className}>
+      {icon && <Chip.Icon>{icon}</Chip.Icon>}
+      <Chip.Label>{label}</Chip.Label>
+    </Chip>
+  );
+};
 
 type MessageTextProps = {
   children: string;
   className?: string;
 };
 
-const MessageText = ({ children, className }: MessageTextProps) => {
-  const segments = parseChipSegments(children);
-
-  return (
-    <span className={cn("whitespace-pre-wrap text-md", className)}>
-      {segments.map((segment, index) =>
-        segment.type === "text" ? (
-          <Fragment key={index}>{segment.text}</Fragment>
-        ) : (
-          <MessageChip key={index} label={segment.label} chip={segment} />
-        ),
-      )}
-    </span>
-  );
-};
+const MessageText = ({ children, className }: MessageTextProps) => (
+  <MessagePrimitive.Text
+    className={cn("whitespace-pre-wrap text-md", className)}
+    renderChip={(segment) => <MessageChip label={segment.label} chip={segment} />}
+  >
+    {children}
+  </MessagePrimitive.Text>
+);
 
 // Error message display
 const MessageError = ({ children, className, ...props }: ComponentProps<"div">) => (
@@ -201,7 +198,7 @@ const MessageError = ({ children, className, ...props }: ComponentProps<"div">) 
 );
 
 // Stopped indicator — a centered badge on an assistant turn the user aborted
-// mid-stream. The SelectionToolbar is scoped to message-content, so this marker
+// mid-stream. Message.Selection is scoped to message-content, so this marker
 // (a sibling outside it) never triggers the "Add to chat" popover.
 const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
   <div
@@ -226,30 +223,6 @@ const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
     <span>Loading...</span>
   </div>
 );
-
-// Timestamp display
-const MessageTimestamp = ({
-  timestamp,
-  className,
-  ...props
-}: ComponentProps<"span"> & { timestamp: Date | string | number }) => {
-  const date = new Date(timestamp);
-  const formattedTime = date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  return (
-    <span
-      data-slot="message-timestamp"
-      className={cn("text-xs text-muted-foreground", className)}
-      {...props}
-    >
-      {formattedTime}
-    </span>
-  );
-};
 
 // Copy button with individual state
 const MessageCopy = ({
@@ -280,23 +253,24 @@ const MessageCopy = ({
 };
 
 // Attachments container for message history (read-only)
-const MessageAttachments = ({ children, className, ...props }: ComponentProps<"div">) => (
-  <div className={cn("flex flex-wrap gap-2", className)} {...props}>
-    {children}
-  </div>
+const MessageAttachments = ({ className, ...props }: ComponentProps<"div">) => (
+  <div
+    data-slot="message-attachments"
+    className={cn("flex flex-wrap gap-2", className)}
+    {...props}
+  />
 );
 
-// Individual attachment display (read-only, no remove button)
-const isImage = (mediaType: string) => mediaType.startsWith("image/");
-
+// Individual attachment display (read-only, no remove button). Categorization
+// reuses the package's shared media helpers instead of a third local copy.
 type MessageAttachmentProps = {
-  attachment: FileUIPart;
+  attachment: { url: string; mediaType?: string; filename?: string };
 } & ComponentProps<"div">;
 
 const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmentProps) => {
   const mediaType = attachment.mediaType ?? "";
   const filename = attachment.filename ?? "Attachment";
-  const Icon = mediaType === "application/pdf" ? FileIcon : PaperclipIcon;
+  const Icon = isPdfAttachment(mediaType) ? FileIcon : PaperclipIcon;
 
   return (
     <div
@@ -306,7 +280,7 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
       )}
       {...props}
     >
-      {isImage(mediaType) ? (
+      {isImageAttachment(mediaType) ? (
         <HoverCard>
           <HoverCard.Trigger className="shrink-0">
             <Image
@@ -343,93 +317,32 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
 };
 
 // ---------------------------------------------------------------------------
-// Message.SelectionToolbar — floating "Add to chat" bar above a text selection
-// within this message's content. An invisible anchor span resolves the owning
-// [data-slot="message-content"] element, so the listeners are scoped to the
-// answer text — not markers, sources, or actions elsewhere in the message.
+// Message.Selection — floating "Add to chat" bar above a text selection
+// within this message's content. The selection detection and content scoping
+// live in the headless package; this wrapper anchors the popover UI.
 // ---------------------------------------------------------------------------
 
-type MessageSelection = {
-  text: string;
-  range: Range;
-};
-
-const readMessageSelection = (scope: HTMLElement): MessageSelection | null => {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
-
-  const text = selection.toString();
-  if (text.trim().length === 0) return null;
-
-  // Both endpoints must sit inside this message — a cross-message selection
-  // has its common ancestor outside the scope and resolves to null.
-  const range = selection.getRangeAt(0);
-  if (!scope.contains(range.commonAncestorContainer)) return null;
-
-  // Clone so later mutations of the live selection don't move our anchor.
-  return { text, range: range.cloneRange() };
-};
-
-// Subscribe to the document selection, scoped to `scope`. Samples when the
-// gesture settles (mouseup / keyup) instead of on every selectionchange drag
-// tick; selectionchange only clears the value once the selection collapses.
-const useMessageSelection = (scope: HTMLElement | null): MessageSelection | null => {
-  const [selection, setSelection] = useState<MessageSelection | null>(null);
-
-  useEffect(() => {
-    if (!scope) return;
-
-    const readSelection = () => setSelection(readMessageSelection(scope));
-    const hideWhenCollapsed = () => {
-      const current = window.getSelection();
-      if (!current || current.isCollapsed) setSelection(null);
-    };
-
-    document.addEventListener("mouseup", readSelection);
-    document.addEventListener("keyup", readSelection);
-    document.addEventListener("selectionchange", hideWhenCollapsed);
-    return () => {
-      document.removeEventListener("mouseup", readSelection);
-      document.removeEventListener("keyup", readSelection);
-      document.removeEventListener("selectionchange", hideWhenCollapsed);
-    };
-  }, [scope]);
-
-  return selection;
-};
-
-type MessageSelectionToolbarProps = {
+type MessageSelectionProps = {
   onAdd: (text: string) => void;
   className?: string;
 };
 
-const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarProps) => {
-  const [messageElement, setMessageElement] = useState<HTMLElement | null>(null);
-  const selection = useMessageSelection(messageElement);
-
-  // Scope to the owning message's content — the assistant's answer text. The
-  // anchor sits outside it (sibling), so resolve the message root first, then
-  // its content child. Markers like message-stopped, sources, and reasoning
-  // live outside message-content and so never raise the toolbar.
-  const anchorRef = useCallback((node: HTMLSpanElement | null) => {
-    const messageRoot = node?.closest<HTMLElement>('[data-slot="message"]');
-    setMessageElement(
-      messageRoot?.querySelector<HTMLElement>('[data-slot="message-content"]') ?? null,
-    );
-  }, []);
+const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
+  const { anchorRef, contentElement } = useMessageSelectionScope();
+  const selection = useMessageSelection(contentElement);
 
   // Virtual anchor over the live Range — Floating UI's auto-update re-reads
   // the rect, so the toolbar tracks the selection through scrolls and
   // reflows. contextElement supplies the scroll ancestors to observe.
   const anchor = useMemo(
     () =>
-      selection && messageElement
+      selection && contentElement
         ? {
             getBoundingClientRect: () => selection.range.getBoundingClientRect(),
-            contextElement: messageElement,
+            contextElement: contentElement,
           }
         : null,
-    [selection, messageElement],
+    [selection, contentElement],
   );
 
   return (
@@ -456,7 +369,7 @@ const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarPr
             sideOffset={8}
           >
             <PopoverPrimitive.Popup
-              data-slot="message-selection-toolbar"
+              data-slot="message-selection"
               role="toolbar"
               aria-label="Selection actions"
               initialFocus={false}
@@ -492,11 +405,10 @@ const MessageSelectionToolbar = ({ onAdd, className }: MessageSelectionToolbarPr
   );
 };
 
-// Source pills container
-const MessageSources = ({ children, className, ...props }: ComponentProps<"div">) => (
-  <div data-slot="message-sources" className={cn("flex flex-wrap gap-1.5", className)} {...props}>
-    {children}
-  </div>
+// Source pills container. App-owned — which sources show and how they link is
+// product policy, so there is no package primitive behind these.
+const MessageSources = ({ className, ...props }: ComponentProps<"div">) => (
+  <div data-slot="message-sources" className={cn("flex flex-wrap gap-1.5", className)} {...props} />
 );
 
 // Individual source pill with favicon + domain
@@ -507,6 +419,7 @@ const MessageSource = ({
   ...props
 }: { url: string; domain: string } & ComponentProps<"a">) => (
   <a
+    data-slot="message-source"
     href={url}
     target="_blank"
     rel="noopener noreferrer"
@@ -542,8 +455,7 @@ export const Message = Object.assign(MessageRoot, {
   Error: MessageError,
   Stopped: MessageStopped,
   Loading: MessageLoading,
-  Timestamp: MessageTimestamp,
   Sources: MessageSources,
   Source: MessageSource,
-  SelectionToolbar: MessageSelectionToolbar,
+  Selection: MessageSelection,
 });

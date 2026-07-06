@@ -1,0 +1,134 @@
+---
+title: Attachments
+description: The file-attachment tray — item chips, a remove affordance, and inline or global drop zones.
+source: attachments.tsx
+---
+
+<ComponentPreview name="attachments-basic" />
+
+## Usage guidelines
+
+- **Pending-file tray** — the strip above the composer input, showing attachment chips with a remove affordance.
+- **Model included** — accept matching, blob-URL lifecycle, and send preparation ship in the package; the styled tray animates items in and out.
+- **Media-aware** — each item exposes `data-media-type` (`image` / `pdf` / `file`) for per-type styling.
+- **Drop + pick** — a `Dropzone` overlay (inline, or `global` to project into the app shell) plus a `Trigger` file picker.
+- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+
+## Anatomy
+
+```tsx
+<Attachments show={items.length > 0}>
+  {items.map((item) => (
+    <Attachments.Item key={item.id} item={item}>
+      <Attachments.Remove onRemove={() => remove(item.id)} />
+    </Attachments.Item>
+  ))}
+</Attachments>
+```
+
+With a drop zone and a picker trigger:
+
+```tsx
+<>
+  <Attachments.Dropzone visible={isDragging} variant="global" />
+  <Attachments show={items.length > 0}>
+    {items.map((item) => (
+      <Attachments.Item key={item.id} item={item}>
+        <Attachments.Remove onRemove={() => remove(item.id)} />
+      </Attachments.Item>
+    ))}
+  </Attachments>
+  <Attachments.Trigger onClick={openFileDialog} />
+</>
+```
+
+## Accessibility
+
+`Attachments.Remove` renders a `<button aria-label="Remove attachment">`, and
+`Attachments.Trigger` is a real button — both operable and labelled for
+assistive tech.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+
+### Attachments
+
+The tray container; animates open/closed. Renders `data-slot="attachments"`.
+
+export const rootProps = [
+  { name: "show", type: "boolean", default: "true", description: "Animates the tray open or closed." },
+];
+
+<PropsTable rows={rootProps} />
+
+### Attachments.Item
+
+One attachment chip. Renders `data-slot="attachments-item"`.
+
+export const itemProps = [
+  { name: "item", type: "AttachmentItem", default: "(required)", description: "The attachment to render." },
+];
+
+<PropsTable rows={itemProps} />
+
+export const itemAttrs = [
+  { attribute: "data-slot", values: '"attachments-item"', description: "The chip." },
+  { attribute: "data-media-type", values: '"image" | "pdf" | "file"', description: "The item's media category, for per-type styling." },
+];
+
+<AttributesTable rows={itemAttrs} />
+
+### Attachments.Remove
+
+Removal affordance, shown on hover. Renders `<button data-slot="attachments-remove"
+aria-label="Remove attachment">`.
+
+export const removeProps = [
+  { name: "onRemove", type: "() => void", default: "(required)", description: "Called when the button is clicked." },
+];
+
+<PropsTable rows={removeProps} />
+
+### Attachments.Dropzone
+
+Drop overlay. Renders `data-slot="attachments-dropzone"`. `variant="global"`
+portals it into the app shell so files can be dropped anywhere.
+
+export const dropzoneProps = [
+  { name: "visible", type: "boolean", default: "false", description: "Show the overlay (while files are dragged over the scope)." },
+  { name: "variant", type: '"inline" | "global"', description: "Inline sits in place; global portals into the app shell." },
+  { name: "keepMounted", type: "boolean", default: "false", description: "Keep it mounted (hidden) when not visible." },
+  { name: "portalSelector", type: "string", description: "CSS selector to portal into (the mechanism behind global)." },
+];
+
+<PropsTable rows={dropzoneProps} />
+
+export const dropzoneAttrs = [
+  { attribute: "data-slot", values: '"attachments-dropzone"', description: "The overlay." },
+  { attribute: "data-visible", description: "Present while visible is true." },
+];
+
+<AttributesTable rows={dropzoneAttrs} />
+
+### Attachments.Error
+
+Validation message slot. Renders `<span data-slot="attachments-error">`.
+Validation emits a structured `AttachmentErrorCode` (`"accept"`,
+`"max_file_size"`, `"max_files"`) on the composer's attachments state — you map
+codes to your own (localized) copy; the package ships no messages.
+
+### Attachments.Trigger
+
+The file-picker button. Renders `<button data-slot="attachments-trigger">`.
+
+## Utilities
+
+The wrapper re-exports the attachment surface so you import everything from one
+place. From the package (generic mechanics): `toAttachmentItem` (the default
+blob ingestion), `matchesAccept`, and `revokeAttachmentUrl`. From the app
+(policy, taxonomy, send strategy): the `ATTACHMENT_*` accept/limit policy,
+`isImageAttachment` / `isPdfAttachment`, `formatFileSize`, and
+`prepareAttachmentsForSend` — the adapter that turns submitted items into AI
+SDK file parts. The package imposes none of these; they're yours to change.

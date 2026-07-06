@@ -1,201 +1,25 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { glob, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import {
-  addItems,
-  detectPackageManager,
-  getInstallPlan,
-  inferConfig,
-  loadRegistry,
-  resolveRegistrySelection,
-  resolveTargetPath,
-  rewriteInternalImports,
-  upsertIntentfaceCssBlock,
-} from "../src/index.js";
+import { fileURLToPath } from "node:url";
 
-test("registry resolves transitive dependencies for a named AI primitive", async () => {
-  const registry = await loadRegistry();
-  const items = resolveRegistrySelection(registry, ["message"]);
-  const names = items.map((item) => item.name);
+test("every manifest sourcePath exists on disk", async () => {
+  const manifestPath = fileURLToPath(new URL("../registry/manifest.json", import.meta.url));
+  const repoRoot = path.resolve(path.dirname(manifestPath), "..", "..", "..");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 
-  assert.ok(names.includes("message"));
-  assert.ok(names.includes("markdown"));
-  assert.ok(names.includes("tooltip"));
-  assert.ok(names.includes("hooks-use-copy"));
-  assert.ok(names.includes("icons"));
-
-  const plan = getInstallPlan(items);
-  assert.ok(plan.files.some((file) => file.targetPath === "components/ai/message.tsx"));
-  assert.ok(plan.dependencies.includes("ai"));
-});
-
-test("import rewriting uses target aliases when configured", () => {
-  const result = rewriteInternalImports({
-    content: 'import Button from "@/components/ui/button";\nimport { cn } from "@/lib/utils";\n',
-    sourcePath: "components/ai/example.tsx",
-    targetPath: "components/ai/example.tsx",
-    sourceToTarget: {
-      "components/ai/example.tsx": "components/ai/example.tsx",
-      "components/ui/button.tsx": "components/ui/button.tsx",
-      "lib/utils.ts": "lib/utils.ts",
-    },
-    config: {
-      aliases: {
-        ui: "~/ui",
-        utils: "~/lib/utils",
-      },
-    },
-  });
-
-  assert.equal(result, 'import Button from "~/ui/button";\nimport { cn } from "~/lib/utils";\n');
-});
-
-test("import rewriting falls back to relative imports without aliases", () => {
-  const result = rewriteInternalImports({
-    content: 'import { cn } from "@/lib/utils";\n',
-    sourcePath: "components/ui/button.tsx",
-    targetPath: "components/ui/button.tsx",
-    sourceToTarget: {
-      "components/ui/button.tsx": "components/ui/button.tsx",
-      "lib/utils.ts": "lib/utils.ts",
-    },
-    config: { aliases: {} },
-  });
-
-  assert.equal(result, 'import { cn } from "../../lib/utils";\n');
-});
-
-test("src-layout targets keep alias imports but write under src", () => {
-  const config = inferConfig({
-    tsconfig: {
-      compilerOptions: {
-        paths: {
-          "@/*": ["./src/*"],
-        },
-      },
-    },
-  });
-
-  const buttonTarget = resolveTargetPath("components/ui/button.tsx", config);
-  assert.equal(buttonTarget, "src/components/ui/button.tsx");
-
-  const result = rewriteInternalImports({
-    content: 'import { cn } from "@/lib/utils";\n',
-    sourcePath: "components/ui/button.tsx",
-    targetPath: buttonTarget,
-    sourceToTarget: {
-      "components/ui/button.tsx": buttonTarget,
-      "lib/utils.ts": resolveTargetPath("lib/utils.ts", config),
-    },
-    config,
-  });
-
-  assert.equal(result, 'import { cn } from "@/lib/utils";\n');
-});
-
-test("css block insertion is idempotent", () => {
-  const first = upsertIntentfaceCssBlock('@import "tailwindcss";\n', ":root { --bg: #fff; }");
-  const second = upsertIntentfaceCssBlock(first, ":root { --bg: #000; }");
-
-  assert.equal(second.match(/intentface:start/g)?.length, 1);
-  assert.ok(second.includes("--bg: #000"));
-  assert.ok(!second.includes("--bg: #fff"));
-});
-
-test("css source paths are rewritten relative to nested globals files", () => {
-  const result = upsertIntentfaceCssBlock(
-    '@import "tailwindcss";\n',
-    '@source "../node_modules/streamdown/dist/*.js";',
-    { cssPath: "src/app/globals.css" },
-  );
-
-  assert.ok(result.includes('@source "../../node_modules/streamdown/dist/*.js";'));
-});
-
-test("package manager detection follows lockfile priority", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "intentface-pm-"));
-  try {
-    assert.equal(await detectPackageManager(dir), "npm");
-    await writeFile(path.join(dir, "yarn.lock"), "");
-    assert.equal(await detectPackageManager(dir), "yarn");
-    await writeFile(path.join(dir, "pnpm-lock.yaml"), "");
-    assert.equal(await detectPackageManager(dir), "pnpm");
-    await writeFile(path.join(dir, "bun.lock"), "");
-    assert.equal(await detectPackageManager(dir), "bun");
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-test("config inference reuses shadcn aliases and css path", () => {
-  const config = inferConfig({
-    shadcnConfig: {
-      tailwind: { css: "src/app/globals.css" },
-      aliases: {
-        components: "~/components",
-        ui: "~/components/ui",
-        utils: "~/lib/utils",
-      },
-    },
-    tsconfig: null,
-  });
-
-  assert.equal(config.tailwind.css, "src/app/globals.css");
-  assert.equal(config.aliases.ui, "~/components/ui");
-  assert.equal(config.aliases.ai, "@/components/ai");
-});
-
-test("config inference detects src source root from tsconfig aliases", () => {
-  const config = inferConfig({
-    tsconfig: {
-      compilerOptions: {
-        paths: {
-          "@/*": ["src/*"],
-        },
-      },
-    },
-  });
-
-  assert.equal(config.sourceRoot, "src");
-  assert.equal(config.aliases.components, "@/components");
-});
-
-test("dry-run add resolves files without mutating a fixture project", async () => {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "intentface-fixture-"));
-  try {
-    await mkdir(path.join(dir, "app"), { recursive: true });
-    await writeFile(
-      path.join(dir, "package.json"),
-      JSON.stringify({
-        dependencies: {
-          next: "16.0.0",
-          react: "19.0.0",
-          tailwindcss: "4.0.0",
-        },
-      }),
-    );
-    await writeFile(
-      path.join(dir, "tsconfig.json"),
-      JSON.stringify({
-        compilerOptions: {
-          paths: {
-            "@/*": ["./*"],
-          },
-        },
-      }),
-    );
-    await writeFile(path.join(dir, "app/globals.css"), '@import "tailwindcss";\n');
-
-    await addItems(["button", "message"], {
-      cwd: dir,
-      dryRun: true,
-      yes: true,
-    });
-
-    await assert.rejects(readFile(path.join(dir, "components/ui/button.tsx"), "utf8"), /ENOENT/);
-  } finally {
-    await rm(dir, { recursive: true, force: true });
+  for (const item of manifest.items) {
+    for (const file of item.files ?? []) {
+      if (file.sourcePath.includes("*")) {
+        const matches = await Array.fromAsync(glob(file.sourcePath, { cwd: repoRoot }));
+        assert.ok(matches.length > 0, `${item.name}: glob "${file.sourcePath}" matched no files`);
+        continue;
+      }
+      await assert.doesNotReject(
+        stat(path.join(repoRoot, file.sourcePath)),
+        `${item.name}: sourcePath "${file.sourcePath}" does not exist`,
+      );
+    }
   }
 });

@@ -1,0 +1,35 @@
+---
+title: Introduction
+description: Headless chat UI primitives with a copy-paste styled layer.
+---
+
+**@intentface/chat** is a set of headless, unstyled chat primitives — the
+behavior, state, and wire formats for building AI chat interfaces — paired with
+a copy-paste layer of styled components you own.
+
+This is the Base UI model applied to chat: **install the logic from npm, copy
+the look from the docs.**
+
+## Two layers
+
+The headless package ships the parts that are hard to get right and rarely need
+restyling — the composer's rich-text editor and command palette, the thread's
+scroll and auto-follow, message part segmentation, the chip wire format. These
+render no styles of their own; they expose behavior through `data-*` attributes,
+context hooks, and render props.
+
+The styled layer is thin wrappers around those primitives, distributed as
+copy-paste source: each component page lists the dependencies and shows the
+`.tsx` to drop into your repo, and you own every class from then on.
+
+## Get started
+
+Install the headless package:
+
+```bash
+bun add @intentface/chat
+```
+
+Then head to a primitive page — start with the [Composer](/docs/primitives/composer) —
+to see it live, install its dependencies, and copy the styled source into your
+project.

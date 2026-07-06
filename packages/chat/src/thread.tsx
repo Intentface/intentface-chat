@@ -720,17 +720,29 @@ const COMPOSER_GAP = 32;
 const DEFAULT_DOCK_SELECTOR =
   '[data-slot="composer-context-window"], [data-slot="composer-container"]';
 
+// `dockSelector` is public API, so it may be an invalid selector string.
+// Degrade to "no dock parts" rather than letting querySelectorAll throw a
+// SyntaxError inside the layout effect (which would crash the render).
+const queryDockParts = (root: HTMLElement, dockSelector: string): Element[] => {
+  try {
+    return [...root.querySelectorAll(dockSelector)];
+  } catch {
+    return [];
+  }
+};
+
 /**
  * Height (px) to reserve at the bottom for the dock parts matching
  * `dockSelector` — but NOT the command-list / ask-user panel. The dock is
  * bottom-anchored, so it sits in a fixed region while the panel grows upward
- * above it; measuring from the bottom-most matched part's top to the root's
- * bottom captures the former and ignores the latter. Returns null when no dock
- * is mounted yet.
+ * above it. The inset is measured from a single reference — the bottom-most
+ * match's top to the root's bottom — not a sum of matches, so a taller part
+ * stacked above must fit within COMPOSER_GAP. Returns null when no dock is
+ * mounted yet.
  */
 const measureDockInset = (root: HTMLElement, dockSelector: string): number | null => {
   let dockTop: number | null = null;
-  for (const part of root.querySelectorAll(dockSelector)) {
+  for (const part of queryDockParts(root, dockSelector)) {
     const top = part.getBoundingClientRect().top;
     if (dockTop === null || top > dockTop) dockTop = top;
   }
@@ -775,7 +787,7 @@ const useThreadInsets = (dockSelector: string) => {
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(root);
-    for (const part of root.querySelectorAll(dockSelector)) {
+    for (const part of queryDockParts(root, dockSelector)) {
       observer.observe(part);
     }
     return () => observer.disconnect();
@@ -799,8 +811,10 @@ export type ThreadRootProps = PrimitiveProps<"div"> & {
   preserveScrollOnPrepend?: boolean;
   /**
    * CSS selector for the bottom-docked parts the thread reserves space for.
-   * Every match is observed for resize; the inset is measured from the
-   * bottom-most match's top edge. Defaults to the styled composer's dock
+   * Every match is observed for resize, but the reserved inset is measured
+   * from a single reference — the bottom-most match's top edge, not a sum of
+   * matches — so a taller part stacked above it must fit within the content
+   * gap. Must be a valid CSS selector. Defaults to the styled composer's dock
    * slots.
    */
   dockSelector?: string;

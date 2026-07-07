@@ -354,11 +354,13 @@ Button that opens the file dialog. Renders
 
 Shows the `PanelItem` whose `value` matches, and force-routes to the item
 with the exported `COMMAND_LIST_PANEL_VALUE` while a command prefix is open.
-Renders `data-slot="composer-panel"`.
+Renders `data-slot="composer-panel"`. The matched child renders directly; for
+open/close transitions, compose motion through the standard `render` prop —
+`open` comes from the panel's state, the matched child arrives as
+`props.children`, and `data-open`/`data-closed` are exposed to style against.
 
 export const panelProps = [
   { name: "value", type: "string", description: "Which PanelItem to show (overridden by an active command list)." },
-  { name: "renderContent", type: "(matched: ReactNode, hasMatch: boolean) => ReactNode", description: "Presentation hook for open/close transitions; without it the matched child renders directly." },
 ];
 
 <PropsTable rows={panelProps} />

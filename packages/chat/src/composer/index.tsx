@@ -26,8 +26,9 @@ import {
   ComposerCommandLoading,
 } from "./command-list";
 import { ComposerContainer } from "./container";
-import { ComposerPanel, ComposerPanelItem, ComposerPopover } from "./panel";
+import { ComposerPanel, ComposerPanelItem } from "./panel";
 import { ComposerPlaceholder } from "./placeholder";
+import { ComposerPopover } from "./popover";
 import { ComposerRoot } from "./root";
 import { createComposerStore } from "./store";
 import { ComposerTextarea } from "./textarea";
@@ -78,9 +79,10 @@ export type { EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";
 export { createMentionChipExtension } from "./mention-chip";
-export type { ComposerPanelItemProps, ComposerPanelProps, ComposerPopoverProps } from "./panel";
+export type { ComposerPanelItemProps, ComposerPanelProps } from "./panel";
 export { COMMAND_LIST_PANEL_VALUE } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
+export type { ComposerPopoverProps } from "./popover";
 export type { CommandListPluginState, RegisteredPrefix } from "./prefix-plugin";
 export { CLOSED_COMMAND_STATE, commandListPluginKey, detectActivePrefix } from "./prefix-plugin";
 export type { ComposerRootProps } from "./root";

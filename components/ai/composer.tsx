@@ -352,25 +352,30 @@ const ComposerPanel = ({ children, className, value, ...props }: ComposerPanelPr
     <ComposerPrimitive.Panel
       value={value}
       className={cn("overflow-hidden transition-transform data-open:pb-2", className)}
-      renderContent={(matchedChild, hasMatch) => (
-        <MotionConfig transition={{ duration: 0.3, type: "spring", bounce: 0 }}>
-          <AnimatePresence initial={false}>
-            {hasMatch && (
-              <motion.div
-                initial={{ y: "100%", opacity: 0 }}
-                animate={{ y: 0, opacity: 1, height: bounds.height }}
-                exit={{ y: "100%", opacity: 0 }}
-                className="overflow-hidden box-content border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle]"
-              >
-                <div ref={contentRef} className="relative">
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {matchedChild}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </MotionConfig>
+      // Same open/close motion as before, now composed through the standard
+      // `render` seam every other part uses: `open` comes from the primitive's
+      // state, and the matched child arrives as props.children.
+      render={({ children: matchedChild, ...elementProps }, state) => (
+        <div {...elementProps}>
+          <MotionConfig transition={{ duration: 0.3, type: "spring", bounce: 0 }}>
+            <AnimatePresence initial={false}>
+              {state.open && (
+                <motion.div
+                  initial={{ y: "100%", opacity: 0 }}
+                  animate={{ y: 0, opacity: 1, height: bounds.height }}
+                  exit={{ y: "100%", opacity: 0 }}
+                  className="overflow-hidden box-content border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle]"
+                >
+                  <div ref={contentRef} className="relative">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {matchedChild}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </MotionConfig>
+        </div>
       )}
       {...props}
     >
@@ -414,7 +419,7 @@ const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => (
       // Floating shell — same material as the in-flow panel, scaled down and
       // lifted above the anchor token with a stronger shadow. z-50 keeps the
       // portaled popover above the thread.
-      "z-50 mb-2 w-72 overflow-hidden border border-primary-border bg-primary rounded-2xl shadow-lg [corner-shape:squircle]",
+      "z-50 mb-2 w-72 overflow-hidden border border-primary-border bg-primary rounded-4xl shadow-lg [corner-shape:squircle]",
       "transition-[opacity,transform,filter] duration-150 ease-out",
       "data-closed:opacity-0 data-closed:translate-y-1.5 data-closed:blur-[3px]",
       className,
@@ -509,6 +514,8 @@ type ComposerCommandItemProps = ComponentProps<typeof ComposerPrimitive.CommandI
 const ComposerCommandItem = ({ className, ...props }: ComposerCommandItemProps) => (
   <ComposerPrimitive.CommandItem
     className={cn(
+      // Radius is the popover's 16px (rounded-2xl) minus the 5px gap to its edge
+      // (1px border + p-1) so the highlight corner stays concentric with it.
       "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm font-book text-ink-primary cursor-pointer data-highlighted:bg-primary-hover",
       className,
     )}

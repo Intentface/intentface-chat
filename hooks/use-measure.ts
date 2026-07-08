@@ -15,9 +15,13 @@ export const useMeasure = <T extends HTMLElement = HTMLElement>(): [
     if (!element) return;
 
     const observer = new ResizeObserver(([entry]) => {
+      // Border box (includes padding + border), not contentRect — callers size a
+      // container to this element, so a border on the measured node must count or
+      // it gets clipped. Fall back to contentRect where borderBoxSize is absent.
+      const borderBox = entry.borderBoxSize?.[0];
       setBounds({
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
+        width: borderBox ? borderBox.inlineSize : entry.contentRect.width,
+        height: borderBox ? borderBox.blockSize : entry.contentRect.height,
       });
     });
 

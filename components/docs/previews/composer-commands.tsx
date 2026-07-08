@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  COMMAND_LIST_PANEL_VALUE,
-  type CommandItemData,
-  Composer,
-  type ComposerSubmitData,
-} from "@/components/ai/composer";
+import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
 
 const MENTIONS: CommandItemData[] = [
   { value: "readme", label: "README.md", description: "Project overview" },
@@ -13,8 +8,9 @@ const MENTIONS: CommandItemData[] = [
   { value: "composer", label: "composer.tsx", description: "The composer primitive" },
 ];
 
-// Demonstrates the `@` mention command list. Type "@" in the field to trigger
-// it — the panel auto-routes to the command list while a prefix is active.
+// Demonstrates the `@` mention command list. Type "@" in the field to trigger it.
+// The Panel's children is a callback that receives composer state, so the command
+// list shows only while a prefix is active.
 export const ComposerCommands = () => {
   const handleSubmit = (_data: ComposerSubmitData) => {};
 
@@ -29,23 +25,25 @@ export const ComposerCommands = () => {
         }}
       >
         <Composer.Panel>
-          <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
-            <Composer.CommandList prefix="@">
-              <Composer.CommandEmpty />
-              <Composer.CommandItems>
-                {(item) => (
-                  <Composer.CommandItem value={item.value}>
-                    <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                    {item.description && (
-                      <Composer.CommandItemDescription>
-                        {item.description}
-                      </Composer.CommandItemDescription>
-                    )}
-                  </Composer.CommandItem>
-                )}
-              </Composer.CommandItems>
-            </Composer.CommandList>
-          </Composer.PanelItem>
+          {(composer) =>
+            composer.commands.active ? (
+              <Composer.CommandList prefix="@">
+                <Composer.CommandEmpty />
+                <Composer.CommandItems>
+                  {(item) => (
+                    <Composer.CommandItem value={item.value}>
+                      <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                      {item.description && (
+                        <Composer.CommandItemDescription>
+                          {item.description}
+                        </Composer.CommandItemDescription>
+                      )}
+                    </Composer.CommandItem>
+                  )}
+                </Composer.CommandItems>
+              </Composer.CommandList>
+            ) : null
+          }
         </Composer.Panel>
         <Composer.Container>
           <Composer.Textarea>

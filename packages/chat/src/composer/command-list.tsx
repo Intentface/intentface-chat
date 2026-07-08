@@ -3,7 +3,7 @@
 // Composer.CommandList family — resolution (sync/async items, fuzzy filter),
 // keyboard/mouse selection, chip insertion, dismissal, and the nav/items
 // context split (highlight changes don't re-render the items map, and items
-// mutations don't re-render every row). All unstyled; state surfaces as
+// mutations don't re-render every row). All unstyled; state panels as
 // data-state / data-highlighted.
 
 import {
@@ -150,8 +150,11 @@ export const ComposerCommandList = ({
   const attachments = useComposer((composer) => composer.attachments);
   const internals = useComposerInternals();
 
+  // Content only: renders when this prefix is the active one, else null. The
+  // consumer gates the enclosing Panel/Popover on `commands.active`, so the
+  // container follows this null-vs-node — no registration, no claim.
   const isActive = useComposer(
-    (composer) => composer.commands.isOpen && composer.commands.trigger === prefix,
+    (composer) => composer.commands.active && composer.commands.trigger === prefix,
   );
   const query = useComposer((composer) => composer.commands.query);
 

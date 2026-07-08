@@ -239,7 +239,7 @@ export const ComposerTextarea = ({
     onTransaction: ({ editor: instance }) => {
       const pluginState = commandListPluginKey.getState(instance.state);
       store.setCommands({
-        isOpen: pluginState?.isOpen ?? false,
+        active: pluginState?.isOpen ?? false,
         trigger: pluginState?.trigger ?? null,
         query: pluginState?.query ?? "",
       });

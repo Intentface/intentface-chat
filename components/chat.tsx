@@ -31,12 +31,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  COMMAND_LIST_PANEL_VALUE,
-  type CommandItemData,
-  Composer,
-  type ComposerSubmitData,
-} from "@/components/ai/composer";
+import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { StepQueue } from "@/components/ai/step-queue";
@@ -767,67 +762,81 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
       }}
       questions={askUserQuestions ?? undefined}
     >
-      <Composer.Panel value={panelState.type}>
-        <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
-          <Composer.CommandList prefix="@">
-            <Composer.CommandLoading />
-            <Composer.CommandEmpty />
-            <Composer.CommandItems>
-              {(item) => (
-                <Composer.CommandItem value={item.value}>
-                  {item.icon && (
-                    <Composer.CommandItemIcon>{CHIP_ICONS[item.icon]}</Composer.CommandItemIcon>
-                  )}
-                  <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                </Composer.CommandItem>
-              )}
-            </Composer.CommandItems>
-          </Composer.CommandList>
-
-          <Composer.CommandList prefix="/">
-            <Composer.CommandLoading />
-            <Composer.CommandEmpty />
-            <Composer.CommandItems>
-              {(item) => (
-                <Composer.CommandItem value={item.value}>
-                  {item.icon && (
-                    <Composer.CommandItemIcon>{CHIP_ICONS[item.icon]}</Composer.CommandItemIcon>
-                  )}
-                  <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                  {item.description && (
-                    <Composer.CommandItemDescription>
-                      {item.description}
-                    </Composer.CommandItemDescription>
-                  )}
-                </Composer.CommandItem>
-              )}
-            </Composer.CommandItems>
-          </Composer.CommandList>
-        </Composer.PanelItem>
-        <Composer.PanelItem value="active">
-          <StepQueue>
-            {activeSteps.map((step, i) => {
-              const active = i === activeSteps.length - 1;
-              return (
-                <StepQueue.Item key={step.key}>
-                  <StepQueue.Icon>
-                    {step.kind === "thinking" ? (
-                      <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
-                    ) : active ? (
-                      <Loader className="size-3.5 animate-spin" />
-                    ) : (
-                      <CircleDotIcon className="size-3.5" />
+      <Composer.Panel>
+        {(composer) => {
+          // One at a time, by priority: an active command list wins, else the
+          // app-derived panelState (ask-user / active steps).
+          if (composer.commands.active) {
+            return (
+              <>
+                <Composer.CommandList prefix="@">
+                  <Composer.CommandLoading />
+                  <Composer.CommandEmpty />
+                  <Composer.CommandItems>
+                    {(item) => (
+                      <Composer.CommandItem value={item.value}>
+                        {item.icon && (
+                          <Composer.CommandItemIcon>
+                            {CHIP_ICONS[item.icon]}
+                          </Composer.CommandItemIcon>
+                        )}
+                        <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                      </Composer.CommandItem>
                     )}
-                  </StepQueue.Icon>
-                  <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
-                </StepQueue.Item>
-              );
-            })}
-          </StepQueue>
-        </Composer.PanelItem>
-        <Composer.PanelItem value="ask-user">
-          <Composer.AskUser />
-        </Composer.PanelItem>
+                  </Composer.CommandItems>
+                </Composer.CommandList>
+                <Composer.CommandList prefix="/">
+                  <Composer.CommandLoading />
+                  <Composer.CommandEmpty />
+                  <Composer.CommandItems>
+                    {(item) => (
+                      <Composer.CommandItem value={item.value}>
+                        {item.icon && (
+                          <Composer.CommandItemIcon>
+                            {CHIP_ICONS[item.icon]}
+                          </Composer.CommandItemIcon>
+                        )}
+                        <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                        {item.description && (
+                          <Composer.CommandItemDescription>
+                            {item.description}
+                          </Composer.CommandItemDescription>
+                        )}
+                      </Composer.CommandItem>
+                    )}
+                  </Composer.CommandItems>
+                </Composer.CommandList>
+              </>
+            );
+          }
+          if (panelState.type === "ask-user") return <Composer.AskUser />;
+          if (panelState.type === "active") {
+            return (
+              <div className="p-2">
+                <StepQueue>
+                  {activeSteps.map((step, i) => {
+                    const active = i === activeSteps.length - 1;
+                    return (
+                      <StepQueue.Item key={step.key}>
+                        <StepQueue.Icon>
+                          {step.kind === "thinking" ? (
+                            <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
+                          ) : active ? (
+                            <Loader className="size-3.5 animate-spin" />
+                          ) : (
+                            <CircleDotIcon className="size-3.5" />
+                          )}
+                        </StepQueue.Icon>
+                        <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
+                      </StepQueue.Item>
+                    );
+                  })}
+                </StepQueue>
+              </div>
+            );
+          }
+          return null;
+        }}
       </Composer.Panel>
 
       <Composer.ContextWindow>

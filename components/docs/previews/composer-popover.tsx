@@ -8,9 +8,9 @@ const MENTIONS: CommandItemData[] = [
   { value: "composer", label: "composer.tsx", description: "The composer primitive" },
 ];
 
-// The floating variant. Composer.Popover takes the same CommandList children as
-// Composer.Panel, but portals them above the field instead of growing it — type
-// "@" and the list overlays, anchored to the trigger, without shifting layout.
+// The floating variant. Composer.Popover takes the same content as a Composer.Panel
+// (including the state callback) but portals it above the field instead of growing
+// it — it opens while the command list is active.
 export const ComposerPopover = () => {
   const handleSubmit = (_data: ComposerSubmitData) => {};
 
@@ -22,21 +22,25 @@ export const ComposerPopover = () => {
       }}
     >
       <Composer.Popover>
-        <Composer.CommandList prefix="@">
-          <Composer.CommandEmpty />
-          <Composer.CommandItems>
-            {(item) => (
-              <Composer.CommandItem value={item.value}>
-                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                {item.description && (
-                  <Composer.CommandItemDescription>
-                    {item.description}
-                  </Composer.CommandItemDescription>
+        {(composer) =>
+          composer.commands.active ? (
+            <Composer.CommandList prefix="@">
+              <Composer.CommandEmpty />
+              <Composer.CommandItems>
+                {(item) => (
+                  <Composer.CommandItem value={item.value}>
+                    <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                    {item.description && (
+                      <Composer.CommandItemDescription>
+                        {item.description}
+                      </Composer.CommandItemDescription>
+                    )}
+                  </Composer.CommandItem>
                 )}
-              </Composer.CommandItem>
-            )}
-          </Composer.CommandItems>
-        </Composer.CommandList>
+              </Composer.CommandItems>
+            </Composer.CommandList>
+          ) : null
+        }
       </Composer.Popover>
       <Composer.Container>
         <Composer.Textarea>

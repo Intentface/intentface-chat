@@ -25,10 +25,13 @@ export const ComposerContextWindow = ({
   style,
   ...elementProps
 }: ComposerContextWindowProps) => {
-  const isPanelOpen = useComposer((composer) => composer.panel.isOpen);
+  // Yield while any native panel is active — the strip slides back out once they
+  // close. (Union of the native slices; no central registry.)
+  const anyPanelActive = useComposer(
+    (composer) => composer.commands.active || composer.askUser.active,
+  );
   const hasContent = Children.toArray(children).length > 0;
-  // Yield to an open panel — the strip slides back out once it closes.
-  const isVisible = hasContent && !isPanelOpen;
+  const isVisible = hasContent && !anyPanelActive;
 
   return useRenderElement(
     "div",

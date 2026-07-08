@@ -56,12 +56,9 @@ export const ComposerAskUserFlow = () => {
     // Reserve height and bottom-anchor so the ask-user panel opening (and the
     // reset button appearing) never shifts the surrounding layout.
     <div className="flex min-h-[440px] w-full max-w-xl flex-col items-center justify-end gap-3">
-      <Composer questions={questions} onSubmit={handleSubmit}>
-        <Composer.Panel value={done ? undefined : "ask-user"}>
-          <Composer.PanelItem value="ask-user">
-            <Composer.AskUser />
-          </Composer.PanelItem>
-        </Composer.Panel>
+      <Composer questions={done ? undefined : questions} onSubmit={handleSubmit}>
+        {/* Plain children, gated with the preview's own state — no callback needed. */}
+        <Composer.Panel>{!done && <Composer.AskUser />}</Composer.Panel>
         <Composer.Container>
           <Composer.Textarea>
             <Composer.Placeholder

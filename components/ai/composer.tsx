@@ -14,7 +14,7 @@ import {
   useComposerStore,
   useComposerSubmit,
 } from "@intentface/chat/composer";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Children, type ComponentProps, type ReactNode, useMemo, useRef } from "react";
 import { AskUser } from "@/components/ai/ask-user";
 import { Attachments } from "@/components/ai/attachments";
@@ -36,7 +36,6 @@ import { cn } from "@/lib/utils";
 
 export { useComposer, useComposerController, useComposerStore };
 export type { ComposerStore };
-export { COMMAND_LIST_PANEL_VALUE } from "@intentface/chat/composer";
 
 // The wire format carries the icon as an opaque string; this app's command
 // items narrow it to the concrete union so CHIP_ICONS indexing stays typed.
@@ -338,95 +337,77 @@ const ComposerSubmit = ({
 };
 
 // ---------------------------------------------------------------------------
-// Panel / PanelItem
+// Panel — an in-flow surface card. The primitive always renders the outer host
+// and hands us `open` (non-empty content) as the render's second arg. Because
+// that host is always mounted, the AnimatePresence inside it stays put and can
+// watch the card mount/unmount as `open` flips — so open and close both animate.
+// The measured inner div drives the card's height between content changes.
 // ---------------------------------------------------------------------------
 
-type ComposerPanelProps = ComponentProps<"div"> & {
-  value?: string;
-};
+type ComposerPanelProps = Omit<ComponentProps<typeof ComposerPrimitive.Panel>, "render">;
 
-const ComposerPanel = ({ children, className, value, ...props }: ComposerPanelProps) => {
+const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => {
   const [contentRef, bounds] = useMeasure();
 
   return (
     <ComposerPrimitive.Panel
-      value={value}
-      className={cn("overflow-hidden transition-transform data-open:pb-2", className)}
-      // Same open/close motion as before, now composed through the standard
-      // `render` seam every other part uses: `open` comes from the primitive's
-      // state, and the matched child arrives as props.children.
-      render={({ children: matchedChild, ...elementProps }, state) => (
+      {...props}
+      className="relative"
+      render={({ children: content, ...elementProps }, state) => (
         <div {...elementProps}>
-          <MotionConfig transition={{ duration: 0.3, type: "spring", bounce: 0 }}>
-            <AnimatePresence initial={false}>
-              {state.open && (
-                <motion.div
-                  initial={{ y: "100%", opacity: 0 }}
-                  animate={{ y: 0, opacity: 1, height: bounds.height }}
-                  exit={{ y: "100%", opacity: 0 }}
-                  className="overflow-hidden box-content border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle]"
+          <AnimatePresence mode="popLayout" initial={false}>
+            {state.open && (
+              <motion.div
+                // justify-end pins the content to the bottom of the clipping box,
+                // so height changes reveal/hide at the top and the bottom stays put.
+                className={cn("absolute inset-x-0 bottom-2 overflow-hidden", className)}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: bounds.height, opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ type: "spring", bounce: 0, duration: 0.15 }}
+              >
+                <div
+                  ref={contentRef}
+                  className="rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]"
                 >
-                  <div ref={contentRef} className="relative">
-                    <AnimatePresence mode="popLayout" initial={false}>
-                      {matchedChild}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </MotionConfig>
+                  {content}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
-      {...props}
-    >
-      {children}
-    </ComposerPrimitive.Panel>
+    />
   );
 };
 
-type ComposerPanelItemProps = Omit<ComponentProps<typeof motion.div>, "value"> & {
-  value: string;
-  children: ReactNode;
-};
-
-const ComposerPanelItem = ({ value, children, ...props }: ComposerPanelItemProps) => (
-  <motion.div
-    key={value}
-    data-slot="composer-panel-item"
-    initial={{ opacity: 0, filter: "blur(8px)" }}
-    animate={{ opacity: 1, filter: "blur(0px)" }}
-    exit={{ opacity: 0, filter: "blur(8px)" }}
-    {...props}
-  >
-    {children}
-  </motion.div>
-);
-
 // ---------------------------------------------------------------------------
-// Popover — the floating alternative to Panel. Takes the same CommandList
+// Popover — the floating alternative to a Panel. Takes the same CommandList
 // children but lifts them into a portal above the field, anchored to the active
-// command badge. The package keeps the host mounted and exposes open state as
-// data-open/data-closed; this layer is the visual shell and animates the
-// enter/exit off those attributes — same approach as ContextWindow's
-// data-visible. Dismissal (Escape, editor blur) is wired in the package.
+// command badge. Content-driven like Panel (no `open` prop): the primitive opens
+// while it has children, and exposes data-open/data-closed for the enter/exit
+// animation below — same approach as ContextWindow's data-visible.
 // ---------------------------------------------------------------------------
 
 type ComposerPopoverProps = ComponentProps<typeof ComposerPrimitive.Popover>;
 
-const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => (
-  <ComposerPrimitive.Popover
-    className={cn(
-      // Floating shell — same material as the in-flow panel, scaled down and
-      // lifted above the anchor token with a stronger shadow. z-50 keeps the
-      // portaled popover above the thread.
-      "z-50 mb-2 w-72 overflow-hidden border border-primary-border bg-primary rounded-4xl shadow-lg [corner-shape:squircle]",
-      "transition-[opacity,transform,filter] duration-150 ease-out",
-      "data-closed:opacity-0 data-closed:translate-y-1.5 data-closed:blur-[3px]",
-      className,
-    )}
-    {...props}
-  />
-);
+const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => {
+  return (
+    <ComposerPrimitive.Popover
+      className={cn(
+        // Floating shell — same material as the in-flow panel, scaled down and
+        // lifted above the anchor token with a stronger shadow. `fixed` is the
+        // positioning context the primitive anchors within (it sets left/bottom);
+        // z-50 keeps the portaled popover above the thread.
+        "fixed z-50 mb-2 w-72 overflow-hidden border border-primary-border bg-primary rounded-4xl shadow-lg [corner-shape:squircle]",
+        "transition-[opacity,transform,filter] duration-150 ease-out",
+        "data-closed:opacity-0 data-closed:translate-y-1.5 data-closed:blur-[3px]",
+        className,
+      )}
+      {...props}
+    />
+  );
+};
 
 // ---------------------------------------------------------------------------
 // CommandList family
@@ -437,6 +418,8 @@ type ComposerCommandListProps = ComponentProps<typeof ComposerPrimitive.CommandL
 const ComposerCommandList = ({ className, ...props }: ComposerCommandListProps) => (
   <ComposerPrimitive.CommandList
     className={cn(
+      // Pure content — the host (a PanelItem card or the Popover) supplies the
+      // surface material and positioning; this is just the scrollable list.
       "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1 scroll-py-1",
       className,
     )}
@@ -575,6 +558,9 @@ const ComposerCommandCollection = ComposerPrimitive.CommandCollection;
 const ComposerAskUser = () => {
   const askUser = useComposer((composer) => composer.askUser);
 
+  // Content only. The consumer gates the enclosing Panel on `askUser.active`;
+  // this renders the question compound, or null when there are none. `display`
+  // keeps the last question on screen through an exit animation.
   const question = askUser.questions?.[askUser.step] ?? null;
   const lastQuestionRef = useRef(question);
   if (question) lastQuestionRef.current = question;
@@ -596,7 +582,9 @@ const ComposerAskUser = () => {
         {!askUser.isSingle && totalQuestions > 1 && (
           <AskUser.Navigation>
             <AskUser.Previous onClick={askUser.goBack} disabled={askUser.step === 0} />
-            <AskUser.StepLabel current={askUser.step + 1} total={totalQuestions} />
+            <AskUser.StepLabel>
+              {({ current, total }) => `${current} of ${total} questions`}
+            </AskUser.StepLabel>
             <AskUser.Next onClick={askUser.goNext} disabled={askUser.step === totalQuestions - 1} />
           </AskUser.Navigation>
         )}
@@ -706,7 +694,6 @@ export const Composer = Object.assign(ComposerRoot, {
   Placeholder: ComposerPlaceholder,
   Submit: ComposerSubmit,
   Panel: ComposerPanel,
-  PanelItem: ComposerPanelItem,
   Popover: ComposerPopover,
   Textarea: ComposerTextarea,
   AskUser: ComposerAskUser,

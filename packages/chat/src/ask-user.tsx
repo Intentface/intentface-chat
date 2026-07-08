@@ -8,6 +8,7 @@
 
 import {
   createContext,
+  type ReactNode,
   type RefObject,
   use,
   useCallback,
@@ -17,6 +18,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useComposer } from "./composer/store";
 import type { PrimitiveProps } from "./internal/primitive-props";
 import { useRenderElement } from "./internal/render/useRenderElement";
 
@@ -80,31 +82,32 @@ const AskUserNext = ({ className, render, style, ...elementProps }: AskUserNextP
     { props: [{ "data-slot": "ask-user-next" }, elementProps] },
   );
 
-/** Displays "{current} of {total}" step indicator. Supports custom children to override the default text. */
-export type AskUserStepLabelProps = PrimitiveProps<"span"> & {
-  current: number;
-  total: number;
+/** Step indicator. Reads the current step + total from the composer store; the
+ * consumer supplies the text via `children` — either a node, or a callback
+ * receiving `{ current, total }` (1-based current). No default format. */
+export type AskUserStepLabelState = { current: number; total: number };
+
+export type AskUserStepLabelProps = Omit<PrimitiveProps<"span">, "children"> & {
+  children?: ReactNode | ((state: AskUserStepLabelState) => ReactNode);
 };
 
 const AskUserStepLabel = ({
-  current,
-  total,
   children,
   className,
   render,
   style,
   ...elementProps
-}: AskUserStepLabelProps) =>
-  useRenderElement(
+}: AskUserStepLabelProps) => {
+  const current = useComposer((composer) => composer.askUser.step) + 1;
+  const total = useComposer((composer) => composer.askUser.questions?.length ?? 0);
+  const content = typeof children === "function" ? children({ current, total }) : children;
+
+  return useRenderElement(
     "span",
     { className, render, style },
-    {
-      props: [
-        { "data-slot": "ask-user-step-label", children: children ?? `${current} / ${total}` },
-        elementProps,
-      ],
-    },
+    { props: [{ "data-slot": "ask-user-step-label", children: content }, elementProps] },
   );
+};
 
 /** Fieldset wrapper for `Option` items. Provides `multiSelect`, `groupName`, and highlight state to child options via context. Items self-register on mount (cmdk pattern). */
 type OptionsContextValue = {
@@ -387,6 +390,26 @@ const AskUserHints = ({ className, render, style, ...elementProps }: AskUserHint
     { props: [{ "data-slot": "ask-user-hints" }, elementProps] },
   );
 
+/** Dismiss/skip button. Stateless — wire `onClick` to your dismiss handler. */
+export type AskUserDismissProps = PrimitiveProps<"button">;
+
+const AskUserDismiss = ({ className, render, style, ...elementProps }: AskUserDismissProps) =>
+  useRenderElement(
+    "button",
+    { className, render, style },
+    { props: [{ type: "button" as const, "data-slot": "ask-user-dismiss" }, elementProps] },
+  );
+
+/** Continue/submit button — `type=submit` so the enclosing form drives it. */
+export type AskUserContinueProps = PrimitiveProps<"button">;
+
+const AskUserContinue = ({ className, render, style, ...elementProps }: AskUserContinueProps) =>
+  useRenderElement(
+    "button",
+    { className, render, style },
+    { props: [{ type: "submit" as const, "data-slot": "ask-user-continue" }, elementProps] },
+  );
+
 export const AskUser = Object.assign(AskUserRoot, {
   Header: AskUserHeader,
   Label: AskUserLabel,
@@ -400,4 +423,6 @@ export const AskUser = Object.assign(AskUserRoot, {
   OptionLabel: AskUserOptionLabel,
   OptionDescription: AskUserOptionDescription,
   Hints: AskUserHints,
+  Dismiss: AskUserDismiss,
+  Continue: AskUserContinue,
 });

@@ -147,7 +147,6 @@ export const ComposerCommandList = ({
   ...elementProps
 }: ComposerCommandListProps) => {
   const store = useComposerContextStore();
-  const attachments = useComposer((composer) => composer.attachments);
   const internals = useComposerInternals();
 
   // Content only: renders when this prefix is the active one, else null. The
@@ -214,20 +213,20 @@ export const ComposerCommandList = ({
           .focus()
           .deleteRange({ from: triggerStartPosition, to: triggerEndPosition })
           .run();
+        // Read the attachment actions lazily at selection time — their
+        // identities are store-stable, so subscribing would only re-render the
+        // list on unrelated attachment changes.
+        const { add, remove, openFileDialog } = store.getSnapshot().attachments;
         const onSelectContext: PrefixOnSelectContext = {
           editor: store.controller,
-          attachments: {
-            add: attachments.add,
-            remove: attachments.remove,
-            openFileDialog: attachments.openFileDialog,
-          },
+          attachments: { add, remove, openFileDialog },
         };
         dataItem.onSelect?.(onSelectContext);
       }
 
       editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
     },
-    [store, items, kind, prefix, attachments],
+    [store, items, kind, prefix],
   );
 
   const dismiss = useCallback(() => {

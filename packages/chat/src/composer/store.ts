@@ -56,7 +56,7 @@ export type ComposerAttachmentsState = {
   globalDropRef: RefObject<boolean>;
 };
 
-export type ComposerAskUserState = {
+export type ComposerAskUserState = ComposerPanelSlice & {
   questions: AskUserQuestion[] | null;
   step: number;
   answers: Map<number, AnswerEntry>;
@@ -76,25 +76,19 @@ export type ComposerAskUserState = {
 // highlight lives here — not in the CommandList component — so the editor's
 // keydown handler (outside React) can move it through a plain store method
 // instead of a bridged ref. It's a raw index; readers wrap it by item count.
-export type ComposerCommandsState = {
-  isOpen: boolean;
+// Every native panel slice (commands, ask-user, and later tool-approval) shares
+// this skeleton, so a consumer can gate any of them the same way
+// (`{commands.active && <…/>}`); each adds its own payload/actions on top.
+export type ComposerPanelSlice = { active: boolean };
+
+// Command-list state: the plugin mirror (which trigger prefix is active, the query
+// typed after it) plus the navigation highlight. The highlight lives here — not in
+// the CommandList component — so the editor's keydown handler (outside React) can
+// move it through a plain store method. Raw index; readers wrap it by item count.
+export type ComposerCommandsState = ComposerPanelSlice & {
   trigger: string | null;
   query: string;
   highlightIndex: number;
-  // items: ComposerCommandItem[];
-};
-
-// export type ComposerCommandItem = {
-//   icon: ReactNode;
-//   label: string;
-//   value: string;
-// };
-
-// The effective open panel — `value` is the matched Composer.PanelItem value
-// (including the "command-list" override), null while closed.
-export type ComposerPanelState = {
-  isOpen: boolean;
-  value: string | null;
 };
 
 export type ComposerState = {
@@ -102,7 +96,6 @@ export type ComposerState = {
   // hasContent flag: const textarea = useComposer((c) => c.textarea)
   textarea: ComposerEditorState & { hasContent: boolean };
   isSubmitting: boolean;
-  panel: ComposerPanelState;
   commands: ComposerCommandsState;
   attachments: ComposerAttachmentsState;
   askUser: ComposerAskUserState;
@@ -118,8 +111,7 @@ export type ComposerStore = {
   // Bridges for props and editor/document integrations — not consumer API.
   setHasContent: (value: boolean) => void;
   setIsSubmitting: (value: boolean) => void;
-  setPanelValue: (value: string | null) => void;
-  setCommands: (next: { isOpen: boolean; trigger: string | null; query: string }) => void;
+  setCommands: (next: { active: boolean; trigger: string | null; query: string }) => void;
   moveHighlight: (direction: number) => void;
   setHighlight: (index: number) => void;
   setQuestions: (questions: AskUserQuestion[] | null) => void;
@@ -132,6 +124,11 @@ export type ComposerStore = {
   editorRef: RefObject<Editor | null>;
   controller: ComposerEditorState;
   registerEditor: (editor: Editor) => () => void;
+  // The mounted Composer.Container's element, registered by its render ref.
+  // Composer.Popover anchors to the active command badge inside the editor, but
+  // observes this box to reposition — the badge moves when the container grows
+  // (attachments strip, multi-line input).
+  containerRef: RefObject<HTMLElement | null>;
   // Co-located refs the mounted Composer wires up at runtime.
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
@@ -157,6 +154,7 @@ export const createComposerStore = (): ComposerStore => {
   };
 
   // Imperative refs co-located with the store; not reactive.
+  const containerRef: RefObject<HTMLElement | null> = { current: null };
   const optionsRef: RefObject<AskUserOptionsHandle | null> = { current: null };
   const fileInputRef: RefObject<HTMLInputElement | null> = { current: null };
   const globalDropRef: RefObject<boolean> = { current: false };
@@ -194,16 +192,10 @@ export const createComposerStore = (): ComposerStore => {
     notify();
   };
 
-  const setPanelValue = (value: string | null) => {
-    if (snapshot.panel.value === value) return;
-    snapshot = { ...snapshot, panel: { isOpen: value !== null, value } };
-    notify();
-  };
-
-  const setCommands = (next: { isOpen: boolean; trigger: string | null; query: string }) => {
+  const setCommands = (next: { active: boolean; trigger: string | null; query: string }) => {
     const current = snapshot.commands;
     if (
-      current.isOpen === next.isOpen &&
+      current.active === next.active &&
       current.trigger === next.trigger &&
       current.query === next.query
     ) {
@@ -310,6 +302,7 @@ export const createComposerStore = (): ComposerStore => {
       ...snapshot,
       askUser: {
         ...snapshot.askUser,
+        active: questions != null,
         questions,
         step: askUserMachine.step,
         answers: askUserMachine.answers,
@@ -386,8 +379,7 @@ export const createComposerStore = (): ComposerStore => {
   snapshot = {
     textarea: { ...controller, hasContent: false },
     isSubmitting: false,
-    panel: { isOpen: false, value: null },
-    commands: { isOpen: false, trigger: null, query: "", highlightIndex: 0 },
+    commands: { active: false, trigger: null, query: "", highlightIndex: 0 },
     attachments: {
       items: attachmentState.items,
       error: attachmentState.error,
@@ -399,6 +391,7 @@ export const createComposerStore = (): ComposerStore => {
       globalDropRef,
     },
     askUser: {
+      active: false,
       questions: null,
       step: askUserMachine.step,
       answers: askUserMachine.answers,
@@ -439,7 +432,6 @@ export const createComposerStore = (): ComposerStore => {
     getSnapshot: () => snapshot,
     setHasContent,
     setIsSubmitting,
-    setPanelValue,
     setCommands,
     moveHighlight,
     setHighlight,
@@ -451,6 +443,7 @@ export const createComposerStore = (): ComposerStore => {
     editorRef,
     controller,
     registerEditor,
+    containerRef,
     attachmentConfigRef,
     submitAnswersRef,
     commandSelectRef,

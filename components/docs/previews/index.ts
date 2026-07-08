@@ -7,6 +7,7 @@ import { ComposerAttachments } from "./composer-attachments";
 import { ComposerBasic } from "./composer-basic";
 import { ComposerCommands } from "./composer-commands";
 import { ComposerControlled } from "./composer-controlled";
+import { ComposerPopover } from "./composer-popover";
 import { ComposerStoreDemo } from "./composer-store";
 import { MessageBasic } from "./message-basic";
 import { ReasoningBasic } from "./reasoning-basic";
@@ -38,6 +39,7 @@ export const previews: Record<string, PreviewEntry> = {
     file: `${dir}/composer-attachments.tsx`,
   },
   "composer-controlled": { Component: ComposerControlled, file: `${dir}/composer-controlled.tsx` },
+  "composer-popover": { Component: ComposerPopover, file: `${dir}/composer-popover.tsx` },
   "composer-store": { Component: ComposerStoreDemo, file: `${dir}/composer-store.tsx` },
   "thread-basic": { Component: ThreadBasic, file: `${dir}/thread-basic.tsx` },
   "message-basic": { Component: MessageBasic, file: `${dir}/message-basic.tsx` },

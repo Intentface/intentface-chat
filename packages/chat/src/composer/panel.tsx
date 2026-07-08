@@ -1,108 +1,50 @@
 "use client";
 
-// Composer.Panel — owns which panel content is active: the command-list
-// override, the matched Composer.PanelItem child, and the store mirror that
-// lets siblings (the context window) yield while a panel is open. The open/
-// close transition is presentation: the styled layer supplies renderContent
-// and composes its own motion around the matched child.
+// Composer.Panel — the in-flow surface region. `children` is either normal nodes
+// or a callback receiving the whole composer state, so you can pick what to show
+// by priority: `{(c) => c.commands.active ? <CommandList/> : c.askUser.active ?
+// <AskUser/> : null}`. Gate with the callback when you need a native's store
+// state; pass plain children gated with your own state otherwise.
+//
+// The host element always renders; visibility is exposed as `open` (whether the
+// resolved content is non-empty) via the render's second arg and data-open/
+// data-closed — the same seam as Composer.Popover. That lets the styled layer
+// mount the card under an AnimatePresence and get a real open/close transition.
 
-import { Children, Fragment, isValidElement, type ReactNode, useEffect } from "react";
+import { Children, type ReactNode } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping } from "../internal/state-mappings";
-import { useComposer, useComposerContextStore } from "./store";
-
-/**
- * Reserved `Composer.PanelItem` value the panel routes to while a command-list
- * prefix is active. Give your command-list panel item this value.
- */
-export const COMMAND_LIST_PANEL_VALUE = "command-list";
+import { type ComposerState, useComposer } from "./store";
 
 export type ComposerPanelState = {
   open: boolean;
 };
 
+export type ComposerPanelChildren = ReactNode | ((composer: ComposerState) => ReactNode);
+
 export type ComposerPanelProps = Omit<PrimitiveProps<"div", ComposerPanelState>, "children"> & {
-  value?: string;
-  children?: ReactNode;
-  /**
-   * Presentation inversion: receives the matched panel child (or null) and
-   * whether a match exists; compose your open/close transition around it.
-   * Without it, the matched child renders directly.
-   */
-  renderContent?: (matchedChild: ReactNode, hasMatch: boolean) => ReactNode;
+  children?: ComposerPanelChildren;
 };
 
 export const ComposerPanel = ({
-  children,
-  value,
-  renderContent,
   className,
   render,
   style,
+  children,
   ...elementProps
 }: ComposerPanelProps) => {
-  const store = useComposerContextStore();
-  const isCommandListOpen = useComposer((composer) => composer.commands.isOpen);
-
-  // When a command-list prefix is active, route the panel to its
-  // command-list item regardless of what the consumer passed.
-  const effectiveValue = isCommandListOpen ? COMMAND_LIST_PANEL_VALUE : value;
-
-  const matchedChild = effectiveValue
-    ? Children.toArray(children).find(
-        (child) =>
-          isValidElement(child) && (child.props as { value?: string }).value === effectiveValue,
-      )
-    : null;
-  const hasMatch = matchedChild != null;
-
-  // Mirror the open panel into the store so sibling parts (the context
-  // window) can yield while a panel is open and consumers can read which
-  // panel is active.
-  useEffect(() => {
-    store.setPanelValue(hasMatch ? (effectiveValue ?? null) : null);
-    return () => store.setPanelValue(null);
-  }, [store, hasMatch, effectiveValue]);
+  const composer = useComposer((c) => c);
+  const content = typeof children === "function" ? children(composer) : children;
+  const open = Children.toArray(content).length > 0;
 
   return useRenderElement(
     "div",
     { className, render, style },
     {
-      state: { open: hasMatch },
+      state: { open },
       stateAttributesMapping: openStateMapping,
-      props: [
-        {
-          "data-slot": "composer-panel",
-          children: renderContent
-            ? renderContent(matchedChild ?? null, hasMatch)
-            : hasMatch
-              ? matchedChild
-              : null,
-        },
-        elementProps,
-      ],
+      props: [{ "data-slot": "composer-panel", children: content }, elementProps],
     },
   );
-};
-
-export type ComposerPanelItemProps = PrimitiveProps<"div"> & {
-  value: string;
-};
-
-export const ComposerPanelItem = ({
-  value,
-  className,
-  render,
-  style,
-  ...elementProps
-}: ComposerPanelItemProps) => {
-  const element = useRenderElement(
-    "div",
-    { className, render, style },
-    { props: [{ "data-slot": "composer-panel-item" }, elementProps] },
-  );
-
-  // Keyed per value so switching panels remounts the item's subtree.
-  return <Fragment key={value}>{element}</Fragment>;
 };

@@ -1,16 +1,8 @@
 "use client";
 
-import {
-  CircleDotIcon,
-  FileCodeIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-  Loader,
-  ScanIcon,
-} from "lucide-react";
+import { FileCodeIcon, FileSpreadsheetIcon, FileTextIcon, ScanIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { COMMAND_LIST_PANEL_VALUE, type CommandItemData, Composer } from "@/components/ai/composer";
-import { StepQueue } from "@/components/ai/step-queue";
+import { type CommandItemData, Composer } from "@/components/ai/composer";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
@@ -23,18 +15,6 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 // Composer States panel — needs useComposer() so must be inside <Composer>
 // ---------------------------------------------------------------------------
-
-const stepLabels = [
-  "Analyzing query",
-  "Searching knowledge base",
-  "Generating response",
-  "Filtering results",
-  "Ranking documents",
-  "Extracting entities",
-  "Summarizing findings",
-  "Verifying sources",
-  "Building context",
-];
 
 const singleQuestion: AskUserQuestion[] = [
   {
@@ -167,7 +147,6 @@ export default function ComponentsPlayground() {
   const [composerState, setComposerState] = useState<
     "idle" | "active" | "ask-user" | "ask-user-multi"
   >("idle");
-  const [composerSteps, setComposerSteps] = useState(stepLabels.slice(0, 1));
   // Independent of the panel states — the context window can be visible at
   // the same time as any panel.
   const [showContextWindow, setShowContextWindow] = useState(false);
@@ -197,13 +176,6 @@ export default function ComponentsPlayground() {
     ],
     [setTool],
   );
-
-  const panelValue =
-    composerState === "active"
-      ? "active"
-      : composerState === "ask-user" || composerState === "ask-user-multi"
-        ? "ask-user"
-        : "idle";
 
   const questions =
     composerState === "ask-user"
@@ -249,54 +221,36 @@ export default function ComponentsPlayground() {
                 }}
                 questions={questions}
               >
-                <Composer.Panel
-                  value={panelValue}
-                  className="absolute bottom-full left-0 right-0 z-10 mb-2 w-full data-open:pb-0"
-                >
-                  <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
-                    {["@", "/", "#"].map((prefix) => (
-                      <Composer.CommandList key={prefix} prefix={prefix}>
-                        <Composer.CommandLoading />
-                        <Composer.CommandEmpty />
-                        <Composer.CommandItems>
-                          {(item) => (
-                            <Composer.CommandItem value={item.value}>
-                              {item.icon && (
-                                <Composer.CommandItemIcon>
-                                  {CHIP_ICONS[item.icon]}
-                                </Composer.CommandItemIcon>
-                              )}
-                              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                              {item.description && (
-                                <Composer.CommandItemDescription>
-                                  {item.description}
-                                </Composer.CommandItemDescription>
-                              )}
-                            </Composer.CommandItem>
-                          )}
-                        </Composer.CommandItems>
-                      </Composer.CommandList>
-                    ))}
-                  </Composer.PanelItem>
-                  <Composer.PanelItem value="active">
-                    <StepQueue>
-                      {composerSteps.map((step, i, arr) => (
-                        <StepQueue.Item key={`${step}-${i}`}>
-                          <StepQueue.Icon>
-                            {i === arr.length - 1 ? (
-                              <Loader className="size-3.5 animate-spin" />
-                            ) : (
-                              <CircleDotIcon className="size-3.5" />
+                <Composer.Panel>
+                  {(composer) => {
+                    if (composer.commands.active) {
+                      return ["@", "/", "#"].map((prefix) => (
+                        <Composer.CommandList key={prefix} prefix={prefix}>
+                          <Composer.CommandLoading />
+                          <Composer.CommandEmpty />
+                          <Composer.CommandItems>
+                            {(item) => (
+                              <Composer.CommandItem value={item.value}>
+                                {item.icon && (
+                                  <Composer.CommandItemIcon>
+                                    {CHIP_ICONS[item.icon]}
+                                  </Composer.CommandItemIcon>
+                                )}
+                                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+                                {item.description && (
+                                  <Composer.CommandItemDescription>
+                                    {item.description}
+                                  </Composer.CommandItemDescription>
+                                )}
+                              </Composer.CommandItem>
                             )}
-                          </StepQueue.Icon>
-                          <StepQueue.Label active={i === arr.length - 1}>{step}</StepQueue.Label>
-                        </StepQueue.Item>
-                      ))}
-                    </StepQueue>
-                  </Composer.PanelItem>
-                  <Composer.PanelItem value="ask-user">
-                    <Composer.AskUser />
-                  </Composer.PanelItem>
+                          </Composer.CommandItems>
+                        </Composer.CommandList>
+                      ));
+                    }
+                    if (questions != null) return <Composer.AskUser />;
+                    return null;
+                  }}
                 </Composer.Panel>
 
                 <Composer.ContextWindow>
@@ -357,19 +311,11 @@ export default function ComponentsPlayground() {
               </Composer>
             </div>
             <div className="mt-4 flex items-center gap-2">
-              {(["idle", "active", "ask-user", "ask-user-multi"] as const).map((state) => (
+              {(["idle", "ask-user", "ask-user-multi"] as const).map((state) => (
                 <button
                   key={state}
                   type="button"
                   onClick={() => {
-                    if (state === "active") {
-                      if (composerState === "active") {
-                        const next = stepLabels[composerSteps.length % stepLabels.length];
-                        setComposerSteps((prev) => [...prev, next]);
-                        return;
-                      }
-                      setComposerSteps(stepLabels.slice(0, 1));
-                    }
                     setComposerState(state);
                   }}
                   className={cn(
@@ -377,13 +323,7 @@ export default function ComponentsPlayground() {
                     composerState === state && "bg-primary-active text-slate-1",
                   )}
                 >
-                  {state === "idle"
-                    ? "Idle"
-                    : state === "active"
-                      ? "Active"
-                      : state === "ask-user"
-                        ? "Ask User"
-                        : "Ask Multi"}
+                  {state === "idle" ? "Idle" : state === "ask-user" ? "Ask User" : "Ask Multi"}
                 </button>
               ))}
             </div>

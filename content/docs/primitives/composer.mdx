@@ -21,19 +21,21 @@ The bare nesting — every part is optional except `Composer` and `Container`:
 ```tsx
 <Composer onSubmit={handleSubmit}>
   <Composer.Panel>
-    <Composer.PanelItem value={COMMAND_LIST_PANEL_VALUE}>
-      <Composer.CommandList prefix="@">
-        <Composer.CommandLoading />
-        <Composer.CommandEmpty />
-        <Composer.CommandItems>
-          {(item) => (
-            <Composer.CommandItem value={item.value}>
-              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-            </Composer.CommandItem>
-          )}
-        </Composer.CommandItems>
-      </Composer.CommandList>
-    </Composer.PanelItem>
+    {(composer) =>
+      composer.commands.active && (
+        <Composer.CommandList prefix="@">
+          <Composer.CommandLoading />
+          <Composer.CommandEmpty />
+          <Composer.CommandItems>
+            {(item) => (
+              <Composer.CommandItem value={item.value}>
+                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+              </Composer.CommandItem>
+            )}
+          </Composer.CommandItems>
+        </Composer.CommandList>
+      )
+    }
   </Composer.Panel>
   <Composer.Container>
     <Composer.Textarea>
@@ -46,6 +48,11 @@ The bare nesting — every part is optional except `Composer` and `Container`:
 </Composer>
 ```
 
+`Composer.Panel` takes plain children or a callback receiving the composer
+state, and shows only while its resolved content is non-empty. Gate each part on
+the state it belongs to (`commands.active`, `askUser.active`, …) and the panel
+opens and closes to match — priority is just the order of your branches.
+
 ## Examples
 
 ### Mention command list
@@ -55,13 +62,24 @@ a prefix is active. `commands` maps each prefix to its config and items.
 
 <ComponentPreview name="composer-commands" />
 
+### Floating command popover
+
+`Composer.Popover` is the floating alternative to `Composer.Panel`. It takes the
+same children — plain nodes or a state callback — but portals them above the
+field, anchored to the active trigger token, so the list overlays instead of
+growing the composer and needs no reserved height. Mount one or the other; the
+content is identical.
+
+<ComponentPreview name="composer-popover" />
+
 ### Ask-user flow
 
 Setting the `questions` prop — typically from an assistant's clarifying
-question — routes the panel to an ask-user prompt. The flow steps through each
-question (single- or multi-select), and answering or skipping the last one
-fires `onSubmit` with `{ kind: "answers" }`. Passing a fresh `questions` array
-re-arms it from the first step.
+question — arms the ask-user flow and flips `askUser.active`; render
+`<Composer.AskUser />` inside a `Panel` (or `Popover`) gated on that flag. The
+flow steps through each question (single- or multi-select), and answering or
+skipping the last one fires `onSubmit` with `{ kind: "answers" }`. Passing a
+fresh `questions` array re-arms it from the first step.
 
 <ComponentPreview name="composer-ask-user-flow" />
 
@@ -200,7 +218,7 @@ prop → store bridges. Renders `data-slot="composer-root"`.
 export const rootProps = [
   { name: "onSubmit", type: "(data: ComposerSubmitData) => void | Promise<void>", description: "Fires on message submit and on ask-user answers. Discriminate on data.kind." },
   { name: "commands", type: "ComposerCommandsMap", default: "{}", description: "Prefix → command config (kind, trigger, items). Drives the command lists." },
-  { name: "questions", type: "AskUserQuestion[]", description: "When set, arms the ask-user flow (blurs the editor, routes the panel)." },
+  { name: "questions", type: "AskUserQuestion[]", description: "When set, arms the ask-user flow (blurs the editor, flips askUser.active)." },
   { name: "isSubmitting", type: "boolean", default: "false", description: "Flips Submit to a stop affordance and gates re-submits." },
   { name: "value", type: "ComposerSnapshot", description: "Controlled editor content." },
   { name: "defaultValue", type: "ComposerSnapshot", description: "Uncontrolled initial editor content." },
@@ -342,34 +360,53 @@ Button that opens the file dialog. Renders
 
 ### Composer.Panel
 
-Shows the `PanelItem` whose `value` matches, and force-routes to the item
-with the exported `COMMAND_LIST_PANEL_VALUE` while a command prefix is open.
-Renders `data-slot="composer-panel"`.
+The in-flow surface region above the field. `children` is either plain nodes or
+a callback `(composer) => ReactNode` receiving the composer state, so you pick
+what to show by priority (`commands.active ? <CommandList/> : askUser.active ?
+<AskUser/> : null`). The host element always renders
+(`data-slot="composer-panel"`); `open` — whether the resolved content is
+non-empty — arrives as the `render` prop's second argument and is mirrored to
+`data-open`/`data-closed`, so the styled layer can mount the card under an
+`AnimatePresence` for a real open/close transition.
 
 export const panelProps = [
-  { name: "value", type: "string", description: "Which PanelItem to show (overridden by an active command list)." },
-  { name: "renderContent", type: "(matched: ReactNode, hasMatch: boolean) => ReactNode", description: "Presentation hook for open/close transitions; without it the matched child renders directly." },
+  { name: "children", type: "ReactNode | ((composer: ComposerState) => ReactNode)", description: "Panel content, or a callback that reads composer state and returns one branch by priority." },
 ];
 
 <PropsTable rows={panelProps} />
 
 export const panelAttrs = [
   { attribute: "data-slot", values: '"composer-panel"', description: "The panel element." },
-  { attribute: "data-open", description: "Present while a panel item is open." },
-  { attribute: "data-closed", description: "Present while closed." },
+  { attribute: "data-open", description: "Present while the resolved content is non-empty." },
+  { attribute: "data-closed", description: "Present while empty." },
 ];
 
 <AttributesTable rows={panelAttrs} />
 
-### Composer.PanelItem
+### Composer.Popover
 
-One matchable panel view. Renders `data-slot="composer-panel-item"`.
+Floating alternative to `Composer.Panel`. Takes the same `children` (nodes or a
+state callback) but portals them above the field, anchored to the active trigger
+token and opening upward — overlaying instead of growing the composer.
+Positioning is deterministic (no floating library); it repositions on scroll,
+resize, and composer growth. It stays mounted and exposes `open` the same way as
+`Panel` (the `render` prop's second argument plus `data-open`/`data-closed`). The
+consumer supplies the positioning context — e.g. `position: fixed` — via
+`className`/`style`.
 
-export const panelItemProps = [
-  { name: "value", type: "string", default: "(required)", description: "Match key against Panel's value or the COMMAND_LIST_PANEL_VALUE override." },
+export const popoverProps = [
+  { name: "children", type: "ReactNode | ((composer: ComposerState) => ReactNode)", description: "Same content as Panel — nodes or a state callback." },
 ];
 
-<PropsTable rows={panelItemProps} />
+<PropsTable rows={popoverProps} />
+
+export const popoverAttrs = [
+  { attribute: "data-slot", values: '"composer-popover"', description: "The portaled popover element." },
+  { attribute: "data-open", description: "Present while the resolved content is non-empty." },
+  { attribute: "data-closed", description: "Present while empty (stays mounted, holding its last position)." },
+];
+
+<AttributesTable rows={popoverAttrs} />
 
 ### Composer.CommandList
 
@@ -434,8 +471,9 @@ it maps `items` through a render-prop child and renders no element.
 
 ### Composer.AskUser
 
-Renders the active question inside the panel (or nothing when there is no
-question). No props — it reads the store's ask-user state.
+Renders the active question. Put it inside a `Panel` or `Popover`, gated on
+`askUser.active`. No props — it reads the store's ask-user state and renders
+nothing when there's no question.
 
 ### Ask-user actions
 

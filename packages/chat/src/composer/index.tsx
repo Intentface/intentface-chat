@@ -4,12 +4,6 @@
 // the store/controller/hook building blocks.
 
 import { ComposerActions, ComposerContextWindow, ComposerSubmit } from "./actions";
-import {
-  ComposerAskUser,
-  ComposerAskUserContinue,
-  ComposerAskUserDismiss,
-  ComposerAskUserHints,
-} from "./ask-user-parts";
 import { ComposerAttachments, ComposerAttachmentTrigger } from "./attachments";
 import {
   ComposerCommandCollection,
@@ -26,8 +20,9 @@ import {
   ComposerCommandLoading,
 } from "./command-list";
 import { ComposerContainer } from "./container";
-import { ComposerPanel, ComposerPanelItem } from "./panel";
+import { ComposerPanel } from "./panel";
 import { ComposerPlaceholder } from "./placeholder";
+import { ComposerPopover } from "./popover";
 import { ComposerRoot } from "./root";
 import { createComposerStore } from "./store";
 import { ComposerTextarea } from "./textarea";
@@ -43,12 +38,8 @@ export const Composer = Object.assign(ComposerRoot, {
   Placeholder: ComposerPlaceholder,
   Submit: ComposerSubmit,
   Panel: ComposerPanel,
-  PanelItem: ComposerPanelItem,
+  Popover: ComposerPopover,
   Textarea: ComposerTextarea,
-  AskUser: ComposerAskUser,
-  AskUserHints: ComposerAskUserHints,
-  AskUserDismiss: ComposerAskUserDismiss,
-  AskUserContinue: ComposerAskUserContinue,
   CommandList: ComposerCommandList,
   CommandItems: ComposerCommandItems,
   CommandLoading: ComposerCommandLoading,
@@ -77,9 +68,9 @@ export type { EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";
 export { createMentionChipExtension } from "./mention-chip";
-export type { ComposerPanelItemProps, ComposerPanelProps } from "./panel";
-export { COMMAND_LIST_PANEL_VALUE } from "./panel";
+export type { ComposerPanelProps } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
+export type { ComposerPopoverProps } from "./popover";
 export type { CommandListPluginState, RegisteredPrefix } from "./prefix-plugin";
 export { CLOSED_COMMAND_STATE, commandListPluginKey, detectActivePrefix } from "./prefix-plugin";
 export type { ComposerRootProps } from "./root";
@@ -87,7 +78,7 @@ export type {
   ComposerAskUserState,
   ComposerAttachmentsState,
   ComposerCommandsState,
-  ComposerPanelState,
+  ComposerPanelSlice,
   ComposerState,
   ComposerStore,
 } from "./store";

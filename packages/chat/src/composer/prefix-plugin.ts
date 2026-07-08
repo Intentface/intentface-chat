@@ -8,6 +8,10 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import type { TriggerRule } from "./types";
 
+// ---------------------------------------------------------------------------
+// Types & constants
+// ---------------------------------------------------------------------------
+
 export type RegisteredPrefix = {
   prefix: string;
   triggerRule: TriggerRule;
@@ -37,6 +41,11 @@ export const CLOSED_COMMAND_STATE: CommandListPluginState = {
   triggerEndPosition: 0,
   dismissedAt: null,
 };
+
+// ---------------------------------------------------------------------------
+// Prefix detection — scan the block around the caret for a registered trigger
+// and derive the active-token state (pure; the plugin's `apply` calls it).
+// ---------------------------------------------------------------------------
 
 export const detectActivePrefix = (args: {
   registered: RegisteredPrefix[];
@@ -99,6 +108,11 @@ export const detectActivePrefix = (args: {
 
   return CLOSED_COMMAND_STATE;
 };
+
+// ---------------------------------------------------------------------------
+// ProseMirror plugin — owns the active-token state (sticky range tracking,
+// dismissal memory) and paints the trigger badge decoration.
+// ---------------------------------------------------------------------------
 
 export const commandListPluginKey = new PluginKey<CommandListPluginState>("commandList");
 

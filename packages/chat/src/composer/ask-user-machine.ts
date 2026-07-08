@@ -4,6 +4,11 @@
 
 import type { AskUserQuestion, ComposerAnswerEntry } from "./types";
 
+// ---------------------------------------------------------------------------
+// Types — the machine state plus the effect/action/transition vocabulary the
+// store speaks to it in.
+// ---------------------------------------------------------------------------
+
 export type AnswerEntry = {
   selected: Set<string>;
   freeText: string;
@@ -18,6 +23,36 @@ export const INITIAL_ASK_USER_STATE: AskUserState = {
   step: 0,
   answers: new Map(),
 };
+
+// Everything a transition may ask of the outside world. The store executes
+// these against the editor controller, the options handle, and the submit
+// callback — the transitions below only describe them.
+export type AskUserEffect =
+  | { type: "clear-input" }
+  | { type: "set-input-text"; text: string }
+  | { type: "focus-input" }
+  | { type: "blur-input" }
+  | { type: "reset-highlight" }
+  | { type: "submit-answers"; answers: ComposerAnswerEntry[] };
+
+export type AskUserAction =
+  | { type: "toggle-option"; label: string }
+  | { type: "select-option"; label: string }
+  | { type: "clear-selections" }
+  | { type: "continue-step"; freeText: string }
+  | { type: "dismiss-step" }
+  | { type: "step-back"; currentText: string }
+  | { type: "step-forward"; currentText: string };
+
+export type AskUserTransition = {
+  next: AskUserState;
+  effects: AskUserEffect[];
+};
+
+// ---------------------------------------------------------------------------
+// Answer helpers — immutable operations on the per-step answer map, plus the
+// projection/query the store reads.
+// ---------------------------------------------------------------------------
 
 const emptyEntry = (): AnswerEntry => ({
   selected: new Set<string>(),
@@ -53,6 +88,29 @@ const skipStep = (answers: Map<number, AnswerEntry>, step: number): Map<number, 
   return next;
 };
 
+// Toggle an option on the step's entry. Multi-select toggles membership and
+// keeps free text; single-select replaces both (option and text are mutually
+// exclusive).
+const toggleAnswer = (
+  answers: Map<number, AnswerEntry>,
+  step: number,
+  label: string,
+  multiSelect: boolean,
+) => {
+  const next = cloneAnswers(answers);
+  const previous = next.get(step) ?? emptyEntry();
+  const selected = new Set(previous.selected);
+  if (multiSelect) {
+    if (selected.has(label)) selected.delete(label);
+    else selected.add(label);
+  } else {
+    selected.clear();
+    selected.add(label);
+  }
+  next.set(step, { selected, freeText: multiSelect ? previous.freeText : "" });
+  return next;
+};
+
 // Project the collected answers onto the public ComposerAnswerEntry union, one
 // entry per question in order. The chosen branch encodes the invariant:
 // single-select carries `option` *or* `text`; multi-select carries both;
@@ -82,53 +140,10 @@ export const compileAnswers = (
 export const isLastStep = (state: AskUserState, questions: AskUserQuestion[]) =>
   state.step >= questions.length - 1;
 
-// Toggle an option on the step's entry. Multi-select toggles membership and
-// keeps free text; single-select replaces both (option and text are mutually
-// exclusive).
-const toggleAnswer = (
-  answers: Map<number, AnswerEntry>,
-  step: number,
-  label: string,
-  multiSelect: boolean,
-) => {
-  const next = cloneAnswers(answers);
-  const previous = next.get(step) ?? emptyEntry();
-  const selected = new Set(previous.selected);
-  if (multiSelect) {
-    if (selected.has(label)) selected.delete(label);
-    else selected.add(label);
-  } else {
-    selected.clear();
-    selected.add(label);
-  }
-  next.set(step, { selected, freeText: multiSelect ? previous.freeText : "" });
-  return next;
-};
-
-// Everything a transition may ask of the outside world. The store executes
-// these against the editor controller, the options handle, and the submit
-// callback — the transitions below only describe them.
-export type AskUserEffect =
-  | { type: "clear-input" }
-  | { type: "set-input-text"; text: string }
-  | { type: "focus-input" }
-  | { type: "blur-input" }
-  | { type: "reset-highlight" }
-  | { type: "submit-answers"; answers: ComposerAnswerEntry[] };
-
-export type AskUserAction =
-  | { type: "toggle-option"; label: string }
-  | { type: "select-option"; label: string }
-  | { type: "clear-selections" }
-  | { type: "continue-step"; freeText: string }
-  | { type: "dismiss-step" }
-  | { type: "step-back"; currentText: string }
-  | { type: "step-forward"; currentText: string };
-
-export type AskUserTransition = {
-  next: AskUserState;
-  effects: AskUserEffect[];
-};
+// ---------------------------------------------------------------------------
+// Transitions — the decide half of the flow: map an action onto the next state
+// plus the effects to run. transitionAskUser is the single entry point.
+// ---------------------------------------------------------------------------
 
 // Commit `nextAnswers`, advance one step, and reset the input — then either
 // arm the next question (blurred, highlight reset) or compile and submit on

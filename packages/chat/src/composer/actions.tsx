@@ -13,6 +13,11 @@ import { openStateMapping } from "../internal/state-mappings";
 import { useAsRef } from "./internals";
 import { useComposer } from "./store";
 
+// ---------------------------------------------------------------------------
+// Context window — content-driven strip, open while it has content and no panel
+// is active.
+// ---------------------------------------------------------------------------
+
 export type ComposerContextWindowState = {
   /** Open (data-open) while the strip has content and no panel is active. */
   open: boolean;
@@ -46,6 +51,10 @@ export const ComposerContextWindow = ({
   );
 };
 
+// ---------------------------------------------------------------------------
+// Actions — the trailing action row.
+// ---------------------------------------------------------------------------
+
 export type ComposerActionsProps = PrimitiveProps<"div">;
 
 export const ComposerActions = ({
@@ -59,6 +68,10 @@ export const ComposerActions = ({
     { className, render, style },
     { props: [{ "data-slot": "composer-actions" }, elementProps] },
   );
+
+// ---------------------------------------------------------------------------
+// Submit — the send↔stop hook and the button that renders it.
+// ---------------------------------------------------------------------------
 
 export type UseComposerSubmitOptions = {
   isGenerating?: boolean;

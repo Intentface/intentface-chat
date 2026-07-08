@@ -97,6 +97,8 @@ export const ComposerTextarea = ({
         "data-slot": "composer-editor",
         spellcheck: "false",
       },
+      // Paste: file clipboard entries become attachments; chip-markdown text
+      // becomes chips. Anything else falls through to the default paste.
       handlePaste: (_view, event) => {
         const items = event.clipboardData?.items;
         if (items) {
@@ -128,6 +130,8 @@ export const ComposerTextarea = ({
         editor.commands.insertContent(paragraphs);
         return true;
       },
+      // Keydown: interpret the key (pure) against the current command/ask-user
+      // state, then run the resulting command-list / ask-user / form action.
       handleKeyDown: (view, event) => {
         const commandState = commandListPluginKey.getState(view.state);
         const action = interpretEditorKey(
@@ -206,6 +210,8 @@ export const ComposerTextarea = ({
         }
       },
     },
+    // Lifecycle & store mirroring — focus/blur, mount/unmount editor
+    // registration, and content/command-state sync back into the store.
     onFocus: () => {
       store.getSnapshot().askUser.optionsRef.current?.clearHighlight();
     },

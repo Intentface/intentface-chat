@@ -19,6 +19,10 @@ import { applySnapshotToEditor, snapshotFromEditor } from "./document";
 import type { RegisteredPrefix } from "./prefix-plugin";
 import type { ComposerCommandsMap, ComposerSnapshot } from "./types";
 
+// ---------------------------------------------------------------------------
+// Generic hooks — small, composer-agnostic utilities the parts build on.
+// ---------------------------------------------------------------------------
+
 // SSR-safe layout effect — same shape as cmdk's. useLayoutEffect runs before
 // paint; useEffect is a no-op fallback when window is undefined (SSR pass).
 export const useIsomorphicLayoutEffect =
@@ -35,6 +39,11 @@ export const useAsRef = <T,>(value: T) => {
   return ref;
 };
 
+// ---------------------------------------------------------------------------
+// Internals context — command registry + editor-update reporting shared down
+// the tree. Not consumer API.
+// ---------------------------------------------------------------------------
+
 export type ComposerInternalsValue = {
   commands: ComposerCommandsMap;
   getRegisteredPrefixes: () => RegisteredPrefix[];
@@ -50,6 +59,11 @@ export const useComposerInternals = (): ComposerInternalsValue => {
   }
   return context;
 };
+
+// ---------------------------------------------------------------------------
+// Feature hooks — the composer-specific wiring: command registry, drag-and-drop
+// file intake, and the controlled/uncontrolled snapshot bridge.
+// ---------------------------------------------------------------------------
 
 export const useCommandRegistry = (commands: ComposerCommandsMap) => {
   const registryRef = useAsRef(commands);

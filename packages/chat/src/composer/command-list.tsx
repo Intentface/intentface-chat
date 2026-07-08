@@ -6,6 +6,7 @@
 // mutations don't re-render every row). All unstyled; state panels as
 // data-state / data-highlighted.
 
+import type { Editor } from "@tiptap/react";
 import {
   type ComponentProps,
   createContext,
@@ -25,6 +26,11 @@ import { useAsRef, useComposerInternals } from "./internals";
 import { commandListPluginKey } from "./prefix-plugin";
 import { useComposer, useComposerContextStore } from "./store";
 import type { CommandItemData, ComposerCommandsItems, PrefixOnSelectContext } from "./types";
+
+// ---------------------------------------------------------------------------
+// Types & contexts — a two-context split so navigation and item resolution
+// re-render independently.
+// ---------------------------------------------------------------------------
 
 export type CommandListState = "loading" | "empty" | "ready";
 
@@ -48,6 +54,11 @@ type CommandListItemsContextValue = {
 };
 
 const CommandListItemsContext = createContext<CommandListItemsContextValue | null>(null);
+
+// ---------------------------------------------------------------------------
+// Item resolution — turn the prefix's items config (array or async callback)
+// into the current filtered list + loading/empty/ready state.
+// ---------------------------------------------------------------------------
 
 const useResolvedItems = (
   itemsProp: ComposerCommandsItems,
@@ -125,6 +136,55 @@ const useResolvedItems = (
   };
 };
 
+// ---------------------------------------------------------------------------
+// Selection helpers — the editor mutations a selection performs, split out of
+// the CommandList component so its `selectByValue` reads as a plain dispatch.
+// ---------------------------------------------------------------------------
+
+// The active trigger's document range, read from the plugin's mirror. Falls
+// back to the caret when the plugin has no active token.
+const resolveTriggerRange = (editor: Editor): { from: number; to: number } => {
+  const pluginState = commandListPluginKey.getState(editor.state);
+  return {
+    from: pluginState?.triggerStartPosition ?? 0,
+    to: pluginState?.triggerEndPosition ?? editor.state.selection.$from.pos,
+  };
+};
+
+// Replace the trigger range with a mention chip. Adds a trailing space so the
+// user can keep typing — unless one already follows (mid-sentence mention), to
+// avoid doubling it.
+const insertMentionChip = (
+  editor: Editor,
+  prefix: string,
+  item: CommandItemData,
+  range: { from: number; to: number },
+) => {
+  const docEnd = editor.state.doc.content.size;
+  const charAfter = range.to < docEnd ? editor.state.doc.textBetween(range.to, range.to + 1) : "";
+  const chain = editor
+    .chain()
+    .focus()
+    .deleteRange(range)
+    .insertContentAt(range.from, {
+      type: "mentionChip",
+      attrs: {
+        prefix,
+        label: item.label ?? item.value,
+        value: item.value,
+        icon: item.icon ?? null,
+      },
+    });
+  if (charAfter !== " ") chain.insertContent(" ");
+  chain.run();
+};
+
+// ---------------------------------------------------------------------------
+// Composer.CommandList — the orchestrator: resolves items for the active
+// prefix, owns the highlight/selection/dismiss logic, and provides the two
+// contexts. Renders null unless this prefix is the active one.
+// ---------------------------------------------------------------------------
+
 const EMPTY_ITEMS: CommandItemData[] = [];
 
 export type ComposerCommandListState = {
@@ -176,43 +236,15 @@ export const ComposerCommandList = ({
     (value: string) => {
       const editor = store.editorRef.current;
       if (!editor) return;
-      const dataItem = items.find((item) => item.value === value);
-      if (!dataItem) return;
+      const item = items.find((candidate) => candidate.value === value);
+      if (!item) return;
 
-      const pluginState = commandListPluginKey.getState(editor.state);
-      const triggerStartPosition = pluginState?.triggerStartPosition ?? 0;
-      const triggerEndPosition =
-        pluginState?.triggerEndPosition ?? editor.state.selection.$from.pos;
+      const range = resolveTriggerRange(editor);
 
       if (kind === "insert") {
-        // Add a trailing space so the user can keep typing — unless one is
-        // already there (mid-sentence mention), to avoid doubling it.
-        const docEnd = editor.state.doc.content.size;
-        const charAfter =
-          triggerEndPosition < docEnd
-            ? editor.state.doc.textBetween(triggerEndPosition, triggerEndPosition + 1)
-            : "";
-        const chain = editor
-          .chain()
-          .focus()
-          .deleteRange({ from: triggerStartPosition, to: triggerEndPosition })
-          .insertContentAt(triggerStartPosition, {
-            type: "mentionChip",
-            attrs: {
-              prefix,
-              label: dataItem.label ?? dataItem.value,
-              value: dataItem.value,
-              icon: dataItem.icon ?? null,
-            },
-          });
-        if (charAfter !== " ") chain.insertContent(" ");
-        chain.run();
+        insertMentionChip(editor, prefix, item, range);
       } else {
-        editor
-          .chain()
-          .focus()
-          .deleteRange({ from: triggerStartPosition, to: triggerEndPosition })
-          .run();
+        editor.chain().focus().deleteRange(range).run();
         // Read the attachment actions lazily at selection time — their
         // identities are store-stable, so subscribing would only re-render the
         // list on unrelated attachment changes.
@@ -221,7 +253,7 @@ export const ComposerCommandList = ({
           editor: store.controller,
           attachments: { add, remove, openFileDialog },
         };
-        dataItem.onSelect?.(onSelectContext);
+        item.onSelect?.(onSelectContext);
       }
 
       editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
@@ -300,6 +332,11 @@ export const ComposerCommandList = ({
   );
 };
 
+// ---------------------------------------------------------------------------
+// List hooks — the consumer-facing items hook and the internal nav accessor
+// the slot primitives read.
+// ---------------------------------------------------------------------------
+
 export const useCommandListItems = <Item extends CommandItemData = CommandItemData>(): {
   items: Item[];
   state: CommandListState;
@@ -318,6 +355,11 @@ const useCommandListNav = (componentName: string): CommandListNavContextValue =>
   }
   return context;
 };
+
+// ---------------------------------------------------------------------------
+// Slot primitives — unstyled structural parts of the list. Each sets its
+// data-slot and forwards props; the styled layer supplies the look.
+// ---------------------------------------------------------------------------
 
 export type ComposerCommandItemsProps<Item extends CommandItemData> = Omit<
   PrimitiveProps<"div">,

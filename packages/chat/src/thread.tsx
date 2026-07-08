@@ -33,13 +33,15 @@ import { useRefWithInit } from "./internal/render/useRefWithInit";
 import { useRenderElement } from "./internal/render/useRenderElement";
 
 // ---------------------------------------------------------------------------
-// At-bottom store — external so an at-bottom flip re-renders only the
-// components that actually read isAtBottom (via useThread), never the Thread
-// tree itself: the context value stays referentially stable for the lifetime
-// of the thread.
+// Scroll-edge stores — one boolean store per edge (top / bottom), external so
+// an edge flip re-renders only the components that read it (via useThread),
+// never the Thread tree itself: the context value stays referentially stable
+// for the thread's lifetime. Two independent stores rather than one
+// {atTop,atBottom} snapshot, so a flip at one edge never notifies the other's
+// readers.
 // ---------------------------------------------------------------------------
 
-const createAtBottomStore = () => {
+const createEdgeStore = () => {
   let snapshot = true;
   const listeners = new Set<() => void>();
   return {
@@ -58,7 +60,7 @@ const createAtBottomStore = () => {
   };
 };
 
-type AtBottomStore = ReturnType<typeof createAtBottomStore>;
+type EdgeStore = ReturnType<typeof createEdgeStore>;
 
 // Latest-ref: read the current value from long-lived effects/callbacks without
 // re-subscribing them when it changes.
@@ -136,7 +138,8 @@ export type ThreadScrollToMessageOptions = {
 };
 
 type ThreadContextValue = {
-  atBottomStore: AtBottomStore;
+  atTopStore: EdgeStore;
+  atBottomStore: EdgeStore;
   visibilityStore: VisibilityStore;
   observeVisibility: () => void;
   unobserveVisibility: () => void;
@@ -146,7 +149,8 @@ type ThreadContextValue = {
   releaseFollow: () => void;
   scrollRef: RefObject<HTMLDivElement | null>;
   contentRef: RefObject<HTMLDivElement | null>;
-  sentinelRef: RefObject<HTMLDivElement | null>;
+  topSentinelRef: RefObject<HTMLDivElement | null>;
+  bottomSentinelRef: RefObject<HTMLDivElement | null>;
 };
 
 const ThreadContext = createContext<ThreadContextValue | null>(null);
@@ -158,33 +162,38 @@ const useThreadContext = () => {
 };
 
 /**
- * Public thread surface. Subscribes to at-bottom, so call it where isAtBottom
- * is actually read (e.g. a scroll button); the commands and refs are stable
- * and never cause re-renders on their own.
+ * Public thread surface. Subscribes to the scroll edges, so call it where
+ * isAtTop / isAtBottom are actually read (e.g. a scroll button or a load-older
+ * trigger); the commands and refs are stable and never cause re-renders.
  */
 export const useThread = () => {
   const {
+    atTopStore,
     atBottomStore,
     scrollToBottom,
     scrollToTop,
     scrollToMessage,
     scrollRef,
     contentRef,
-    sentinelRef,
   } = useThreadContext();
+  const isAtTop = useSyncExternalStore(
+    atTopStore.subscribe,
+    atTopStore.getSnapshot,
+    atTopStore.getSnapshot,
+  );
   const isAtBottom = useSyncExternalStore(
     atBottomStore.subscribe,
     atBottomStore.getSnapshot,
     atBottomStore.getSnapshot,
   );
   return {
+    isAtTop,
     isAtBottom,
     scrollToBottom,
     scrollToTop,
     scrollToMessage,
     scrollRef,
     contentRef,
-    sentinelRef,
   };
 };
 
@@ -247,6 +256,10 @@ const USER_SCROLL_UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"]);
 // timeout is the Safari fallback.
 const AUTO_SCROLL_SETTLE_MS = 200;
 
+// Sub-pixel scrollTop rounding differs across engines; a small IntersectionObserver
+// rootMargin keeps edge detection from flickering right at the top/bottom boundary.
+const EDGE_TOLERANCE = "8px 0px";
+
 // A prepend = rows were added, nothing removed, and the previously-first row
 // is still connected but no longer first (older history loading in above).
 const wasPrepended = (
@@ -260,17 +273,20 @@ const wasPrepended = (
   mutations.every((m) => m.removedNodes.length === 0);
 
 const useThreadScroll = (
+  rootRef: RefObject<HTMLDivElement | null>,
   mode: ThreadAutoScrollMode,
   preserveScrollOnPrepend: boolean,
 ): ThreadContextValue => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+  const bottomSentinelRef = useRef<HTMLDivElement>(null);
 
-  // "At the bottom" = the bottom sentinel is in view. IntersectionObserver
-  // computes it off the main thread (no scrollTop/scrollHeight reads); it
-  // drives the scroll button and re-arms the follow.
-  const atBottomStore = useRefWithInit(createAtBottomStore).current;
+  // Edge state = each sentinel is in view. IntersectionObserver computes it off
+  // the main thread (no scrollTop/scrollHeight reads); the bottom edge drives
+  // the scroll button and re-arms the follow, the top edge drives load-older.
+  const atTopStore = useRefWithInit(createEdgeStore).current;
+  const atBottomStore = useRefWithInit(createEdgeStore).current;
 
   // Follow intent: true while the view should track streaming growth.
   const followingRef = useRef(true);
@@ -294,26 +310,45 @@ const useThreadScroll = (
   }, []);
 
   useEffect(() => {
-    const root = scrollRef.current;
-    const sentinel = sentinelRef.current;
-    if (!root || !sentinel) return;
+    const scroller = scrollRef.current;
+    const rootElement = rootRef.current;
+    const topSentinel = topSentinelRef.current;
+    const bottomSentinel = bottomSentinelRef.current;
+    if (!scroller || !topSentinel || !bottomSentinel) return;
 
+    // One observer for both edge sentinels; its `root` is the scroll container.
+    // Edge state is mirrored to data-at-top / data-at-bottom on the thread root
+    // (the common ancestor of the overlays + scroller) for pure-CSS affordances.
     const io = new IntersectionObserver(
-      ([entry]) => {
-        const isAtBottom = entry?.isIntersecting ?? true;
-        atBottomStore.setSnapshot(isAtBottom);
-        if (isAtBottom) {
-          followingRef.current = true;
-        } else if (!autoScrollingRef.current) {
-          // The sentinel left view and we didn't cause it: a scrollbar drag or
-          // a momentum scroll away. Wheel/touch/keys release via the viewport's
-          // gesture handlers before this even fires.
-          followingRef.current = false;
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target === topSentinel) {
+            const atTop = entry.isIntersecting;
+            atTopStore.setSnapshot(atTop);
+            rootElement?.toggleAttribute("data-at-top", atTop);
+            continue;
+          }
+          const atBottom = entry.isIntersecting;
+          if (atBottom) {
+            atBottomStore.setSnapshot(true);
+            followingRef.current = true;
+            rootElement?.toggleAttribute("data-at-bottom", true);
+          } else if (!autoScrollingRef.current) {
+            // The sentinel left view and we didn't cause it: a scrollbar drag,
+            // a momentum scroll away, or content growing past the live edge in a
+            // non-following mode. A scroll *we* started (send landing / followed
+            // stream) keeps autoScrollingRef set, so its transient off-screen
+            // frame is ignored — that's what stops the button flashing on send.
+            atBottomStore.setSnapshot(false);
+            followingRef.current = false;
+            rootElement?.toggleAttribute("data-at-bottom", false);
+          }
         }
       },
-      { root },
+      { root: scroller, rootMargin: EDGE_TOLERANCE },
     );
-    io.observe(sentinel);
+    io.observe(topSentinel);
+    io.observe(bottomSentinel);
 
     // A finished scroll means nothing of ours is in flight anymore; clear
     // early instead of waiting out the timeout fallback.
@@ -324,17 +359,17 @@ const useThreadScroll = (
         autoScrollingTimeoutRef.current = null;
       }
     };
-    root.addEventListener("scrollend", settle);
+    scroller.addEventListener("scrollend", settle);
 
     return () => {
       io.disconnect();
-      root.removeEventListener("scrollend", settle);
+      scroller.removeEventListener("scrollend", settle);
       if (autoScrollingTimeoutRef.current !== null) {
         window.clearTimeout(autoScrollingTimeoutRef.current);
         autoScrollingTimeoutRef.current = null;
       }
     };
-  }, [atBottomStore]);
+  }, [atTopStore, atBottomStore, rootRef]);
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -683,6 +718,7 @@ const useThreadScroll = (
 
   return useMemo(
     () => ({
+      atTopStore,
       atBottomStore,
       visibilityStore,
       observeVisibility,
@@ -693,9 +729,11 @@ const useThreadScroll = (
       releaseFollow,
       scrollRef,
       contentRef,
-      sentinelRef,
+      topSentinelRef,
+      bottomSentinelRef,
     }),
     [
+      atTopStore,
       atBottomStore,
       visibilityStore,
       observeVisibility,
@@ -764,9 +802,7 @@ const measureTopInset = (root: HTMLElement): number =>
  *   (--thread-turn-min-height) to it; otherwise the reserve falls back to 0.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
-const useThreadInsets = (dockSelector: string) => {
-  const rootRef = useRef<HTMLDivElement>(null);
-
+const useThreadInsets = (rootRef: RefObject<HTMLDivElement | null>, dockSelector: string) => {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
@@ -791,9 +827,7 @@ const useThreadInsets = (dockSelector: string) => {
       observer.observe(part);
     }
     return () => observer.disconnect();
-  }, [dockSelector]);
-
-  return rootRef;
+  }, [dockSelector, rootRef]);
 };
 
 // ---------------------------------------------------------------------------
@@ -829,8 +863,9 @@ const ThreadRoot = ({
   style,
   ...elementProps
 }: ThreadRootProps) => {
-  const rootRef = useThreadInsets(dockSelector);
-  const scroll = useThreadScroll(autoScroll, preserveScrollOnPrepend);
+  const rootRef = useRef<HTMLDivElement>(null);
+  useThreadInsets(rootRef, dockSelector);
+  const scroll = useThreadScroll(rootRef, autoScroll, preserveScrollOnPrepend);
 
   const element = useRenderElement(
     "div",
@@ -963,14 +998,15 @@ const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadVie
 };
 
 // ---------------------------------------------------------------------------
-// Content — the measured content column plus the at-bottom sentinel rendered
-// as its sibling (outside the last-child reserve).
+// Content — the measured content column bracketed by 1px edge sentinels (top +
+// bottom) rendered as siblings, outside the last-child reserve. The observer in
+// useThreadScroll watches both to drive isAtTop/isAtBottom + data-at-*.
 // ---------------------------------------------------------------------------
 
 export type ThreadContentProps = PrimitiveProps<"div">;
 
 const ThreadContent = ({ className, render, style, ...elementProps }: ThreadContentProps) => {
-  const { contentRef, sentinelRef } = useThreadContext();
+  const { contentRef, topSentinelRef, bottomSentinelRef } = useThreadContext();
 
   const element = useRenderElement(
     "div",
@@ -992,9 +1028,15 @@ const ThreadContent = ({ className, render, style, ...elementProps }: ThreadCont
 
   return (
     <>
+      <div
+        ref={topSentinelRef}
+        data-slot="thread-top"
+        aria-hidden
+        style={{ height: 1, width: "100%", flexShrink: 0 }}
+      />
       {element}
       <div
-        ref={sentinelRef}
+        ref={bottomSentinelRef}
         data-slot="thread-bottom"
         aria-hidden
         style={{ height: 1, width: "100%", flexShrink: 0 }}

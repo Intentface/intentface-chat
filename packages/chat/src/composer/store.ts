@@ -71,20 +71,17 @@ export type ComposerAskUserState = ComposerPanelSlice & {
   optionsRef: RefObject<AskUserOptionsHandle | null>;
 };
 
+// The shared skeleton every native panel slice (commands, ask-user, and later
+// tool-approval) is built on: an `active` flag a consumer can gate on the same
+// way for any of them (`{commands.active && <…/>}`). Each slice adds its own
+// payload/actions on top.
+export type ComposerPanelSlice = { active: boolean };
+
 // Command-list state: the plugin mirror (whether a trigger prefix is active,
 // which one, the query typed after it) plus the navigation highlight. The
 // highlight lives here — not in the CommandList component — so the editor's
 // keydown handler (outside React) can move it through a plain store method
 // instead of a bridged ref. It's a raw index; readers wrap it by item count.
-// Every native panel slice (commands, ask-user, and later tool-approval) shares
-// this skeleton, so a consumer can gate any of them the same way
-// (`{commands.active && <…/>}`); each adds its own payload/actions on top.
-export type ComposerPanelSlice = { active: boolean };
-
-// Command-list state: the plugin mirror (which trigger prefix is active, the query
-// typed after it) plus the navigation highlight. The highlight lives here — not in
-// the CommandList component — so the editor's keydown handler (outside React) can
-// move it through a plain store method. Raw index; readers wrap it by item count.
 export type ComposerCommandsState = ComposerPanelSlice & {
   trigger: string | null;
   query: string;
@@ -137,7 +134,82 @@ export type ComposerStore = {
   commandSelectRef: RefObject<(() => void) | null>;
 };
 
+// ---------------------------------------------------------------------------
+// Ask-user keydown — the document-level handler for question mode, kept out of
+// the store factory so activateAskUser reads as just "blur, listen, unlisten".
+// ---------------------------------------------------------------------------
+
+// Scope a document-level listener to this composer: ignore keystrokes aimed at
+// another editable (e.g. a second composer on the same page). Options/body
+// focus (no editable host) still counts as ours, so "type to answer" works.
+const isEventForComposer = (event: KeyboardEvent, editorDom: HTMLElement | undefined) => {
+  const target = event.target as HTMLElement | null;
+  const editableHost = target?.closest<HTMLElement>('input, textarea, [contenteditable="true"]');
+  return !editableHost || editableHost === editorDom;
+};
+
+type AskUserKeydownDeps = {
+  controller: ComposerEditorState;
+  optionsRef: RefObject<AskUserOptionsHandle | null>;
+  editorRef: RefObject<Editor | null>;
+  dispatch: (action: AskUserAction) => void;
+};
+
+// Interpret a key (pure) and drive the machine + editor controller. Mirrors the
+// action union from interpretAskUserKey one-to-one.
+const createAskUserKeydownHandler =
+  ({ controller, optionsRef, editorRef, dispatch }: AskUserKeydownDeps) =>
+  (event: KeyboardEvent) => {
+    if (!isEventForComposer(event, editorRef.current?.view.dom)) return;
+
+    const optionsHandle = optionsRef.current;
+    const action = interpretAskUserKey(
+      {
+        key: event.key,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+        defaultPrevented: event.defaultPrevented,
+      },
+      { hasHighlight: optionsHandle?.highlightedValue != null },
+    );
+    if (!action) return;
+    event.preventDefault();
+
+    switch (action.type) {
+      case "dismiss-step":
+        dispatch({ type: "dismiss-step" });
+        return;
+      case "navigate-options": {
+        const newValue = optionsHandle?.navigate(action.direction);
+        if (newValue === null) controller.focus();
+        return;
+      }
+      case "select-option": {
+        const item = optionsHandle?.select();
+        if (item) dispatch({ type: "select-option", label: item.value });
+        return;
+      }
+      case "go-back":
+        dispatch({ type: "step-back", currentText: controller.getText() });
+        return;
+      case "go-next":
+        dispatch({ type: "step-forward", currentText: controller.getText() });
+        return;
+      case "insert-character":
+        optionsHandle?.clearHighlight();
+        controller.focus();
+        controller.insertText(action.character);
+        return;
+    }
+  };
+
+// ---------------------------------------------------------------------------
+// Store factory
+// ---------------------------------------------------------------------------
+
 export const createComposerStore = (): ComposerStore => {
+  // --- Subscriptions & refs
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of listeners) listener();
@@ -180,6 +252,7 @@ export const createComposerStore = (): ComposerStore => {
   let askUserMachine = INITIAL_ASK_USER_STATE;
   let snapshot: ComposerState;
 
+  // --- Setters
   const setHasContent = (value: boolean) => {
     if (snapshot.textarea.hasContent === value) return;
     snapshot = { ...snapshot, textarea: { ...snapshot.textarea, hasContent: value } };
@@ -229,6 +302,7 @@ export const createComposerStore = (): ComposerStore => {
     notify();
   };
 
+  // --- Attachments
   const dispatchAttachments = (action: AttachmentStoreAction) => {
     const next = attachmentReducer(attachmentState, action, attachmentConfigRef.current);
     if (next === attachmentState) return;
@@ -246,6 +320,7 @@ export const createComposerStore = (): ComposerStore => {
     notify();
   };
 
+  // --- Ask-user
   // The execute half of the ask-user flow: replay a transition's effects
   // against the editor controller, the options handle, and the submit
   // callback. Input-content state is the editor's own job — tiptap v3 emits
@@ -318,64 +393,17 @@ export const createComposerStore = (): ComposerStore => {
   // dispatched here, so custom AskUser renders keep the behavior for free.
   const activateAskUser = () => {
     controller.blur();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // This is a document-level listener, so scope it to this composer:
-      // ignore keystrokes aimed at another editable (e.g. a second composer on
-      // the same page). Options/body focus (no editable host) still counts as
-      // ours, so the "type to answer" path keeps working.
-      const target = event.target as HTMLElement | null;
-      const editableHost = target?.closest<HTMLElement>(
-        'input, textarea, [contenteditable="true"]',
-      );
-      if (editableHost && editableHost !== editorRef.current?.view.dom) return;
-
-      const optionsHandle = optionsRef.current;
-      const action = interpretAskUserKey(
-        {
-          key: event.key,
-          ctrlKey: event.ctrlKey,
-          metaKey: event.metaKey,
-          altKey: event.altKey,
-          defaultPrevented: event.defaultPrevented,
-        },
-        { hasHighlight: optionsHandle?.highlightedValue != null },
-      );
-      if (!action) return;
-      event.preventDefault();
-
-      switch (action.type) {
-        case "dismiss-step":
-          dispatchAskUser({ type: "dismiss-step" });
-          return;
-        case "navigate-options": {
-          const newValue = optionsHandle?.navigate(action.direction);
-          if (newValue === null) controller.focus();
-          return;
-        }
-        case "select-option": {
-          const item = optionsHandle?.select();
-          if (item) dispatchAskUser({ type: "select-option", label: item.value });
-          return;
-        }
-        case "go-back":
-          dispatchAskUser({ type: "step-back", currentText: controller.getText() });
-          return;
-        case "go-next":
-          dispatchAskUser({ type: "step-forward", currentText: controller.getText() });
-          return;
-        case "insert-character":
-          optionsHandle?.clearHighlight();
-          controller.focus();
-          controller.insertText(action.character);
-          return;
-      }
-    };
-
+    const handleKeyDown = createAskUserKeydownHandler({
+      controller,
+      optionsRef,
+      editorRef,
+      dispatch: dispatchAskUser,
+    });
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   };
 
+  // --- Initial snapshot
   snapshot = {
     textarea: { ...controller, hasContent: false },
     isSubmitting: false,
@@ -412,6 +440,7 @@ export const createComposerStore = (): ComposerStore => {
   // identities stay stable across resets.
   const initialSnapshot = snapshot;
 
+  // --- Lifecycle
   // Drop everything mount-scoped when the Composer unmounts (route change):
   // revoke attachment object URLs, then restore the pristine snapshot.
   const reset = () => {

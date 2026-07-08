@@ -7,7 +7,6 @@ import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
 import { IconButton } from "@/components/ui/icon-button";
-import { CHIP_ICONS } from "@/lib/ai/chip-icons";
 import type { AskUserQuestion } from "@/lib/ai/types";
 import { useModelStore } from "@/lib/store/model";
 import { cn } from "@/lib/utils";
@@ -225,27 +224,7 @@ export default function ComponentsPlayground() {
                   {(composer) => {
                     if (composer.commands.active) {
                       return ["@", "/", "#"].map((prefix) => (
-                        <Composer.CommandList key={prefix} prefix={prefix}>
-                          <Composer.CommandLoading />
-                          <Composer.CommandEmpty />
-                          <Composer.CommandItems>
-                            {(item) => (
-                              <Composer.CommandItem value={item.value}>
-                                {item.icon && (
-                                  <Composer.CommandItemIcon>
-                                    {CHIP_ICONS[item.icon]}
-                                  </Composer.CommandItemIcon>
-                                )}
-                                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                                {item.description && (
-                                  <Composer.CommandItemDescription>
-                                    {item.description}
-                                  </Composer.CommandItemDescription>
-                                )}
-                              </Composer.CommandItem>
-                            )}
-                          </Composer.CommandItems>
-                        </Composer.CommandList>
+                        <Composer.Commands key={prefix} prefix={prefix} />
                       ));
                     }
                     if (questions != null) return <Composer.AskUser />;

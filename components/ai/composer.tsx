@@ -275,7 +275,7 @@ const ComposerContextWindow = ({ className, ...props }: ComposerContextWindowPro
       // Visible: 32px band peeking above the container plus 16px submerged
       // beneath it (negative margin pulls the container up over the
       // bottom-padded zone).
-      "h-0 opacity-0 data-visible:h-12 data-visible:pb-4 data-visible:-mb-4 data-visible:opacity-100",
+      "h-0 opacity-0 data-open:h-12 data-open:pb-4 data-open:-mb-4 data-open:opacity-100",
       className,
     )}
     {...props}
@@ -384,7 +384,7 @@ const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => {
 // children but lifts them into a portal above the field, anchored to the active
 // command badge. Content-driven like Panel (no `open` prop): the primitive opens
 // while it has children, and exposes data-open/data-closed for the enter/exit
-// animation below — same approach as ContextWindow's data-visible.
+// animation below — the same content-driven open state ContextWindow uses.
 // ---------------------------------------------------------------------------
 
 type ComposerPopoverProps = ComponentProps<typeof ComposerPrimitive.Popover>;
@@ -548,6 +548,35 @@ const ComposerCommandGroupLabel = ({
 
 const ComposerCommandCollection = ComposerPrimitive.CommandCollection;
 
+// Commands — the whole command-list shape for one prefix in a single part:
+// loading/empty states plus items rendered as icon + label + optional
+// description (the shape every prefix shares). Drop `<Composer.Commands
+// prefix="@" />` into a Panel/Popover instead of hand-rolling the CommandList
+// tree per prefix; reach for the lower-level parts only when a prefix needs
+// bespoke item markup.
+type ComposerCommandsProps = {
+  prefix: string;
+  className?: string;
+};
+
+const ComposerCommands = ({ prefix, className }: ComposerCommandsProps) => (
+  <ComposerCommandList prefix={prefix} className={className}>
+    <ComposerCommandLoading />
+    <ComposerCommandEmpty />
+    <ComposerCommandItems>
+      {(item) => (
+        <ComposerCommandItem value={item.value}>
+          {item.icon && <ComposerCommandItemIcon>{CHIP_ICONS[item.icon]}</ComposerCommandItemIcon>}
+          <ComposerCommandItemLabel>{item.label}</ComposerCommandItemLabel>
+          {item.description && (
+            <ComposerCommandItemDescription>{item.description}</ComposerCommandItemDescription>
+          )}
+        </ComposerCommandItem>
+      )}
+    </ComposerCommandItems>
+  </ComposerCommandList>
+);
+
 // ---------------------------------------------------------------------------
 // AskUser (with sub-Parts) — default render for the ask-user flow registered
 // via the `questions` prop on Composer Root.
@@ -698,6 +727,7 @@ export const Composer = Object.assign(ComposerRoot, {
   AskUserHints: ComposerAskUserHints,
   AskUserDismiss: ComposerAskUserDismiss,
   AskUserContinue: ComposerAskUserContinue,
+  Commands: ComposerCommands,
   CommandList: ComposerCommandList,
   CommandItems: ComposerCommandItems,
   CommandLoading: ComposerCommandLoading,

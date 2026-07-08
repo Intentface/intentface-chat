@@ -48,7 +48,6 @@ import { Markdown } from "@/components/ui/markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { prepareAttachmentsForSend } from "@/lib/ai/attachments";
 import { type ComposerPanelState, useActiveComposerState } from "@/lib/ai/chat-status";
-import { CHIP_ICONS } from "@/lib/ai/chip-icons";
 import {
   getChainInfo,
   getReasoningInfo,
@@ -764,52 +763,17 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
     >
       <Composer.Panel>
         {(composer) => {
-          // One at a time, by priority: an active command list wins, else the
-          // app-derived panelState (ask-user / active steps).
+          // One at a time, by priority: an active command list wins, then the
+          // composer's own ask-user flow, else the app-derived step list.
           if (composer.commands.active) {
             return (
               <>
-                <Composer.CommandList prefix="@">
-                  <Composer.CommandLoading />
-                  <Composer.CommandEmpty />
-                  <Composer.CommandItems>
-                    {(item) => (
-                      <Composer.CommandItem value={item.value}>
-                        {item.icon && (
-                          <Composer.CommandItemIcon>
-                            {CHIP_ICONS[item.icon]}
-                          </Composer.CommandItemIcon>
-                        )}
-                        <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                      </Composer.CommandItem>
-                    )}
-                  </Composer.CommandItems>
-                </Composer.CommandList>
-                <Composer.CommandList prefix="/">
-                  <Composer.CommandLoading />
-                  <Composer.CommandEmpty />
-                  <Composer.CommandItems>
-                    {(item) => (
-                      <Composer.CommandItem value={item.value}>
-                        {item.icon && (
-                          <Composer.CommandItemIcon>
-                            {CHIP_ICONS[item.icon]}
-                          </Composer.CommandItemIcon>
-                        )}
-                        <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-                        {item.description && (
-                          <Composer.CommandItemDescription>
-                            {item.description}
-                          </Composer.CommandItemDescription>
-                        )}
-                      </Composer.CommandItem>
-                    )}
-                  </Composer.CommandItems>
-                </Composer.CommandList>
+                <Composer.Commands prefix="@" />
+                <Composer.Commands prefix="/" />
               </>
             );
           }
-          if (panelState.type === "ask-user") return <Composer.AskUser />;
+          if (composer.askUser.active) return <Composer.AskUser />;
           if (panelState.type === "active") {
             return (
               <StepQueue>

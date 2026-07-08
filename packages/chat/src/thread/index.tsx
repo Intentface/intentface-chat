@@ -27,40 +27,29 @@ import {
   useSyncExternalStore,
   type WheelEvent,
 } from "react";
-import type { PrimitiveProps } from "./internal/primitive-props";
-import type { StateAttributesMapping } from "./internal/render/getStateAttributesProps";
-import { useRefWithInit } from "./internal/render/useRefWithInit";
-import { useRenderElement } from "./internal/render/useRenderElement";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import type { StateAttributesMapping } from "../internal/render/getStateAttributesProps";
+import { useRefWithInit } from "../internal/render/useRefWithInit";
+import { useRenderElement } from "../internal/render/useRenderElement";
+import {
+  DEFAULT_BOTTOM_OFFSET,
+  DEFAULT_DOCK_SELECTOR,
+  measureDockInset,
+  measureTopInset,
+  queryDockParts,
+  scrollContainerTo,
+  wasPrepended,
+} from "./geometry";
+import {
+  createEdgeStore,
+  createVisibilityStore,
+  type EdgeStore,
+  EMPTY_VISIBILITY,
+  type ThreadVisibilityState,
+  type VisibilityStore,
+} from "./stores";
 
-// ---------------------------------------------------------------------------
-// Scroll-edge stores — one boolean store per edge (top / bottom), external so
-// an edge flip re-renders only the components that read it (via useThread),
-// never the Thread tree itself: the context value stays referentially stable
-// for the thread's lifetime. Two independent stores rather than one
-// {atTop,atBottom} snapshot, so a flip at one edge never notifies the other's
-// readers.
-// ---------------------------------------------------------------------------
-
-const createEdgeStore = () => {
-  let snapshot = true;
-  const listeners = new Set<() => void>();
-  return {
-    getSnapshot: () => snapshot,
-    setSnapshot: (next: boolean) => {
-      if (snapshot === next) return;
-      snapshot = next;
-      for (const listener of listeners) listener();
-    },
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-  };
-};
-
-type EdgeStore = ReturnType<typeof createEdgeStore>;
+export type { ThreadVisibilityState } from "./stores";
 
 // Latest-ref: read the current value from long-lived effects/callbacks without
 // re-subscribing them when it changes.
@@ -71,59 +60,6 @@ const useAsRef = <T,>(value: T) => {
   }, [value]);
   return ref;
 };
-
-// ---------------------------------------------------------------------------
-// Visibility store — which data-message-id rows intersect the viewport. Lazy
-// and ref-counted like the at-bottom store's bigger sibling: the observers
-// behind it exist only while at least one useThreadVisibility subscriber is
-// mounted, so unsubscribed threads pay nothing.
-// ---------------------------------------------------------------------------
-
-export type ThreadVisibilityState = {
-  /** data-message-id values intersecting the viewport, in document order. */
-  visibleMessageIds: string[];
-  /** The topmost visible row — the one being read. */
-  currentMessageId: string | null;
-};
-
-const EMPTY_VISIBILITY: ThreadVisibilityState = {
-  visibleMessageIds: [],
-  currentMessageId: null,
-};
-
-const visibilityStatesEqual = (a: ThreadVisibilityState, b: ThreadVisibilityState) =>
-  a.currentMessageId === b.currentMessageId &&
-  a.visibleMessageIds.length === b.visibleMessageIds.length &&
-  a.visibleMessageIds.every((id, index) => id === b.visibleMessageIds[index]);
-
-const createVisibilityStore = () => {
-  let snapshot = EMPTY_VISIBILITY;
-  const listeners = new Set<() => void>();
-  return {
-    getSnapshot: () => snapshot,
-    hasListeners: () => listeners.size > 0,
-    setSnapshot: (next: ThreadVisibilityState) => {
-      if (visibilityStatesEqual(snapshot, next)) return;
-      snapshot = next;
-      for (const listener of listeners) listener();
-    },
-    subscribe: (
-      listener: () => void,
-      onFirstSubscribe: () => void,
-      onLastUnsubscribe: () => void,
-    ) => {
-      const wasEmpty = listeners.size === 0;
-      listeners.add(listener);
-      if (wasEmpty) onFirstSubscribe();
-      return () => {
-        listeners.delete(listener);
-        if (listeners.size === 0) onLastUnsubscribe();
-      };
-    },
-  };
-};
-
-type VisibilityStore = ReturnType<typeof createVisibilityStore>;
 
 // ---------------------------------------------------------------------------
 // Thread context — a small, generic primitive surface. Auto-scroll behavior is
@@ -212,12 +148,6 @@ export const useThreadVisibility = (): ThreadVisibilityState => {
   return useSyncExternalStore(subscribe, visibilityStore.getSnapshot, visibilityStore.getSnapshot);
 };
 
-// Single place that performs the scroll, so callers just choose the behavior:
-// 'instant' for jumps that must not animate, 'smooth' for deliberate movements.
-const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavior) => {
-  el.scrollTo({ top, behavior });
-};
-
 // ---------------------------------------------------------------------------
 // useThreadScroll — owns the thread's scroll subsystem: the scroll/content/
 // sentinel refs, at-bottom detection, the scroll commands, and the autoScroll
@@ -259,18 +189,6 @@ const AUTO_SCROLL_SETTLE_MS = 200;
 // Sub-pixel scrollTop rounding differs across engines; a small IntersectionObserver
 // rootMargin keeps edge detection from flickering right at the top/bottom boundary.
 const EDGE_TOLERANCE = "8px 0px";
-
-// A prepend = rows were added, nothing removed, and the previously-first row
-// is still connected but no longer first (older history loading in above).
-const wasPrepended = (
-  mutations: MutationRecord[],
-  previousFirst: Element | null,
-  content: HTMLElement,
-) =>
-  previousFirst?.isConnected === true &&
-  content.firstElementChild !== previousFirst &&
-  mutations.some((m) => m.addedNodes.length > 0) &&
-  mutations.every((m) => m.removedNodes.length === 0);
 
 const useThreadScroll = (
   rootRef: RefObject<HTMLDivElement | null>,
@@ -749,49 +667,6 @@ const useThreadScroll = (
 // ---------------------------------------------------------------------------
 // Insets
 // ---------------------------------------------------------------------------
-
-// Fallback (px) until the composer is measured.
-const DEFAULT_BOTTOM_OFFSET = 128;
-// Breathing room between the last line of content and the composer dock. The
-// bottom overlay spans it in the styled layer.
-const COMPOSER_GAP = 32;
-const DEFAULT_DOCK_SELECTOR =
-  '[data-slot="composer-context-window"], [data-slot="composer-container"]';
-
-// `dockSelector` is public API, so it may be an invalid selector string.
-// Degrade to "no dock parts" rather than letting querySelectorAll throw a
-// SyntaxError inside the layout effect (which would crash the render).
-const queryDockParts = (root: HTMLElement, dockSelector: string): Element[] => {
-  try {
-    return [...root.querySelectorAll(dockSelector)];
-  } catch {
-    return [];
-  }
-};
-
-/**
- * Height (px) to reserve at the bottom for the dock parts matching
- * `dockSelector` — but NOT the command-list / ask-user panel. The dock is
- * bottom-anchored, so it sits in a fixed region while the panel grows upward
- * above it. The inset is measured from a single reference — the bottom-most
- * match's top to the root's bottom — not a sum of matches, so a taller part
- * stacked above must fit within COMPOSER_GAP. Returns null when no dock is
- * mounted yet.
- */
-const measureDockInset = (root: HTMLElement, dockSelector: string): number | null => {
-  let dockTop: number | null = null;
-  for (const part of queryDockParts(root, dockSelector)) {
-    const top = part.getBoundingClientRect().top;
-    if (dockTop === null || top > dockTop) dockTop = top;
-  }
-  if (dockTop === null) return null;
-  return Math.round(root.getBoundingClientRect().bottom - dockTop + COMPOSER_GAP);
-};
-
-// Top inset reserved by the top overlay, measured straight off the rendered
-// element (px) — no getComputedStyle / rem→px conversion. 0 if no top overlay.
-const measureTopInset = (root: HTMLElement): number =>
-  root.querySelector('[data-slot="thread-overlay-top"]')?.getBoundingClientRect().height ?? 0;
 
 /**
  * Writes the measured insets to CSS vars on the root via a ResizeObserver — no

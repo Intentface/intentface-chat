@@ -358,8 +358,6 @@ const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => {
           <AnimatePresence mode="popLayout" initial={false}>
             {state.open && (
               <motion.div
-                // justify-end pins the content to the bottom of the clipping box,
-                // so height changes reveal/hide at the top and the bottom stays put.
                 className={cn("absolute inset-x-0 bottom-2 overflow-hidden", className)}
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: bounds.height, opacity: 1 }}

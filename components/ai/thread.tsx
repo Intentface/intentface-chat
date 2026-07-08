@@ -146,7 +146,7 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
                 variant="secondary"
                 size="sm"
                 onClick={handleScrollToBottom}
-                className="rounded-full shadow-md"
+                className="rounded-full shadow-xs"
               >
                 <ArrowDownIcon />
                 Latest

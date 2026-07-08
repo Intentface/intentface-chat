@@ -812,27 +812,25 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
           if (panelState.type === "ask-user") return <Composer.AskUser />;
           if (panelState.type === "active") {
             return (
-              <div className="p-2">
-                <StepQueue>
-                  {activeSteps.map((step, i) => {
-                    const active = i === activeSteps.length - 1;
-                    return (
-                      <StepQueue.Item key={step.key}>
-                        <StepQueue.Icon>
-                          {step.kind === "thinking" ? (
-                            <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
-                          ) : active ? (
-                            <Loader className="size-3.5 animate-spin" />
-                          ) : (
-                            <CircleDotIcon className="size-3.5" />
-                          )}
-                        </StepQueue.Icon>
-                        <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
-                      </StepQueue.Item>
-                    );
-                  })}
-                </StepQueue>
-              </div>
+              <StepQueue>
+                {activeSteps.map((step, i) => {
+                  const active = i === activeSteps.length - 1;
+                  return (
+                    <StepQueue.Item key={step.key}>
+                      <StepQueue.Icon>
+                        {step.kind === "thinking" ? (
+                          <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
+                        ) : active ? (
+                          <Loader className="size-3.5 animate-spin" />
+                        ) : (
+                          <CircleDotIcon className="size-3.5" />
+                        )}
+                      </StepQueue.Icon>
+                      <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
+                    </StepQueue.Item>
+                  );
+                })}
+              </StepQueue>
             );
           }
           return null;

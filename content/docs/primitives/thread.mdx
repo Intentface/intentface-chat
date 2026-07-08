@@ -79,7 +79,8 @@ to the bottom.
 Read the scroll state and issue commands from anywhere inside `<Thread>`:
 
 export const useThreadMembers = [
-  { name: "isAtBottom", type: "boolean", description: "Whether the bottom sentinel is in view. Subscribes the caller — only components that render it re-render on flips." },
+  { name: "isAtTop", type: "boolean", description: "Whether the top sentinel is in view (start of the transcript) — pairs with load-older-history. Subscribes the caller; independent of isAtBottom." },
+  { name: "isAtBottom", type: "boolean", description: "Whether the bottom sentinel is in view. Subscribes the caller — only components that read it re-render on flips." },
   { name: "scrollToBottom", type: "(behavior?) => void", description: "Scroll to the live end." },
   { name: "scrollToTop", type: "(behavior?) => void", description: "Scroll to the start; releases the follow." },
   { name: "scrollToMessage", type: "(id, options?) => boolean", description: "Scroll to a row carrying data-message-id={id}. Options: align (\"start\" | \"center\" | \"end\" | \"nearest\"), behavior. Called before the transcript loads (a deep link), the jump is queued and runs when the row mounts. Returns false only when the id is absent from a loaded transcript." },
@@ -116,13 +117,13 @@ export const visibilityMembers = [
 Thread's scroll subsystem is built to cost nothing while a reply streams — you
 don't need to optimize around it:
 
-- **No scroll handler.** At-bottom detection is an IntersectionObserver
-  sentinel, computed off the main thread. Scrolling runs zero JavaScript.
+- **No scroll handler.** Edge detection is an IntersectionObserver sentinel per
+  edge, computed off the main thread. Scrolling runs zero JavaScript.
 - **Landing and follow are event-driven** — a MutationObserver for new turns, a
   ResizeObserver for growth, one `scrollTo` per change. No per-token geometry
   reads, no animation-frame polling.
-- **`isAtBottom` lives in an external store**, so a flip re-renders only the
-  components that render it (your scroll button) — never the Thread tree.
+- **Edge state lives in external stores** (one per edge), so a flip re-renders
+  only the components that read it (your scroll button) — never the Thread tree.
 - **Lazy capabilities stay free until used**: visibility tracking creates its
   observers on the first `useThreadVisibility` subscriber and tears them down
   with the last; the prepend-preservation scroll listener exists only when
@@ -177,6 +178,14 @@ export const rootProps = [
 
 <PropsTable rows={rootProps} />
 
+export const rootAttrs = [
+  { attribute: "data-slot", values: '"thread-root"', description: "The root element." },
+  { attribute: "data-at-top", description: "Present while the top edge is in view (start of the transcript) — the CSS-only mirror of useThread().isAtTop." },
+  { attribute: "data-at-bottom", description: "Present while the bottom edge is in view (at the live end) — the CSS-only mirror of useThread().isAtBottom." },
+];
+
+<AttributesTable rows={rootAttrs} />
+
 ### Thread.Overlay
 
 A positioned fade strip at the top or bottom edge. The top overlay's height is
@@ -197,12 +206,13 @@ export const overlayAttrs = [
 
 ### Thread.Viewport
 
-The scroll container plus the measured content column and the at-bottom
-sentinel. Focusable so keyboard users can scroll it.
+The scroll container plus the measured content column and the 1px edge sentinels
+(top + bottom). Focusable so keyboard users can scroll it.
 
 export const viewportAttrs = [
   { attribute: "data-slot", values: '"thread-scroller"', description: "The scroll container (role=region, tabIndex 0, aria-label \"Messages\")." },
   { attribute: "data-slot", values: '"thread-content"', description: "The content column (role=log, aria-relevant=\"additions\") where your messages render." },
+  { attribute: "data-slot", values: '"thread-top"', description: "The 1px at-top sentinel the IntersectionObserver watches." },
   { attribute: "data-slot", values: '"thread-bottom"', description: "The 1px at-bottom sentinel the IntersectionObserver watches." },
 ];
 

@@ -414,10 +414,20 @@ const useThreadScroll = (
     // let the preserve effect hold the reading position instead.
     let landed = false;
     let skipNextResize = true;
+    let hadContent = false;
     let firstTurn: Element | null = null;
     const land = (mutations: MutationRecord[] = []) => {
       const previousFirst = firstTurn;
       firstTurn = content.firstElementChild;
+      // A switch whose history loads async goes A → [] → B across separate
+      // commits, so the add-only commit isn't flagged `replaced`. Treat "was
+      // empty, now populated" as a fresh land (instant), not an incremental
+      // turn — shadcn's `previousItemCount === 0` rule, read off the DOM since
+      // the headless thread owns no item count. Tracked before the early
+      // returns so the prepend / deep-link-jump paths keep it accurate.
+      const hasContent = content.children.length > 0;
+      const repopulated = hasContent && !hadContent;
+      hadContent = hasContent;
       if (preserveOnPrependRef.current && wasPrepended(mutations, previousFirst, content)) {
         return;
       }
@@ -435,7 +445,7 @@ const useThreadScroll = (
       const replaced = mutations.some((m) => m.removedNodes.length > 0);
       skipNextResize = true;
       followingRef.current = true;
-      scrollToBottom(landed && !replaced ? "smooth" : "instant");
+      scrollToBottom(landed && !replaced && !repopulated ? "smooth" : "instant");
       landed = true;
     };
 

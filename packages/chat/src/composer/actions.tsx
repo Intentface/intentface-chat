@@ -1,19 +1,21 @@
 "use client";
 
-// Composer.ContextWindow / Actions / Submit. ContextWindow exposes its
-// visibility as data-visible (yields to an open panel); Submit owns the
-// send↔stop behavior via useComposerSubmit and renders a plain button — the
-// styled layer applies the same hook to its own button component.
+// Composer.ContextWindow / Actions / Submit. ContextWindow is content-driven
+// like the panels — open (data-open / data-closed) while it has content and no
+// panel is active, yielding to an active panel. Submit owns the send↔stop
+// behavior via useComposerSubmit and renders a plain button — the styled layer
+// applies the same hook to its own button component.
 
 import { Children, useEffect } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
+import { openStateMapping } from "../internal/state-mappings";
 import { useAsRef } from "./internals";
 import { useComposer } from "./store";
 
 export type ComposerContextWindowState = {
-  /** Present as data-visible while the strip has content and no panel is open. */
-  visible: boolean;
+  /** Open (data-open) while the strip has content and no panel is active. */
+  open: boolean;
 };
 
 export type ComposerContextWindowProps = PrimitiveProps<"div", ComposerContextWindowState>;
@@ -31,13 +33,14 @@ export const ComposerContextWindow = ({
     (composer) => composer.commands.active || composer.askUser.active,
   );
   const hasContent = Children.toArray(children).length > 0;
-  const isVisible = hasContent && !anyPanelActive;
+  const open = hasContent && !anyPanelActive;
 
   return useRenderElement(
     "div",
     { className, render, style },
     {
-      state: { visible: isVisible },
+      state: { open },
+      stateAttributesMapping: openStateMapping,
       props: [{ "data-slot": "composer-context-window", children }, elementProps],
     },
   );

@@ -300,12 +300,14 @@ export const placeholderProps = [
 
 ### Composer.ContextWindow
 
-A slot above the input, visible only when it has content and no panel is open.
+A slot above the input, open only when it has content and no panel is active.
+Content-driven and exposing `data-open`/`data-closed` like `Panel`/`Popover`.
 Renders `data-slot="composer-context-window"`.
 
 export const contextWindowAttrs = [
   { attribute: "data-slot", values: '"composer-context-window"', description: "The context-window element." },
-  { attribute: "data-visible", description: "Present while the window is shown." },
+  { attribute: "data-open", description: "Present while the window has content and no panel is active." },
+  { attribute: "data-closed", description: "Present while empty or yielding to an active panel." },
 ];
 
 <AttributesTable rows={contextWindowAttrs} />

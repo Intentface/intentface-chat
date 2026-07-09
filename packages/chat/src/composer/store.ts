@@ -72,10 +72,12 @@ export type ComposerAskUserState = ComposerPanelSlice & {
 };
 
 // The shared skeleton every native panel slice (commands, ask-user, and later
-// tool-approval) is built on: an `active` flag a consumer can gate on the same
-// way for any of them (`{commands.active && <…/>}`). Each slice adds its own
-// payload/actions on top.
-export type ComposerPanelSlice = { active: boolean };
+// tool-approval) is built on: `active` is the logical open flag a consumer gates
+// on (`{commands.active && <…/>}`); `present` is sticky-true — it stays set through
+// the close animation so the panel can keep the last content mounted while it
+// animates out, and is cleared only by finalizePanelClose() once the animation
+// ends. Each slice adds its own payload/actions on top.
+export type ComposerPanelSlice = { active: boolean; present: boolean };
 
 // Command-list state: the plugin mirror (whether a trigger prefix is active,
 // which one, the query typed after it) plus the navigation highlight. The
@@ -115,6 +117,9 @@ export type ComposerStore = {
   setDragging: (active: boolean) => void;
   resetAttachments: () => void;
   activateAskUser: () => () => void;
+  // Clears `present` on native panel slices whose `active` is false — the Panel calls
+  // this once its close animation finishes, so closing content stays mounted until then.
+  finalizePanelClose: () => void;
   reset: () => void;
   // The store's editor instance: registered by the mounted Textarea, driven
   // through the controller (a null-safe port over editorRef).
@@ -279,7 +284,13 @@ export const createComposerStore = (): ComposerStore => {
     const resetHighlight = current.trigger !== next.trigger || current.query !== next.query;
     snapshot = {
       ...snapshot,
-      commands: { ...next, highlightIndex: resetHighlight ? 0 : current.highlightIndex },
+      commands: {
+        ...next,
+        // Sticky: opening sets present; closing leaves it set until the panel's
+        // exit animation finishes and finalizePanelClose() clears it.
+        present: next.active || current.present,
+        highlightIndex: resetHighlight ? 0 : current.highlightIndex,
+      },
     };
     notify();
   };
@@ -378,6 +389,8 @@ export const createComposerStore = (): ComposerStore => {
       askUser: {
         ...snapshot.askUser,
         active: questions != null,
+        // Sticky, same as commands: cleared by finalizePanelClose() after the exit.
+        present: questions != null || snapshot.askUser.present,
         questions,
         step: askUserMachine.step,
         answers: askUserMachine.answers,
@@ -407,7 +420,7 @@ export const createComposerStore = (): ComposerStore => {
   snapshot = {
     textarea: { ...controller, hasContent: false },
     isSubmitting: false,
-    commands: { active: false, trigger: null, query: "", highlightIndex: 0 },
+    commands: { active: false, present: false, trigger: null, query: "", highlightIndex: 0 },
     attachments: {
       items: attachmentState.items,
       error: attachmentState.error,
@@ -420,6 +433,7 @@ export const createComposerStore = (): ComposerStore => {
     },
     askUser: {
       active: false,
+      present: false,
       questions: null,
       step: askUserMachine.step,
       answers: askUserMachine.answers,
@@ -439,6 +453,22 @@ export const createComposerStore = (): ComposerStore => {
   // Pristine state for reset() — slice actions and refs are reused, so action
   // identities stay stable across resets.
   const initialSnapshot = snapshot;
+
+  // Clear `present` on any native panel slice whose `active` is now false — called by
+  // the Panel once its close animation finishes, so the last content stays mounted
+  // (and keeps animating) until then. Identity-guarded so it no-ops when nothing changed.
+  const finalizePanelClose = () => {
+    const { commands, askUser } = snapshot;
+    if (commands.present === commands.active && askUser.present === askUser.active) return;
+    snapshot = {
+      ...snapshot,
+      commands:
+        commands.present === commands.active ? commands : { ...commands, present: commands.active },
+      askUser:
+        askUser.present === askUser.active ? askUser : { ...askUser, present: askUser.active },
+    };
+    notify();
+  };
 
   // --- Lifecycle
   // Drop everything mount-scoped when the Composer unmounts (route change):
@@ -468,6 +498,7 @@ export const createComposerStore = (): ComposerStore => {
     setDragging,
     resetAttachments: () => dispatchAttachments({ type: "reset" }),
     activateAskUser,
+    finalizePanelClose,
     reset,
     editorRef,
     controller,

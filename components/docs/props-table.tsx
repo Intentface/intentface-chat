@@ -83,7 +83,10 @@ const PropsRow = ({ row }: { row: PropRow }) => {
           </div>
         </td>
       </tr>
-      <tr aria-hidden={!open} className={cn(open && "border-secondary-border/60 border-b bg-base/40")}>
+      <tr
+        aria-hidden={!open}
+        className={cn(open && "border-secondary-border/60 border-b bg-base/40")}
+      >
         <td colSpan={3} className="p-0">
           <motion.div
             initial={false}
@@ -101,7 +104,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
                 duration: 0.15,
                 ease: "easeOut",
               }}
-              className="flex flex-col gap-3 px-4 py-4"
+              className="flex flex-col gap-3 py-4"
             >
               <DetailRow label="Name">
                 <code className="font-mono text-ink-primary text-xs">{row.name}</code>
@@ -129,9 +132,12 @@ const PropsRow = ({ row }: { row: PropRow }) => {
   );
 };
 
+// Mirror the collapsed row's column grid (first col 28%, matching the <colgroup>): the
+// label sits under the "Prop" column and its value under "Type", each with the cells'
+// px-4 so the detail lines up with the row above it.
 const DetailRow = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="grid grid-cols-[7rem_1fr] items-baseline gap-4">
-    <dt className="text-ink-tertiary text-xs">{label}</dt>
-    <dd className="min-w-0 text-sm">{children}</dd>
+  <div className="grid grid-cols-[28%_1fr] items-baseline">
+    <dt className="px-4 text-ink-tertiary text-xs">{label}</dt>
+    <dd className="min-w-0 px-4 text-sm">{children}</dd>
   </div>
 );

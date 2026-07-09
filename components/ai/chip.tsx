@@ -12,14 +12,14 @@ import { cn } from "@/lib/utils";
 // doesn't grow the line box; `box-decoration-clone` keeps padding/bg intact if a
 // chip wraps; `leading-[inherit]` so it never inflates the editor's line height.
 export const CHIP_SURFACE_CLASS =
-  "box-decoration-clone inline rounded-sm px-0.75 py-0.5 align-baseline font-book leading-[inherit] whitespace-nowrap";
+  "box-decoration-clone inline rounded-sm border border-primary-border bg-primary px-0.75 py-0.5 align-baseline font-book leading-[inherit] whitespace-nowrap text-ink-primary";
 
 const chipVariants = cva(CHIP_SURFACE_CLASS, {
   variants: {
     variant: {
-      primary: "bg-primary-hover text-ink-primary",
-      accent: "bg-accent text-accent-ink",
-      warning: "bg-warning text-warning-ink",
+      primary: "",
+      accent: "",
+      warning: "",
     },
   },
   defaultVariants: {
@@ -30,10 +30,9 @@ const chipVariants = cva(CHIP_SURFACE_CLASS, {
 export type ChipVariant = NonNullable<VariantProps<typeof chipVariants>["variant"]>;
 
 // Inline-block icon with a baseline nudge (not flex/absolute) so it rides the
-// text baseline without inflating the line box. The -0.2em nudge is a starting
-// point — tune against the editor's line-height.
+// text baseline without inflating the line box. Inherits the chip's text color.
 const CHIP_ICON_WRAPPER_CLASSES =
-  "mr-0.5 inline-block size-4 align-[-0.2em] text-ink-tertiary [&>svg]:block [&>svg]:size-4";
+  "mr-0.5 inline-block size-3.5 align-[-0.15em] opacity-70 [&>svg]:block [&>svg]:size-3.5";
 
 type ChipRootProps = Omit<ComponentProps<typeof ChipPrimitive>, "variant"> & {
   variant?: ChipVariant;

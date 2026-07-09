@@ -67,8 +67,9 @@ a prefix is active. `commands` maps each prefix to its config and items.
 `Composer.Popover` is the floating alternative to `Composer.Panel`. It takes the
 same children — plain nodes or a state callback — but portals them above the
 field, anchored to the active trigger token, so the list overlays instead of
-growing the composer and needs no reserved height. Mount one or the other; the
-content is identical.
+growing the composer and needs no reserved height. It's collision-aware — near a
+viewport edge it flips, shifts, and caps its height to stay on screen. Mount one
+or the other; the content is identical.
 
 <ComponentPreview name="composer-popover" />
 
@@ -362,17 +363,33 @@ Button that opens the file dialog. Renders
 
 ### Composer.Panel
 
-The in-flow surface region above the field. `children` is either plain nodes or
-a callback `(composer) => ReactNode` receiving the composer state, so you pick
-what to show by priority (`commands.active ? <CommandList/> : askUser.active ?
-<AskUser/> : null`). The host element always renders
-(`data-slot="composer-panel"`); `open` — whether the resolved content is
-non-empty — arrives as the `render` prop's second argument and is mirrored to
-`data-open`/`data-closed`, so the styled layer can mount the card under an
-`AnimatePresence` for a real open/close transition.
+A surface region above the field. `children` is either plain nodes or a callback
+`(composer) => ReactNode` receiving the composer state, so you pick what to show
+by priority (`commands.active ? <CommandList/> : askUser.active ? <AskUser/> :
+null`). By default (`anchor`) it renders as a **collision-aware, portaled overlay**
+anchored to the `Container` — flipping / shifting / sizing to stay on screen (via
+`@floating-ui/dom`); anchor a ref/element elsewhere, or pass `anchor={false}` for an
+**in-flow** block that grows the composer. Pass `pin` to hold the placement without
+flip/shift. `open` — whether the resolved content is non-empty — arrives as the
+`render` prop's second argument and is mirrored to `data-open`/`data-closed`; the
+host stays mounted through its close animation (exposing
+`data-starting-style`/`data-ending-style`) and, when positioned, publishes the
+resolved `data-side`/`data-align` so the transition origin follows a flip.
+
+When positioned, the overlay publishes the anchor's geometry as CSS variables —
+opt in from your styling rather than having the primitive impose a size (Base
+UI-style): `--anchor-width` / `--anchor-height` (the anchor's box, e.g.
+`width: var(--anchor-width)` to match the composer) and `--anchor-available-height`
+(free space toward the resolved side, e.g. `max-height: var(--anchor-available-height)`
+so the content scrolls instead of overflowing).
 
 export const panelProps = [
   { name: "children", type: "ReactNode | ((composer: ComposerState) => ReactNode)", description: "Panel content, or a callback that reads composer state and returns one branch by priority." },
+  { name: "anchor", type: "boolean | Element | RefObject<Element>", description: "Positioned, portaled overlay (default true, anchored to the Container) or an in-flow block (false). A ref/element anchors elsewhere. Match its width with width: var(--anchor-width)." },
+  { name: "side", type: '"top" | "bottom" | "left" | "right"', description: "Overlay preferred side; flips to the opposite on collision. Default \"top\"." },
+  { name: "align", type: '"start" | "center" | "end"', description: "Overlay alignment along the side. Default \"center\"." },
+  { name: "sideOffset", type: "number", description: "Overlay gap between the anchor and the panel, in px. Default 0." },
+  { name: "pin", type: "boolean", description: "Hold side/align without collision repositioning (drops flip + shift). Default false." },
 ];
 
 <PropsTable rows={panelProps} />
@@ -381,6 +398,10 @@ export const panelAttrs = [
   { attribute: "data-slot", values: '"composer-panel"', description: "The panel element." },
   { attribute: "data-open", description: "Present while the resolved content is non-empty." },
   { attribute: "data-closed", description: "Present while empty." },
+  { attribute: "data-starting-style", description: "Present on the first open frame — the enter transition's from-state." },
+  { attribute: "data-ending-style", description: "Present while the close transition runs, before unmount." },
+  { attribute: "data-side", values: '"top" | "bottom" | "left" | "right"', description: "Resolved side when positioned (anchor) — the origin to animate from." },
+  { attribute: "data-align", values: '"start" | "center" | "end"', description: "Resolved alignment when positioned." },
 ];
 
 <AttributesTable rows={panelAttrs} />
@@ -388,16 +409,19 @@ export const panelAttrs = [
 ### Composer.Popover
 
 Floating alternative to `Composer.Panel`. Takes the same `children` (nodes or a
-state callback) but portals them above the field, anchored to the active trigger
-token and opening upward — overlaying instead of growing the composer.
-Positioning is deterministic (no floating library); it repositions on scroll,
-resize, and composer growth. It stays mounted and exposes `open` the same way as
-`Panel` (the `render` prop's second argument plus `data-open`/`data-closed`). The
-consumer supplies the positioning context — e.g. `position: fixed` — via
-`className`/`style`.
+state callback) but portals them to the body, anchored to the active trigger
+token — overlaying instead of growing the composer. It's collision-aware (via
+`@floating-ui/dom`): opens upward by default and flips below / shifts / caps its
+height to stay on screen, tracking the anchor across scroll, resize, and composer
+growth. It stays mounted and exposes `open` the same way as `Panel` (the `render`
+prop's second argument plus `data-open`/`data-closed`), and publishes the resolved
+`data-side`/`data-align` so the transition origin follows a flip. Positioning is
+written imperatively — the styled layer supplies only box and animation styling,
+not `left`/`top`.
 
 export const popoverProps = [
   { name: "children", type: "ReactNode | ((composer: ComposerState) => ReactNode)", description: "Same content as Panel — nodes or a state callback." },
+  { name: "pin", type: "boolean", description: "Hold the placement without collision repositioning (drops flip + shift). Default false." },
 ];
 
 <PropsTable rows={popoverProps} />
@@ -406,6 +430,8 @@ export const popoverAttrs = [
   { attribute: "data-slot", values: '"composer-popover"', description: "The portaled popover element." },
   { attribute: "data-open", description: "Present while the resolved content is non-empty." },
   { attribute: "data-closed", description: "Present while empty (stays mounted, holding its last position)." },
+  { attribute: "data-side", values: '"top" | "bottom" | "left" | "right"', description: "Resolved side — flips to \"bottom\" when there's no room above; the origin to animate from." },
+  { attribute: "data-align", values: '"start" | "center" | "end"', description: "Resolved alignment along the side." },
 ];
 
 <AttributesTable rows={popoverAttrs} />

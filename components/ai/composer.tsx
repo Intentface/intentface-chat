@@ -200,7 +200,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       // Active-prefix badge: same inline text-flow surface as a committed chip
       // (CHIP_SURFACE_CLASS in chip.tsx) so the badge and the chip it becomes
       // share one baseline — no jump on commit.
-      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
+      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:border **:data-command-badge:border-primary-border **:data-command-badge:bg-primary **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:text-ink-primary",
       // Type-to-filter hint while the command query is empty.
       "[&_[data-command-placeholder]::after]:content-['Type_to_filter'] [&_[data-command-placeholder]::after]:pointer-events-none [&_[data-command-placeholder]::after]:whitespace-nowrap [&_[data-command-placeholder]::after]:text-ink-tertiary",
       disabled && "opacity-50 cursor-not-allowed",
@@ -336,31 +336,38 @@ const ComposerSubmit = ({
 };
 
 // ---------------------------------------------------------------------------
-// Panel — an in-flow surface card. The primitive owns the Base UI open/close
-// lifecycle: it stays mounted through its exit and exposes data-open/data-closed
-// + data-starting-style/data-ending-style, keeping the last content mounted while
-// it animates out. So this is pure CSS — no AnimatePresence: the card fades/slides
-// from data-starting-style on open and to data-ending-style on close, and the
-// primitive unmounts once the transition finishes. The relative wrapper is the
-// (always-present) positioning context the absolute card anchors to.
+// Panel — a floating surface card above the input. `anchor` runs it through the
+// shared collision-aware positioner (portaled, matched to the Container width,
+// flipping/shifting/sizing near a viewport edge) instead of a plain absolute box.
+// The primitive owns the Base UI open/close lifecycle: it stays mounted through
+// its exit and exposes data-open/data-closed + data-starting-style/data-ending-style
+// (plus data-side from the positioner), keeping the last content mounted while it
+// animates out. So this is pure CSS — no AnimatePresence: the card fades/slides
+// from data-starting-style on open and to data-ending-style on close, from whichever
+// side it resolved to, and the primitive unmounts once the transition finishes.
 // ---------------------------------------------------------------------------
 
 type ComposerPanelProps = Omit<ComponentProps<typeof ComposerPrimitive.Panel>, "render">;
 
 const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => (
-  <div className="relative">
-    <ComposerPrimitive.Panel
-      {...props}
-      className={cn(
-        "absolute inset-x-0 bottom-2 overflow-hidden",
-        "rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]",
-        "transition-[opacity,transform] duration-150 ease-out",
-        "data-starting-style:opacity-0",
-        "data-ending-style:opacity-0",
-        className,
-      )}
-    />
-  </div>
+  <ComposerPrimitive.Panel
+    sideOffset={8}
+    {...props}
+    className={cn(
+      // absolute is the base positioning context (the positioner writes left/top in page
+      // coordinates); portaled to the body, so it never reserves layout in the composer.
+      // Match the composer Container's width via the positioner's --anchor-width var.
+      "absolute z-50 w-(--anchor-width) overflow-hidden",
+      "rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]",
+      "transition-[opacity,transform] duration-150 ease-out",
+      "data-starting-style:opacity-0 data-ending-style:opacity-0",
+      // Slide from the anchored edge: default (above) drops in from below; flipped
+      // below the input, it rises in from above.
+      "data-[side=top]:data-starting-style:translate-y-1.5 data-[side=top]:data-ending-style:translate-y-1.5",
+      "data-[side=bottom]:data-starting-style:-translate-y-1.5 data-[side=bottom]:data-ending-style:-translate-y-1.5",
+      className,
+    )}
+  />
 );
 
 // ---------------------------------------------------------------------------
@@ -377,13 +384,15 @@ const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => {
   return (
     <ComposerPrimitive.Popover
       className={cn(
-        // Floating shell — same material as the in-flow panel, scaled down and
-        // lifted above the anchor token with a stronger shadow. `fixed` is the
-        // positioning context the primitive anchors within (it sets left/bottom);
-        // z-50 keeps the portaled popover above the thread.
-        "fixed z-50 mb-2 w-72 overflow-hidden border border-primary-border bg-primary rounded-4xl shadow-lg [corner-shape:squircle]",
+        // Floating shell — same material as the in-flow panel, scaled down and lifted
+        // off the anchor token with a stronger shadow. `absolute` is the base positioning
+        // context (the positioner then writes left/top in page coordinates); z-50 keeps
+        // the portaled popover above the thread.
+        "absolute z-50 w-72 overflow-hidden border border-primary-border bg-primary rounded-4xl shadow-lg [corner-shape:squircle]",
         "transition-[opacity,transform,filter] duration-150 ease-out",
-        "data-closed:opacity-0 data-closed:translate-y-1.5 data-closed:blur-[3px]",
+        "data-closed:opacity-0 data-closed:blur-[3px]",
+        // Slide from the anchored edge — opens upward by default, downward when flipped.
+        "data-[side=top]:data-closed:translate-y-1.5 data-[side=bottom]:data-closed:-translate-y-1.5",
         className,
       )}
       {...props}
@@ -400,9 +409,11 @@ type ComposerCommandListProps = ComponentProps<typeof ComposerPrimitive.CommandL
 const ComposerCommandList = ({ className, ...props }: ComposerCommandListProps) => (
   <ComposerPrimitive.CommandList
     className={cn(
-      // Pure content — the host (a PanelItem card or the Popover) supplies the
-      // surface material and positioning; this is just the scrollable list.
-      "group/composer-command-list flex max-h-64 flex-col overflow-y-auto p-1 scroll-py-1",
+      // Pure content — the host (a Panel card or the Popover) supplies the surface
+      // material and positioning; this is just the scrollable list. Height caps at
+      // 16rem, or the positioner's available space near a viewport edge, whichever is
+      // smaller (the var falls back to 16rem when unset, e.g. an in-flow panel).
+      "group/composer-command-list flex max-h-[min(16rem,var(--anchor-available-height,16rem))] flex-col overflow-y-auto p-1 scroll-py-1",
       className,
     )}
     {...props}

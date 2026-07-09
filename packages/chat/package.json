@@ -48,12 +48,13 @@
     "postpack": "node scripts/swap-exports.mjs post"
   },
   "dependencies": {
-    "@tiptap/core": "^3.23.1",
-    "@tiptap/extension-document": "^3.19.0",
-    "@tiptap/extension-paragraph": "^3.19.0",
-    "@tiptap/extension-text": "^3.19.0",
-    "@tiptap/pm": "^3.19.0",
-    "@tiptap/react": "^3.19.0",
+    "@floating-ui/dom": "1.7.6",
+    "@tiptap/core": "^3.27.1",
+    "@tiptap/extension-document": "^3.27.1",
+    "@tiptap/extension-paragraph": "^3.27.1",
+    "@tiptap/extension-text": "^3.27.1",
+    "@tiptap/pm": "^3.27.1",
+    "@tiptap/react": "^3.27.1",
     "nanoid": "^5.1.11"
   },
   "peerDependencies": {

@@ -51,13 +51,13 @@ stream. `Thread.Viewport` maps `--thread-turn-min-height` onto its last child,
 so the reserve that lets the newest turn land at the top is wired for you.
 
 export const autoScrollModes = [
-  { name: '"follow"', type: "default", description: "Newest lands at the top; the view follows the stream (ChatGPT-style)." },
-  { name: '"bottom"', type: "", description: "Newest lands at the bottom; the view follows the stream (Codex-style)." },
-  { name: '"jump"', type: "", description: "Newest lands at the top; the view does not follow." },
-  { name: '"off"', type: "", description: "A plain scroll area — no landing, no follow, no reserve." },
+  { value: '"follow"', default: true, description: "Newest lands at the top; the view follows the stream (ChatGPT-style)." },
+  { value: '"bottom"', description: "Newest lands at the bottom; the view follows the stream (Codex-style)." },
+  { value: '"jump"', description: "Newest lands at the top; the view does not follow." },
+  { value: '"off"', description: "A plain scroll area — no landing, no follow, no reserve." },
 ];
 
-<PropsTable rows={autoScrollModes} />
+<ValuesTable rows={autoScrollModes} />
 
 ### Opening position
 

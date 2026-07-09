@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { type ReactNode, useState } from "react";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { cn } from "@/lib/utils";
@@ -82,10 +83,26 @@ const PropsRow = ({ row }: { row: PropRow }) => {
           </div>
         </td>
       </tr>
-      {open && (
-        <tr className="border-secondary-border/60 border-b bg-base/40 last:border-0">
-          <td colSpan={3} className="px-4 py-4">
-            <dl className="flex animate-in flex-col gap-3 fade-in slide-in-from-top-1">
+      <tr aria-hidden={!open} className={cn(open && "border-secondary-border/60 border-b bg-base/40")}>
+        <td colSpan={3} className="p-0">
+          <motion.div
+            initial={false}
+            animate={{ height: open ? "auto" : 0 }}
+            transition={{
+              duration: 0.22,
+              ease: [0.32, 0.72, 0, 1],
+            }}
+            className="overflow-hidden"
+          >
+            <motion.dl
+              initial={false}
+              animate={{ opacity: open ? 1 : 0 }}
+              transition={{
+                duration: 0.15,
+                ease: "easeOut",
+              }}
+              className="flex flex-col gap-3 px-4 py-4"
+            >
               <DetailRow label="Name">
                 <code className="font-mono text-ink-primary text-xs">{row.name}</code>
               </DetailRow>
@@ -93,7 +110,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
                 <span className="text-ink-secondary">{row.description}</span>
               </DetailRow>
               <DetailRow label="Type">
-                <code className="block w-fit max-w-full overflow-x-auto rounded-md border border-base-border bg-base px-3 py-1.5 font-mono text-accent text-xs">
+                <code className="block w-fit max-w-full overflow-x-auto rounded border border-base-border bg-base px-1 py-px font-mono text-accent text-xs">
                   {row.type}
                 </code>
               </DetailRow>
@@ -104,10 +121,10 @@ const PropsRow = ({ row }: { row: PropRow }) => {
                   <span className="text-ink-tertiary">—</span>
                 )}
               </DetailRow>
-            </dl>
-          </td>
-        </tr>
-      )}
+            </motion.dl>
+          </motion.div>
+        </td>
+      </tr>
     </>
   );
 };

@@ -338,10 +338,11 @@ const ComposerSubmit = ({
 
 // ---------------------------------------------------------------------------
 // Panel — an in-flow surface card. The primitive always renders the outer host
-// and hands us `open` (non-empty content) as the render's second arg. Because
-// that host is always mounted, the AnimatePresence inside it stays put and can
-// watch the card mount/unmount as `open` flips — so open and close both animate.
-// The measured inner div drives the card's height between content changes.
+// and hands us the resolved content + `open` (non-empty content) via the render
+// function. Because the host never unmounts, there's no AnimatePresence: the
+// inner card is a persistent motion.div that animates *between* open and closed
+// states as `open` flips, so close is a real height/opacity collapse rather than
+// an unmount. The measured inner div supplies the open height.
 // ---------------------------------------------------------------------------
 
 type ComposerPanelProps = Omit<ComponentProps<typeof ComposerPrimitive.Panel>, "render">;
@@ -355,24 +356,22 @@ const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => {
       className="relative"
       render={({ children: content, ...elementProps }, state) => (
         <div {...elementProps}>
-          <AnimatePresence mode="popLayout" initial={false}>
-            {state.open && (
-              <motion.div
-                className={cn("absolute inset-x-0 bottom-2 overflow-hidden", className)}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: bounds.height, opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ type: "spring", bounce: 0, duration: 0.15 }}
-              >
-                <div
-                  ref={contentRef}
-                  className="rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]"
-                >
-                  {content}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            className={cn("absolute inset-x-0 bottom-2 overflow-hidden", className)}
+            initial={false}
+            animate={{
+              height: state.open ? bounds.height : 0,
+              opacity: state.open ? 1 : 0,
+            }}
+            transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+          >
+            <div
+              ref={contentRef}
+              className="rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]"
+            >
+              {content}
+            </div>
+          </motion.div>
         </div>
       )}
     />

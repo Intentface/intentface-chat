@@ -1,5 +1,6 @@
 "use client";
 
+import { useCommandListItems } from "@intentface/chat/composer";
 import { FileCodeIcon, FileSpreadsheetIcon, FileTextIcon, ScanIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { type CommandItemData, Composer } from "@/components/ai/composer";
@@ -91,19 +92,26 @@ const PLAYGROUND_MENTIONS: CommandItemData[] = [
 
 // Async-callback exercise: a fake "issues" list fetched with simulated latency.
 // Typing `#` opens the list; typing fast aborts in-flight calls via AbortSignal.
-const PLAYGROUND_ISSUES: CommandItemData[] = [
-  { value: "i-123", label: "#123 Login throws on empty password" },
-  { value: "i-142", label: "#142 Memory leak in idle workers" },
-  { value: "i-199", label: "#199 Search returns stale results" },
-  { value: "i-231", label: "#231 Markdown render flash" },
-  { value: "i-287", label: "#287 Composer keyboard nav broken on Safari" },
-  { value: "i-312", label: "#312 Theme picker overflow" },
-  { value: "i-356", label: "#356 Streaming cancellation race" },
-  { value: "i-401", label: "#401 Empty state CTA too small" },
-  { value: "i-445", label: "#445 Sidebar collapse animation jank" },
-  { value: "i-478", label: "#478 i18n stubs out of date" },
-  { value: "i-502", label: "#502 Attachment thumbnails missing" },
-  { value: "i-534", label: "#534 Auth token refresh loop" },
+// The package has no `group` field, so we attach our own for the grouping demo.
+type GroupedIssue = CommandItemData & { group: string };
+
+// Sorted by group (Bugs → UI → Performance) on purpose: the command list's
+// highlight is a flat index over this order, so keeping the source grouped keeps
+// arrow-key nav aligned with the visual groups below. Reorder it and the
+// highlight would jump between groups as you press down.
+const PLAYGROUND_ISSUES: GroupedIssue[] = [
+  { value: "i-123", label: "#123 Login throws on empty password", group: "Bugs" },
+  { value: "i-199", label: "#199 Search returns stale results", group: "Bugs" },
+  { value: "i-287", label: "#287 Composer keyboard nav broken on Safari", group: "Bugs" },
+  { value: "i-478", label: "#478 i18n stubs out of date", group: "Bugs" },
+  { value: "i-534", label: "#534 Auth token refresh loop", group: "Bugs" },
+  { value: "i-231", label: "#231 Markdown render flash", group: "UI" },
+  { value: "i-312", label: "#312 Theme picker overflow", group: "UI" },
+  { value: "i-401", label: "#401 Empty state CTA too small", group: "UI" },
+  { value: "i-445", label: "#445 Sidebar collapse animation jank", group: "UI" },
+  { value: "i-502", label: "#502 Attachment thumbnails missing", group: "UI" },
+  { value: "i-142", label: "#142 Memory leak in idle workers", group: "Performance" },
+  { value: "i-356", label: "#356 Streaming cancellation race", group: "Performance" },
 ].map((item) => ({ ...item, icon: "code" as const }));
 
 const abortableDelay = (ms: number, signal: AbortSignal) =>
@@ -122,13 +130,62 @@ const abortableDelay = (ms: number, signal: AbortSignal) =>
 const fetchPlaygroundIssues = async (
   query: string,
   { signal }: { signal: AbortSignal },
-): Promise<CommandItemData[]> => {
+): Promise<GroupedIssue[]> => {
   const latency = 300 + Math.random() * 600;
   await abortableDelay(latency, signal);
   const lowered = query.toLowerCase();
   if (!lowered) return PLAYGROUND_ISSUES;
   return PLAYGROUND_ISSUES.filter((item) => item.label.toLowerCase().includes(lowered));
 };
+
+// ---------------------------------------------------------------------------
+// Grouped command list (prototype) — manual grouping over the flat, library-
+// filtered items. There's no first-class group support: we read the resolved
+// items with useCommandListItems(), partition by our own `group` field, and
+// render a CommandGroup + CommandGroupLabel per bucket via CommandCollection.
+// Empty groups fall away for free (a filtered-out group just never appears).
+// ---------------------------------------------------------------------------
+
+// Insertion order = first appearance, which (since the source is group-sorted)
+// matches the flat highlight order — so nav flows top-to-bottom across groups.
+const partitionByGroup = (items: GroupedIssue[]): [string, GroupedIssue[]][] => {
+  const groups = new Map<string, GroupedIssue[]>();
+  for (const item of items) {
+    const bucket = groups.get(item.group);
+    if (bucket) bucket.push(item);
+    else groups.set(item.group, [item]);
+  }
+  return [...groups];
+};
+
+const GroupedIssueList = () => {
+  const { items } = useCommandListItems<GroupedIssue>();
+
+  return (
+    <>
+      {partitionByGroup(items).map(([group, groupItems]) => (
+        <Composer.CommandGroup key={group}>
+          <Composer.CommandGroupLabel>{group}</Composer.CommandGroupLabel>
+          <Composer.CommandCollection items={groupItems}>
+            {(item) => (
+              <Composer.CommandItem value={item.value}>
+                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+              </Composer.CommandItem>
+            )}
+          </Composer.CommandCollection>
+        </Composer.CommandGroup>
+      ))}
+    </>
+  );
+};
+
+const GroupedIssueCommands = () => (
+  <Composer.CommandList prefix="#">
+    <Composer.CommandLoading />
+    <Composer.CommandEmpty />
+    <GroupedIssueList />
+  </Composer.CommandList>
+);
 
 // Demo: files "open in the workspace" surfaced as the AI's context, shown in the
 // strip peeking above the composer and toggled by the scan button in the chrome.
@@ -223,9 +280,13 @@ export default function ComponentsPlayground() {
                 <Composer.Panel>
                   {(composer) => {
                     if (composer.commands.active) {
-                      return ["@", "/", "#"].map((prefix) => (
-                        <Composer.Commands key={prefix} prefix={prefix} />
-                      ));
+                      return ["@", "/", "#"].map((prefix) =>
+                        prefix === "#" ? (
+                          <GroupedIssueCommands key={prefix} />
+                        ) : (
+                          <Composer.Commands key={prefix} prefix={prefix} />
+                        ),
+                      );
                     }
                     if (questions != null) return <Composer.AskUser />;
                     return null;

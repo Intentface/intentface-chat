@@ -16,6 +16,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
@@ -209,19 +210,31 @@ export const ComposerCommandList = ({
   const store = useComposerContextStore();
   const internals = useComposerInternals();
 
-  // Content only: renders when this prefix is the active one, else null. The
-  // consumer gates the enclosing Panel/Popover on `commands.active`, so the
-  // container follows this null-vs-node — no registration, no claim.
+  // Renders while this prefix is the active one AND through its close animation. `active`
+  // flips false the instant the trigger closes, but the store keeps `present` sticky until
+  // the Panel's exit animation finishes (finalizePanelClose). `wasActiveRef` marks that this
+  // prefix — not a sibling — is the one closing, so only it keeps rendering during the window.
   const isActive = useComposer(
     (composer) => composer.commands.active && composer.commands.trigger === prefix,
   );
+  const present = useComposer((composer) => composer.commands.present);
   const query = useComposer((composer) => composer.commands.query);
+
+  const wasActiveRef = useRef(false);
+  if (isActive) wasActiveRef.current = true;
+  else if (!present) wasActiveRef.current = false;
+  const isPresent = isActive || (present && wasActiveRef.current);
 
   const config = internals.commands[prefix];
   const itemsProp = config?.items ?? EMPTY_ITEMS;
   const kind = config?.kind ?? "execute";
 
-  const { items, state } = useResolvedItems(itemsProp, query, isActive);
+  // Freeze the last resolved items while closing so the exiting panel shows what it had,
+  // not a re-filter/re-fetch against the now-empty query.
+  const resolved = useResolvedItems(itemsProp, query, isActive);
+  const lastResolvedRef = useRef(resolved);
+  if (isActive) lastResolvedRef.current = resolved;
+  const { items, state } = isActive ? resolved : lastResolvedRef.current;
 
   // The highlight index lives in the store (so the editor's keydown handler can
   // move it). It's raw/unbounded; wrap it by the current item count here. An
@@ -316,14 +329,14 @@ export const ComposerCommandList = ({
     "div",
     { className, render, style },
     {
-      enabled: isActive,
+      enabled: isPresent,
       state: { loading: state === "loading", empty: state === "empty" },
       ref: registerSelect,
       props: [{ "data-slot": "composer-command-list", children }, elementProps],
     },
   );
 
-  if (!isActive) return null;
+  if (!isPresent) return null;
 
   return (
     <CommandListItemsContext value={itemsContext}>

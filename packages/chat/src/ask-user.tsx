@@ -314,6 +314,22 @@ const AskUserOption = ({
           htmlFor: id,
           "data-slot": "ask-user-option",
           onMouseMove: () => onItemHover(value),
+          // Self-contained click selection. If the click landed on an
+          // associated control (the checkbox/radio the styled layer renders),
+          // let that control drive selection — otherwise it and the label's
+          // native forwarding would both fire onSelect (double toggle). If the
+          // option chrome itself is the target, cancel the label's native
+          // control-forwarding and select directly, so a bare option with no
+          // inner control is still clickable.
+          onClick: (event: React.MouseEvent<HTMLLabelElement>) => {
+            if (
+              (event.target as HTMLElement).closest("input,button,[role=checkbox],[role=radio]")
+            ) {
+              return;
+            }
+            event.preventDefault();
+            onSelect?.();
+          },
           children,
         },
         elementProps,

@@ -5,17 +5,18 @@
 // lifts the same CommandList children into a portal above the field, so it
 // overlays instead of pushing layout. Like Panel, it's content-driven: the
 // consumer gates its children on `commands.active`, so an empty popover (all
-// gated out) stays closed. Popover anchors to the active command badge by
-// setting left/bottom, but leaves the positioning context (position:
-// fixed/absolute) to the consumer's styling — like Base UI's Positioner
-// `positionMethod`. It exposes data-open/data-closed for animation.
+// gated out) stays closed. Positioned against the active command badge with
+// collision handling (flip / shift / size) via useAnchorPositioning, portaled to
+// the body. Exposes data-open/data-closed for the open/close animation plus
+// data-side/data-align (from the positioner) so the transition origin can follow
+// a flip, and a --anchor-available-height var so the list caps height + scrolls.
 
 import { Children, type ReactNode, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { PrimitiveProps } from "../internal/primitive-props";
+import { useAnchorPositioning } from "../internal/render/positioning";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping } from "../internal/state-mappings";
-import { useIsomorphicLayoutEffect } from "./internals";
 import { type ComposerState, useComposer, useComposerContextStore } from "./store";
 
 export type ComposerPopoverState = {
@@ -24,6 +25,8 @@ export type ComposerPopoverState = {
 
 export type ComposerPopoverProps = Omit<PrimitiveProps<"div", ComposerPopoverState>, "children"> & {
   children?: ReactNode | ((composer: ComposerState) => ReactNode);
+  /** Hold the placement without collision repositioning (drops flip + shift). Default false. */
+  pin?: boolean;
 };
 
 export const ComposerPopover = ({
@@ -31,6 +34,7 @@ export const ComposerPopover = ({
   className,
   render,
   style,
+  pin = false,
   ...elementProps
 }: ComposerPopoverProps) => {
   const store = useComposerContextStore();
@@ -42,40 +46,21 @@ export const ComposerPopover = ({
   const open = Children.toArray(content).length > 0;
   const elementRef = useRef<HTMLDivElement | null>(null);
 
-  // Pin the popover just above the active command badge (the trigger token in
-  // the editor), left-aligned to it and opening upward. Deterministic, so no
-  // floating library: read the badge's rect and set left + bottom directly.
-  const reposition = useCallback(() => {
-    const element = elementRef.current;
-    const editor = store.editorRef.current;
-    if (!element || !editor) return;
-    const badge = editor.view.dom.querySelector("[data-command-badge]");
-    if (!badge) return;
-    // A wrapped token spans several line boxes; the first is where the prefix
-    // sits, so anchor to it.
-    const rect = badge.getClientRects()[0] ?? badge.getBoundingClientRect();
-    element.style.left = `${rect.left}px`;
-    element.style.bottom = `${window.innerHeight - rect.top}px`;
-  }, [store]);
-
-  useIsomorphicLayoutEffect(() => {
-    if (!open) return;
-    // Runs before paint, so the first frame is already positioned — no flash.
-    reposition();
-
-    // The badge shifts when the container's box changes (attachments strip,
-    // multi-line growth) or the viewport scrolls/resizes. Scroll is captured so
-    // the editor's own overflow scroll counts too.
-    const observer = new ResizeObserver(reposition);
-    if (store.containerRef.current) observer.observe(store.containerRef.current);
-    window.addEventListener("scroll", reposition, true);
-    window.addEventListener("resize", reposition);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener("scroll", reposition, true);
-      window.removeEventListener("resize", reposition);
-    };
-  }, [open, reposition]);
+  // Anchor to the active command badge, opening upward and left-aligned, with collision
+  // handling (flip below when there's no room above, shift into view, size to fit), tracked
+  // across scroll/resize/container growth. A getter (not a captured element) so the
+  // re-rendered badge decoration is always the current one.
+  const getBadge = useCallback(
+    () => store.editorRef.current?.view.dom.querySelector("[data-command-badge]") ?? null,
+    [store],
+  );
+  useAnchorPositioning(getBadge, elementRef, {
+    enabled: open,
+    side: "top",
+    align: "start",
+    sideOffset: 8,
+    pin,
+  });
 
   const element = useRenderElement(
     "div",
@@ -87,9 +72,8 @@ export const ComposerPopover = ({
       props: [
         {
           "data-slot": "composer-popover",
-          // left/bottom are set imperatively above; the consumer supplies the
-          // positioning context (e.g. `position: fixed`) via className/style, so
-          // the primitive imposes no positioning of its own.
+          // position/left/top are written imperatively by useAnchorPositioning; the styled
+          // layer only supplies box/animation styling, not positioning.
           // Keep the editor focused when clicking the popover chrome so it
           // doesn't blur-dismiss; command items run their own selection on
           // mousedown. The list never takes focus.

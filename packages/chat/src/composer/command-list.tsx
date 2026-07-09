@@ -302,8 +302,27 @@ export const ComposerCommandList = ({
 
   // Scroll the highlighted row into view as it becomes the highlight. Stable, so
   // React calls it only on highlight change — no per-render scroll, no effect.
+  // Scroll *only* the list's own scroll container, never any ancestor: plain
+  // scrollIntoView bubbles to the window too, so when the list is a portaled overlay
+  // sitting near a viewport edge it would yank the whole page to reveal the row.
   const scrollHighlightedIntoView = useCallback((node: HTMLElement | null) => {
-    node?.scrollIntoView({ block: "nearest" });
+    if (!node) return;
+    let scroller = node.parentElement;
+    while (scroller) {
+      const overflowY = getComputedStyle(scroller).overflowY;
+      if (
+        (overflowY === "auto" || overflowY === "scroll") &&
+        scroller.scrollHeight > scroller.clientHeight
+      ) {
+        break;
+      }
+      scroller = scroller.parentElement;
+    }
+    if (!scroller) return;
+    const item = node.getBoundingClientRect();
+    const view = scroller.getBoundingClientRect();
+    if (item.top < view.top) scroller.scrollTop -= view.top - item.top;
+    else if (item.bottom > view.bottom) scroller.scrollTop += item.bottom - view.bottom;
   }, []);
 
   const navContext = useMemo<CommandListNavContextValue>(

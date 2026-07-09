@@ -15,11 +15,7 @@
 
 import { Children, type ReactNode, useRef } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
-import {
-  type TransitionStatus,
-  useOpenChangeComplete,
-  useTransitionStatus,
-} from "../internal/render/transition";
+import { type TransitionStatus, useOpenTransition } from "../internal/render/transition";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping, transitionStatusMapping } from "../internal/state-mappings";
 import { type ComposerState, useComposer, useComposerContextStore } from "./store";
@@ -49,7 +45,6 @@ export const ComposerPanel = ({
   const open = Children.toArray(content).length > 0;
 
   const ref = useRef<HTMLDivElement>(null);
-  const { mounted, setMounted, transitionStatus } = useTransitionStatus(open);
 
   // Freeze the last non-empty content so the panel keeps rendering it while it animates
   // closed. React reconciles by type+position, so the content fiber (e.g. the command list)
@@ -59,15 +54,10 @@ export const ComposerPanel = ({
   if (open) lastContentRef.current = content;
   const rendered = open ? content : lastContentRef.current;
 
-  // Once the close animation finishes: unmount, and clear `present` so the frozen content drops.
-  useOpenChangeComplete({
-    open,
-    ref,
-    enabled: !open && mounted,
-    onComplete: () => {
-      setMounted(false);
-      store.finalizePanelClose();
-    },
+  // Stay mounted through the exit; once the close animation finishes, unmount and clear
+  // `present` (via onClosed) so the frozen content can drop.
+  const { mounted, transitionStatus } = useOpenTransition(open, ref, {
+    onClosed: store.finalizePanelClose,
   });
 
   return useRenderElement(

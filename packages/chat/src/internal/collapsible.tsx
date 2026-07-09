@@ -14,21 +14,14 @@ import {
   createContext,
   use,
   useCallback,
-  useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
 } from "react";
-import { flushSync } from "react-dom";
 import type { PrimitiveProps } from "./primitive-props";
-import type { StateAttributesMapping } from "./render/getStateAttributesProps";
+import { type TransitionStatus, useOpenTransition } from "./render/transition";
 import { useRenderElement } from "./render/useRenderElement";
-import { openStateMapping } from "./state-mappings";
-
-// SSR-safe layout effect — same shape as composer/internals.tsx; inlined so
-// the internal primitive stays self-contained.
-const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+import { openStateMapping, transitionStatusMapping } from "./state-mappings";
 
 export type CollapsibleState = {
   open: boolean;
@@ -127,22 +120,8 @@ export type CollapsiblePanelProps = PrimitiveProps<"div", CollapsiblePanelState>
   keepMounted?: boolean;
 };
 
-// Panel transition status: "starting" holds data-starting-style for the first
-// open frame; "ending" holds data-ending-style until exit animations finish.
-// Initial mount renders settled (no animate-on-mount for defaultOpen panels).
-type PanelStatus = "closed" | "starting" | "open" | "ending";
-
 export type CollapsiblePanelState = CollapsibleState & {
-  transitionStatus: PanelStatus;
-};
-
-const panelStateMapping: StateAttributesMapping<CollapsiblePanelState> = {
-  ...openStateMapping,
-  transitionStatus: (value): Record<string, string> | null => {
-    if (value === "starting") return { "data-starting-style": "" };
-    if (value === "ending") return { "data-ending-style": "" };
-    return null;
-  },
+  transitionStatus: TransitionStatus;
 };
 
 const CollapsiblePanel = ({
@@ -154,83 +133,30 @@ const CollapsiblePanel = ({
 }: CollapsiblePanelProps) => {
   const { open, panelId } = useCollapsible();
   const panelRef = useRef<HTMLDivElement | null>(null);
-  const [status, setStatus] = useState<PanelStatus>(open ? "open" : "closed");
-  const [panelHeight, setPanelHeight] = useState<number | null>(null);
+  // The shared transition hook owns the open/starting/ending/close lifecycle: it keeps the
+  // panel mounted through its exit (waiting on getAnimations), measures the natural height
+  // for the CSS var, and reports the status that drives data-starting/ending-style.
+  const { mounted, transitionStatus, height } = useOpenTransition(open, panelRef, {
+    measureHeight: true,
+  });
 
-  // Enter/exit is driven by `open` flips, detected during render (previous-
-  // value pattern) so the transitional frame renders its data attribute.
-  const previousOpenRef = useRef(open);
-  if (previousOpenRef.current !== open) {
-    previousOpenRef.current = open;
-    setStatus(open ? "starting" : "ending");
-  }
-
-  // Starting frame: measure the natural height for --collapsible-panel-height,
-  // then drop data-starting-style on the next frame so CSS transitions run
-  // from the starting style to the settled one.
-  useIsomorphicLayoutEffect(() => {
-    if (status !== "starting") return;
-    const panel = panelRef.current;
-    if (panel) setPanelHeight(panel.scrollHeight);
-    const frame = requestAnimationFrame(() => {
-      setStatus((current) => (current === "starting" ? "open" : current));
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [status]);
-
-  // Ending: re-measure (content may have grown while open), let the ending
-  // styles paint, then wait for the panel's animations before closing. With
-  // no animations running, this closes on the next frame — same as before.
-  useIsomorphicLayoutEffect(() => {
-    if (status !== "ending") return;
-    const panel = panelRef.current;
-    if (!panel) {
-      setStatus("closed");
-      return;
-    }
-    setPanelHeight(panel.scrollHeight);
-    let cancelled = false;
-    const close = () => {
-      if (cancelled) return;
-      // flushSync so the browser can't paint a settled frame between the exit
-      // animation finishing and React committing the hidden state (Base UI #979).
-      flushSync(() => {
-        setStatus((current) => (current === "ending" ? "closed" : current));
-      });
-    };
-    const frame = requestAnimationFrame(() => {
-      // Panel's own animations only — a subtree query would also wait on
-      // infinite child animations (spinners) and never close.
-      const animations = panel.getAnimations();
-      if (animations.length === 0) {
-        close();
-        return;
-      }
-      Promise.allSettled(animations.map((animation) => animation.finished)).then(close);
-    });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-    };
-  }, [status]);
-
-  const isHidden = !open && status === "closed";
+  const hidden = !open && !mounted;
 
   return useRenderElement(
     "div",
     { className, render, style },
     {
-      enabled: !(isHidden && !keepMounted),
-      state: { open, transitionStatus: status },
-      stateAttributesMapping: panelStateMapping,
+      enabled: mounted || keepMounted,
+      state: { open, transitionStatus },
+      stateAttributesMapping: { ...openStateMapping, ...transitionStatusMapping },
       ref: panelRef,
       props: [
         {
           id: panelId,
-          hidden: isHidden,
+          hidden,
           style:
-            panelHeight !== null
-              ? ({ "--collapsible-panel-height": `${panelHeight}px` } as CSSProperties)
+            height !== null
+              ? ({ "--collapsible-panel-height": `${height}px` } as CSSProperties)
               : undefined,
         },
         elementProps,

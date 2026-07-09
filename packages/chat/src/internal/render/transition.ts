@@ -245,3 +245,52 @@ export const useOpenChangeComplete = ({
     return () => abortController.abort();
   }, [enabled, open, onComplete, runOnceAnimationsFinish]);
 };
+
+// ---------------------------------------------------------------------------
+// useOpenTransition — the composed convenience hook the composer's Panel and
+// the internal Collapsible share.
+// ---------------------------------------------------------------------------
+
+export type UseOpenTransitionOptions = {
+  /** Measure the element's natural height into `height` (for a height-collapse CSS var). */
+  measureHeight?: boolean;
+  /** Called when the close animation completes, alongside the internal unmount. */
+  onClosed?: () => void;
+};
+
+/**
+ * Drives a Base UI-style open/close for an element: keeps it `mounted` through the exit,
+ * reports `transitionStatus` (feed it to a stateAttributesMapping for data-open/closed/
+ * starting-style/ending-style), optionally measures its natural `height`, and unmounts once
+ * `element.getAnimations()` resolve. Composes useTransitionStatus + useOpenChangeComplete.
+ */
+export const useOpenTransition = (
+  open: boolean,
+  ref: RefObject<HTMLElement | null>,
+  { measureHeight = false, onClosed }: UseOpenTransitionOptions = {},
+) => {
+  const { mounted, setMounted, transitionStatus } = useTransitionStatus(open);
+  const [height, setHeight] = useState<number | null>(null);
+
+  // Measure on the transitional frames (before the CSS transition runs). scrollHeight is the
+  // natural content height regardless of any clamp the data-starting/ending-style sets.
+  useIsoLayoutEffect(() => {
+    if (!measureHeight) return;
+    if (transitionStatus === "starting" || transitionStatus === "ending") {
+      const element = ref.current;
+      if (element) setHeight(element.scrollHeight);
+    }
+  }, [measureHeight, transitionStatus, ref]);
+
+  useOpenChangeComplete({
+    open,
+    ref,
+    enabled: !open && mounted,
+    onComplete: () => {
+      setMounted(false);
+      onClosed?.();
+    },
+  });
+
+  return { mounted, transitionStatus, height };
+};

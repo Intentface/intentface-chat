@@ -11,7 +11,6 @@ import { ComposerPopover } from "./composer-popover";
 import { ComposerStoreDemo } from "./composer-store";
 import { MessageBasic } from "./message-basic";
 import { ReasoningBasic } from "./reasoning-basic";
-import { StepQueueBasic } from "./step-queue-basic";
 import { StepsBasic } from "./steps-basic";
 import { ThreadBasic } from "./thread-basic";
 
@@ -47,5 +46,4 @@ export const previews: Record<string, PreviewEntry> = {
   "reasoning-basic": { Component: ReasoningBasic, file: `${dir}/reasoning-basic.tsx` },
   "steps-basic": { Component: StepsBasic, file: `${dir}/steps-basic.tsx` },
   "attachments-basic": { Component: AttachmentsBasic, file: `${dir}/attachments-basic.tsx` },
-  "step-queue-basic": { Component: StepQueueBasic, file: `${dir}/step-queue-basic.tsx` },
 };

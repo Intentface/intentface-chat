@@ -31,7 +31,6 @@
     "./composer": "./src/composer/index.tsx",
     "./chip": "./src/chip.tsx",
     "./thread": "./src/thread/index.tsx",
-    "./step-queue": "./src/step-queue.tsx",
     "./reasoning": "./src/reasoning.tsx",
     "./steps": "./src/steps.tsx",
     "./attachments": "./src/attachments.tsx",
@@ -86,10 +85,6 @@
       "./thread": {
         "types": "./dist/src/thread/index.d.ts",
         "default": "./dist/src/thread/index.js"
-      },
-      "./step-queue": {
-        "types": "./dist/src/step-queue.d.ts",
-        "default": "./dist/src/step-queue.js"
       },
       "./reasoning": {
         "types": "./dist/src/reasoning.d.ts",

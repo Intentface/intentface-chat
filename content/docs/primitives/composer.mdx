@@ -132,7 +132,7 @@ memoized inner composer:
 ```tsx
 const ChatInput = () => {
   const { messages, status } = useChatMessages();
-  const panelState = useActiveComposerState(messages, status, TOOL_LABELS);
+  const panelState = useAskUserPanelState(messages, status);
   return <ChatInputInner panelState={panelState} status={status} />;
 };
 
@@ -141,12 +141,11 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => (
 ));
 ```
 
-`useActiveComposerState` is app code (`lib/ai/chat-status.ts` in the registry) —
-which steps to show and how to label them is your product's policy, so you own
-and edit the derivation. It returns a referentially stable value while nothing
-transitioned, so the inner composer bails on every chunk except real panel
-changes. See [Streaming performance](/docs/headless/performance) for the full
-render model.
+The derivation (`useAskUserPanelState` here) is app code — what to surface in the
+panel (an ask-user prompt, a status line, …) is your product's policy, so you own
+it. Return a referentially stable value while nothing transitioned, so the inner
+composer bails on every chunk except real panel changes. See
+[Streaming performance](/docs/headless/performance) for the full render model.
 
 ## Keyboard
 

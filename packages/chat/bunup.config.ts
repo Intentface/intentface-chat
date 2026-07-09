@@ -13,7 +13,6 @@ export default defineConfig({
     "src/composer/index.tsx",
     "src/chip.tsx",
     "src/thread.tsx",
-    "src/step-queue.tsx",
     "src/reasoning.tsx",
     "src/steps.tsx",
     "src/attachments.tsx",

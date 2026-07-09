@@ -10,14 +10,7 @@ import {
 } from "@intentface/chat/message-utils";
 import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
 import type { ChatStatus } from "ai";
-import {
-  CircleDotIcon,
-  CircleHelpIcon,
-  CircleIcon,
-  Loader,
-  TextQuoteIcon,
-  XIcon,
-} from "lucide-react";
+import { CircleHelpIcon, CircleIcon, TextQuoteIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import {
@@ -34,7 +27,6 @@ import {
 import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
-import { StepQueue } from "@/components/ai/step-queue";
 import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
@@ -46,8 +38,8 @@ import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
 import { Markdown } from "@/components/ui/markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
+import { useThrottledText } from "@/hooks/use-throttled-text";
 import { prepareAttachmentsForSend } from "@/lib/ai/attachments";
-import { type ComposerPanelState, useActiveComposerState } from "@/lib/ai/chat-status";
 import {
   getChainInfo,
   getReasoningInfo,
@@ -123,6 +115,7 @@ const statusIcons: Record<StepStatus, IconComponent> = {
   complete: CheckMarkMediumIcon,
   active: CircleIcon,
   pending: CircleIcon,
+  error: TriangleAlertIcon,
 };
 
 // A timeline row: static when it has no detail, collapsible (icon morphs to a
@@ -145,12 +138,14 @@ const TimelineStep = ({
     status === "complete" && "text-ink-secondary",
     status === "active" && "text-ink-primary",
     status === "pending" && "text-slate-9",
+    status === "error" && "text-red-500",
   );
   const labelClasses = cn(
     "text-sm text-left",
     status === "active" && "text-ink-primary font-medium",
     status === "complete" && "text-ink-secondary",
     status === "pending" && "text-slate-9",
+    status === "error" && "text-red-500",
   );
 
   if (!hasDetail) {
@@ -185,10 +180,11 @@ const TimelineStep = ({
 };
 
 const TimelineToolCall = ({ part }: { part: ToolPart }) => {
-  const { label, status, summary, sources } = getToolCallInfo(part, DEFAULT_TOOL_LABELS);
+  const { label, status, summary, errorText, sources } = getToolCallInfo(part, DEFAULT_TOOL_LABELS);
 
   return (
     <TimelineStep label={label} status={status}>
+      {errorText && <span className="text-xs text-red-500">{errorText}</span>}
       {summary && <span className="text-xs text-ink-secondary">{summary}</span>}
       {sources.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -230,10 +226,15 @@ const TimelineAskUser = ({ part }: { part: ToolPart }) => {
 const InterleavedSteps = ({
   segments,
   isStreaming,
+  awaitingInput = false,
 }: {
   segments: MessageSegment[];
   isStreaming: boolean;
+  // An open ask-user prompt means the turn is paused, not finished — keep the block
+  // in its active state (cycling header, open) rather than the "done" summary.
+  awaitingInput?: boolean;
 }) => {
+  const isActive = isStreaming || awaitingInput;
   const { toolCount, questionCount } = segments.reduce(
     (acc, s) => {
       if (s.type !== "tool") return acc;
@@ -271,19 +272,76 @@ const InterleavedSteps = ({
     suffixes.push(`asked ${questionCount} question${questionCount !== 1 ? "s" : ""}`);
   const suffix = suffixes.length > 0 ? `, ${suffixes.join(", ")}` : "";
 
-  const header = isStreaming ? (
-    <TextShimmer>Thinking...{suffix}</TextShimmer>
-  ) : (
-    <span>
-      Thought for {duration ?? "a few"} seconds{suffix}
-    </span>
+  // While streaming the header cycles to the running tool's label — falling back to the
+  // last tool between rounds so it never drops back to "Thinking" once tools start —
+  // throttled so fast tools don't flicker. The header narrates what's happening *now*,
+  // so even the between-rounds fallback (a completed tool) keeps its present-tense form
+  // ("Searching the web"), never the row's past-tense label ("Ran webSearch").
+  const toolParts = segments.flatMap((s) => (s.type === "tool" ? s.parts : []));
+  const runningTool = toolParts.find(
+    (p) => p.state === "input-streaming" || p.state === "input-available",
   );
+  const activeTool = runningTool ?? toolParts.at(-1);
+  const askingCount =
+    activeTool?.type === "tool-askUser"
+      ? (((activeTool.input as { questions?: unknown[] } | undefined)?.questions ?? []).length ?? 0)
+      : 0;
+  const activeToolName = activeTool?.type.replace("tool-", "") ?? "";
+  const activeToolConfig = DEFAULT_TOOL_LABELS[activeToolName];
+  const streamingLabel = !activeTool
+    ? "Thinking..."
+    : activeTool.type === "tool-askUser"
+      ? `Asking ${askingCount === 1 ? "question" : "questions"}`
+      : (activeToolConfig?.active((activeTool.input as Record<string, unknown>) ?? {}) ??
+        `Running ${activeToolName}`);
+  // Hold each label past the roll animation (300ms) so a fast tool sequence reads as a
+  // calm loop instead of overlapping mid-roll swaps.
+  const shownLabel = useThrottledText(streamingLabel, 800);
+
+  // Open while active, auto-collapse when done — but a user toggle wins from then on.
+  const [userOpen, setUserOpen] = useState<boolean | null>(null);
+  const open = userOpen ?? isActive;
+
+  const doneLabel = `Thought for ${
+    duration === undefined
+      ? "a few seconds"
+      : `${duration} ${duration === 1 ? "second" : "seconds"}`
+  }${suffix}`;
+  const displayLabel = isActive ? shownLabel : doneLabel;
+
+  // One rolling label for both states — the box never changes when the stream ends, so
+  // there's no layout shift: the last active label just rolls out and the summary rolls in
+  // (roll matches the composer placeholder / TextLoop; shimmer only while active).
+  const header = (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.span
+        key={displayLabel}
+        initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="block"
+      >
+        {isActive ? <TextShimmer>{displayLabel}</TextShimmer> : displayLabel}
+      </motion.span>
+    </AnimatePresence>
+  );
+
+  // Text-only turn (no reasoning/tools) — keep the status header, but there's nothing
+  // to expand, so render it as a static line (no chevron, no disclosure).
+  if (segments.length === 0) {
+    return (
+      <div className="flex w-full items-center py-1 text-ink-secondary text-sm">
+        <span className="overflow-hidden text-left">{header}</span>
+      </div>
+    );
+  }
 
   return (
     <Steps>
-      <Steps.Item defaultOpen={isStreaming}>
+      <Steps.Item open={open} onOpenChange={setUserOpen}>
         <Steps.Trigger>
-          <span className="flex-1 text-left">{header}</span>
+          <span className="overflow-hidden text-left">{header}</span>
           <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
         </Steps.Trigger>
         <Steps.Panel>
@@ -291,7 +349,7 @@ const InterleavedSteps = ({
             if (seg.type === "reasoning") {
               const text = seg.parts.map((p) => p.text).join("");
               const lastPart = seg.parts.at(-1);
-              const streaming = isStreaming && lastPart === segments.at(-1);
+              const streaming = isActive && lastPart === segments.at(-1);
 
               const sections = splitReasoningByHeaders([text]);
 
@@ -355,16 +413,15 @@ const ChatMessageItem = memo(
     const askUser = getAskUserInfo(parts);
     const sourcesInfo = isAssistant ? getSourcesInfo(parts) : null;
 
-    // Only show reasoning/tools inline after the message has finished streaming
-    const shouldShowReasoning =
-      isAssistant &&
-      reasoning &&
-      reasoning.parts.length > 0 &&
-      !isStreaming &&
-      !askUser.isAwaitingInput;
+    // Every assistant turn keeps a status block, so it never appears-then-vanishes. A
+    // finished reasoning-only turn uses the dedicated Reasoning disclosure; every other
+    // assistant turn — streaming, tools, ask-user, or a plain text reply — uses
+    // InterleavedSteps, which shows a "Thought for Xs" header even with an empty timeline.
+    const isReasoningOnlyDone =
+      isAssistant && !isStreaming && !chain.hasTools && !!reasoning && reasoning.parts.length > 0;
 
-    const shouldShowInterleavedReasoning =
-      isAssistant && chain.hasTools && !isStreaming && !askUser.isAwaitingInput;
+    const shouldShowReasoning = isReasoningOnlyDone;
+    const shouldShowInterleavedReasoning = isAssistant && !isReasoningOnlyDone;
 
     return (
       <Message
@@ -392,7 +449,11 @@ const ChatMessageItem = memo(
 
         {/* Interleaved reasoning + tool chain — suppress when panel handles it */}
         {shouldShowInterleavedReasoning && (
-          <InterleavedSteps segments={chain.segments} isStreaming={isStreaming} />
+          <InterleavedSteps
+            segments={chain.segments}
+            isStreaming={isStreaming}
+            awaitingInput={askUser.isAwaitingInput}
+          />
         )}
 
         {/* Message content */}
@@ -534,20 +595,23 @@ const MENTION_ITEMS: CommandItemData[] = [
   },
 ];
 
-// This app's panel-state union: the step derivation's state (idle / active
-// steps, lib/ai/chat-status) plus the ask-user arm for its askUser tool.
+// This app's composer panel-state union: idle, or the ask-user arm for its
+// askUser tool. (Tool/step status moved to the assistant message.)
 type AskUserPanelState = {
   type: "ask-user";
   toolCallId: string;
   questions: AskUserQuestion[];
 };
 
-type AppComposerPanelState = ComposerPanelState | AskUserPanelState;
+type AppComposerPanelState = { type: "idle" } | AskUserPanelState;
 
-// App overlay: routes the panel to ask-user while this app's askUser tool
-// awaits input. Detection runs on ready AND streaming — the chat goes "ready"
-// while the tool waits. Referentially stable (same memo discipline as
-// useActiveComposerState) so the memoized inner composer bails per chunk.
+// Stable idle reference so ChatInputInner's memo bails when nothing transitioned.
+const IDLE_PANEL_STATE: AppComposerPanelState = { type: "idle" };
+
+// App overlay: routes the composer panel to ask-user while this app's askUser
+// tool awaits input. Detection runs on ready AND streaming — the chat goes
+// "ready" while the tool waits. Referentially stable so the memoized inner
+// composer bails per stream chunk.
 const useAskUserPanelState = (
   messages: readonly AppUIMessage[],
   status: ChatStatus,
@@ -583,16 +647,14 @@ const useAskUserPanelState = (
   return next;
 };
 
-// Thin bridge — the only composer piece that re-renders per stream chunk. It
-// derives the panel state (referentially stable while nothing transitioned)
-// so the memoized inner composer bails unless the panel actually changed. The
-// askUser tool is excluded from the step derivation (lib/ai/chat-status) and
-// overlaid as this app's own ask-user arm.
+// Thin bridge — the only composer piece that re-renders per stream chunk. It derives
+// the ask-user panel state (referentially stable while nothing transitioned) so the
+// memoized inner composer bails unless the panel actually changed. Idle otherwise —
+// tool/step status now renders in the assistant message.
 const ChatInput = () => {
   const { messages, status } = useChatMessages();
-  const stepPanelState = useActiveComposerState(messages, status, DEFAULT_TOOL_LABELS);
   const askUserPanelState = useAskUserPanelState(messages, status);
-  return <ChatInputInner panelState={askUserPanelState ?? stepPanelState} status={status} />;
+  return <ChatInputInner panelState={askUserPanelState ?? IDLE_PANEL_STATE} status={status} />;
 };
 
 type ChatInputInnerProps = {
@@ -671,17 +733,28 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
   );
 
   const isAskUser = panelState.type === "ask-user";
-  const activeSteps = panelState.type === "active" ? panelState.steps : [];
   const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;
 
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
       if (data.kind === "answers") {
         if (panelState.type !== "ask-user") return;
+        // Project the composer's per-question entries into a question→answer map — the
+        // shape the tool output is read back as (getAskUserInfo / getAskUserStepInfo).
+        const answers: Record<string, string> = {};
+        for (const entry of data.answers) {
+          if ("options" in entry) {
+            answers[entry.question] = [...entry.options, entry.text].filter(Boolean).join(", ");
+          } else if ("option" in entry) {
+            answers[entry.question] = entry.option;
+          } else if ("text" in entry) {
+            answers[entry.question] = entry.text;
+          }
+        }
         addToolOutput({
           tool: "askUser",
           toolCallId: panelState.toolCallId,
-          output: JSON.stringify(data.answers),
+          output: JSON.stringify(answers),
         });
         return;
       }
@@ -763,8 +836,9 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
     >
       <Composer.Panel>
         {(composer) => {
-          // One at a time, by priority: an active command list wins, then the
-          // composer's own ask-user flow, else the app-derived step list.
+          // One at a time, by priority: an active command list wins, else the
+          // composer's own ask-user flow. (Tool/step status now lives in the
+          // assistant message, not the composer.)
           if (composer.commands.active) {
             return (
               <>
@@ -774,29 +848,6 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
             );
           }
           if (composer.askUser.active) return <Composer.AskUser />;
-          if (panelState.type === "active") {
-            return (
-              <StepQueue>
-                {activeSteps.map((step, i) => {
-                  const active = i === activeSteps.length - 1;
-                  return (
-                    <StepQueue.Item key={step.key}>
-                      <StepQueue.Icon>
-                        {step.kind === "thinking" ? (
-                          <BrainIcon className={cn("size-3.5", active && "animate-pulse")} />
-                        ) : active ? (
-                          <Loader className="size-3.5 animate-spin" />
-                        ) : (
-                          <CircleDotIcon className="size-3.5" />
-                        )}
-                      </StepQueue.Icon>
-                      <StepQueue.Label active={active}>{step.label}</StepQueue.Label>
-                    </StepQueue.Item>
-                  );
-                })}
-              </StepQueue>
-            );
-          }
           return null;
         }}
       </Composer.Panel>

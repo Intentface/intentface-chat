@@ -74,6 +74,8 @@ export type ToolCallInfo = {
   label: string;
   status: StepStatus;
   summary: string | null;
+  /** Present only when the tool failed (state "output-error"). */
+  errorText: string | null;
   sources: { url: string; title: string; domain: string }[];
 };
 
@@ -81,6 +83,7 @@ export const getToolCallInfo = (part: ToolPart, labels: ToolLabels = {}): ToolCa
   const input = (part.input as Record<string, unknown>) ?? {};
   const isActive = part.state === "input-streaming" || part.state === "input-available";
   const isComplete = part.state === "output-available";
+  const isError = part.state === "output-error";
   const name = part.type.replace("tool-", "");
 
   const labelConfig = labels[name];
@@ -92,7 +95,15 @@ export const getToolCallInfo = (part: ToolPart, labels: ToolLabels = {}): ToolCa
       ? `Running ${name}`
       : `Ran ${name}`;
 
-  const status: StepStatus = isActive ? "active" : isComplete ? "complete" : "pending";
+  const status: StepStatus = isError
+    ? "error"
+    : isActive
+      ? "active"
+      : isComplete
+        ? "complete"
+        : "pending";
+
+  const errorText = isError ? (part.errorText ?? "Tool call failed") : null;
 
   // Extract summary from tool output
   const output = isComplete ? (part.output as Record<string, unknown>) : null;
@@ -111,7 +122,7 @@ export const getToolCallInfo = (part: ToolPart, labels: ToolLabels = {}): ToolCa
       }
     });
 
-  return { label, status, summary, sources };
+  return { label, status, summary, errorText, sources };
 };
 
 export type AskUserStepInfo = {
@@ -137,7 +148,10 @@ export const getAskUserStepInfo = (part: ToolPart): AskUserStepInfo => {
   }
 
   const count = questions.length;
-  const label = `Answered ${count} ${count === 1 ? "question" : "questions"}`;
+  const noun = count === 1 ? "question" : "questions";
+  // Awaiting the user's answer vs already answered — don't claim "Answered" while the
+  // prompt is still open.
+  const label = isComplete ? `Answered ${count} ${noun}` : `Asked ${count} ${noun}`;
 
   return { label, status: isComplete ? "complete" : "active", questions, answers, isComplete };
 };

@@ -126,24 +126,6 @@
       ]
     },
     {
-      "name": "ai-chat-status",
-      "type": "registry:lib",
-      "hidden": true,
-      "dependencies": [
-        "@intentface/chat"
-      ],
-      "registryDependencies": [
-        "tool-labels"
-      ],
-      "files": [
-        {
-          "sourcePath": "lib/ai/chat-status.ts",
-          "targetPath": "lib/ai/chat-status.ts",
-          "type": "registry:lib"
-        }
-      ]
-    },
-    {
       "name": "ai-message-info",
       "type": "registry:lib",
       "hidden": true,
@@ -831,26 +813,6 @@
         {
           "sourcePath": "components/ai/reasoning.tsx",
           "targetPath": "components/ai/reasoning.tsx",
-          "type": "registry:component"
-        }
-      ]
-    },
-    {
-      "name": "step-queue",
-      "type": "registry:component",
-      "title": "Step Queue",
-      "dependencies": [
-        "@intentface/chat",
-        "motion"
-      ],
-      "registryDependencies": [
-        "text-shimmer",
-        "utils"
-      ],
-      "files": [
-        {
-          "sourcePath": "components/ai/step-queue.tsx",
-          "targetPath": "components/ai/step-queue.tsx",
           "type": "registry:component"
         }
       ]

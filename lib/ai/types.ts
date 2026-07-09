@@ -32,7 +32,7 @@ export type MessageRole = "system" | "user" | "assistant";
 
 // This app's concrete step statuses. The headless Steps primitive takes an
 // opaque status string; the app owns the set.
-export type StepStatus = "complete" | "active" | "pending";
+export type StepStatus = "complete" | "active" | "pending" | "error";
 
 // ---------------------------------------------------------------------------
 // Assignability locks

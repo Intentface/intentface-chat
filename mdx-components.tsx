@@ -7,6 +7,7 @@ import { ComponentPreview } from "@/components/docs/component-preview";
 import { ManualInstall } from "@/components/docs/manual-install";
 import { PropsTable } from "@/components/docs/props-table";
 import { ThemeSource } from "@/components/docs/theme-source";
+import { ValuesTable } from "@/components/docs/values-table";
 import { cn } from "@/lib/utils";
 
 // Slugify heading text into an id so the TOC anchors resolve. Mirrors the
@@ -104,6 +105,7 @@ const docsComponents: MDXComponents = {
   ManualInstall,
   PropsTable,
   AttributesTable,
+  ValuesTable,
   ThemeSource,
 };
 

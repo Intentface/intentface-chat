@@ -25,7 +25,6 @@ import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
 import { useLoop } from "@/hooks/use-loop";
-import { useMeasure } from "@/hooks/use-measure";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_MAX_FILE_SIZE,
@@ -337,47 +336,32 @@ const ComposerSubmit = ({
 };
 
 // ---------------------------------------------------------------------------
-// Panel — an in-flow surface card. The primitive always renders the outer host
-// and hands us `open` (non-empty content) as the render's second arg. Because
-// that host is always mounted, the AnimatePresence inside it stays put and can
-// watch the card mount/unmount as `open` flips — so open and close both animate.
-// The measured inner div drives the card's height between content changes.
+// Panel — an in-flow surface card. The primitive owns the Base UI open/close
+// lifecycle: it stays mounted through its exit and exposes data-open/data-closed
+// + data-starting-style/data-ending-style, keeping the last content mounted while
+// it animates out. So this is pure CSS — no AnimatePresence: the card fades/slides
+// from data-starting-style on open and to data-ending-style on close, and the
+// primitive unmounts once the transition finishes. The relative wrapper is the
+// (always-present) positioning context the absolute card anchors to.
 // ---------------------------------------------------------------------------
 
 type ComposerPanelProps = Omit<ComponentProps<typeof ComposerPrimitive.Panel>, "render">;
 
-const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => {
-  const [contentRef, bounds] = useMeasure();
-
-  return (
+const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => (
+  <div className="relative">
     <ComposerPrimitive.Panel
       {...props}
-      className="relative"
-      render={({ children: content, ...elementProps }, state) => (
-        <div {...elementProps}>
-          <AnimatePresence mode="popLayout" initial={false}>
-            {state.open && (
-              <motion.div
-                className={cn("absolute inset-x-0 bottom-2 overflow-hidden", className)}
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: bounds.height, opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ type: "spring", bounce: 0, duration: 0.15 }}
-              >
-                <div
-                  ref={contentRef}
-                  className="rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]"
-                >
-                  {content}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+      className={cn(
+        "absolute inset-x-0 bottom-2 overflow-hidden",
+        "rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]",
+        "transition-[opacity,transform] duration-150 ease-out",
+        "data-starting-style:opacity-0",
+        "data-ending-style:opacity-0",
+        className,
       )}
     />
-  );
-};
+  </div>
+);
 
 // ---------------------------------------------------------------------------
 // Popover — the floating alternative to a Panel. Takes the same CommandList

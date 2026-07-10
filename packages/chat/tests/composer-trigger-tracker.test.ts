@@ -160,3 +160,22 @@ describe("chips in scan text", () => {
     expect(state.triggerStartPosition).toBe(1);
   });
 });
+
+describe("line breaks", () => {
+  const open = typeAt(CLOSED_COMMAND_STATE, "hi @", 4, {
+    rangeStart: 3,
+    rangeEnd: 3,
+    insertedLength: 1,
+  });
+
+  test("a newline entering the token range closes it instead of being absorbed", () => {
+    const state = typeAt(open, "hi @\n", 5, { rangeStart: 4, rangeEnd: 4, insertedLength: 1 });
+    expect(state.isOpen).toBe(false);
+  });
+
+  test("a pasted newline inside a grown token also closes it", () => {
+    const grown = typeAt(open, "hi @ra", 6, { rangeStart: 4, rangeEnd: 4, insertedLength: 2 });
+    const state = typeAt(grown, "hi @r\na", 7, { rangeStart: 5, rangeEnd: 5, insertedLength: 1 });
+    expect(state.isOpen).toBe(false);
+  });
+});

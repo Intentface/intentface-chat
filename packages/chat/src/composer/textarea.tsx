@@ -16,6 +16,7 @@ import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import type { ChipData } from "../chip-markdown";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
+import type { ComposerSubmitOn } from "./keyboard";
 import { useComposerContextStore } from "./store";
 import { useComposerEditor } from "./use-composer-editor";
 
@@ -36,6 +37,8 @@ export type ComposerTextareaProps = Omit<
   autoFocus?: boolean;
   /** Native-textarea-style placeholder string. For rich placeholder content, pass children instead (children win when both are set). */
   placeholder?: string;
+  /** Which Enter chord sends the message; the other inserts a soft break. Consider pairing "shift-enter" with enterKeyHint="enter". */
+  submitOn?: ComposerSubmitOn;
   /** Logical-length cap: one per character, one per chip. IME input is capped at composition commit. */
   maxLength?: number;
   /** Native form validation via the hidden input — blocks empty submits. */
@@ -78,6 +81,7 @@ export const ComposerTextarea = ({
   disabled = false,
   autoFocus = false,
   placeholder,
+  submitOn,
   maxLength,
   required = false,
   name,
@@ -108,6 +112,7 @@ export const ComposerTextarea = ({
     useComposerEditor({
       disabled,
       autoFocus,
+      submitOn,
       maxLength,
       value,
       onValueChange,

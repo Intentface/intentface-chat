@@ -27,6 +27,7 @@ import { Chip } from "../chip";
 import { type ChipData, parseChipSegments } from "../chip-markdown";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
 import {
+  documentToDomSpec,
   logicalRangeFromDom,
   readDocumentFromDom,
   readSelectionRange,
@@ -307,7 +308,18 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
       commit(doc, selection, null, false);
     }
 
-    if (dirty) renormalizeDom();
+    // Line-break parity invariant: browsers add and remove <br>s freely during
+    // native edits — emptying can leave no <br> at all (the unpadded editable
+    // collapses to zero height, hiding the caret and the placeholder overlay),
+    // and typing before the padding <br> strands it mid-content, where later
+    // reads count it as a phantom newline. Whenever the DOM's <br> count
+    // diverges from the canonical rendering, repaint from the model. Plain
+    // typing never diverges, so the native fast path stays untouched.
+    const domBreakCount = root.querySelectorAll("br").length;
+    const canonicalBreakCount = documentToDomSpec(doc).filter(
+      (spec) => spec.kind === "br",
+    ).length;
+    if (dirty || domBreakCount !== canonicalBreakCount) renormalizeDom();
   };
 
   // --- Command closing — Escape / Dismiss / blur / post-selection all funnel

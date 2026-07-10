@@ -5,7 +5,7 @@
 // Composer.createStore() handle via the store prop, or an instance created for
 // this mount. Every bare <Composer> is fully isolated.
 
-import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
 import { useRenderElement } from "../internal/render/useRenderElement";
@@ -60,13 +60,19 @@ export const ComposerRoot = ({
   style,
   ...elementProps
 }: ComposerRootProps) => {
+  // SSR-stable per-mount id for the command listbox (aria-controls target +
+  // option-id root). Assigned onto the store in init below — the factory
+  // can't mint it because explicit handles are created outside React.
+  const listboxId = useId();
+
   // Resolved once at mount (lazy-init ref, not reactive state): an explicit
   // handle, or an instance this mount creates and owns. Swapping the store
   // prop after mount is not supported.
-  const { store, ownsStore } = useRefWithInit(() => ({
-    store: storeProp ?? createComposerStore(),
-    ownsStore: !storeProp,
-  })).current;
+  const { store, ownsStore } = useRefWithInit(() => {
+    const resolved = storeProp ?? createComposerStore();
+    resolved.listboxId = listboxId;
+    return { store: resolved, ownsStore: !storeProp };
+  }).current;
 
   const formRef = useRef<HTMLFormElement | null>(null);
 

@@ -122,6 +122,8 @@ export type ComposerCommandsState = ComposerPanelSlice & {
   trigger: string | null;
   query: string;
   highlightIndex: number;
+  /** DOM id of the highlighted option row — the editor's aria-activedescendant. Written by the mounted Command as the highlight resolves. */
+  activeOptionId: string | null;
 };
 
 export type ComposerState = {
@@ -145,6 +147,14 @@ export type ComposerStore = {
   setHasContent: (value: boolean) => void;
   setIsSubmitting: (value: boolean) => void;
   setCommands: (next: { active: boolean; trigger: string | null; query: string }) => void;
+  setActiveOptionId: (id: string | null) => void;
+  /**
+   * Stable per-instance id for the command listbox — the editor references it
+   * via aria-controls; option rows derive their ids from it. Assigned by the
+   * mounting Composer.Root from React's useId (SSR-stable); the factory can't
+   * mint it because explicit handles are created outside React.
+   */
+  listboxId: string;
   moveHighlight: (direction: number) => void;
   setHighlight: (index: number) => void;
   setQuestions: (questions: AskUserQuestion[] | null) => void;
@@ -325,8 +335,19 @@ export const createComposerStore = (): ComposerStore => {
         // exit animation finishes and finalizePanelClose() clears it.
         present: next.active || current.present,
         highlightIndex: resetHighlight ? 0 : current.highlightIndex,
+        // A closed popup has no active descendant; while open, the mounted
+        // Command re-derives it as the highlight resolves.
+        activeOptionId: next.active ? current.activeOptionId : null,
       },
     };
+    notify();
+  };
+
+  // The editor's aria-activedescendant target — written by the mounted
+  // Command, which is where highlight index resolves against the item list.
+  const setActiveOptionId = (id: string | null) => {
+    if (snapshot.commands.activeOptionId === id) return;
+    snapshot = { ...snapshot, commands: { ...snapshot.commands, activeOptionId: id } };
     notify();
   };
 
@@ -479,7 +500,14 @@ export const createComposerStore = (): ComposerStore => {
   snapshot = {
     textarea: { ...controller, hasContent: false },
     isSubmitting: false,
-    commands: { active: false, present: false, trigger: null, query: "", highlightIndex: 0 },
+    commands: {
+      active: false,
+      present: false,
+      trigger: null,
+      query: "",
+      highlightIndex: 0,
+      activeOptionId: null,
+    },
     attachments: {
       items: attachmentState.items,
       error: attachmentState.error,
@@ -551,6 +579,8 @@ export const createComposerStore = (): ComposerStore => {
     setHasContent,
     setIsSubmitting,
     setCommands,
+    setActiveOptionId,
+    listboxId: "",
     moveHighlight,
     setHighlight,
     setQuestions,

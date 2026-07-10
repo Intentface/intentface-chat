@@ -191,6 +191,30 @@ for `Escape` to call `onStop`, unless the event was already handled.
 
 ## Accessibility
 
+### Command popup (combobox)
+
+The editor is a `role="textbox"` with combobox wiring: `aria-autocomplete="list"`,
+`aria-haspopup="listbox"`, plus `aria-controls` and `aria-activedescendant`
+while a trigger popup is open. The popup renders `role="listbox"` (labelled
+"Suggestions", overridable) with `role="option"` rows carrying stable ids and
+`aria-selected` on the highlight — keyboard selection stays in the editor, so
+rows are never tab stops. Grouped lists wrap in `role="group"` labelled by
+their `CommandGroupLabel`. Async resolution sets `aria-busy` on the listbox and
+the empty state is a `role="status"` region. Committed mention chips announce
+as atomic tokens ("Label, @ mention").
+
+One deliberate deviation from the strict APG combobox pattern: `aria-expanded`
+is omitted — ARIA 1.2 forbids it on `textbox`, and switching to
+`role="combobox"` would forbid `aria-multiline`, which matters more for a
+multiline chat field. The popup announces through `aria-haspopup` and live
+`aria-activedescendant` narration instead. Tab selects the highlighted option
+while the popup is open (Linear-style) rather than moving focus.
+
+The placeholder overlay is `aria-hidden` — assistive tech hears the string
+`placeholder` prop via `aria-placeholder`. When rich `children` replace the
+string, keep a `placeholder` string alongside (children win visually) so the
+hint still announces.
+
 ### Ask-user questions
 
 While `questions` are active, the options form a labelled group: `AskUser.Options`
@@ -211,9 +235,9 @@ key handling treats native inputs as foreign editables.
 - **Click-to-focus.** `Container` is a focus proxy (`role="button"`,
   `tabIndex={0}`): clicking its chrome focuses the editor, but clicks on nested
   buttons, links, and inputs pass through.
-- **Ask-user focus.** Activating `questions` blurs the editor and moves key
-  handling to the options; typing any character returns focus to the editor for
-  a free-text answer.
+- **Ask-user focus.** Activating `questions` moves focus into the options
+  group; typing any character returns focus to the editor for a free-text
+  answer.
 - **Submit labelling.** While generating, `Submit` sets
   `aria-label="Stop generating"` so the morphed control is announced correctly.
 

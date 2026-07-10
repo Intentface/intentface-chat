@@ -120,11 +120,11 @@ export type ComposerCommandsConfig = {
    */
   suggestion?: boolean;
   /**
-   * Per-prefix hint shown after the trigger while the query is empty — the
-   * value of data-command-placeholder, rendered by the styled layer's ::after.
-   * Never shows alongside a suggestion: the ::after slot is exclusive and the
-   * suggestion wins, so this is the resident hint for suggestion: false
-   * prefixes and the fallback when nothing can complete.
+   * Per-prefix hint shown while the query is empty, rendered into the badge's
+   * hint element (span[data-slot="command-hint"]). Defaults to "Type to
+   * filter". Never shows alongside a suggestion — one hint slot, suggestion
+   * wins — so this is the resident hint for suggestion: false prefixes and
+   * the fallback when nothing can complete.
    */
   placeholder?: string;
 };

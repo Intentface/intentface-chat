@@ -143,6 +143,18 @@ const useResolvedItems = (
 
 const EMPTY_ITEMS: CommandItemData[] = [];
 
+// The badge's hint chrome: non-editable so the caret can't enter it, no chip
+// id so the reader/mappers treat it as zero-width presentation, aria-hidden
+// so screen readers skip the ghost. Styled via data-slot like any other part.
+const createHintElement = (badge: Element): HTMLElement => {
+  const hint = badge.ownerDocument.createElement("span");
+  hint.setAttribute("data-slot", "command-hint");
+  hint.setAttribute("contenteditable", "false");
+  hint.setAttribute("aria-hidden", "true");
+  badge.appendChild(hint);
+  return hint;
+};
+
 export type ComposerCommandState = {
   /** Present as data-loading while an async items callback is in flight. */
   loading: boolean;
@@ -201,29 +213,31 @@ export const ComposerCommand = ({
   const highlightedItem = items[activeIndex] ?? null;
   const effectiveHighlight = highlightedItem?.value ?? null;
 
-  // Badge hints: stamp the highlighted item's remaining label
-  // (data-command-suggestion) and the per-prefix empty-query hint (the VALUE
-  // of data-command-placeholder — the engine stamps the marker, this fills in
-  // the copy) onto the active-token badge; the styled layer paints them as
-  // ::after content. The two are exclusive by construction — one ::after slot,
-  // and the suggestion rule outranks the placeholder rule. The badge is
-  // engine-owned DOM out of JSX reach — same access pattern as the popover's
-  // anchor query — so this is a true DOM-integration effect. No deps: badge
-  // identity changes on token rewraps, which always coincide with a re-render
-  // here (query/highlight subscribed).
+  // Badge hint — one real element (span[data-slot="command-hint"], appended
+  // inside the badge) carrying either the ghost-text completion of the
+  // highlighted item or the per-prefix empty-query placeholder. One slot, one
+  // value: the suggestion wins by a plain ?? chain, so exclusivity is code,
+  // not CSS specificity. The reader and position mappers treat non-editable,
+  // non-chip elements as zero-width presentation, so the hint never reaches
+  // the model. The badge is engine-owned DOM out of JSX reach — same access
+  // pattern as the popover's anchor query — so this is a true DOM-integration
+  // effect. No deps: badge identity changes on token rewraps, which always
+  // coincide with a re-render here (query/highlight subscribed).
   const suggestion =
     isActive && highlightedItem && (config?.suggestion ?? true)
       ? suggestionRemainder(query, highlightedItem.label)
       : null;
-  const placeholderText = config?.placeholder ?? null;
+  const hintText =
+    suggestion ?? (isActive && query === "" ? (config?.placeholder ?? "Type to filter") : null);
   useIsomorphicLayoutEffect(() => {
     const badge = store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]");
-    if (!badge) return;
-    if (suggestion) badge.setAttribute("data-command-suggestion", suggestion);
-    else badge.removeAttribute("data-command-suggestion");
-    if (placeholderText && badge.hasAttribute("data-command-placeholder")) {
-      badge.setAttribute("data-command-placeholder", placeholderText);
+    const existingHint = badge?.querySelector('[data-slot="command-hint"]') ?? null;
+    if (!badge || !hintText) {
+      existingHint?.remove();
+      return;
     }
+    const hint = existingHint ?? createHintElement(badge);
+    if (hint.textContent !== hintText) hint.textContent = hintText;
   });
 
   const selectByValue = useCallback(

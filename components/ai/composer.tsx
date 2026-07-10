@@ -204,16 +204,9 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       // messages/docs) so the badge and the chip it becomes share one baseline —
       // no jump on commit.
       "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
-      // Type-to-filter hint while the command query is empty; a per-prefix
-      // commands.placeholder overrides the copy via the attribute value
-      // (the :not-empty rule is more specific than the default).
-      "[&_[data-command-placeholder]::after]:content-['Type_to_filter'] [&_[data-command-placeholder]::after]:pointer-events-none [&_[data-command-placeholder]::after]:whitespace-nowrap [&_[data-command-placeholder]::after]:text-ink-tertiary",
-      "[&_[data-command-placeholder]:not([data-command-placeholder=''])::after]:content-[attr(data-command-placeholder)]",
-      // Ghost-text completion of the highlighted command item (Notion-style).
-      // Triple-attribute specificity: the suggestion always wins the single
-      // ::after slot over both placeholder rules.
-      "[&_[data-command-suggestion]::after]:content-[attr(data-command-suggestion)] [&_[data-command-suggestion]::after]:pointer-events-none [&_[data-command-suggestion]::after]:whitespace-nowrap [&_[data-command-suggestion]::after]:text-ink-tertiary",
-      "[&_[data-command-badge][data-command-placeholder][data-command-suggestion]::after]:content-[attr(data-command-suggestion)]",
+      // The badge's hint element — ghost-text completion or the empty-query
+      // placeholder (the package renders whichever applies into one slot).
+      "**:data-[slot=command-hint]:pointer-events-none **:data-[slot=command-hint]:whitespace-nowrap **:data-[slot=command-hint]:text-ink-tertiary",
       disabled && "opacity-50 cursor-not-allowed",
       className,
     )}

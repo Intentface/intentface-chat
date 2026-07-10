@@ -316,9 +316,7 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     // diverges from the canonical rendering, repaint from the model. Plain
     // typing never diverges, so the native fast path stays untouched.
     const domBreakCount = root.querySelectorAll("br").length;
-    const canonicalBreakCount = documentToDomSpec(doc).filter(
-      (spec) => spec.kind === "br",
-    ).length;
+    const canonicalBreakCount = documentToDomSpec(doc).filter((spec) => spec.kind === "br").length;
     if (dirty || domBreakCount !== canonicalBreakCount) renormalizeDom();
   };
 

@@ -278,6 +278,7 @@ export const textareaProps = [
   { name: "required", type: "boolean", default: "false", description: "Native form validation via the hidden input (requires name)." },
   { name: "name", type: "string", description: "Mirrors the serialized text (chips as chip-markdown) into FormData." },
   { name: "spellCheck", type: "boolean", default: "false", description: "Forwarded to the editable element, with autoCapitalize, enterKeyHint, inputMode, dir, and aria-* passthrough." },
+  { name: "onFocus / onBlur / onKeyDown / onKeyUp / onPaste / onCopy / onCut", type: "React handlers", description: "Route to the editable element, native-textarea style: they run before the engine, and preventDefault overrides the engine's handling (keydown/clipboard)." },
 ];
 
 <PropsTable rows={textareaProps} />

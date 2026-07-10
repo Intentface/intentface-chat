@@ -15,7 +15,13 @@
 //    mount through portals into engine-owned spans, so React never
 //    reconciles the editable's children.
 
-import { type ReactNode, useSyncExternalStore } from "react";
+import {
+  type ClipboardEventHandler,
+  type FocusEventHandler,
+  type KeyboardEventHandler,
+  type ReactNode,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import { Chip } from "../chip";
 import { type ChipData, parseChipSegments } from "../chip-markdown";
@@ -68,11 +74,34 @@ export type UseComposerEditorOptions = {
   value?: string;
   onValueChange?: (text: string) => void;
   renderChip?: (chip: ChipData) => ReactNode;
+  // Consumer callbacks on the editable, native-textarea style. They run
+  // before the engine; preventDefault in onKeyDown/onPaste/onCopy/onCut
+  // overrides the engine's handling (focus/blur are bookkeeping and always
+  // run — a native blur isn't cancelable either).
+  onFocus?: FocusEventHandler<HTMLDivElement>;
+  onBlur?: FocusEventHandler<HTMLDivElement>;
+  onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
+  onKeyUp?: KeyboardEventHandler<HTMLDivElement>;
+  onPaste?: ClipboardEventHandler<HTMLDivElement>;
+  onCopy?: ClipboardEventHandler<HTMLDivElement>;
+  onCut?: ClipboardEventHandler<HTMLDivElement>;
+};
+
+export type ComposerEditableProps = {
+  onFocus: FocusEventHandler<HTMLDivElement>;
+  onBlur: FocusEventHandler<HTMLDivElement>;
+  onKeyDown: KeyboardEventHandler<HTMLDivElement>;
+  onKeyUp: KeyboardEventHandler<HTMLDivElement>;
+  onPaste: ClipboardEventHandler<HTMLDivElement>;
+  onCopy: ClipboardEventHandler<HTMLDivElement>;
+  onCut: ClipboardEventHandler<HTMLDivElement>;
 };
 
 export type UseComposerEditorResult = {
   /** Attach to the contenteditable element; returns a React 19 ref cleanup. */
   attachRoot: (node: HTMLElement | null) => (() => void) | undefined;
+  /** Spread onto the editable: consumer-then-engine composed event handlers. */
+  editableProps: ComposerEditableProps;
   /** Chip visuals, portaled into the engine-owned inline spans. */
   chipPortals: ReactNode;
   hasContent: boolean;
@@ -591,7 +620,11 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     },
   };
 
-  // --- Mount — native listeners + store registration, cleaned up together.
+  // --- Mount — the input-pipeline listeners stay native (getTargetRanges
+  // must be read off the real beforeinput event; composition timing is
+  // synthetic-hostile). The interactive events (keydown, focus/blur,
+  // clipboard) are exposed below and attached as React handlers so consumer
+  // callbacks compose with native-textarea override semantics.
 
   const attach = (node: HTMLElement | null): (() => void) | undefined => {
     if (!node) return undefined;
@@ -602,12 +635,6 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     node.addEventListener("input", handleInput);
     node.addEventListener("compositionstart", handleCompositionStart);
     node.addEventListener("compositionend", handleCompositionEnd);
-    node.addEventListener("keydown", handleKeyDown);
-    node.addEventListener("focus", handleFocus);
-    node.addEventListener("blur", handleBlur);
-    node.addEventListener("paste", handlePaste);
-    node.addEventListener("copy", handleCopy);
-    node.addEventListener("cut", handleCut);
 
     const unregister = getDependencies().store.registerEditor(registeredEditor);
 
@@ -618,12 +645,6 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
       node.removeEventListener("input", handleInput);
       node.removeEventListener("compositionstart", handleCompositionStart);
       node.removeEventListener("compositionend", handleCompositionEnd);
-      node.removeEventListener("keydown", handleKeyDown);
-      node.removeEventListener("focus", handleFocus);
-      node.removeEventListener("blur", handleBlur);
-      node.removeEventListener("paste", handlePaste);
-      node.removeEventListener("copy", handleCopy);
-      node.removeEventListener("cut", handleCut);
       detachSelectionListener?.();
       detachSelectionListener = null;
       unregister();
@@ -652,6 +673,13 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     getChipElement: (id: string) => chipElements.get(id),
     attach,
     applyControlledText,
+    // Interactive handlers, composed with consumer callbacks by the hook.
+    handleKeyDown,
+    handleFocus,
+    handleBlur,
+    handlePaste,
+    handleCopy,
+    handleCut,
   };
 };
 
@@ -681,6 +709,41 @@ export const useComposerEditor = (options: UseComposerEditorOptions): UseCompose
     engine.applyControlledText(options.value);
   }, [engine, options.value]);
 
+  // Consumer-then-engine composition — native-textarea override semantics:
+  // preventDefault in the consumer's handler stops the engine (and, for
+  // keydown, the browser default) exactly like it would on a real textarea.
+  // Focus/blur engine handling is bookkeeping (selectionchange lifecycle,
+  // command-list close) and always runs.
+  const editableProps: ComposerEditableProps = {
+    onFocus: (event) => {
+      dependenciesRef.current.options.onFocus?.(event);
+      engine.handleFocus();
+    },
+    onBlur: (event) => {
+      dependenciesRef.current.options.onBlur?.(event);
+      engine.handleBlur();
+    },
+    onKeyDown: (event) => {
+      dependenciesRef.current.options.onKeyDown?.(event);
+      if (!event.defaultPrevented) engine.handleKeyDown(event.nativeEvent);
+    },
+    onKeyUp: (event) => {
+      dependenciesRef.current.options.onKeyUp?.(event);
+    },
+    onPaste: (event) => {
+      dependenciesRef.current.options.onPaste?.(event);
+      if (!event.defaultPrevented) engine.handlePaste(event.nativeEvent);
+    },
+    onCopy: (event) => {
+      dependenciesRef.current.options.onCopy?.(event);
+      if (!event.defaultPrevented) engine.handleCopy(event.nativeEvent);
+    },
+    onCut: (event) => {
+      dependenciesRef.current.options.onCut?.(event);
+      if (!event.defaultPrevented) engine.handleCut(event.nativeEvent);
+    },
+  };
+
   const chipPortals = engine.getDoc().flatMap((segment) => {
     if (segment.type !== "chip") return [];
     const element = engine.getChipElement(segment.id);
@@ -700,6 +763,7 @@ export const useComposerEditor = (options: UseComposerEditorOptions): UseCompose
 
   return {
     attachRoot: engine.attach,
+    editableProps,
     chipPortals,
     hasContent,
     serializedText: serializeSegments(engine.getDoc()).text,

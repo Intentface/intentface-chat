@@ -6,7 +6,7 @@
 import { ComposerActions, ComposerContextWindow, ComposerSubmit } from "./actions";
 import { ComposerAttachments, ComposerAttachmentTrigger } from "./attachments";
 import {
-  ComposerCommandCollection,
+  ComposerCommand,
   ComposerCommandDismiss,
   ComposerCommandEmpty,
   ComposerCommandGroup,
@@ -15,7 +15,6 @@ import {
   ComposerCommandItemDescription,
   ComposerCommandItemIcon,
   ComposerCommandItemLabel,
-  ComposerCommandItems,
   ComposerCommandList,
   ComposerCommandLoading,
 } from "./command-list";
@@ -40,8 +39,8 @@ export const Composer = Object.assign(ComposerRoot, {
   Panel: ComposerPanel,
   Popover: ComposerPopover,
   Textarea: ComposerTextarea,
+  Command: ComposerCommand,
   CommandList: ComposerCommandList,
-  CommandItems: ComposerCommandItems,
   CommandLoading: ComposerCommandLoading,
   CommandEmpty: ComposerCommandEmpty,
   CommandDismiss: ComposerCommandDismiss,
@@ -51,13 +50,12 @@ export const Composer = Object.assign(ComposerRoot, {
   CommandItemDescription: ComposerCommandItemDescription,
   CommandGroup: ComposerCommandGroup,
   CommandGroupLabel: ComposerCommandGroupLabel,
-  CommandCollection: ComposerCommandCollection,
 });
 
 export type { ComposerSubmitState, UseComposerSubmitOptions } from "./actions";
 export { useComposerSubmit } from "./actions";
 export type { ComposerAttachmentsProps, ComposerAttachmentTriggerProps } from "./attachments";
-export type { CommandListState, ComposerCommandListProps } from "./command-list";
+export type { CommandListState, ComposerCommandProps } from "./command-list";
 export { useCommandListItems } from "./command-list";
 export type { ComposerContainerProps } from "./container";
 export { useComposerController } from "./controller";

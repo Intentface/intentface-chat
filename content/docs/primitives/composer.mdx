@@ -23,17 +23,17 @@ The bare nesting — every part is optional except `Composer` and `Container`:
   <Composer.Panel>
     {(composer) =>
       composer.commands.active && (
-        <Composer.CommandList prefix="@">
+        <Composer.Command prefix="@">
           <Composer.CommandLoading />
           <Composer.CommandEmpty />
-          <Composer.CommandItems>
+          <Composer.CommandList>
             {(item) => (
               <Composer.CommandItem value={item.value}>
                 <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
               </Composer.CommandItem>
             )}
-          </Composer.CommandItems>
-        </Composer.CommandList>
+          </Composer.CommandList>
+        </Composer.Command>
       )
     }
   </Composer.Panel>
@@ -364,7 +364,7 @@ Button that opens the file dialog. Renders
 
 A surface region above the field. `children` is either plain nodes or a callback
 `(composer) => ReactNode` receiving the composer state, so you pick what to show
-by priority (`commands.active ? <CommandList/> : askUser.active ? <AskUser/> :
+by priority (`commands.active ? <Command/> : askUser.active ? <AskUser/> :
 null`). By default (`anchor`) it renders as a **collision-aware, portaled overlay**
 anchored to the `Container` — flipping / shifting / sizing to stay on screen (via
 `@floating-ui/dom`); anchor a ref/element elsewhere, or pass `anchor={false}` for an
@@ -435,7 +435,7 @@ export const popoverAttrs = [
 
 <AttributesTable rows={popoverAttrs} />
 
-### Composer.CommandList
+### Composer.Command
 
 The command popup for one prefix. Renders `data-slot="composer-command-list"`
 **only while that prefix is active** (returns nothing otherwise).
@@ -454,7 +454,7 @@ export const commandListAttrs = [
 
 <AttributesTable rows={commandListAttrs} />
 
-### Composer.CommandItems
+### Composer.CommandList
 
 Maps resolved items through a render-prop child. Renders
 `data-slot="composer-command-items"`.
@@ -490,11 +490,27 @@ export const commandItemAttrs = [
 `Composer.CommandLoading` (`composer-command-loading`),
 `Composer.CommandEmpty` (`composer-command-empty`), and
 `Composer.CommandDismiss` (`composer-command-dismiss`, a button) fill the list
-states — all render only your children, so you supply the copy. `Composer.CommandGroup` renders
-`data-slot="command-group"` (the inner primitive's slot, **not**
-`composer-`-prefixed) with `Composer.CommandGroupLabel`
-(`composer-command-group-label`). `Composer.CommandCollection` is logic-only —
-it maps `items` through a render-prop child and renders no element.
+states — all render only your children, so you supply the copy. To group, give
+`Composer.CommandGroup` a `groupBy` and a render callback: it buckets the resolved
+(already-filtered) items by your key — in first-appearance order, so keyboard nav
+still flows top-to-bottom — and calls the callback once per group with
+`(group, items)`, wrapping each in `data-slot="command-group"`. You render
+`Composer.CommandGroupLabel` (`composer-command-group-label`) + the group's items:
+
+```tsx
+<Composer.CommandGroup groupBy={(item: Issue) => item.group}>
+  {(group, items) => (
+    <>
+      <Composer.CommandGroupLabel>{group}</Composer.CommandGroupLabel>
+      {items.map((item) => (
+        <Composer.CommandItem key={item.value} value={item.value}>
+          <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+        </Composer.CommandItem>
+      ))}
+    </>
+  )}
+</Composer.CommandGroup>
+```
 
 ### Composer.AskUser
 
@@ -518,7 +534,7 @@ export const hooks = [
   { name: "useComposerStore", type: "(store, selector?) => Selected", description: "Same, for an explicit createStore() handle — the outside-the-tree twin." },
   { name: "useComposerController", type: "() => ComposerEditorState", description: "The nearest composer's imperative editor controls (focus, insert, clear, …)." },
   { name: "useComposerSubmit", type: "(options) => ComposerSubmitState", description: "Computes Submit's type/disabled/generating; auto-disables while empty or submitting; aborts on Escape." },
-  { name: "useCommandListItems", type: "() => { items, state }", description: "The resolved items and load state inside a CommandList. Throws outside one." },
+  { name: "useCommandListItems", type: "() => { items, state }", description: "The resolved items and load state inside a Command. Throws outside one." },
 ];
 
 <PropsTable rows={hooks} />

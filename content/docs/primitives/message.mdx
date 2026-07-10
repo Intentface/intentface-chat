@@ -97,7 +97,7 @@ Done right, a stream chunk re-renders exactly one row. See
   on the root, so styling and assistive context stay in sync.
 - **Speaker identity is yours to announce.** `role` is an opaque string the
   package only surfaces as `data-role` — alignment and color are invisible to
-  assistive tech. Give each message a visually-hidden "\{role\} said" prefix, or
+  assistive tech. Give each message a visually-hidden `{role} said` prefix, or
   an `aria-label` on the root, so a transcript read top-to-bottom attributes
   its turns.
 - **Error / stopped / loading markers** are consumer-owned slots: give an

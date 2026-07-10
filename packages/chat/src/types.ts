@@ -2,14 +2,15 @@
 // SDK-agnostic: an AI SDK `UIMessage` satisfies `ChatMessage` structurally, so
 // no adapter or translation layer is needed. Extend via the generics.
 
-// `data-slot` is the part-identity styling hook every primitive stamps.
+// Every primitive stamps a bespoke part-identity attribute (data-composer-root,
+// data-thread-scroller, …) — `data-slot` stays free for the consumer layer.
 // Declared on React's HTMLAttributes so internal props objects typecheck —
 // TS only special-cases data-* attributes inside JSX literals, not in plain
 // object literals handed to the render machinery.
 declare module "react" {
   // biome-ignore lint/correctness/noUnusedVariables: augmentation must repeat React's type parameter
   interface HTMLAttributes<T> {
-    "data-slot"?: string | undefined;
+    [dataAttribute: `data-${string}`]: string | undefined;
   }
 }
 

@@ -5,7 +5,7 @@
 // chip paste handling, the command-prefix plugin, keyboard interpretation,
 // store mirroring, controlled/uncontrolled text. No styling crosses this
 // boundary — the editor element and the command decorations expose data
-// attributes (data-slot="composer-editor", data-command-badge,
+// attributes (data-composer-editor="", data-command-badge,
 // data-command-placeholder) for the styled layer's CSS.
 
 import Document from "@tiptap/extension-document";
@@ -101,7 +101,7 @@ export const ComposerTextareaLegacy = ({
     content: isControlled ? value : "",
     editorProps: {
       attributes: {
-        "data-slot": "composer-editor",
+        "data-composer-editor": "",
         spellcheck: "false",
       },
       // Paste: file clipboard entries become attachments; chip-markdown text
@@ -277,7 +277,7 @@ export const ComposerTextareaLegacy = ({
       <EditorContent editor={tiptapEditor} style={{ position: "relative" }}>
         {!hasContent && children && (
           <div
-            data-slot="composer-placeholder"
+            data-composer-placeholder=""
             style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
             aria-hidden="true"
           >
@@ -292,7 +292,7 @@ export const ComposerTextareaLegacy = ({
     { className, render, style },
     {
       state: { disabled, filled: hasContent },
-      props: [{ "data-slot": "composer-textarea", children: editorContent }, elementProps],
+      props: [{ "data-composer-textarea": "", children: editorContent }, elementProps],
     },
   );
 };

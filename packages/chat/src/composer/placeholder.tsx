@@ -1,7 +1,7 @@
 "use client";
 
 // Composer.Placeholder — the textarea's empty-state overlay content. Renders a
-// plain element with a data-slot; it carries no styling. Rotating through
+// plain element with a part attribute; it carries no styling. Rotating through
 // several placeholders (and any crossfade) is a presentation concern and lives
 // in the styled layer, not here.
 
@@ -25,7 +25,7 @@ export const ComposerPlaceholder = ({
     { className, render, style },
     {
       props: [
-        { "data-slot": "composer-placeholder-text", children: placeholder ?? children },
+        { "data-composer-placeholder-text": "", children: placeholder ?? children },
         elementProps,
       ],
     },

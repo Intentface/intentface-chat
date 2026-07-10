@@ -100,14 +100,14 @@ Done right, a stream chunk re-renders exactly one row. See
 
 ## API reference
 
-Every part accepts `className` and `style` and emits a `data-slot` unless
+Every part accepts `className` and `style` and emits a bespoke part attribute unless
 noted. The headless-backed parts — `Message`, `Message.Turn`, `Message.Text` —
 also accept `render` (see [PrimitiveProps](/docs/headless/types)); the rest are
 consumer-owned styled parts you edit directly.
 
 ### Message
 
-The root: role-aware container. Renders `data-slot="message"`.
+The root: role-aware container. Renders `data-message`.
 
 export const rootProps = [
   { name: "role", type: "string", default: "(required)", description: "Opaque role string surfaced as data-role; you own the set (commonly system / user / assistant)." },
@@ -118,7 +118,7 @@ export const rootProps = [
 <PropsTable rows={rootProps} />
 
 export const rootAttrs = [
-  { attribute: "data-slot", values: '"message"', description: "The message root." },
+  { attribute: "data-message", description: "The message root." },
   { attribute: "data-role", values: "string", description: "The message role you passed (commonly system / user / assistant)." },
   { attribute: "data-error", description: "Present when isError is true." },
   { attribute: "data-last", description: "Present when isLast is true." },
@@ -128,7 +128,7 @@ export const rootAttrs = [
 
 ### Message.Turn
 
-Groups a role's messages into one visual turn. Renders `data-slot="message-turn"`.
+Groups a role's messages into one visual turn. Renders `data-message-turn`.
 
 export const turnProps = [
   { name: "sticky", type: "boolean", description: "Pins the turn header while its content scrolls." },
@@ -139,7 +139,7 @@ export const turnProps = [
 ### Message.Text
 
 Plain/segmented text: reconstructs inline chips from the wire format. Renders
-`data-slot="message-text"`.
+`data-message-text`.
 
 export const textProps = [
   { name: "children", type: "string", default: "(required)", description: "The message text; chip tokens are parsed out and rendered." },
@@ -181,7 +181,7 @@ export const actionProps = [
 
 ### Message.Source
 
-A source pill linking out. Renders `data-slot="message-source"` as
+A source pill linking out. Renders `data-message-source` as
 `<a target="_blank" rel="noopener noreferrer">`.
 
 export const sourceProps = [
@@ -216,7 +216,7 @@ export const toolbarProps = [
 `Message.Content`, `Message.Actions`, `Message.Attachments`, `Message.Sources`,
 `Message.Error`, `Message.Stopped`, and `Message.Loading` are consumer-owned
 layout/marker slots taking only `children`; they render
-`data-slot="message-content"`, `"message-actions"`, `"message-attachments"`,
+`data-message-content`, `"message-actions"`, `"message-attachments"`,
 `"message-sources"`, `"message-error"`, `"message-stopped"`, and
 `"message-loading"` respectively — plain styled elements in your copy of the
 component, not package primitives.

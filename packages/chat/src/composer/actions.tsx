@@ -46,7 +46,7 @@ export const ComposerContextWindow = ({
     {
       state: { open },
       stateAttributesMapping: openStateMapping,
-      props: [{ "data-slot": "composer-context-window", children }, elementProps],
+      props: [{ "data-composer-context-window": "", children }, elementProps],
     },
   );
 };
@@ -66,7 +66,7 @@ export const ComposerActions = ({
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "composer-actions" }, elementProps] },
+    { props: [{ "data-composer-actions": "" }, elementProps] },
   );
 
 // ---------------------------------------------------------------------------
@@ -157,7 +157,7 @@ export const ComposerSubmit = ({
       props: [
         {
           type: submit.type,
-          "data-slot": "composer-submit",
+          "data-composer-submit": "",
           "aria-label": isGenerating ? "Stop generating" : undefined,
           disabled: submit.disabled,
           // Replaces (not chains) the consumer's onClick while generating —

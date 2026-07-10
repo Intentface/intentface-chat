@@ -79,7 +79,7 @@ const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) 
       className={cn(
         "relative @container/thread-viewport flex w-full min-w-[340px] flex-col items-center",
         "min-h-full",
-        "has-data-[slot=thread-placeholder]:h-full",
+        "has-data-thread-placeholder:h-full",
         className,
       )}
       {...props}

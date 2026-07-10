@@ -53,7 +53,7 @@ const ChipRoot = ({
     { className, render, style },
     {
       state: { variant },
-      props: [{ "data-slot": "chip", children: inlineChildren }, elementProps],
+      props: [{ "data-chip": "", children: inlineChildren }, elementProps],
     },
   );
 
@@ -68,7 +68,7 @@ const ChipIcon = ({ className, render, style, ...elementProps }: ChipIconProps) 
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "aria-hidden": true, "data-slot": "chip-icon" }, elementProps] },
+    { props: [{ "aria-hidden": true, "data-chip-icon": "" }, elementProps] },
   );
 
 export type ChipLabelProps = PrimitiveProps<"span">;
@@ -77,7 +77,7 @@ const ChipLabel = ({ className, render, style, ...elementProps }: ChipLabelProps
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "chip-label" }, elementProps] },
+    { props: [{ "data-chip-label": "" }, elementProps] },
   );
 
 export const Chip = Object.assign(ChipRoot, {

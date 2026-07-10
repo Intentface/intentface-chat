@@ -78,7 +78,7 @@ The chat API follows Vercel AI SDK conventions
 5. Every component in `components/ai/` and `components/ui/` must use the compound component pattern (see Component Architecture above).
 6. Use `cn()` from `lib/utils.ts` for className merging.
 7. Follow Biome rules and formatting.
-8. Use data attributes (`data-slot`, `data-role`) for styling and state selectors.
+8. Use data attributes for styling and state selectors: app components (`components/ai`, `components/ui`) stamp `data-slot` / `data-role`; package primitives (`packages/chat`) emit bespoke part attributes instead (`data-composer-editor`, `data-command-badge`) — `data-slot` belongs to the consumer layer.
 9. Leverage Motion for entrance/exit animations.
 10. Use TipTap for rich text editing needs.
 11. Follow AI SDK patterns (`useChat()`, `streamText()`, `toUIMessageStreamResponse()`).

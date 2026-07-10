@@ -198,7 +198,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       "max-h-32 min-h-8 overflow-y-auto py-2 px-3 text-md",
       "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
       // The editor element — ProseMirror-owned DOM, out of JSX reach.
-      "**:data-[slot=composer-editor]:w-full **:data-[slot=composer-editor]:max-w-none **:data-[slot=composer-editor]:font-book **:data-[slot=composer-editor]:leading-[1.7] [&_[data-slot=composer-editor]:focus]:outline-none",
+      "**:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:font-book **:data-composer-editor:leading-[1.7] [&_[data-composer-editor]:focus]:outline-none",
       // Active-prefix badge: the composer's own borderless surface (matching the
       // committed chip above, not the bordered CHIP_SURFACE_CLASS used in
       // messages/docs) so the badge and the chip it becomes share one baseline —

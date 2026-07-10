@@ -17,7 +17,7 @@ import type { PrimitiveProps } from "./internal/primitive-props";
 import { useRenderElement } from "./internal/render/useRenderElement";
 
 // ---------------------------------------------------------------------------
-// Root — data-attribute contract: data-slot="message", data-role, data-error,
+// Root — data-attribute contract: data-message="", data-role, data-error,
 // data-last, generated from MessageState. The selection toolbar and thread
 // spacing query these.
 // ---------------------------------------------------------------------------
@@ -54,7 +54,7 @@ const MessageRoot = ({
   return useRenderElement(
     "div",
     { className, render, style },
-    { state, props: [{ "data-slot": "message" }, elementProps] },
+    { state, props: [{ "data-message": "" }, elementProps] },
   );
 };
 
@@ -68,11 +68,11 @@ const MessageTurn = ({ className, render, style, ...elementProps }: MessageTurnP
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "message-turn" }, elementProps] },
+    { props: [{ "data-message-turn": "" }, elementProps] },
   );
 
 // Layout/marker slots (content, actions, attachments, sources, error, stopped,
-// loading) and timestamps are the consumer's — plain elements with a data-slot
+// loading) and timestamps are the consumer's — plain elements with a part attribute
 // carry no mechanism, and link targets, copy, and date formatting are product
 // policy. The package keeps only Root (state attributes), Turn (the grouping
 // contract), and Text (chip reconstruction).
@@ -109,7 +109,7 @@ const MessageText = ({
         {renderChip ? (
           renderChip(segment, index)
         ) : (
-          <span data-slot="message-chip">{segment.label}</span>
+          <span data-message-chip="">{segment.label}</span>
         )}
       </Fragment>
     ),
@@ -118,7 +118,7 @@ const MessageText = ({
   return useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "message-text", children: segmentNodes }, elementProps] },
+    { props: [{ "data-message-text": "", children: segmentNodes }, elementProps] },
   );
 };
 
@@ -186,9 +186,9 @@ export const useMessageSelectionScope = () => {
   const [contentElement, setContentElement] = useState<HTMLElement | null>(null);
 
   const anchorRef = useCallback((node: HTMLElement | null) => {
-    const messageRoot = node?.closest<HTMLElement>('[data-slot="message"]');
+    const messageRoot = node?.closest<HTMLElement>('[data-message]');
     setContentElement(
-      messageRoot?.querySelector<HTMLElement>('[data-slot="message-content"]') ?? null,
+      messageRoot?.querySelector<HTMLElement>('[data-message-content]') ?? null,
     );
   }, []);
 

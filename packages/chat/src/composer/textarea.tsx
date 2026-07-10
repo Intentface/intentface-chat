@@ -4,7 +4,7 @@
 // the flat segment engine (useComposerEditor). Acts like a native textarea
 // with atomic mention chips: native typing/IME, form participation via a
 // hidden input mirror, and the same data-attribute contract as always
-// (data-slot="composer-editor", data-command-badge, data-mention-chip). No
+// (data-composer-editor="", data-command-badge, data-mention-chip). No
 // styling crosses this boundary.
 //
 // The editable div renders with no JSX children — the engine owns its DOM;
@@ -146,7 +146,7 @@ export const ComposerTextarea = ({
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         aria-describedby={ariaDescribedBy}
-        data-slot="composer-editor"
+        data-composer-editor=""
         spellCheck={spellCheck}
         autoCapitalize={autoCapitalize}
         enterKeyHint={enterKeyHint}
@@ -159,7 +159,7 @@ export const ComposerTextarea = ({
           any model commit, so hasContent alone would lag the preview. */}
       {!hasContent && !isComposing && (children ?? placeholder) && (
         <div
-          data-slot="composer-placeholder"
+          data-composer-placeholder=""
           style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
           aria-hidden="true"
         >
@@ -176,7 +176,7 @@ export const ComposerTextarea = ({
       state: { disabled, filled: hasContent },
       props: [
         {
-          "data-slot": "composer-textarea",
+          "data-composer-textarea": "",
           children: (
             <>
               {editorContent}

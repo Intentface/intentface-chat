@@ -24,7 +24,7 @@ export const ComposerContainer = ({
     // preventDefault on a mousedown inside the editable area would cancel the
     // browser's text-selection drag, so only hijack focus when the click lands
     // on the surrounding chrome.
-    if (target.closest("button, a, input, [data-slot='composer-editor']")) {
+    if (target.closest("button, a, input, [data-composer-editor]")) {
       return;
     }
 
@@ -42,7 +42,7 @@ export const ComposerContainer = ({
         {
           role: "button",
           tabIndex: 0,
-          "data-slot": "composer-container",
+          "data-composer-container": "",
           onMouseDown: handleMouseDown,
         },
         elementProps,

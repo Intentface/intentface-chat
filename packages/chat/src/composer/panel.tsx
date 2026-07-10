@@ -117,7 +117,7 @@ export const ComposerPanel = ({
       state: { open, transitionStatus },
       stateAttributesMapping: { ...openStateMapping, ...transitionStatusMapping },
       ref,
-      props: [{ "data-slot": "composer-panel", children: rendered }, elementProps],
+      props: [{ "data-composer-panel": "", children: rendered }, elementProps],
     },
   );
 

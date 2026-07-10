@@ -145,7 +145,7 @@ const EMPTY_ITEMS: CommandItemData[] = [];
 
 // The badge's hint chrome: non-editable so the caret can't enter it, no chip
 // id so the reader/mappers treat it as zero-width presentation, aria-hidden
-// so screen readers skip the ghost. Styled via data-slot like any other part.
+// so screen readers skip the ghost. Styled via its part attribute like any other part.
 const createHintElement = (badge: Element): HTMLElement => {
   const hint = badge.ownerDocument.createElement("span");
   hint.setAttribute("data-command-hint", "");
@@ -346,7 +346,7 @@ export const ComposerCommand = ({
       enabled: isPresent,
       state: { loading: state === "loading", empty: state === "empty" },
       ref: registerSelect,
-      props: [{ "data-slot": "composer-command-list", children }, elementProps],
+      props: [{ "data-composer-command-list": "", children }, elementProps],
     },
   );
 
@@ -385,7 +385,7 @@ const useCommandListNav = (componentName: string): CommandListNavContextValue =>
 
 // ---------------------------------------------------------------------------
 // Slot primitives — unstyled structural parts of the list. Each sets its
-// data-slot and forwards props; the styled layer supplies the look.
+// its part attribute and forwards props; the styled layer supplies the look.
 // ---------------------------------------------------------------------------
 
 export type ComposerCommandListProps<Item extends CommandItemData> = Omit<
@@ -410,7 +410,7 @@ export const ComposerCommandList = <Item extends CommandItemData>({
     {
       props: [
         {
-          "data-slot": "composer-command-items",
+          "data-composer-command-items": "",
           children: items.map((item, index) => (
             <Fragment key={item.value ?? `__cmd_${index}`}>{renderItem(item)}</Fragment>
           )),
@@ -434,7 +434,7 @@ export const ComposerCommandLoading = ({
     "div",
     { className, render, style },
     {
-      props: [{ "data-slot": "composer-command-loading", children }, elementProps],
+      props: [{ "data-composer-command-loading": "", children }, elementProps],
     },
   );
 
@@ -451,7 +451,7 @@ export const ComposerCommandEmpty = ({
     "div",
     { className, render, style },
     {
-      props: [{ "data-slot": "composer-command-empty", children }, elementProps],
+      props: [{ "data-composer-command-empty": "", children }, elementProps],
     },
   );
 
@@ -475,7 +475,7 @@ export const ComposerCommandDismiss = ({
     {
       props: [
         {
-          "data-slot": "composer-command-dismiss",
+          "data-composer-command-dismiss": "",
           onMouseDown: (event: React.MouseEvent) => {
             event.preventDefault();
             navContext.dismiss();
@@ -500,7 +500,7 @@ export const ComposerCommandItem = ({ value, ...props }: ComposerCommandItemProp
   return (
     <Commands.Item
       ref={isHighlighted ? navContext.scrollHighlightedIntoView : undefined}
-      data-slot="composer-command-item"
+      data-composer-command-item=""
       highlighted={isHighlighted}
       onMouseDown={(event) => {
         event.preventDefault();
@@ -523,7 +523,7 @@ export const ComposerCommandItemIcon = ({
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "composer-command-item-icon" }, elementProps] },
+    { props: [{ "data-composer-command-item-icon": "" }, elementProps] },
   );
 
 export type ComposerCommandItemLabelProps = PrimitiveProps<"span">;
@@ -537,7 +537,7 @@ export const ComposerCommandItemLabel = ({
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "composer-command-item-label" }, elementProps] },
+    { props: [{ "data-composer-command-item-label": "" }, elementProps] },
   );
 
 export type ComposerCommandItemDescriptionProps = PrimitiveProps<"span">;
@@ -551,7 +551,7 @@ export const ComposerCommandItemDescription = ({
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "composer-command-item-description" }, elementProps] },
+    { props: [{ "data-composer-command-item-description": "" }, elementProps] },
   );
 
 export type ComposerCommandGroupProps<Item extends CommandItemData = CommandItemData> = {
@@ -591,5 +591,5 @@ export const ComposerCommandGroupLabel = ({
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "composer-command-group-label" }, elementProps] },
+    { props: [{ "data-composer-command-group-label": "" }, elementProps] },
   );

@@ -25,7 +25,7 @@ export const DEFAULT_BOTTOM_OFFSET = 128;
 // bottom overlay spans it in the styled layer.
 const COMPOSER_GAP = 32;
 export const DEFAULT_DOCK_SELECTOR =
-  '[data-slot="composer-context-window"], [data-slot="composer-container"]';
+  '[data-composer-context-window], [data-composer-container]';
 
 // `dockSelector` is public API, so it may be an invalid selector string.
 // Degrade to "no dock parts" rather than letting querySelectorAll throw a
@@ -60,4 +60,4 @@ export const measureDockInset = (root: HTMLElement, dockSelector: string): numbe
 // Top inset reserved by the top overlay, measured straight off the rendered
 // element (px) — no getComputedStyle / rem→px conversion. 0 if no top overlay.
 export const measureTopInset = (root: HTMLElement): number =>
-  root.querySelector('[data-slot="thread-overlay-top"]')?.getBoundingClientRect().height ?? 0;
+  root.querySelector('[data-thread-overlay="top"]')?.getBoundingClientRect().height ?? 0;

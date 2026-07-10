@@ -51,11 +51,11 @@ assistive tech.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 
 ### Attachments
 
-The tray container; animates open/closed. Renders `data-slot="attachments"`.
+The tray container; animates open/closed. Renders `data-attachments`.
 
 export const rootProps = [
   { name: "show", type: "boolean", default: "true", description: "Animates the tray open or closed." },
@@ -65,7 +65,7 @@ export const rootProps = [
 
 ### Attachments.Item
 
-One attachment chip. Renders `data-slot="attachments-item"`.
+One attachment chip. Renders `data-attachments-item`.
 
 export const itemProps = [
   { name: "item", type: "AttachmentItem", default: "(required)", description: "The attachment to render." },
@@ -74,7 +74,7 @@ export const itemProps = [
 <PropsTable rows={itemProps} />
 
 export const itemAttrs = [
-  { attribute: "data-slot", values: '"attachments-item"', description: "The chip." },
+  { attribute: "data-attachments-item", description: "The chip." },
   { attribute: "data-media-type", values: '"image" | "pdf" | "file"', description: "The item's media category, for per-type styling." },
 ];
 
@@ -82,7 +82,7 @@ export const itemAttrs = [
 
 ### Attachments.Remove
 
-Removal affordance, shown on hover. Renders `<button data-slot="attachments-remove"
+Removal affordance, shown on hover. Renders `<button data-attachments-remove
 aria-label="Remove attachment">`.
 
 export const removeProps = [
@@ -93,7 +93,7 @@ export const removeProps = [
 
 ### Attachments.Dropzone
 
-Drop overlay. Renders `data-slot="attachments-dropzone"`. `variant="global"`
+Drop overlay. Renders `data-attachments-dropzone`. `variant="global"`
 portals it into the app shell so files can be dropped anywhere.
 
 export const dropzoneProps = [
@@ -106,7 +106,7 @@ export const dropzoneProps = [
 <PropsTable rows={dropzoneProps} />
 
 export const dropzoneAttrs = [
-  { attribute: "data-slot", values: '"attachments-dropzone"', description: "The overlay." },
+  { attribute: "data-attachments-dropzone", description: "The overlay." },
   { attribute: "data-visible", description: "Present while visible is true." },
 ];
 
@@ -114,14 +114,14 @@ export const dropzoneAttrs = [
 
 ### Attachments.Error
 
-Validation message slot. Renders `<span data-slot="attachments-error">`.
+Validation message slot. Renders `<span data-attachments-error>`.
 Validation emits a structured `AttachmentErrorCode` (`"accept"`,
 `"max_file_size"`, `"max_files"`) on the composer's attachments state — you map
 codes to your own (localized) copy; the package ships no messages.
 
 ### Attachments.Trigger
 
-The file-picker button. Renders `<button data-slot="attachments-trigger">`.
+The file-picker button. Renders `<button data-attachments-trigger>`.
 
 ## Utilities
 

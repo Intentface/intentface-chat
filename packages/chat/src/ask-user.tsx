@@ -29,7 +29,7 @@ const AskUserRoot = ({ className, render, style, ...elementProps }: AskUserRootP
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user" }, elementProps] },
+    { props: [{ "data-ask-user": "" }, elementProps] },
   );
 
 /** Question heading text. */
@@ -39,7 +39,7 @@ const AskUserLabel = ({ className, render, style, ...elementProps }: AskUserLabe
   useRenderElement(
     "p",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-label" }, elementProps] },
+    { props: [{ "data-ask-user-label": "" }, elementProps] },
   );
 
 /** Row container for `Label` and optional `Navigation`. */
@@ -49,7 +49,7 @@ const AskUserHeader = ({ className, render, style, ...elementProps }: AskUserHea
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-header" }, elementProps] },
+    { props: [{ "data-ask-user-header": "" }, elementProps] },
   );
 
 /** Row container for `Previous`, `StepLabel`, and `Next`. */
@@ -59,7 +59,7 @@ const AskUserNavigation = ({ className, render, style, ...elementProps }: AskUse
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-navigation" }, elementProps] },
+    { props: [{ "data-ask-user-navigation": "" }, elementProps] },
   );
 
 /** Navigate to the previous step. */
@@ -69,7 +69,7 @@ const AskUserPrevious = ({ className, render, style, ...elementProps }: AskUserP
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-previous" }, elementProps] },
+    { props: [{ "data-ask-user-previous": "" }, elementProps] },
   );
 
 /** Navigate to the next step. */
@@ -79,7 +79,7 @@ const AskUserNext = ({ className, render, style, ...elementProps }: AskUserNextP
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-next" }, elementProps] },
+    { props: [{ "data-ask-user-next": "" }, elementProps] },
   );
 
 /** Step indicator. Reads the current step + total from the composer store; the
@@ -105,7 +105,7 @@ const AskUserStepLabel = ({
   return useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-step-label", children: content }, elementProps] },
+    { props: [{ "data-ask-user-step-label": "", children: content }, elementProps] },
   );
 };
 
@@ -236,7 +236,7 @@ const AskUserOptions = ({
   const element = useRenderElement(
     "fieldset",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-options", children }, elementProps] },
+    { props: [{ "data-ask-user-options": "", children }, elementProps] },
   );
 
   return (
@@ -312,7 +312,7 @@ const AskUserOption = ({
       props: [
         {
           htmlFor: id,
-          "data-slot": "ask-user-option",
+          "data-ask-user-option": "",
           onMouseMove: () => onItemHover(value),
           // Self-contained click selection. If the click landed on an
           // associated control (the checkbox/radio the styled layer renders),
@@ -363,7 +363,7 @@ const AskUserOptionContent = ({
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-option-content" }, elementProps] },
+    { props: [{ "data-ask-user-option-content": "" }, elementProps] },
   );
 
 /** Option title text. */
@@ -378,7 +378,7 @@ const AskUserOptionLabel = ({
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-option-label" }, elementProps] },
+    { props: [{ "data-ask-user-option-label": "" }, elementProps] },
   );
 
 /** Option subtitle/description text. */
@@ -393,7 +393,7 @@ const AskUserOptionDescription = ({
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-option-description" }, elementProps] },
+    { props: [{ "data-ask-user-option-description": "" }, elementProps] },
   );
 
 /** Keyboard shortcut hints displayed below the ask-user options. */
@@ -403,7 +403,7 @@ const AskUserHints = ({ className, render, style, ...elementProps }: AskUserHint
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "ask-user-hints" }, elementProps] },
+    { props: [{ "data-ask-user-hints": "" }, elementProps] },
   );
 
 /** Dismiss/skip button. Stateless — wire `onClick` to your dismiss handler. */
@@ -413,7 +413,7 @@ const AskUserDismiss = ({ className, render, style, ...elementProps }: AskUserDi
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ type: "button" as const, "data-slot": "ask-user-dismiss" }, elementProps] },
+    { props: [{ type: "button" as const, "data-ask-user-dismiss": "" }, elementProps] },
   );
 
 /** Continue/submit button — `type=submit` so the enclosing form drives it. */
@@ -423,7 +423,7 @@ const AskUserContinue = ({ className, render, style, ...elementProps }: AskUserC
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ type: "submit" as const, "data-slot": "ask-user-continue" }, elementProps] },
+    { props: [{ type: "submit" as const, "data-ask-user-continue": "" }, elementProps] },
   );
 
 export const AskUser = Object.assign(AskUserRoot, {

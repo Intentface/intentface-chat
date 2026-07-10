@@ -41,7 +41,7 @@ import { Message } from "@/components/ai/message";
 | `isLast` | `boolean` | Marks the last message (`data-last`). |
 | `isError` | `boolean` | Applies error styling (`data-error`). |
 
-Sets `data-slot="message"` and fades in on mount. All three props are required.
+Sets `data-message` and fades in on mount. All three props are required.
 
 ## Compound parts
 

@@ -206,14 +206,14 @@ for `Escape` to call `onStop`, unless the event was already handled.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 Only part-specific props and state-driven attributes are listed below. These
 tables are hand-authored from the package source.
 
 ### Composer
 
 The `<form>` that owns submission, store resolution, drag-and-drop, and the
-prop → store bridges. Renders `data-slot="composer-root"`.
+prop → store bridges. Renders `data-composer-root`.
 
 export const rootProps = [
   { name: "onSubmit", type: "(data: ComposerSubmitData) => void | Promise<void>", description: "Fires on message submit and on ask-user answers. Discriminate on data.kind." },
@@ -229,7 +229,7 @@ export const rootProps = [
 <PropsTable rows={rootProps} />
 
 export const rootAttrs = [
-  { attribute: "data-slot", values: '"composer-root"', description: "The form element." },
+  { attribute: "data-composer-root", description: "The form element." },
   { attribute: "data-submitting", description: "Present while isSubmitting is true." },
   { attribute: "data-dragging", description: "Present while files are dragged over the drop scope." },
 ];
@@ -257,14 +257,14 @@ your wire format (this app inlines blob URLs into AI SDK file parts with its
 
 ### Composer.Container
 
-Focus proxy and layout frame. Renders `data-slot="composer-container"`
+Focus proxy and layout frame. Renders `data-composer-container`
 (`role="button"`, `tabIndex={0}`); clicking its chrome focuses the editor.
 
 ### Composer.Textarea
 
 The editor surface — a contenteditable that acts like a native textarea with
-atomic mention chips. Renders `data-slot="composer-textarea"` wrapping the
-editable element (`data-slot="composer-editor"`). With `name` set, a hidden
+atomic mention chips. Renders `data-composer-textarea` wrapping the
+editable element (`data-composer-editor`). With `name` set, a hidden
 input mirrors the serialized text into the surrounding form's FormData.
 
 export const textareaProps = [
@@ -274,7 +274,7 @@ export const textareaProps = [
   { name: "autoFocus", type: "boolean", default: "false", description: "Focus the editor on mount." },
   { name: "placeholder", type: "string", description: "Native-textarea-style placeholder (also sets aria-placeholder). For rich content, pass children instead." },
   { name: "submitOn", type: '"enter" | "shift-enter"', default: '"enter"', description: "Which Enter chord sends the message; the other inserts a soft break. Pair \"shift-enter\" with enterKeyHint=\"enter\"." },
-  { name: "renderChip", type: "(chip: ChipData) => ReactNode", description: "Custom renderer for a committed chip." },
+  { name: "renderChip", type: "(chip: ChipData) => ReactNode", description: "Custom renderer for a committed chip. ChipData carries prefix, value, label, and icon — the default renders label only; add chip.prefix in front to show the trigger." },
   { name: "children", type: "ReactNode", description: "Placeholder overlay, shown while empty." },
   { name: "maxLength", type: "number", description: "Logical-length cap — one per character, one per chip. IME input is capped at composition commit." },
   { name: "required", type: "boolean", default: "false", description: "Native form validation via the hidden input (requires name)." },
@@ -286,7 +286,8 @@ export const textareaProps = [
 <PropsTable rows={textareaProps} />
 
 export const textareaAttrs = [
-  { attribute: "data-slot", values: '"composer-textarea" | "composer-editor"', description: "The wrapper and the inner editor element." },
+  { attribute: "data-composer-textarea", description: "The wrapper element." },
+  { attribute: "data-composer-editor", description: "The contenteditable editor element." },
   { attribute: "data-filled", description: "Present when the editor has content." },
   { attribute: "data-disabled", description: "Present when disabled." },
   { attribute: "data-command-badge", description: "On the active trigger token decoration (e.g. the leading @)." },
@@ -298,7 +299,7 @@ export const textareaAttrs = [
 
 ### Composer.Placeholder
 
-Static or custom placeholder. Renders `data-slot="composer-placeholder-text"`.
+Static or custom placeholder. Renders `data-composer-placeholder-text`.
 Pass **either** `placeholder` or `children`, not both.
 
 export const placeholderProps = [
@@ -312,10 +313,10 @@ export const placeholderProps = [
 
 A slot above the input, open only when it has content and no panel is active.
 Content-driven and exposing `data-open`/`data-closed` like `Panel`/`Popover`.
-Renders `data-slot="composer-context-window"`.
+Renders `data-composer-context-window`.
 
 export const contextWindowAttrs = [
-  { attribute: "data-slot", values: '"composer-context-window"', description: "The context-window element." },
+  { attribute: "data-composer-context-window", description: "The context-window element." },
   { attribute: "data-open", description: "Present while the window has content and no panel is active." },
   { attribute: "data-closed", description: "Present while empty or yielding to an active panel." },
 ];
@@ -324,13 +325,13 @@ export const contextWindowAttrs = [
 
 ### Composer.Actions
 
-Layout row for buttons. Renders `data-slot="composer-actions"`. No
+Layout row for buttons. Renders `data-composer-actions`. No
 part-specific props or state attributes.
 
 ### Composer.Submit
 
 Submit button that morphs into a stop control while generating. Renders
-`data-slot="composer-submit"`.
+`data-composer-submit`.
 
 export const submitProps = [
   { name: "isGenerating", type: "boolean", default: "false", description: "Morphs into a stop control: type becomes \"button\" and clicking calls onStop." },
@@ -340,7 +341,7 @@ export const submitProps = [
 <PropsTable rows={submitProps} />
 
 export const submitAttrs = [
-  { attribute: "data-slot", values: '"composer-submit"', description: "The button element." },
+  { attribute: "data-composer-submit", description: "The button element." },
   { attribute: "data-generating", description: "Present while isGenerating is true." },
 ];
 
@@ -350,7 +351,7 @@ export const submitAttrs = [
 
 Owns the hidden file input and renders the file strip / drop zone as children.
 This part does **not** take `className` / `style` / `render` and emits no
-`data-slot` of its own.
+part attribute of its own.
 
 export const attachmentsProps = [
   { name: "convert", type: "(file: File) => AttachmentItem", default: "blob ingestion", description: "Converts a picked/dropped/pasted File into an item. Override (with destroy) for custom ids, extra fields, or upload-backed items." },
@@ -368,7 +369,7 @@ export const attachmentsProps = [
 ### Composer.AttachmentTrigger
 
 Button that opens the file dialog. Renders
-`data-slot="composer-attachment-trigger"`. No part-specific props.
+`data-composer-attachment-trigger`. No part-specific props.
 
 ### Composer.Panel
 
@@ -404,7 +405,7 @@ export const panelProps = [
 <PropsTable rows={panelProps} />
 
 export const panelAttrs = [
-  { attribute: "data-slot", values: '"composer-panel"', description: "The panel element." },
+  { attribute: "data-composer-panel", description: "The panel element." },
   { attribute: "data-open", description: "Present while the resolved content is non-empty." },
   { attribute: "data-closed", description: "Present while empty." },
   { attribute: "data-starting-style", description: "Present on the first open frame — the enter transition's from-state." },
@@ -436,7 +437,7 @@ export const popoverProps = [
 <PropsTable rows={popoverProps} />
 
 export const popoverAttrs = [
-  { attribute: "data-slot", values: '"composer-popover"', description: "The portaled popover element." },
+  { attribute: "data-composer-popover", description: "The portaled popover element." },
   { attribute: "data-open", description: "Present while the resolved content is non-empty." },
   { attribute: "data-closed", description: "Present while empty (stays mounted, holding its last position)." },
   { attribute: "data-side", values: '"top" | "bottom" | "left" | "right"', description: "Resolved side — flips to \"bottom\" when there's no room above; the origin to animate from." },
@@ -447,7 +448,7 @@ export const popoverAttrs = [
 
 ### Composer.Command
 
-The command popup for one prefix. Renders `data-slot="composer-command-list"`
+The command popup for one prefix. Renders `data-composer-command-list`
 **only while that prefix is active** (returns nothing otherwise).
 
 export const commandListProps = [
@@ -457,7 +458,7 @@ export const commandListProps = [
 <PropsTable rows={commandListProps} />
 
 export const commandListAttrs = [
-  { attribute: "data-slot", values: '"composer-command-list"', description: "The list element." },
+  { attribute: "data-composer-command-list", description: "The list element." },
   { attribute: "data-loading", description: "Present while async items are being fetched." },
   { attribute: "data-empty", description: "Present when no items match." },
 ];
@@ -467,7 +468,7 @@ export const commandListAttrs = [
 ### Composer.CommandList
 
 Maps resolved items through a render-prop child. Renders
-`data-slot="composer-command-items"`.
+`data-composer-command-items`.
 
 export const commandItemsProps = [
   { name: "children", type: "(item: Item) => ReactNode", default: "(required)", description: "Row renderer, called per resolved item." },
@@ -477,7 +478,7 @@ export const commandItemsProps = [
 
 ### Composer.CommandItem
 
-One selectable row. Renders `data-slot="composer-command-item"`.
+One selectable row. Renders `data-composer-command-item`.
 
 export const commandItemProps = [
   { name: "value", type: "string", default: "(required)", description: "Item identity, matched against the highlight and selection." },
@@ -486,7 +487,7 @@ export const commandItemProps = [
 <PropsTable rows={commandItemProps} />
 
 export const commandItemAttrs = [
-  { attribute: "data-slot", values: '"composer-command-item"', description: "The row button." },
+  { attribute: "data-composer-command-item", description: "The row button." },
   { attribute: "data-highlighted", description: "Present when this row is the active highlight." },
 ];
 
@@ -496,7 +497,7 @@ export const commandItemAttrs = [
 
 `Composer.CommandItemIcon`, `Composer.CommandItemLabel`, and
 `Composer.CommandItemDescription` render `<span>`s with
-`data-slot="composer-command-item-{icon,label,description}"`.
+`data-composer-command-item-{icon,label,description}`.
 `Composer.CommandLoading` (`composer-command-loading`),
 `Composer.CommandEmpty` (`composer-command-empty`), and
 `Composer.CommandDismiss` (`composer-command-dismiss`, a button) fill the list
@@ -504,7 +505,7 @@ states — all render only your children, so you supply the copy. To group, give
 `Composer.CommandGroup` a `groupBy` and a render callback: it buckets the resolved
 (already-filtered) items by your key — in first-appearance order, so keyboard nav
 still flows top-to-bottom — and calls the callback once per group with
-`(group, items)`, wrapping each in `data-slot="command-group"`. You render
+`(group, items)`, wrapping each in `data-command-group`. You render
 `Composer.CommandGroupLabel` (`composer-command-group-label`) + the group's items:
 
 ```tsx
@@ -532,8 +533,8 @@ nothing when there's no question.
 
 `Composer.AskUserHints` is the structural slot for keyboard hints.
 `Composer.AskUserDismiss` is a button wired to dismiss the current step
-(`data-slot="composer-ask-user-dismiss"`). `Composer.AskUserContinue` is a
-submit button (`data-slot="composer-ask-user-continue"`). None ship copy —
+(`data-composer-ask-user-dismiss`). `Composer.AskUserContinue` is a
+submit button (`data-composer-ask-user-continue`). None ship copy —
 supply the labels as children; read `useComposer((c) => c.askUser.isLastStep)`
 to switch continue/submit wording.
 

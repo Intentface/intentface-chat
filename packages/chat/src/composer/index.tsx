@@ -6,7 +6,6 @@
 import { ComposerActions, ComposerContextWindow, ComposerSubmit } from "./actions";
 import { ComposerAttachments, ComposerAttachmentTrigger } from "./attachments";
 import {
-  ComposerCommandCollection,
   ComposerCommandDismiss,
   ComposerCommandEmpty,
   ComposerCommandGroup,
@@ -51,7 +50,6 @@ export const Composer = Object.assign(ComposerRoot, {
   CommandItemDescription: ComposerCommandItemDescription,
   CommandGroup: ComposerCommandGroup,
   CommandGroupLabel: ComposerCommandGroupLabel,
-  CommandCollection: ComposerCommandCollection,
 });
 
 export type { ComposerSubmitState, UseComposerSubmitOptions } from "./actions";

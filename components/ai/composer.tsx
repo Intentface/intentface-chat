@@ -541,8 +541,6 @@ const ComposerCommandGroupLabel = ({
   />
 );
 
-const ComposerCommandCollection = ComposerPrimitive.CommandCollection;
-
 // Commands — the whole command-list shape for one prefix in a single part:
 // loading/empty states plus items rendered as icon + label + optional
 // description (the shape every prefix shares). Drop `<Composer.Commands
@@ -734,5 +732,4 @@ export const Composer = Object.assign(ComposerRoot, {
   CommandItemDescription: ComposerCommandItemDescription,
   CommandGroup: ComposerCommandGroup,
   CommandGroupLabel: ComposerCommandGroupLabel,
-  CommandCollection: ComposerCommandCollection,
 });

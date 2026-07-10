@@ -578,21 +578,3 @@ export const ComposerCommandGroupLabel = ({
     { className, render, style },
     { props: [{ "data-slot": "composer-command-group-label" }, elementProps] },
   );
-
-export type ComposerCommandCollectionProps<Item> = {
-  items: Item[];
-  children: (item: Item) => ReactNode;
-};
-
-export const ComposerCommandCollection = <Item,>({
-  items,
-  children: renderItem,
-}: ComposerCommandCollectionProps<Item>): ReactNode => (
-  <>
-    {items.map((item, index) => (
-      <Fragment key={(item as { value?: string } | null)?.value ?? `__col_${index}`}>
-        {renderItem(item)}
-      </Fragment>
-    ))}
-  </>
-);

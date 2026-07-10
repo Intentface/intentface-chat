@@ -493,8 +493,11 @@ export const commandItemAttrs = [
 states — all render only your children, so you supply the copy. `Composer.CommandGroup` renders
 `data-slot="command-group"` (the inner primitive's slot, **not**
 `composer-`-prefixed) with `Composer.CommandGroupLabel`
-(`composer-command-group-label`). `Composer.CommandCollection` is logic-only —
-it maps `items` through a render-prop child and renders no element.
+(`composer-command-group-label`). To group, read the resolved items with
+`useCommandListItems()`, partition them by your own field, and render a
+`CommandGroup` + `CommandGroupLabel` per bucket, mapping the bucket's items to
+`CommandItem`s — keyboard nav still flows top-to-bottom because the resolved order
+is store-driven, not derived from the render tree.
 
 ### Composer.AskUser
 

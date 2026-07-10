@@ -142,8 +142,9 @@ const fetchPlaygroundIssues = async (
 // Grouped command list (prototype) — manual grouping over the flat, library-
 // filtered items. There's no first-class group support: we read the resolved
 // items with useCommandListItems(), partition by our own `group` field, and
-// render a CommandGroup + CommandGroupLabel per bucket via CommandCollection.
-// Empty groups fall away for free (a filtered-out group just never appears).
+// render a CommandGroup + CommandGroupLabel per bucket, mapping the bucket's
+// items directly. Empty groups fall away for free (a filtered-out group never
+// appears).
 // ---------------------------------------------------------------------------
 
 // Insertion order = first appearance, which (since the source is group-sorted)
@@ -166,13 +167,11 @@ const GroupedIssueList = () => {
       {partitionByGroup(items).map(([group, groupItems]) => (
         <Composer.CommandGroup key={group}>
           <Composer.CommandGroupLabel>{group}</Composer.CommandGroupLabel>
-          <Composer.CommandCollection items={groupItems}>
-            {(item) => (
-              <Composer.CommandItem value={item.value}>
-                <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-              </Composer.CommandItem>
-            )}
-          </Composer.CommandCollection>
+          {groupItems.map((item) => (
+            <Composer.CommandItem key={item.value} value={item.value}>
+              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+            </Composer.CommandItem>
+          ))}
         </Composer.CommandGroup>
       ))}
     </>

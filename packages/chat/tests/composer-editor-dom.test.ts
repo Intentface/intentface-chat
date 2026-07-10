@@ -222,7 +222,7 @@ describe("logicalRangeFromDom", () => {
 
 describe("presentation-only elements (badge hint)", () => {
   const hintSpan = (text: string) =>
-    element("SPAN", { "data-slot": "command-hint", contenteditable: "false" }, textNode(text));
+    element("SPAN", { "data-command-hint": "", contenteditable: "false" }, textNode(text));
 
   test("the reader skips hint content without flagging dirty", () => {
     const { doc, dirty } = readDocumentFromDom(
@@ -237,7 +237,7 @@ describe("presentation-only elements (badge hint)", () => {
     const hintLabel = textNode("smus");
     const hint = element(
       "SPAN",
-      { "data-slot": "command-hint", contenteditable: "false" },
+      { "data-command-hint": "", contenteditable: "false" },
       hintLabel,
     );
     const after = textNode(" end");

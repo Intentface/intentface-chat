@@ -148,7 +148,7 @@ const EMPTY_ITEMS: CommandItemData[] = [];
 // so screen readers skip the ghost. Styled via data-slot like any other part.
 const createHintElement = (badge: Element): HTMLElement => {
   const hint = badge.ownerDocument.createElement("span");
-  hint.setAttribute("data-slot", "command-hint");
+  hint.setAttribute("data-command-hint", "");
   hint.setAttribute("contenteditable", "false");
   hint.setAttribute("aria-hidden", "true");
   badge.appendChild(hint);
@@ -213,7 +213,7 @@ export const ComposerCommand = ({
   const highlightedItem = items[activeIndex] ?? null;
   const effectiveHighlight = highlightedItem?.value ?? null;
 
-  // Badge hint — one real element (span[data-slot="command-hint"], appended
+  // Badge hint — one real element (span[data-command-hint], appended
   // inside the badge) carrying either the ghost-text completion of the
   // highlighted item or the per-prefix empty-query placeholder. One slot, one
   // value: the suggestion wins by a plain ?? chain, so exclusivity is code,
@@ -231,7 +231,7 @@ export const ComposerCommand = ({
     suggestion ?? (isActive && query === "" ? (config?.placeholder ?? "Type to filter") : null);
   useIsomorphicLayoutEffect(() => {
     const badge = store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]");
-    const existingHint = badge?.querySelector('[data-slot="command-hint"]') ?? null;
+    const existingHint = badge?.querySelector('[data-command-hint]') ?? null;
     if (!badge || !hintText) {
       existingHint?.remove();
       return;

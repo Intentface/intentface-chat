@@ -121,7 +121,7 @@ export type ComposerCommandsConfig = {
   suggestion?: boolean;
   /**
    * Per-prefix hint shown while the query is empty, rendered into the badge's
-   * hint element (span[data-slot="command-hint"]). Defaults to "Type to
+   * hint element (span[data-command-hint]). Defaults to "Type to
    * filter". Never shows alongside a suggestion — one hint slot, suggestion
    * wins — so this is the resident hint for suggestion: false prefixes and
    * the fallback when nothing can complete.

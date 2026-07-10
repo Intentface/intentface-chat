@@ -206,7 +206,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
       // The badge's hint element — ghost-text completion or the empty-query
       // placeholder (the package renders whichever applies into one slot).
-      "**:data-[slot=command-hint]:pointer-events-none **:data-[slot=command-hint]:whitespace-nowrap **:data-[slot=command-hint]:text-ink-tertiary",
+      "**:data-command-hint:pointer-events-none **:data-command-hint:whitespace-nowrap **:data-command-hint:text-ink-tertiary",
       disabled && "opacity-50 cursor-not-allowed",
       className,
     )}

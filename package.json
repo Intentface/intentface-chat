@@ -8,12 +8,10 @@
   ],
   "scripts": {
     "dev": "next dev",
-    "build": "bun run intentface:validate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "intentface:validate": "bun run --cwd packages/intentface validate",
-    "intentface:test": "bun run --cwd packages/intentface test",
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {

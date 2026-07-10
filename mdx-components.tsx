@@ -4,7 +4,6 @@ import type { ComponentProps, ReactNode } from "react";
 import { AttributesTable } from "@/components/docs/attributes-table";
 import { CodeBlock } from "@/components/docs/code-block";
 import { ComponentPreview } from "@/components/docs/component-preview";
-import { ManualInstall } from "@/components/docs/manual-install";
 import { PropsTable } from "@/components/docs/props-table";
 import { ThemeSource } from "@/components/docs/theme-source";
 import { ValuesTable } from "@/components/docs/values-table";
@@ -32,10 +31,7 @@ const proseComponents: MDXComponents = {
   h1: (props) => (
     <h1 className="font-semibold text-2xl text-ink-primary tracking-tight" {...props} />
   ),
-  h2: heading(
-    "h2",
-    "mt-10 mb-3 font-semibold text-ink-primary text-xl",
-  ),
+  h2: heading("h2", "mt-10 mb-3 font-semibold text-ink-primary text-xl"),
   h3: heading("h3", "mt-8 mb-2 font-semibold text-ink-primary text-lg"),
   h4: heading("h4", "mt-6 mb-2 font-medium text-ink-primary"),
   p: (props) => <p className="my-4 text-lg text-ink-secondary leading-7" {...props} />,
@@ -76,7 +72,10 @@ const proseComponents: MDXComponents = {
     />
   ),
   td: (props) => (
-    <td className="border-secondary-border/60 border-b px-3 py-2.5 align-top text-ink-secondary" {...props} />
+    <td
+      className="border-secondary-border/60 border-b px-3 py-2.5 align-top text-ink-secondary"
+      {...props}
+    />
   ),
   // Inline code; fenced blocks arrive as <pre><code> and are handled by `pre`.
   code: (props) => (
@@ -102,7 +101,6 @@ const proseComponents: MDXComponents = {
 // Docs components available inside every MDX page without an import.
 const docsComponents: MDXComponents = {
   ComponentPreview,
-  ManualInstall,
   PropsTable,
   AttributesTable,
   ValuesTable,

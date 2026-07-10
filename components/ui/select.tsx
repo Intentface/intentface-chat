@@ -2,11 +2,12 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cva, type VariantProps } from "class-variance-authority";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
+import { ChevronDownMediumIcon } from "../icons/chevron-down-medium";
 import { ChevronGrabberVerticalIcon } from "../icons/chevron-grabber-vertical";
+import { ChevronTopMediumIcon } from "../icons/chevron-top-medium";
 
 const selectTriggerVariants = cva(
   [
@@ -233,7 +234,7 @@ const SelectScrollUpButton = ({
       )}
       {...props}
     >
-      <ChevronUpIcon />
+      <ChevronTopMediumIcon />
     </SelectPrimitive.ScrollUpArrow>
   );
 };
@@ -258,7 +259,7 @@ const SelectScrollDownButton = ({
       )}
       {...props}
     >
-      <ChevronDownIcon />
+      <ChevronDownMediumIcon />
     </SelectPrimitive.ScrollDownArrow>
   );
 };

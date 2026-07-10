@@ -195,10 +195,13 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
   };
 
   // hasContent from the model — the placeholder overlay and data-filled key
-  // off this through the store.
+  // off this through the store. Any content counts, including whitespace-only
+  // docs: a lone "\n" (Shift+Enter on an empty editor) renders two line boxes,
+  // and a trim-based check would paint the placeholder over them. This is
+  // also legacy parity — its `|| !instance.isEmpty` half made structure count
+  // — and native-textarea parity: the placeholder hides on any character.
   const refreshHasContent = () => {
-    const hasChips = doc.some((segment) => segment.type === "chip");
-    getDependencies().store.setHasContent(getPlainText(doc).trim().length > 0 || hasChips);
+    getDependencies().store.setHasContent(documentLength(doc) > 0);
   };
 
   // Make the badge span match the tracker state; a DOM change moves the

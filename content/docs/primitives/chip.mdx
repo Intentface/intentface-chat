@@ -35,6 +35,18 @@ never rendered inline:
 </Chip>
 ```
 
+## Accessibility
+
+The chip is inline text: in messages the label reads as part of the sentence,
+and `Chip.Icon` is `aria-hidden` so decoration never announces. In the
+composer's editor, committed chips carry `aria-label="{label}, {prefix}
+mention"` so they announce as atomic tokens rather than bare words.
+
+The package never renders the hover preview — `renderWithPreview` is the seam.
+Whatever surface the styled layer lifts it into must honor the hover-card
+contract: open on keyboard focus as well as hover, and dismiss with Escape
+(the styled layer's Base UI Hover Card does both).
+
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see

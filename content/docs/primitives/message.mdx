@@ -95,6 +95,14 @@ Done right, a stream chunk re-renders exactly one row. See
 
 - **Role** drives `data-role`, and error/last state drive `data-error`/`data-last`
   on the root, so styling and assistive context stay in sync.
+- **Speaker identity is yours to announce.** `role` is an opaque string the
+  package only surfaces as `data-role` — alignment and color are invisible to
+  assistive tech. Give each message a visually-hidden "\{role\} said" prefix, or
+  an `aria-label` on the root, so a transcript read top-to-bottom attributes
+  its turns.
+- **Error / stopped / loading markers** are consumer-owned slots: give an
+  inline failure marker `role="alert"` so it announces immediately, and quieter
+  states ("stopped", "generating…") `role="status"`.
 - **Sources** render as `<a target="_blank" rel="noopener noreferrer">`.
 - **Actions** are real buttons; `Message.Action` pairs with a tooltip label.
 

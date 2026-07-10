@@ -9,10 +9,23 @@
 // :last-child / :only-child). Icons, connectors, markdown, and all classes
 // belong to the styled layer; tool derivation belongs to the app layer.
 
-import { type ComponentProps, createContext, use } from "react";
+import { type ComponentProps, type CSSProperties, createContext, use } from "react";
 import { Collapsible } from "./internal/collapsible";
 import type { PrimitiveProps } from "./internal/primitive-props";
 import { useRenderElement } from "./internal/render/useRenderElement";
+
+// Visually-hidden-but-announced (screen-reader-only) default for Steps.Status.
+const visuallyHiddenStyle: CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
 
 // ---------------------------------------------------------------------------
 // Root — a plain container. A collapse-everything timeline is just a
@@ -62,6 +75,9 @@ const StepsItem = ({ status = "complete", defaultOpen, ...props }: StepsItemProp
       <StepStatusContext value={status}>
         <Collapsible
           defaultOpen={defaultOpen ?? status === "active"}
+          // The package already privileges "active" (defaultOpen above), so
+          // marking it as the current step is the same contract, not new copy.
+          aria-current={status === "active" ? "step" : undefined}
           data-steps-item=""
           data-status={status}
           data-nested={isNested || undefined}
@@ -132,6 +148,45 @@ const StepsLabel = ({ status, className, render, style, ...elementProps }: Steps
 StepsLabel.displayName = "StepsLabel";
 
 // ---------------------------------------------------------------------------
+// Status — visually-hidden status announcement. The icon is aria-hidden and
+// color never reaches AT, so this part speaks the row's status. Renders the
+// resolved status string by default; pass children for localized copy.
+// ---------------------------------------------------------------------------
+
+export type StepsStatusProps = PrimitiveProps<"span", { status: StepStatus }> & {
+  status?: StepStatus;
+};
+
+const StepsStatus = ({
+  status,
+  children,
+  className,
+  render,
+  style,
+  ...elementProps
+}: StepsStatusProps) => {
+  const resolvedStatus = useStepStatus(status);
+
+  return useRenderElement(
+    "span",
+    { className, render, style },
+    {
+      state: { status: resolvedStatus },
+      props: [
+        {
+          "data-steps-status": "",
+          style: visuallyHiddenStyle,
+          children: children ?? resolvedStatus,
+        },
+        elementProps,
+      ],
+    },
+  );
+};
+
+StepsStatus.displayName = "StepsStatus";
+
+// ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
 
@@ -141,4 +196,5 @@ export const Steps = Object.assign(StepsRoot, {
   Panel: StepsPanel,
   Icon: StepsIcon,
   Label: StepsLabel,
+  Status: StepsStatus,
 });

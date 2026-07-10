@@ -122,7 +122,7 @@ const AskUserOptionInput = () => {
 };
 
 const INDICATOR_CLASS = cn(
-  "flex size-lh shrink-0 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
+  "flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
 );
 
 const INDICATOR_SELECTED_CLASS = "border-tertiary-active bg-tertiary-active text-ink-primary";

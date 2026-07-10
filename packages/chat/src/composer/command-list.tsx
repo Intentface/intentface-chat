@@ -248,9 +248,13 @@ export const ComposerCommand = ({
   // Mirror the highlighted row's DOM id into the store — the editor renders
   // it as aria-activedescendant. This is where the raw highlight index
   // resolves against the actual item list, so the id can only be derived here.
+  // Only the ACTIVE command writes: with several Commands mounted, an inactive
+  // sibling writing null would ping-pong against the active one's id forever
+  // (max-update-depth). Clearing on close is setCommands' job.
   useIsomorphicLayoutEffect(() => {
+    if (!isActive) return;
     store.setActiveOptionId(
-      isActive && highlightedItem ? optionDomId(store.listboxId, highlightedItem.value) : null,
+      highlightedItem ? optionDomId(store.listboxId, highlightedItem.value) : null,
     );
   });
 

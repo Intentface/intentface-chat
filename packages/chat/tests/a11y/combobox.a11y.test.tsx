@@ -14,12 +14,18 @@ const ITEMS: CommandItemData[] = [
   { value: "maija", label: "Maija" },
 ];
 
+const ISSUES: CommandItemData[] = [
+  { value: "INT-1", label: "INT-1 Login bug" },
+  { value: "INT-2", label: "INT-2 Search bug" },
+];
+
 const COMMANDS = {
   "@": { kind: "insert" as const, trigger: "after-whitespace" as const, items: ITEMS },
+  "#": { kind: "insert" as const, trigger: "after-whitespace" as const, items: ISSUES },
 };
 
-const CommandsHarness = () => (
-  <Composer.Command prefix="@">
+const CommandsHarness = ({ prefix }: { prefix: string }) => (
+  <Composer.Command prefix={prefix}>
     <Composer.CommandList>
       {(item) => (
         <Composer.CommandItem key={item.value} value={item.value}>
@@ -36,7 +42,7 @@ describe("composer combobox a11y", () => {
     const { container } = render(
       <Composer store={store} onSubmit={() => {}} commands={COMMANDS}>
         <Composer.Textarea aria-label="Message" />
-        <CommandsHarness />
+        <CommandsHarness prefix="@" />
       </Composer>,
     );
 
@@ -80,6 +86,38 @@ describe("composer combobox a11y", () => {
     expect(textbox.getAttribute("aria-activedescendant")).toBeNull();
 
     await expectNoAxeViolations(container);
+    cleanup();
+  });
+
+  // Regression: with several Commands mounted (playground: @ mentions + #
+  // issues), an inactive sibling must not stomp activeOptionId back to null —
+  // that ping-pongs against the active command's write forever
+  // (max-update-depth crash).
+  test("two mounted commands do not fight over aria-activedescendant", () => {
+    const store = Composer.createStore();
+    render(
+      <Composer store={store} onSubmit={() => {}} commands={COMMANDS}>
+        <Composer.Textarea aria-label="Message" />
+        <CommandsHarness prefix="@" />
+        <CommandsHarness prefix="#" />
+      </Composer>,
+    );
+
+    act(() => {
+      store.setCommands({ active: true, trigger: "#", query: "" });
+    });
+
+    const textbox = screen.getByRole("textbox", { name: "Message" });
+    const options = screen.getAllByRole("option");
+    expect(options.length).toBe(2);
+    expect(textbox.getAttribute("aria-activedescendant")).toBe(options[0]?.id ?? null);
+
+    // The other prefix takes over — the mirror follows the newly active list.
+    act(() => {
+      store.setCommands({ active: true, trigger: "@", query: "" });
+    });
+    expect(textbox.getAttribute("aria-activedescendant")).toContain("rasmus");
+
     cleanup();
   });
 });

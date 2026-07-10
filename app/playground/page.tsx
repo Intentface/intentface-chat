@@ -113,7 +113,7 @@ const PLAYGROUND_ISSUES: GroupedIssue[] = [
   { value: "INT-502", label: "INT-502 Attachment thumbnails missing", group: "UI" },
   { value: "INT-142", label: "INT-142 Memory leak in idle workers", group: "Performance" },
   { value: "INT-356", label: "INT-356 Streaming cancellation race", group: "Performance" },
-].map((item) => ({ ...item, icon: "code" as const }));
+].map((item) => ({ ...item, icon: "bug" as const }));
 
 const abortableDelay = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {

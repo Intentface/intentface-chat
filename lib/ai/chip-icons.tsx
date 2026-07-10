@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BrainIcon } from "@/components/icons/brain";
+import { BugIcon } from "@/components/icons/bug";
 import { BubbleWideSparkleIcon } from "@/components/icons/bubble-wide-sparkle";
 import { CodeIcon } from "@/components/icons/code";
 import { FileChartIcon } from "@/components/icons/file-chart";
@@ -10,6 +11,7 @@ import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 
 export const CHIP_ICONS = {
   brain: <BrainIcon />,
+  bug: <BugIcon />,
   bubbleWideSparkle: <BubbleWideSparkleIcon />,
   code: <CodeIcon />,
   fileChart: <FileChartIcon />,

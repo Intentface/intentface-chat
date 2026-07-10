@@ -298,18 +298,19 @@ export const ComposerCommand = ({
   // Scroll the highlighted row into view as it becomes the highlight. Stable, so
   // React calls it only on highlight change — no per-render scroll, no effect.
   //
-  // INVARIANT (Safari/Firefox): native block:"nearest" is safe only because
-  // the collision positioner keeps the popover fully inside the viewport.
-  // scrollIntoView scrolls every ancestor scrolling box — the window included
-  // — whenever the row isn't viewport-visible, so if the positioner's
-  // containment ever regresses, arrowing through the list will scroll the
-  // page behind the popup (the pre-positioner bug a hand-rolled scoped scroll
-  // used to guard against; its implementation lives in this function's git
-  // history). container:"nearest" hard-scopes the scroll on Chromium and is
-  // silently ignored elsewhere (unknown dictionary members) — once WebKit and
-  // Gecko ship it, the invariant above stops being load-bearing everywhere.
-  // Native also honors the scroller's CSS scroll-padding (scroll-py-* in the
-  // styled layer) without any manual math.
+  // container:"nearest" hard-scopes the scroll to the list on Chromium.
+  // Safari/Firefox silently ignore the member (unknown dictionary keys) and
+  // run an UNSCOPED block:"nearest" — scrollIntoView then scrolls every
+  // ancestor scrolling box, the window included, whenever the row isn't
+  // viewport-visible.
+  //
+  // KNOWN BUG (accepted 2026-07-10): on Safari, arrowing through the list
+  // while the popup opens can scroll the page behind it (reproduced; the
+  // positioner's viewport containment is not sufficient there). Accepted in
+  // exchange for native scroll-padding support and −24 lines; goes away when
+  // WebKit ships `container`. If it starts to hurt sooner, the scoped manual
+  // implementation lives in this function's git history (PR #39, first
+  // commit).
   const scrollHighlightedIntoView = useCallback((node: HTMLElement | null) => {
     // Cast: lib.dom doesn't know the `container` member yet (Chromium-only).
     node?.scrollIntoView({ block: "nearest", container: "nearest" } as ScrollIntoViewOptions);

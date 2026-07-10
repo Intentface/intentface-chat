@@ -648,8 +648,7 @@
       "title": "Sidebar",
       "dependencies": [
         "@base-ui/react",
-        "class-variance-authority",
-        "lucide-react"
+        "class-variance-authority"
       ],
       "registryDependencies": [
         "drawer",

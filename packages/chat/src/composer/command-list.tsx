@@ -201,21 +201,29 @@ export const ComposerCommand = ({
   const highlightedItem = items[activeIndex] ?? null;
   const effectiveHighlight = highlightedItem?.value ?? null;
 
-  // Ghost-text completion: stamp the highlighted item's remaining label onto
-  // the active-token badge; the styled layer paints it as ::after content
-  // (data-command-suggestion). The badge is engine-owned DOM out of JSX reach
-  // — same access pattern as the popover's anchor query — so this is a true
-  // DOM-integration effect. No deps: badge identity changes on token rewraps,
-  // which always coincide with a re-render here (query/highlight subscribed).
+  // Badge hints: stamp the highlighted item's remaining label
+  // (data-command-suggestion) and the per-prefix empty-query hint (the VALUE
+  // of data-command-placeholder — the engine stamps the marker, this fills in
+  // the copy) onto the active-token badge; the styled layer paints them as
+  // ::after content. The two are exclusive by construction — one ::after slot,
+  // and the suggestion rule outranks the placeholder rule. The badge is
+  // engine-owned DOM out of JSX reach — same access pattern as the popover's
+  // anchor query — so this is a true DOM-integration effect. No deps: badge
+  // identity changes on token rewraps, which always coincide with a re-render
+  // here (query/highlight subscribed).
   const suggestion =
     isActive && highlightedItem && (config?.suggestion ?? true)
       ? suggestionRemainder(query, highlightedItem.label)
       : null;
+  const placeholderText = config?.placeholder ?? null;
   useIsomorphicLayoutEffect(() => {
     const badge = store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]");
     if (!badge) return;
     if (suggestion) badge.setAttribute("data-command-suggestion", suggestion);
     else badge.removeAttribute("data-command-suggestion");
+    if (placeholderText && badge.hasAttribute("data-command-placeholder")) {
+      badge.setAttribute("data-command-placeholder", placeholderText);
+    }
   });
 
   const selectByValue = useCallback(

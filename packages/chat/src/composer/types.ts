@@ -119,6 +119,14 @@ export type ComposerCommandsConfig = {
    * highlight is unstable (e.g. async sources re-ranking while typing).
    */
   suggestion?: boolean;
+  /**
+   * Per-prefix hint shown after the trigger while the query is empty — the
+   * value of data-command-placeholder, rendered by the styled layer's ::after.
+   * Never shows alongside a suggestion: the ::after slot is exclusive and the
+   * suggestion wins, so this is the resident hint for suggestion: false
+   * prefixes and the fallback when nothing can complete.
+   */
+  placeholder?: string;
 };
 
 export type ComposerCommandsMap = Record<string, ComposerCommandsConfig>;

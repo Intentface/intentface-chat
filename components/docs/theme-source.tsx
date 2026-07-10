@@ -6,7 +6,7 @@ import { CodeBlock } from "./code-block";
 // theming page shows the exact block to copy, with no duplication.
 export const ThemeSource = async () => {
   const css = await readFile(
-    path.join(process.cwd(), "packages", "intentface", "registry", "intentface.css"),
+    path.join(process.cwd(), "components", "docs", "intentface.css"),
     "utf8",
   );
 

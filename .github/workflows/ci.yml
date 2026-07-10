@@ -31,14 +31,6 @@ jobs:
       - name: Typecheck
         run: bunx tsc --noEmit
 
-      # Validates the registry manifest (deps + files metadata for the docs'
-      # manual-install blocks); its closure check fails the job on a stale manifest.
-      - name: Registry validate
-        run: bun run intentface:validate
-
-      - name: Registry tests
-        run: bun run intentface:test
-
       - name: Package tests
         run: bun test
         working-directory: packages/chat

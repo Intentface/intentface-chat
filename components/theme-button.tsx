@@ -1,9 +1,10 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
 import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { MoonIcon } from "@/components/icons/moon";
+import { SunIcon } from "@/components/icons/sun";
 import { IconButton } from "@/components/ui/icon-button";
 
 export const ThemeButton = () => {
@@ -34,7 +35,7 @@ export const ThemeButton = () => {
         transition={{ duration: 0.2 }}
         key={isDark ? "moon" : "sun"}
       >
-        {isDark ? <Moon /> : <Sun />}
+        {isDark ? <MoonIcon /> : <SunIcon />}
       </motion.div>
     </IconButton>
   );

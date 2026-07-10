@@ -1,9 +1,10 @@
 "use client";
 
-import { FileCodeIcon, FileSpreadsheetIcon, FileTextIcon, ScanIcon } from "lucide-react";
+import { FileCodeIcon, FileSpreadsheetIcon, FileTextIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { type CommandItemData, Composer } from "@/components/ai/composer";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
+import { ArrowsAllSides2Icon } from "@/components/icons/arrows-all-sides-2";
 import { ModelSelector } from "@/components/model-selector";
 import { ThemeButton } from "@/components/theme-button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -323,7 +324,7 @@ export default function ComponentsPlayground() {
                           onClick={() => setShowContextWindow((previous) => !previous)}
                           className={cn(showContextWindow && "bg-primary-hover text-ink-primary")}
                         >
-                          <ScanIcon />
+                          <ArrowsAllSides2Icon />
                         </IconButton>
                         <Composer.Submit />
                       </div>

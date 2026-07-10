@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDownIcon, PipetteIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 
+import { ChevronDownMediumIcon } from "@/components/icons/chevron-down-medium";
+import { EyedropperIcon } from "@/components/icons/eyedropper";
 import { Popover } from "@/components/ui/popover";
 import { HexSchema } from "@/lib/interface-theme";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,7 @@ export const ColorPill = ({ id, value, onValueChange, disabled, className }: Col
           className="flex size-5 shrink-0 items-center justify-center rounded-sm outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Pick color"
         >
-          <PipetteIcon size={14} />
+          <EyedropperIcon className="size-3.5" />
         </Popover.Trigger>
         <input
           id={id}
@@ -54,7 +55,7 @@ export const ColorPill = ({ id, value, onValueChange, disabled, className }: Col
           spellCheck={false}
           className="flex-1 bg-transparent font-mono text-xs uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
         />
-        <ChevronDownIcon size={12} aria-hidden="true" className="shrink-0 opacity-70" />
+        <ChevronDownMediumIcon className="size-3 shrink-0 opacity-70" />
       </div>
       <Popover.Content align="end" className="w-auto p-2">
         <HexColorPicker color={value} onChange={onValueChange} />

@@ -10,7 +10,7 @@ import {
 } from "@intentface/chat/message-utils";
 import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
 import type { ChatStatus } from "ai";
-import { CircleHelpIcon, CircleIcon, TextQuoteIcon, TriangleAlertIcon, XIcon } from "lucide-react";
+import { CircleIcon } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import {
@@ -34,6 +34,10 @@ import { Header } from "@/components/header";
 import { BrainIcon } from "@/components/icons/brain";
 import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
+import { CircleQuestionmarkIcon } from "@/components/icons/circle-questionmark";
+import { CrossMediumIcon } from "@/components/icons/cross-medium";
+import { ExclamationTriangleIcon } from "@/components/icons/exclamation-triangle";
+import { OpenQuote2Icon } from "@/components/icons/open-quote-2";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
 import { Markdown } from "@/components/ui/markdown";
@@ -115,7 +119,7 @@ const statusIcons: Record<StepStatus, IconComponent> = {
   complete: CheckMarkMediumIcon,
   active: CircleIcon,
   pending: CircleIcon,
-  error: TriangleAlertIcon,
+  error: ExclamationTriangleIcon,
 };
 
 // A timeline row: static when it has no detail, collapsible (icon morphs to a
@@ -206,7 +210,7 @@ const TimelineAskUser = ({ part }: { part: ToolPart }) => {
   const { label, status, questions, answers, isComplete } = getAskUserStepInfo(part);
 
   return (
-    <TimelineStep label={label} status={status} icon={CircleHelpIcon}>
+    <TimelineStep label={label} status={status} icon={CircleQuestionmarkIcon}>
       <div className="flex flex-col gap-1.5">
         {questions.map((q) => (
           <div key={q.question} className="flex flex-col gap-0.5">
@@ -855,7 +859,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
       <Composer.ContextWindow>
         {selections.length > 0 && (
           <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
-            <TextQuoteIcon className="size-3.5" />
+            <OpenQuote2Icon className="size-3.5" />
             <span>
               {selections.length} selection{selections.length === 1 ? "" : "s"}
             </span>
@@ -865,7 +869,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
               className="cursor-pointer rounded-full p-0.5 hover:bg-primary-hover hover:text-ink-primary"
               onClick={clearSelections}
             >
-              <XIcon className="size-3" />
+              <CrossMediumIcon className="size-3" />
             </button>
           </div>
         )}

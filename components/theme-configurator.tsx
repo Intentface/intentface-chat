@@ -1,7 +1,8 @@
 "use client";
 
-import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
-
+import { AppearanceIcon } from "@/components/icons/appearance";
+import { MoonIcon } from "@/components/icons/moon";
+import { SunIcon } from "@/components/icons/sun";
 import { ColorPill } from "@/components/ui/color-pill";
 import { Dialog } from "@/components/ui/dialog";
 import { PresetSwatch } from "@/components/ui/preset-swatch";
@@ -26,7 +27,7 @@ const MODE_OPTIONS: ReadonlyArray<{
 }> = [
   { value: "light", label: "Light", Icon: SunIcon },
   { value: "dark", label: "Dark", Icon: MoonIcon },
-  { value: "system", label: "System", Icon: MonitorIcon },
+  { value: "system", label: "System", Icon: AppearanceIcon },
 ];
 
 type ThemeConfiguratorProps = {
@@ -75,7 +76,7 @@ export const ThemeConfigurator = ({ open, onOpenChange }: ThemeConfiguratorProps
                 >
                   {MODE_OPTIONS.map(({ value, label, Icon }) => (
                     <ToggleGroup.Item key={value} value={value} size="sm">
-                      <Icon size={14} />
+                      <Icon className="size-3.5" />
                       {label}
                     </ToggleGroup.Item>
                   ))}

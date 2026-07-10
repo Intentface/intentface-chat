@@ -7,7 +7,7 @@ import {
   useMessageSelection,
   useMessageSelectionScope,
 } from "@intentface/chat/message";
-import { FileIcon, MessageCircleIcon, PaperclipIcon } from "lucide-react";
+import { PaperclipIcon } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import { type ComponentProps, useMemo } from "react";
@@ -21,8 +21,10 @@ import { useCopy } from "@/hooks/use-copy";
 import { isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
 import { CHIP_ICONS, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
+import { Bubble5Icon } from "../icons/bubble-5";
 import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
 import { CopyIcon } from "../icons/copy";
+import { FileBendIcon } from "../icons/file-bend";
 import { StopIcon } from "../icons/stop";
 
 type MessageRootProps = ComponentProps<typeof MessagePrimitive>;
@@ -270,7 +272,7 @@ type MessageAttachmentProps = {
 const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmentProps) => {
   const mediaType = attachment.mediaType ?? "";
   const filename = attachment.filename ?? "Attachment";
-  const Icon = isPdfAttachment(mediaType) ? FileIcon : PaperclipIcon;
+  const Icon = isPdfAttachment(mediaType) ? FileBendIcon : PaperclipIcon;
 
   return (
     <div
@@ -394,7 +396,7 @@ const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
                   window.getSelection()?.removeAllRanges();
                 }}
               >
-                <MessageCircleIcon className="size-3.5" />
+                <Bubble5Icon className="size-3.5" />
                 Add to chat
               </Button>
             </PopoverPrimitive.Popup>

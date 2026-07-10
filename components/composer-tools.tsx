@@ -1,10 +1,11 @@
 "use client";
 
-import { PlusIcon, XIcon } from "lucide-react";
 import { useComposer } from "@/components/ai/composer";
 import { BrainIcon } from "@/components/icons/brain";
+import { CrossMediumIcon } from "@/components/icons/cross-medium";
 import { GlobeIcon } from "@/components/icons/globe";
 import { PaperClipIcon } from "@/components/icons/paperclip";
+import { PlusMediumIcon } from "@/components/icons/plus-medium";
 import Button from "@/components/ui/button";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/ui/icon-button";
@@ -28,7 +29,7 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
         >
           <span className="relative size-4">
             <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+            <CrossMediumIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
           </span>
           Web Search
         </Button>
@@ -43,7 +44,7 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
         >
           <span className="relative size-4">
             <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <XIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+            <CrossMediumIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
           </span>
           Thinking
         </Button>
@@ -60,7 +61,7 @@ export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
       <DropdownMenu.Trigger
         render={
           <IconButton variant="ghost" type="button" className="rounded-full">
-            <PlusIcon />
+            <PlusMediumIcon />
           </IconButton>
         }
       />

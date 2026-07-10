@@ -2,7 +2,6 @@
 
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import { PanelLeftIcon } from "lucide-react";
 import {
   type ComponentProps,
   createContext,
@@ -12,6 +11,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { SidebarIcon } from "@/components/icons/sidebar";
 import Drawer from "@/components/ui/drawer";
 import Input from "@/components/ui/input";
 import Separator from "@/components/ui/separator";
@@ -200,7 +200,7 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
       variant="ghost"
       {...props}
     >
-      <PanelLeftIcon className="size-4" />
+      <SidebarIcon className="size-4 text-ink-tertiary" />
       <span className="sr-only">Toggle Sidebar</span>
     </IconButton>
   );

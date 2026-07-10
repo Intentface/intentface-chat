@@ -1,7 +1,7 @@
 "use client";
 
 import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
-import { FileIcon, PaperclipIcon, XIcon } from "lucide-react";
+import { PaperclipIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
@@ -10,6 +10,8 @@ import { createPortal } from "react-dom";
 import { IconButton } from "@/components/ui/icon-button";
 import { formatFileSize, isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
 import { cn } from "@/lib/utils";
+import { CrossMediumIcon } from "../icons/cross-medium";
+import { FileBendIcon } from "../icons/file-bend";
 import { PaperClipIcon } from "../icons/paperclip";
 
 // Re-export the attachment surface so consumers import everything from this
@@ -65,7 +67,7 @@ type AttachmentsItemProps = {
 };
 
 const getFileIcon = (mediaType: string) => {
-  if (isPdfAttachment(mediaType)) return FileIcon;
+  if (isPdfAttachment(mediaType)) return FileBendIcon;
   return PaperclipIcon;
 };
 
@@ -136,7 +138,7 @@ const AttachmentsRemove = ({ onRemove, filename, className }: AttachmentsRemoveP
     size="2xs"
     type="button"
   >
-    <XIcon className="size-3" />
+    <CrossMediumIcon className="size-3" />
   </IconButton>
 );
 

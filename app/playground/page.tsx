@@ -160,11 +160,11 @@ const GroupedIssueList = () => (
 );
 
 const GroupedIssueCommands = () => (
-  <Composer.CommandList prefix="#">
+  <Composer.Command prefix="#">
     <Composer.CommandLoading />
     <Composer.CommandEmpty />
     <GroupedIssueList />
-  </Composer.CommandList>
+  </Composer.Command>
 );
 
 // Demo: files "open in the workspace" surfaced as the AI's context, shown in the

@@ -1,6 +1,6 @@
 "use client";
 
-// Composer.CommandList family — resolution (sync/async items, fuzzy filter),
+// Composer.Command family — resolution (sync/async items, fuzzy filter),
 // keyboard/mouse selection, chip insertion, dismissal, and the nav/items
 // context split (highlight changes don't re-render the items map, and items
 // mutations don't re-render every row). All unstyled; state panels as
@@ -48,7 +48,7 @@ type CommandListNavContextValue = {
 
 const CommandListNavContext = createContext<CommandListNavContextValue | null>(null);
 
-// Items slice — updates on items resolution. Consumed by `Composer.CommandItems`.
+// Items slice — updates on items resolution. Consumed by `Composer.CommandList`.
 type CommandListItemsContextValue = {
   items: CommandItemData[];
   state: CommandListState;
@@ -181,32 +181,32 @@ const insertMentionChip = (
 };
 
 // ---------------------------------------------------------------------------
-// Composer.CommandList — the orchestrator: resolves items for the active
+// Composer.Command — the orchestrator: resolves items for the active
 // prefix, owns the highlight/selection/dismiss logic, and provides the two
 // contexts. Renders null unless this prefix is the active one.
 // ---------------------------------------------------------------------------
 
 const EMPTY_ITEMS: CommandItemData[] = [];
 
-export type ComposerCommandListState = {
+export type ComposerCommandState = {
   /** Present as data-loading while an async items callback is in flight. */
   loading: boolean;
   /** Present as data-empty when nothing matches the query. */
   empty: boolean;
 };
 
-export type ComposerCommandListProps = PrimitiveProps<"div", ComposerCommandListState> & {
+export type ComposerCommandProps = PrimitiveProps<"div", ComposerCommandState> & {
   prefix: string;
 };
 
-export const ComposerCommandList = ({
+export const ComposerCommand = ({
   prefix,
   className,
   render,
   style,
   children,
   ...elementProps
-}: ComposerCommandListProps) => {
+}: ComposerCommandProps) => {
   const store = useComposerContextStore();
   const internals = useComposerInternals();
 
@@ -375,7 +375,7 @@ export const useCommandListItems = <Item extends CommandItemData = CommandItemDa
 } => {
   const context = use(CommandListItemsContext);
   if (!context) {
-    throw new Error("<Composer.CommandItems> must be rendered inside <Composer.CommandList>.");
+    throw new Error("<Composer.CommandList> must be rendered inside <Composer.Command>.");
   }
   return context as { items: Item[]; state: CommandListState };
 };
@@ -383,7 +383,7 @@ export const useCommandListItems = <Item extends CommandItemData = CommandItemDa
 const useCommandListNav = (componentName: string): CommandListNavContextValue => {
   const context = use(CommandListNavContext);
   if (!context) {
-    throw new Error(`<Composer.${componentName}> must be rendered inside <Composer.CommandList>.`);
+    throw new Error(`<Composer.${componentName}> must be rendered inside <Composer.Command>.`);
   }
   return context;
 };
@@ -393,20 +393,20 @@ const useCommandListNav = (componentName: string): CommandListNavContextValue =>
 // data-slot and forwards props; the styled layer supplies the look.
 // ---------------------------------------------------------------------------
 
-export type ComposerCommandItemsProps<Item extends CommandItemData> = Omit<
+export type ComposerCommandListProps<Item extends CommandItemData> = Omit<
   PrimitiveProps<"div">,
   "children"
 > & {
   children: (item: Item) => ReactNode;
 };
 
-export const ComposerCommandItems = <Item extends CommandItemData>({
+export const ComposerCommandList = <Item extends CommandItemData>({
   className,
   render,
   style,
   children: renderItem,
   ...elementProps
-}: ComposerCommandItemsProps<Item>): ReactNode => {
+}: ComposerCommandListProps<Item>): ReactNode => {
   const { items } = useCommandListItems<Item>();
 
   return useRenderElement(

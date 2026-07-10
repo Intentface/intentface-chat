@@ -27,9 +27,9 @@ export const ComposerCommands = () => {
         <Composer.Panel>
           {(composer) =>
             composer.commands.active ? (
-              <Composer.CommandList prefix="@">
+              <Composer.Command prefix="@">
                 <Composer.CommandEmpty />
-                <Composer.CommandItems>
+                <Composer.CommandList>
                   {(item) => (
                     <Composer.CommandItem value={item.value}>
                       <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
@@ -40,8 +40,8 @@ export const ComposerCommands = () => {
                       )}
                     </Composer.CommandItem>
                   )}
-                </Composer.CommandItems>
-              </Composer.CommandList>
+                </Composer.CommandList>
+              </Composer.Command>
             ) : null
           }
         </Composer.Panel>

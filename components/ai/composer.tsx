@@ -371,7 +371,7 @@ const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => (
 );
 
 // ---------------------------------------------------------------------------
-// Popover — the floating alternative to a Panel. Takes the same CommandList
+// Popover — the floating alternative to a Panel. Takes the same command-list
 // children but lifts them into a portal above the field, anchored to the active
 // command badge. Content-driven like Panel (no `open` prop): the primitive opens
 // while it has children, and exposes data-open/data-closed for the enter/exit
@@ -401,13 +401,13 @@ const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => {
 };
 
 // ---------------------------------------------------------------------------
-// CommandList family
+// Command family
 // ---------------------------------------------------------------------------
 
-type ComposerCommandListProps = ComponentProps<typeof ComposerPrimitive.CommandList>;
+type ComposerCommandProps = ComponentProps<typeof ComposerPrimitive.Command>;
 
-const ComposerCommandList = ({ className, ...props }: ComposerCommandListProps) => (
-  <ComposerPrimitive.CommandList
+const ComposerCommand = ({ className, ...props }: ComposerCommandProps) => (
+  <ComposerPrimitive.Command
     className={cn(
       // Pure content — the host (a Panel card or the Popover) supplies the surface
       // material and positioning; this is just the scrollable list. Height caps at
@@ -420,20 +420,20 @@ const ComposerCommandList = ({ className, ...props }: ComposerCommandListProps) 
   />
 );
 
-type ComposerCommandItemsProps<Item extends CommandItemDataPrimitive> = {
+type ComposerCommandListProps<Item extends CommandItemDataPrimitive> = {
   className?: string;
   children: (item: Item) => ReactNode;
 };
 
-const ComposerCommandItems = <Item extends CommandItemDataPrimitive = CommandItemData>({
+const ComposerCommandList = <Item extends CommandItemDataPrimitive = CommandItemData>({
   className,
   children,
-}: ComposerCommandItemsProps<Item>): ReactNode => (
-  <ComposerPrimitive.CommandItems
+}: ComposerCommandListProps<Item>): ReactNode => (
+  <ComposerPrimitive.CommandList
     className={cn("flex flex-col", "group-data-empty/composer-command-list:hidden", className)}
   >
     {children}
-  </ComposerPrimitive.CommandItems>
+  </ComposerPrimitive.CommandList>
 );
 
 const ComposerCommandLoading = ({
@@ -544,7 +544,7 @@ const ComposerCommandGroupLabel = ({
 // Commands — the whole command-list shape for one prefix in a single part:
 // loading/empty states plus items rendered as icon + label + optional
 // description (the shape every prefix shares). Drop `<Composer.Commands
-// prefix="@" />` into a Panel/Popover instead of hand-rolling the CommandList
+// prefix="@" />` into a Panel/Popover instead of hand-rolling the Command
 // tree per prefix; reach for the lower-level parts only when a prefix needs
 // bespoke item markup.
 type ComposerCommandsProps = {
@@ -552,11 +552,11 @@ type ComposerCommandsProps = {
   className?: string;
 };
 
-const ComposerCommands = ({ prefix, className }: ComposerCommandsProps) => (
-  <ComposerCommandList prefix={prefix} className={className}>
+const ComposerCommands = ({ prefix }: ComposerCommandsProps) => (
+  <ComposerCommand prefix={prefix}>
     <ComposerCommandLoading />
     <ComposerCommandEmpty />
-    <ComposerCommandItems>
+    <ComposerCommandList>
       {(item) => (
         <ComposerCommandItem value={item.value}>
           {item.icon && <ComposerCommandItemIcon>{CHIP_ICONS[item.icon]}</ComposerCommandItemIcon>}
@@ -566,8 +566,8 @@ const ComposerCommands = ({ prefix, className }: ComposerCommandsProps) => (
           )}
         </ComposerCommandItem>
       )}
-    </ComposerCommandItems>
-  </ComposerCommandList>
+    </ComposerCommandList>
+  </ComposerCommand>
 );
 
 // ---------------------------------------------------------------------------
@@ -721,8 +721,8 @@ export const Composer = Object.assign(ComposerRoot, {
   AskUserDismiss: ComposerAskUserDismiss,
   AskUserContinue: ComposerAskUserContinue,
   Commands: ComposerCommands,
+  Command: ComposerCommand,
   CommandList: ComposerCommandList,
-  CommandItems: ComposerCommandItems,
   CommandLoading: ComposerCommandLoading,
   CommandEmpty: ComposerCommandEmpty,
   CommandDismiss: ComposerCommandDismiss,

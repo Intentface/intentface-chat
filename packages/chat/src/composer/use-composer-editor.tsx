@@ -105,6 +105,8 @@ export type UseComposerEditorResult = {
   /** Chip visuals, portaled into the engine-owned inline spans. */
   chipPortals: ReactNode;
   hasContent: boolean;
+  /** True while an IME composition is in progress — the placeholder overlay gates on it. */
+  isComposing: boolean;
   /** The serialized submit text, for the hidden form-input mirror. */
   serializedText: string;
 };
@@ -376,20 +378,21 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     syncFromDom();
   };
 
+  // Composition flips are version-bumped so React re-renders: the textarea
+  // gates its placeholder overlay on !isComposing (the browser paints marked
+  // text without any commit, so hasContent alone would lag until
+  // compositionend). hasContent itself stays single-writer, model-derived.
   const handleCompositionStart = () => {
     isComposing = true;
-    // The browser paints marked text without any commit (input is guarded
-    // during composition), so the placeholder would sit on top of the
-    // composition preview. Hide it optimistically; compositionend recomputes
-    // truthfully below — a cancelled composition on an empty editor produces
-    // no diff and therefore no commit.
-    getDependencies().store.setHasContent(true);
+    bumpVersion();
   };
 
   const handleCompositionEnd = () => {
     isComposing = false;
     syncFromDom();
-    refreshHasContent();
+    // A cancelled composition leaves no diff → no commit → no bump; bump
+    // explicitly so the overlay can return on an empty editor.
+    bumpVersion();
     // insertCompositionText is not cancelable — the cap is enforced at commit:
     // the one sanctioned post-IME rewrite.
     const { maxLength } = getDependencies().options;
@@ -684,6 +687,7 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     getVersion: () => version,
     getDoc: () => doc,
     getChipElement: (id: string) => chipElements.get(id),
+    getIsComposing: () => isComposing,
     attach,
     applyControlledText,
     // Interactive handlers, composed with consumer callbacks by the hook.
@@ -779,6 +783,7 @@ export const useComposerEditor = (options: UseComposerEditorOptions): UseCompose
     editableProps,
     chipPortals,
     hasContent,
+    isComposing: engine.getIsComposing(),
     serializedText: serializeSegments(engine.getDoc()).text,
   };
 };

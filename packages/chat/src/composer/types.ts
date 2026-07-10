@@ -113,6 +113,20 @@ export type ComposerCommandsConfig = {
   kind: CommandItemKind;
   trigger: TriggerRule;
   items: ComposerCommandsItems;
+  /**
+   * Ghost-text completion of the highlighted item in the active token
+   * (data-command-suggestion). Defaults to true; turn off per prefix when the
+   * highlight is unstable (e.g. async sources re-ranking while typing).
+   */
+  suggestion?: boolean;
+  /**
+   * Per-prefix hint shown while the query is empty, rendered into the badge's
+   * hint element (span[data-slot="command-hint"]). Defaults to "Type to
+   * filter". Never shows alongside a suggestion — one hint slot, suggestion
+   * wins — so this is the resident hint for suggestion: false prefixes and
+   * the fallback when nothing can complete.
+   */
+  placeholder?: string;
 };
 
 export type ComposerCommandsMap = Record<string, ComposerCommandsConfig>;

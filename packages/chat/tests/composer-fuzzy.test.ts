@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { filterArrayItems, fuzzyScore } from "../src/composer/fuzzy";
+import { filterArrayItems, fuzzyScore, suggestionRemainder } from "../src/composer/fuzzy";
 import type { CommandItemData } from "../src/composer/types";
 
 describe("fuzzyScore", () => {
@@ -50,5 +50,23 @@ describe("filterArrayItems", () => {
   test("keywords participate in matching", () => {
     const result = filterArrayItems(items, "google");
     expect(result.map((r) => r.value)).toContain("web-search");
+  });
+});
+
+describe("suggestionRemainder", () => {
+  test("empty query suggests the full label", () => {
+    expect(suggestionRemainder("", "Test Document")).toBe("Test Document");
+  });
+
+  test("prefix match completes with the label's own casing", () => {
+    expect(suggestionRemainder("te", "Test Document")).toBe("st Document");
+  });
+
+  test("fuzzy (non-prefix) matches suggest nothing", () => {
+    expect(suggestionRemainder("doc", "Test Document")).toBeNull();
+  });
+
+  test("a fully typed label suggests nothing", () => {
+    expect(suggestionRemainder("Test Document", "Test Document")).toBeNull();
   });
 });

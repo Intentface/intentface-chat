@@ -1,27 +1,24 @@
 "use client";
 
-// Composer.Textarea — the TipTap editor. All editing behavior lives here:
-// chip paste handling, the command-prefix plugin, keyboard interpretation,
-// store mirroring, controlled/uncontrolled text. No styling crosses this
-// boundary — the editor element and the command decorations expose data
-// attributes (data-slot="composer-editor", data-command-badge,
-// data-command-placeholder) for the styled layer's CSS.
+// Composer.Textarea — the editor surface: a hand-rolled contenteditable over
+// the flat segment engine (useComposerEditor). Acts like a native textarea
+// with atomic mention chips: native typing/IME, form participation via a
+// hidden input mirror, and the same data-attribute contract as always
+// (data-slot="composer-editor", data-command-badge, data-mention-chip). No
+// styling crosses this boundary.
+//
+// The editable div renders with no JSX children — the engine owns its DOM;
+// React never reconciles inside it. The inline white-space styles replace
+// what TipTap used to inject at runtime: without break-spaces, consecutive
+// spaces corrupt to NBSP in the model.
 
-import Document from "@tiptap/extension-document";
-import Paragraph from "@tiptap/extension-paragraph";
-import Text from "@tiptap/extension-text";
-import { TextSelection } from "@tiptap/pm/state";
-import { type Editor, EditorContent, useEditor } from "@tiptap/react";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
-import { type ChipData, parseChipSegments } from "../chip-markdown";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
+import type { ChipData } from "../chip-markdown";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
-import { chipSegmentsToParagraphJSON, createTiptapRegisteredEditor } from "./document";
-import { useAsRef, useComposerInternals } from "./internals";
-import { interpretEditorKey } from "./keyboard";
-import { createMentionChipExtension } from "./mention-chip";
-import { commandListPluginKey } from "./prefix-plugin";
-import { useComposer, useComposerContextStore } from "./store";
+import type { ComposerSubmitOn } from "./keyboard";
+import { useComposerContextStore } from "./store";
+import { useComposerEditor } from "./use-composer-editor";
 
 export type ComposerTextareaState = {
   /** Present as data-disabled while the editor is non-editable. */
@@ -38,10 +35,41 @@ export type ComposerTextareaProps = Omit<
   onValueChange?: (text: string) => void;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Native-textarea-style placeholder string. For rich placeholder content, pass children instead (children win when both are set). */
+  placeholder?: string;
+  /** Which Enter chord sends the message; the other inserts a soft break. Consider pairing "shift-enter" with enterKeyHint="enter". */
+  submitOn?: ComposerSubmitOn;
+  /** Logical-length cap: one per character, one per chip. IME input is capped at composition commit. */
+  maxLength?: number;
+  /** Native form validation via the hidden input — blocks empty submits. */
+  required?: boolean;
+  /** Mirrors the serialized text (chips as chip-markdown) into FormData. */
+  name?: string;
+  spellCheck?: boolean;
+  autoCapitalize?: string;
+  enterKeyHint?: HTMLAttributes<HTMLElement>["enterKeyHint"];
+  inputMode?: HTMLAttributes<HTMLElement>["inputMode"];
+  dir?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
+  "aria-describedby"?: string;
   /** Custom renderer for committed chips in the editor. Defaults to a label-only Chip. */
   renderChip?: (chip: ChipData) => ReactNode;
   /** Placeholder overlay content, shown while the editor is empty. */
   children?: ReactNode;
+};
+
+// Focusable-but-invisible (not display:none — Chrome refuses to submit forms
+// whose invalid control can't be focused for the validation bubble).
+const visuallyHiddenStyle: CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  border: 0,
 };
 
 export const ComposerTextarea = ({
@@ -52,246 +80,125 @@ export const ComposerTextarea = ({
   style,
   disabled = false,
   autoFocus = false,
+  placeholder,
+  submitOn,
+  maxLength,
+  required = false,
+  name,
+  spellCheck = false,
+  autoCapitalize,
+  enterKeyHint,
+  inputMode,
+  dir,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
+  // Interactive callbacks route to the editable element (not the wrapper),
+  // native-textarea style: they run before the engine, and preventDefault in
+  // onKeyDown/onPaste/onCopy/onCut overrides the engine's handling.
+  onFocus,
+  onBlur,
+  onKeyDown,
+  onKeyUp,
+  onPaste,
+  onCopy,
+  onCut,
   renderChip,
   children,
   ...elementProps
 }: ComposerTextareaProps) => {
   const store = useComposerContextStore();
-  const hasContent = useComposer((composer) => composer.textarea.hasContent);
-  const { getRegisteredPrefixes, reportEditorUpdate } = useComposerInternals();
+  const { attachRoot, editableProps, chipPortals, hasContent, isComposing, serializedText } =
+    useComposerEditor({
+      disabled,
+      autoFocus,
+      submitOn,
+      maxLength,
+      value,
+      onValueChange,
+      renderChip,
+      onFocus,
+      onBlur,
+      onKeyDown,
+      onKeyUp,
+      onPaste,
+      onCopy,
+      onCut,
+    });
 
-  const isControlled = value !== undefined;
-
-  const onValueChangeRef = useAsRef(onValueChange);
-  const renderChipRef = useAsRef(renderChip);
-
-  // The live TipTap instance for this component's own engine-specific ops
-  // (paste handling below). The store only ever sees the RegisteredEditor
-  // adapter, registered in onMount and released in onUnmount.
-  const tiptapInstanceRef = useRef<Editor | null>(null);
-  const unregisterEditorRef = useRef<(() => void) | null>(null);
-
-  // Single-select questions clear their selection once the user starts typing
-  // a free-text answer. Stable across renders — event-time reads go through
-  // the store, so no subscription is needed.
-  const clearSelectionsIfSingle = useCallback(() => {
-    const { askUser } = store.getSnapshot();
-    if (!askUser.questions) return;
-    const currentQuestion = askUser.questions[askUser.step];
-    if (!currentQuestion?.multiSelect) {
-      askUser.clearSelections();
-    }
-  }, [store]);
-
-  const mentionExtension = useMemo(
-    () =>
-      createMentionChipExtension({
-        getRegisteredPrefixes,
-        get renderChip() {
-          return renderChipRef.current;
-        },
-      }),
-    [getRegisteredPrefixes],
+  const editorContent = (
+    // Relative wrapper so the placeholder overlay sizes to the editable, not
+    // the outer slot (which may carry padding/scroll from the styled layer).
+    <div style={{ position: "relative" }}>
+      <div
+        ref={attachRoot}
+        // contenteditable="true" is load-bearing: the store's ask-user event
+        // scoping and the container's click-passthrough both key off it.
+        contentEditable={!disabled}
+        suppressContentEditableWarning
+        role="textbox"
+        // contenteditable is natively focusable; the explicit tabIndex keeps a
+        // disabled editor out of the tab order like a native disabled textarea.
+        tabIndex={disabled ? -1 : 0}
+        aria-multiline="true"
+        aria-placeholder={placeholder}
+        aria-disabled={disabled || undefined}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
+        data-slot="composer-editor"
+        spellCheck={spellCheck}
+        autoCapitalize={autoCapitalize}
+        enterKeyHint={enterKeyHint}
+        inputMode={inputMode}
+        dir={dir}
+        style={{ whiteSpace: "break-spaces", overflowWrap: "break-word" }}
+        {...editableProps}
+      />
+      {/* Hidden during composition too: the browser paints marked text before
+          any model commit, so hasContent alone would lag the preview. */}
+      {!hasContent && !isComposing && (children ?? placeholder) && (
+        <div
+          data-slot="composer-placeholder"
+          style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          aria-hidden="true"
+        >
+          {children ?? placeholder}
+        </div>
+      )}
+    </div>
   );
-
-  const tiptapEditor = useEditor({
-    immediatelyRender: false,
-    extensions: [Document, Paragraph, Text, mentionExtension],
-    content: isControlled ? value : "",
-    editorProps: {
-      attributes: {
-        "data-slot": "composer-editor",
-        spellcheck: "false",
-      },
-      // Paste: file clipboard entries become attachments; chip-markdown text
-      // becomes chips. Anything else falls through to the default paste.
-      handlePaste: (_view, event) => {
-        const items = event.clipboardData?.items;
-        if (items) {
-          const files = [...items]
-            .filter((item) => item.kind === "file")
-            .map((item) => item.getAsFile())
-            .filter((file): file is File => Boolean(file));
-
-          if (files.length) {
-            event.preventDefault();
-            store.getSnapshot().attachments.add(files);
-            return true;
-          }
-        }
-
-        const pastedText = event.clipboardData?.getData("text/plain");
-        if (!pastedText || !pastedText.includes("(chip:")) return false;
-
-        const segments = parseChipSegments(pastedText);
-        if (!segments.some((segment) => segment.type === "chip")) return false;
-
-        const editor = tiptapInstanceRef.current;
-        if (!editor) return false;
-
-        const paragraphs = chipSegmentsToParagraphJSON(segments);
-        if (paragraphs.length === 0) return false;
-
-        event.preventDefault();
-        editor.commands.insertContent(paragraphs);
-        return true;
-      },
-      // Keydown: interpret the key (pure) against the current command/ask-user
-      // state, then run the resulting command-list / ask-user / form action.
-      handleKeyDown: (view, event) => {
-        const commandState = commandListPluginKey.getState(view.state);
-        const action = interpretEditorKey(
-          { key: event.key, shiftKey: event.shiftKey },
-          {
-            isCommandListOpen: commandState?.isOpen ?? false,
-            hasActiveAskUser: (store.getSnapshot().askUser.questions?.length ?? 0) > 0,
-            isEditorEmpty: view.state.doc.textContent === "",
-            hasAttachments: store.getSnapshot().attachments.items.length > 0,
-          },
-        );
-
-        if (!action) return false;
-
-        switch (action.type) {
-          case "command-select": {
-            event.preventDefault();
-            store.commandSelectRef.current?.();
-            return true;
-          }
-          case "command-close": {
-            event.preventDefault();
-            view.dispatch(view.state.tr.setMeta(commandListPluginKey, { close: true }));
-            return true;
-          }
-          case "command-navigate": {
-            event.preventDefault();
-            store.moveHighlight(action.direction);
-            return true;
-          }
-          case "command-caret": {
-            // Trap the caret inside the active token: clamp Left/Right to the
-            // token range so it can't leave while the popup is open (Escape /
-            // Dismiss is the only way out).
-            event.preventDefault();
-            if (commandState?.isOpen) {
-              const { triggerStartPosition, triggerEndPosition } = commandState;
-              const current = view.state.selection.from;
-              const target = Math.min(
-                Math.max(current + action.direction, triggerStartPosition),
-                triggerEndPosition,
-              );
-              if (target !== current) {
-                view.dispatch(
-                  view.state.tr.setSelection(TextSelection.create(view.state.doc, target)),
-                );
-              }
-            }
-            return true;
-          }
-          case "ask-user-arrow": {
-            event.preventDefault();
-            const optionsHandle = store.getSnapshot().askUser.optionsRef.current;
-            optionsHandle?.navigate(action.direction);
-            view.dom.blur();
-            return true;
-          }
-          case "remove-last-attachment": {
-            event.preventDefault();
-            const { items, remove } = store.getSnapshot().attachments;
-            const lastItem = items.at(-1);
-            if (lastItem) remove(lastItem.id);
-            return true;
-          }
-          case "submit-form": {
-            event.preventDefault();
-            const form = (event.target as HTMLElement).closest("form");
-            if (form) form.requestSubmit();
-            return true;
-          }
-          case "soft-break": {
-            const { state, dispatch } = view;
-            dispatch(state.tr.split(state.selection.$from.pos));
-            return true;
-          }
-        }
-      },
-    },
-    // Lifecycle & store mirroring — focus/blur, mount/unmount editor
-    // registration, and content/command-state sync back into the store.
-    onFocus: () => {
-      store.getSnapshot().askUser.optionsRef.current?.clearHighlight();
-    },
-    // Losing focus dismisses an open command list (click-outside, tab-away).
-    // Command items and the popover chrome preventDefault their mousedown, so
-    // interacting with the list keeps focus and never triggers this.
-    onBlur: ({ editor: instance }) => {
-      if (!commandListPluginKey.getState(instance.state)?.isOpen) return;
-      instance.view.dispatch(instance.state.tr.setMeta(commandListPluginKey, { close: true }));
-    },
-    onMount: ({ editor: instance }) => {
-      tiptapInstanceRef.current = instance;
-      unregisterEditorRef.current = store.registerEditor(createTiptapRegisteredEditor(instance));
-    },
-    onUnmount: () => {
-      tiptapInstanceRef.current = null;
-      unregisterEditorRef.current?.();
-      unregisterEditorRef.current = null;
-    },
-    onUpdate: ({ editor: instance }) => {
-      const text = instance.getText();
-      store.setHasContent(text.trim().length > 0 || !instance.isEmpty);
-      if (text.trim().length > 0) {
-        clearSelectionsIfSingle();
-        store.getSnapshot().askUser.optionsRef.current?.clearHighlight();
-      }
-      onValueChangeRef.current?.(text);
-      reportEditorUpdate();
-    },
-    // Command state changes on selection and meta-only transactions too (caret
-    // moving inside the token, Escape / Dismiss closing it), not just on doc
-    // edits — so mirror it from onTransaction, which fires for every kind.
-    // setCommands no-ops when nothing changed, so this stays cheap.
-    onTransaction: ({ editor: instance }) => {
-      const pluginState = commandListPluginKey.getState(instance.state);
-      store.setCommands({
-        active: pluginState?.isOpen ?? false,
-        trigger: pluginState?.trigger ?? null,
-        query: pluginState?.query ?? "",
-      });
-    },
-    editable: !disabled,
-    autofocus: autoFocus,
-  });
-
-  // setContent emits an update (tiptap v3 default), so onUpdate keeps
-  // hasContent in sync — no manual write needed.
-  useEffect(() => {
-    if (isControlled && tiptapEditor && value !== tiptapEditor.getText()) {
-      tiptapEditor.commands.setContent(value);
-    }
-  }, [value, tiptapEditor, isControlled]);
-
-  const editorContent =
-    tiptapEditor !== null ? (
-      <EditorContent editor={tiptapEditor} style={{ position: "relative" }}>
-        {!hasContent && children && (
-          <div
-            data-slot="composer-placeholder"
-            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-            aria-hidden="true"
-          >
-            {children}
-          </div>
-        )}
-      </EditorContent>
-    ) : null;
 
   return useRenderElement(
     "div",
     { className, render, style },
     {
       state: { disabled, filled: hasContent },
-      props: [{ "data-slot": "composer-textarea", children: editorContent }, elementProps],
+      props: [
+        {
+          "data-slot": "composer-textarea",
+          children: (
+            <>
+              {editorContent}
+              {chipPortals}
+              {name != null && (
+                <input
+                  type="text"
+                  readOnly
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  name={name}
+                  required={required}
+                  value={serializedText}
+                  onFocus={() => store.controller.focus()}
+                  style={visuallyHiddenStyle}
+                />
+              )}
+            </>
+          ),
+        },
+        elementProps,
+      ],
     },
   );
 };

@@ -8,7 +8,7 @@ source: composer
 
 ## Usage guidelines
 
-- **Chat input** — TipTap-backed rich text with inline chips and attachments.
+- **Chat input** — a hand-rolled contenteditable over a flat segment model: native typing and IME, inline chips, attachments.
 - **Prefix commands** — type `/`, `@`, or other prefixes to open command lists.
 - **Panel** — hosts command results, live steps, or an ask-user prompt above the field.
 - **Headless + styled** — behavior lives in `@intentface/chat`; the styled wrapper below is yours to copy and edit.
@@ -217,7 +217,7 @@ prop → store bridges. Renders `data-slot="composer-root"`.
 
 export const rootProps = [
   { name: "onSubmit", type: "(data: ComposerSubmitData) => void | Promise<void>", description: "Fires on message submit and on ask-user answers. Discriminate on data.kind." },
-  { name: "commands", type: "ComposerCommandsMap", default: "{}", description: "Prefix → command config (kind, trigger, items). Drives the command lists." },
+  { name: "commands", type: "ComposerCommandsMap", default: "{}", description: "Prefix → command config (kind, trigger, items, suggestion, placeholder). suggestion: false disables ghost-text completion; placeholder sets the per-prefix empty-query hint (never shown alongside a suggestion — the suggestion wins)." },
   { name: "questions", type: "AskUserQuestion[]", description: "When set, arms the ask-user flow (blurs the editor, flips askUser.active)." },
   { name: "isSubmitting", type: "boolean", default: "false", description: "Flips Submit to a stop affordance and gates re-submits." },
   { name: "value", type: "ComposerSnapshot", description: "Controlled editor content." },
@@ -262,16 +262,25 @@ Focus proxy and layout frame. Renders `data-slot="composer-container"`
 
 ### Composer.Textarea
 
-The rich-text editor. Renders `data-slot="composer-textarea"` wrapping the
-ProseMirror editor element (`data-slot="composer-editor"`).
+The editor surface — a contenteditable that acts like a native textarea with
+atomic mention chips. Renders `data-slot="composer-textarea"` wrapping the
+editable element (`data-slot="composer-editor"`). With `name` set, a hidden
+input mirrors the serialized text into the surrounding form's FormData.
 
 export const textareaProps = [
   { name: "value", type: "string", description: "Controlled plain-text value." },
   { name: "onValueChange", type: "(text: string) => void", description: "Fires on each editor update with plain text." },
   { name: "disabled", type: "boolean", default: "false", description: "Makes the editor non-editable." },
   { name: "autoFocus", type: "boolean", default: "false", description: "Focus the editor on mount." },
+  { name: "placeholder", type: "string", description: "Native-textarea-style placeholder (also sets aria-placeholder). For rich content, pass children instead." },
+  { name: "submitOn", type: '"enter" | "shift-enter"', default: '"enter"', description: "Which Enter chord sends the message; the other inserts a soft break. Pair \"shift-enter\" with enterKeyHint=\"enter\"." },
   { name: "renderChip", type: "(chip: ChipData) => ReactNode", description: "Custom renderer for a committed chip." },
   { name: "children", type: "ReactNode", description: "Placeholder overlay, shown while empty." },
+  { name: "maxLength", type: "number", description: "Logical-length cap — one per character, one per chip. IME input is capped at composition commit." },
+  { name: "required", type: "boolean", default: "false", description: "Native form validation via the hidden input (requires name)." },
+  { name: "name", type: "string", description: "Mirrors the serialized text (chips as chip-markdown) into FormData." },
+  { name: "spellCheck", type: "boolean", default: "false", description: "Forwarded to the editable element, with autoCapitalize, enterKeyHint, inputMode, dir, and aria-* passthrough." },
+  { name: "onFocus / onBlur / onKeyDown / onKeyUp / onPaste / onCopy / onCut", type: "React handlers", description: "Route to the editable element, native-textarea style: they run before the engine, and preventDefault overrides the engine's handling (keydown/clipboard)." },
 ];
 
 <PropsTable rows={textareaProps} />
@@ -282,6 +291,7 @@ export const textareaAttrs = [
   { attribute: "data-disabled", description: "Present when disabled." },
   { attribute: "data-command-badge", description: "On the active trigger token decoration (e.g. the leading @)." },
   { attribute: "data-command-placeholder", description: "On the inline hint decoration after a trigger." },
+  { attribute: 'data-slot="command-hint"', description: "The badge's hint element — ghost-text completion of the highlighted item, or the empty-query placeholder. A real span: style it like any other slot." },
 ];
 
 <AttributesTable rows={textareaAttrs} />

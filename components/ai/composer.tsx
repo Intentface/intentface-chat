@@ -203,6 +203,11 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:border **:data-command-badge:border-primary-border **:data-command-badge:bg-primary **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:text-ink-primary",
       // Type-to-filter hint while the command query is empty.
       "[&_[data-command-placeholder]::after]:content-['Type_to_filter'] [&_[data-command-placeholder]::after]:pointer-events-none [&_[data-command-placeholder]::after]:whitespace-nowrap [&_[data-command-placeholder]::after]:text-ink-tertiary",
+      // Ghost-text completion of the highlighted command item (Notion-style).
+      // The double-attribute rule outranks the type-to-filter hint when the
+      // query is empty but an item is highlighted.
+      "[&_[data-command-suggestion]::after]:content-[attr(data-command-suggestion)] [&_[data-command-suggestion]::after]:pointer-events-none [&_[data-command-suggestion]::after]:whitespace-nowrap [&_[data-command-suggestion]::after]:text-ink-tertiary",
+      "[&_[data-command-placeholder][data-command-suggestion]::after]:content-[attr(data-command-suggestion)]",
       disabled && "opacity-50 cursor-not-allowed",
       className,
     )}

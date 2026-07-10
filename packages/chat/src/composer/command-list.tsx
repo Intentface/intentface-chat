@@ -21,8 +21,8 @@ import {
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { Commands } from "./commands";
-import { filterArrayItems } from "./fuzzy";
-import { useAsRef, useComposerInternals } from "./internals";
+import { filterArrayItems, suggestionRemainder } from "./fuzzy";
+import { useAsRef, useComposerInternals, useIsomorphicLayoutEffect } from "./internals";
 import { useComposer, useComposerContextStore } from "./store";
 import type { CommandItemData, ComposerCommandsItems, PrefixOnSelectContext } from "./types";
 
@@ -198,7 +198,23 @@ export const ComposerCommand = ({
   const highlightIndex = useComposer((composer) => composer.commands.highlightIndex);
   const activeIndex =
     items.length > 0 ? ((highlightIndex % items.length) + items.length) % items.length : -1;
-  const effectiveHighlight = items[activeIndex]?.value ?? null;
+  const highlightedItem = items[activeIndex] ?? null;
+  const effectiveHighlight = highlightedItem?.value ?? null;
+
+  // Ghost-text completion: stamp the highlighted item's remaining label onto
+  // the active-token badge; the styled layer paints it as ::after content
+  // (data-command-suggestion). The badge is engine-owned DOM out of JSX reach
+  // — same access pattern as the popover's anchor query — so this is a true
+  // DOM-integration effect. No deps: badge identity changes on token rewraps,
+  // which always coincide with a re-render here (query/highlight subscribed).
+  const suggestion =
+    isActive && highlightedItem ? suggestionRemainder(query, highlightedItem.label) : null;
+  useIsomorphicLayoutEffect(() => {
+    const badge = store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]");
+    if (!badge) return;
+    if (suggestion) badge.setAttribute("data-command-suggestion", suggestion);
+    else badge.removeAttribute("data-command-suggestion");
+  });
 
   const selectByValue = useCallback(
     (value: string) => {

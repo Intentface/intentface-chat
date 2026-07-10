@@ -298,17 +298,21 @@ export const ComposerCommand = ({
   // Scroll the highlighted row into view as it becomes the highlight. Stable, so
   // React calls it only on highlight change — no per-render scroll, no effect.
   //
-  // INVARIANT: native block:"nearest" is safe here only because the collision
-  // positioner keeps the popover fully inside the viewport. scrollIntoView
-  // scrolls every ancestor scrolling box — the window included — whenever the
-  // row isn't viewport-visible, so if the positioner's containment ever
-  // regresses, arrowing through the list will scroll the page behind the
-  // popup (the pre-positioner bug a hand-rolled scoped scroll used to guard
-  // against; its implementation lives in this function's git history).
-  // Bonus of native: the scroller's CSS scroll-padding (scroll-py-* in the
-  // styled layer) is honored without any manual math.
+  // INVARIANT (Safari/Firefox): native block:"nearest" is safe only because
+  // the collision positioner keeps the popover fully inside the viewport.
+  // scrollIntoView scrolls every ancestor scrolling box — the window included
+  // — whenever the row isn't viewport-visible, so if the positioner's
+  // containment ever regresses, arrowing through the list will scroll the
+  // page behind the popup (the pre-positioner bug a hand-rolled scoped scroll
+  // used to guard against; its implementation lives in this function's git
+  // history). container:"nearest" hard-scopes the scroll on Chromium and is
+  // silently ignored elsewhere (unknown dictionary members) — once WebKit and
+  // Gecko ship it, the invariant above stops being load-bearing everywhere.
+  // Native also honors the scroller's CSS scroll-padding (scroll-py-* in the
+  // styled layer) without any manual math.
   const scrollHighlightedIntoView = useCallback((node: HTMLElement | null) => {
-    node?.scrollIntoView({ block: "nearest" });
+    // Cast: lib.dom doesn't know the `container` member yet (Chromium-only).
+    node?.scrollIntoView({ block: "nearest", container: "nearest" } as ScrollIntoViewOptions);
   }, []);
 
   const navContext = useMemo<CommandListNavContextValue>(

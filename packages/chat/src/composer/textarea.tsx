@@ -104,21 +104,22 @@ export const ComposerTextarea = ({
   ...elementProps
 }: ComposerTextareaProps) => {
   const store = useComposerContextStore();
-  const { attachRoot, editableProps, chipPortals, hasContent, serializedText } = useComposerEditor({
-    disabled,
-    autoFocus,
-    maxLength,
-    value,
-    onValueChange,
-    renderChip,
-    onFocus,
-    onBlur,
-    onKeyDown,
-    onKeyUp,
-    onPaste,
-    onCopy,
-    onCut,
-  });
+  const { attachRoot, editableProps, chipPortals, hasContent, isComposing, serializedText } =
+    useComposerEditor({
+      disabled,
+      autoFocus,
+      maxLength,
+      value,
+      onValueChange,
+      renderChip,
+      onFocus,
+      onBlur,
+      onKeyDown,
+      onKeyUp,
+      onPaste,
+      onCopy,
+      onCut,
+    });
 
   const editorContent = (
     // Relative wrapper so the placeholder overlay sizes to the editable, not
@@ -149,7 +150,9 @@ export const ComposerTextarea = ({
         style={{ whiteSpace: "break-spaces", overflowWrap: "break-word" }}
         {...editableProps}
       />
-      {!hasContent && (children ?? placeholder) && (
+      {/* Hidden during composition too: the browser paints marked text before
+          any model commit, so hasContent alone would lag the preview. */}
+      {!hasContent && !isComposing && (children ?? placeholder) && (
         <div
           data-slot="composer-placeholder"
           style={{ position: "absolute", inset: 0, pointerEvents: "none" }}

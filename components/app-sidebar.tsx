@@ -48,8 +48,9 @@ export const AppSidebar = () => {
 
   return (
     <Sidebar>
-      <Sidebar.Header>
+      <Sidebar.Header className="flex-row items-center justify-between">
         <IntentfaceLogo className="size-6" />
+        <Sidebar.Trigger />
       </Sidebar.Header>
       <Sidebar.Content>
         <Sidebar.Group>

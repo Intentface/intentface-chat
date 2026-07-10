@@ -759,7 +759,7 @@ const ThreadRoot = ({
       ref: rootRef,
       props: [
         {
-          "data-slot": "thread-root",
+          "data-thread-root": "",
           // Anchors the overlays/composer and bounds the inset measurement.
           style: { position: "relative", overflow: "hidden" },
         },
@@ -773,7 +773,7 @@ const ThreadRoot = ({
 
 // ---------------------------------------------------------------------------
 // Overlay — a positioned marker strip; the styled layer supplies the blur/fade
-// content as children. data-slot="thread-overlay-top" doubles as the top-inset
+// content as children. data-thread-overlay="top" doubles as the top-inset
 // measurement target.
 // ---------------------------------------------------------------------------
 
@@ -800,7 +800,8 @@ const ThreadOverlay = memo(
         stateAttributesMapping: threadOverlayStateMapping,
         props: [
           {
-            "data-slot": `thread-overlay-${direction}`,
+            // Identity + direction ride the data-thread-overlay state attribute
+            // (stamped by threadOverlayStateMapping above).
             // A sibling of the scroll container: never swallow wheel/drag/click.
             style: { position: "absolute", pointerEvents: "none" },
           },
@@ -866,7 +867,7 @@ const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadVie
       ref: scrollRef,
       props: [
         {
-          "data-slot": "thread-scroller",
+          "data-thread-scroller": "",
           role: "region",
           "aria-label": "Messages",
           tabIndex: 0,
@@ -900,7 +901,7 @@ const ThreadContent = ({ className, render, style, ...elementProps }: ThreadCont
       ref: contentRef,
       props: [
         {
-          "data-slot": "thread-content",
+          "data-thread-content": "",
           // The transcript is the live log; new turns are what screen readers
           // should announce.
           role: "log",
@@ -915,14 +916,14 @@ const ThreadContent = ({ className, render, style, ...elementProps }: ThreadCont
     <>
       <div
         ref={topSentinelRef}
-        data-slot="thread-top"
+        data-thread-top=""
         aria-hidden
         style={{ height: 1, width: "100%", flexShrink: 0 }}
       />
       {element}
       <div
         ref={bottomSentinelRef}
-        data-slot="thread-bottom"
+        data-thread-bottom=""
         aria-hidden
         style={{ height: 1, width: "100%", flexShrink: 0 }}
       />
@@ -940,7 +941,7 @@ const ThreadComposer = ({ className, render, style, ...elementProps }: ThreadCom
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "thread-composer" }, elementProps] },
+    { props: [{ "data-thread-composer": "" }, elementProps] },
   );
 
 export type ThreadPlaceholderProps = PrimitiveProps<"div">;
@@ -949,7 +950,7 @@ const ThreadPlaceholder = ({ className, render, style, ...elementProps }: Thread
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "thread-placeholder" }, elementProps] },
+    { props: [{ "data-thread-placeholder": "" }, elementProps] },
   );
 
 // ---------------------------------------------------------------------------

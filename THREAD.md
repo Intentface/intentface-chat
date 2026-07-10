@@ -119,7 +119,7 @@ Thread writes a few CSS variables via a `ResizeObserver` (not React state — co
 | Variable | Meaning |
 |---|---|
 | `--thread-overlay-top-height` | Top overlay height + viewport top padding. Default `4rem`. |
-| `--thread-overlay-bottom-height` | Bottom overlay height + viewport bottom padding. Measured from the composer dock (`[data-slot="composer-context-window"]` / `composer-container`); default `8rem`. |
+| `--thread-overlay-bottom-height` | Bottom overlay height + viewport bottom padding. Measured from the composer dock (`[data-composer-context-window]` / `composer-container`); default `8rem`. |
 | `--thread-turn-area` | The visible thread area (root − top − bottom). The top-landing `autoScroll` modes map the last turn's reserve to this. |
 
 You normally don't touch these — they keep the composer-dock spacing and the top-landing reserve self-adjusting.

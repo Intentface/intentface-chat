@@ -63,15 +63,15 @@ takes a `status` and publishes it through context; `Steps.Icon` and
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 
 ### Steps
 
-The timeline root. Renders `data-slot="steps"`. No part-specific props.
+The timeline root. Renders `data-steps`. No part-specific props.
 
 ### Steps.Item
 
-One node of the tree (a disclosure). Renders `data-slot="steps-item"`.
+One node of the tree (a disclosure). Renders `data-steps-item`.
 
 export const itemProps = [
   { name: "status", type: "string", default: '"complete"', description: "Node status (commonly complete / active / pending); seeds context for Icon/Label and drives data-status." },
@@ -83,7 +83,7 @@ export const itemProps = [
 <PropsTable rows={itemProps} />
 
 export const itemAttrs = [
-  { attribute: "data-slot", values: '"steps-item"', description: "The item element." },
+  { attribute: "data-steps-item", description: "The item element." },
   { attribute: "data-status", values: "string", description: "The item's status (commonly complete / active / pending)." },
   { attribute: "data-nested", values: '"true"', description: "Present when the item is inside another item (indent rail)." },
   { attribute: "data-open", description: "Present while open." },
@@ -94,7 +94,7 @@ export const itemAttrs = [
 
 ### Steps.Trigger
 
-Toggles the nearest item. Renders a `<button data-slot="steps-trigger">`
+Toggles the nearest item. Renders a `<button data-steps-trigger>`
 (`aria-expanded`, `aria-controls`). Carries `data-open`/`data-closed` for the
 chevron. The styled layer groups it as `group/steps-trigger` so children read
 `group-data-open/steps-trigger:…`.
@@ -102,7 +102,7 @@ chevron. The styled layer groups it as `group/steps-trigger` so children read
 ### Steps.Panel
 
 The nearest item's disclosure area — lays out the timeline column. Renders
-`data-slot="steps-panel"`.
+`data-steps-panel`.
 
 export const panelProps = [
   { name: "keepMounted", type: "boolean", default: "false", description: "Keep the panel in the DOM (hidden) when closed." },
@@ -111,7 +111,7 @@ export const panelProps = [
 <PropsTable rows={panelProps} />
 
 export const panelAttrs = [
-  { attribute: "data-slot", values: '"steps-panel"', description: "The panel." },
+  { attribute: "data-steps-panel", description: "The panel." },
   { attribute: "data-open", description: "Present while open." },
   { attribute: "data-closed", description: "Present while closed." },
   { attribute: "data-starting-style", description: "Present on the first open frame (enter transition)." },
@@ -122,7 +122,7 @@ export const panelAttrs = [
 
 ### Steps.Icon
 
-Status indicator. Renders `<span data-slot="steps-icon" aria-hidden>`.
+Status indicator. Renders `<span data-steps-icon aria-hidden>`.
 
 export const iconProps = [
   { name: "status", type: "string", description: "Overrides the inherited status for this icon." },
@@ -131,7 +131,7 @@ export const iconProps = [
 <PropsTable rows={iconProps} />
 
 export const iconAttrs = [
-  { attribute: "data-slot", values: '"steps-icon"', description: "The icon element." },
+  { attribute: "data-steps-icon", description: "The icon element." },
   { attribute: "data-status", values: "string", description: "Resolved status, for styling." },
 ];
 
@@ -139,7 +139,7 @@ export const iconAttrs = [
 
 ### Steps.Label
 
-Row text. Renders `<span data-slot="steps-label">`.
+Row text. Renders `<span data-steps-label>`.
 
 export const labelProps = [
   { name: "status", type: "string", description: "Overrides the inherited status for this label." },
@@ -148,7 +148,7 @@ export const labelProps = [
 <PropsTable rows={labelProps} />
 
 export const labelAttrs = [
-  { attribute: "data-slot", values: '"steps-label"', description: "The label element." },
+  { attribute: "data-steps-label", description: "The label element." },
   { attribute: "data-status", values: "string", description: "Resolved status, for styling." },
 ];
 

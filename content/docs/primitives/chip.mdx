@@ -38,11 +38,11 @@ never rendered inline:
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 
 ### Chip
 
-The inline token surface. Renders `data-slot="chip"`. A `Chip.Preview` child
+The inline token surface. Renders `data-chip`. A `Chip.Preview` child
 wraps it in a hover card.
 
 export const rootProps = [
@@ -52,7 +52,7 @@ export const rootProps = [
 <PropsTable rows={rootProps} />
 
 export const rootAttrs = [
-  { attribute: "data-slot", values: '"chip"', description: "The token element." },
+  { attribute: "data-chip", description: "The token element." },
   { attribute: "data-variant", values: '"primary" | "accent" | "warning"', description: "The active variant, for styling." },
 ];
 
@@ -61,11 +61,11 @@ export const rootAttrs = [
 ### Chip.Icon
 
 Leading inline icon, baseline-aligned to the label and `aria-hidden`. Renders
-`data-slot="chip-icon"`.
+`data-chip-icon`.
 
 ### Chip.Label
 
-The chip text. Renders `data-slot="chip-label"`.
+The chip text. Renders `data-chip-label`.
 
 ### Chip.Preview
 

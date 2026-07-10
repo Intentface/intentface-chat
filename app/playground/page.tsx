@@ -98,20 +98,22 @@ type GroupedIssue = CommandItemData & { group: string };
 // highlight is a flat index over this order, so keeping the source grouped keeps
 // arrow-key nav aligned with the visual groups below. Reorder it and the
 // highlight would jump between groups as you press down.
+// Linear-style identifiers: the label describes the entity without repeating
+// the typed trigger, so the committed chip reads "INT-123 …", not "##123 …".
 const PLAYGROUND_ISSUES: GroupedIssue[] = [
-  { value: "i-123", label: "#123 Login throws on empty password", group: "Bugs" },
-  { value: "i-199", label: "#199 Search returns stale results", group: "Bugs" },
-  { value: "i-287", label: "#287 Composer keyboard nav broken on Safari", group: "Bugs" },
-  { value: "i-478", label: "#478 i18n stubs out of date", group: "Bugs" },
-  { value: "i-534", label: "#534 Auth token refresh loop", group: "Bugs" },
-  { value: "i-231", label: "#231 Markdown render flash", group: "UI" },
-  { value: "i-312", label: "#312 Theme picker overflow", group: "UI" },
-  { value: "i-401", label: "#401 Empty state CTA too small", group: "UI" },
-  { value: "i-445", label: "#445 Sidebar collapse animation jank", group: "UI" },
-  { value: "i-502", label: "#502 Attachment thumbnails missing", group: "UI" },
-  { value: "i-142", label: "#142 Memory leak in idle workers", group: "Performance" },
-  { value: "i-356", label: "#356 Streaming cancellation race", group: "Performance" },
-].map((item) => ({ ...item, icon: "code" as const }));
+  { value: "INT-123", label: "INT-123 Login throws on empty password", group: "Bugs" },
+  { value: "INT-199", label: "INT-199 Search returns stale results", group: "Bugs" },
+  { value: "INT-287", label: "INT-287 Composer keyboard nav broken on Safari", group: "Bugs" },
+  { value: "INT-478", label: "INT-478 i18n stubs out of date", group: "Bugs" },
+  { value: "INT-534", label: "INT-534 Auth token refresh loop", group: "Bugs" },
+  { value: "INT-231", label: "INT-231 Markdown render flash", group: "UI" },
+  { value: "INT-312", label: "INT-312 Theme picker overflow", group: "UI" },
+  { value: "INT-401", label: "INT-401 Empty state CTA too small", group: "UI" },
+  { value: "INT-445", label: "INT-445 Sidebar collapse animation jank", group: "UI" },
+  { value: "INT-502", label: "INT-502 Attachment thumbnails missing", group: "UI" },
+  { value: "INT-142", label: "INT-142 Memory leak in idle workers", group: "Performance" },
+  { value: "INT-356", label: "INT-356 Streaming cancellation race", group: "Performance" },
+].map((item) => ({ ...item, icon: "bug" as const }));
 
 const abortableDelay = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {

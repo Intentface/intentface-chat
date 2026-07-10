@@ -1,7 +1,7 @@
 "use client";
 
 // Command-list structural primitives used internally by the composer's command
-// palette (see command-list.tsx). Pure markup with data-slot hooks — selection
+// palette (see command-list.tsx). Pure markup with part-attribute hooks — selection
 // and keyboard behavior live in the composer's command plumbing; styling belongs
 // to the styled layer. Not a public export.
 
@@ -14,7 +14,7 @@ const CommandsRoot = ({ className, render, style, ...elementProps }: CommandsRoo
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "command-list" }, elementProps] },
+    { props: [{ "data-command-list": "" }, elementProps] },
   );
 
 type CommandsGroupProps = PrimitiveProps<"div">;
@@ -23,7 +23,7 @@ const CommandsGroup = ({ className, render, style, ...elementProps }: CommandsGr
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "command-group" }, elementProps] },
+    { props: [{ "data-command-group": "" }, elementProps] },
   );
 
 type CommandsGroupLabelProps = PrimitiveProps<"div">;
@@ -37,7 +37,7 @@ const CommandsGroupLabel = ({
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "command-group-label" }, elementProps] },
+    { props: [{ "data-command-group-label": "" }, elementProps] },
   );
 
 export type CommandsItemState = {
@@ -61,7 +61,7 @@ const CommandsItem = ({
     { className, render, style },
     {
       state: { highlighted },
-      props: [{ "data-slot": "command-item" }, elementProps],
+      props: [{ "data-command-item": "" }, elementProps],
     },
   );
 
@@ -71,7 +71,7 @@ const CommandsItemLabel = ({ className, render, style, ...elementProps }: Comman
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "command-item-label" }, elementProps] },
+    { props: [{ "data-command-item-label": "" }, elementProps] },
   );
 
 type CommandsItemDescriptionProps = PrimitiveProps<"span">;
@@ -85,7 +85,7 @@ const CommandsItemDescription = ({
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "command-item-description" }, elementProps] },
+    { props: [{ "data-command-item-description": "" }, elementProps] },
   );
 
 type CommandsEmptyProps = PrimitiveProps<"div">;
@@ -100,7 +100,7 @@ const CommandsEmpty = ({
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "command-empty", children }, elementProps] },
+    { props: [{ "data-command-empty": "", children }, elementProps] },
   );
 
 type CommandsFooterProps = PrimitiveProps<"div">;
@@ -109,7 +109,7 @@ const CommandsFooter = ({ className, render, style, ...elementProps }: CommandsF
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "command-footer" }, elementProps] },
+    { props: [{ "data-command-footer": "" }, elementProps] },
   );
 
 export const Commands = Object.assign(CommandsRoot, {

@@ -7,6 +7,7 @@ import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { GitHubIcon } from "@/components/icons/github";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
 import { NpmIcon } from "@/components/icons/npm";
+import { PlaygroundIcon } from "@/components/icons/playground";
 import { Collapsible } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { DocsSearch } from "./docs-search";
@@ -140,6 +141,16 @@ export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
       <TreeNodes nodes={tree.children} />
     </nav>
     <div className="flex flex-col gap-0.5 border-secondary-border border-t pt-2">
+      {/* Internal route — next/link, not the external-anchor ExternalLink. */}
+      <Link
+        href="/playground"
+        className="flex h-8 items-center gap-2 rounded-md px-3 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-hover hover:text-ink-primary"
+      >
+        <span className="[&>svg]:size-4">
+          <PlaygroundIcon />
+        </span>
+        Playground
+      </Link>
       <ExternalLink
         href="https://github.com/Intentface/intentface-chat"
         icon={<GitHubIcon />}

@@ -81,7 +81,7 @@ export const ComposerAttachmentTrigger = ({
     {
       props: [
         {
-          "data-slot": "composer-attachment-trigger",
+          "data-composer-attachment-trigger": "",
           onClick: () => attachments.openFileDialog(),
         },
         elementProps,

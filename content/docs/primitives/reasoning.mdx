@@ -54,11 +54,11 @@ collapsed/expanded state and the relationship.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 
 ### Reasoning
 
-The disclosure root. Renders `data-slot="reasoning"`.
+The disclosure root. Renders `data-reasoning`.
 
 export const rootProps = [
   { name: "isStreaming", type: "boolean", default: "false", description: "While true the trigger shimmers; the streamed duration is captured when it flips false." },
@@ -71,7 +71,7 @@ export const rootProps = [
 <PropsTable rows={rootProps} />
 
 export const rootAttrs = [
-  { attribute: "data-slot", values: '"reasoning"', description: "The disclosure root." },
+  { attribute: "data-reasoning", description: "The disclosure root." },
   { attribute: "data-streaming", description: "Present while isStreaming is true." },
   { attribute: "data-open", description: "Present while open." },
   { attribute: "data-closed", description: "Present while closed." },
@@ -81,7 +81,7 @@ export const rootAttrs = [
 
 ### Reasoning.Trigger
 
-The toggle. Renders a `<button>` with `data-slot="reasoning-trigger"`. Without
+The toggle. Renders a `<button>` with `data-reasoning-trigger`. Without
 children it shows the default thinking/thought message.
 
 export const triggerProps = [
@@ -93,7 +93,7 @@ export const triggerProps = [
 <PropsTable rows={triggerProps} />
 
 export const triggerAttrs = [
-  { attribute: "data-slot", values: '"reasoning-trigger"', description: "The toggle button." },
+  { attribute: "data-reasoning-trigger", description: "The toggle button." },
   { attribute: "data-open", description: "Present while open." },
   { attribute: "data-closed", description: "Present while closed." },
 ];
@@ -102,7 +102,7 @@ export const triggerAttrs = [
 
 ### Reasoning.Content
 
-The collapsible panel. Renders `data-slot="reasoning-content"`. Bold `**Header**`
+The collapsible panel. Renders `data-reasoning-content`. Bold `**Header**`
 lines split the text into sections rendered as markdown.
 
 export const contentProps = [
@@ -113,7 +113,7 @@ export const contentProps = [
 <PropsTable rows={contentProps} />
 
 export const contentAttrs = [
-  { attribute: "data-slot", values: '"reasoning-content"', description: "The panel." },
+  { attribute: "data-reasoning-content", description: "The panel." },
   { attribute: "data-open", description: "Present while open." },
   { attribute: "data-closed", description: "Present while closed." },
   { attribute: "data-starting-style", description: "Present on the first open frame (enter transition)." },

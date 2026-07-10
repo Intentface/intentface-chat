@@ -188,7 +188,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       return (
         // The composer input uses the plain borderless chip surface; the
         // bordered/filled CHIP_SURFACE_CLASS is reserved for message/docs chips.
-        <Chip className="border-0 bg-transparent">
+        <Chip className="border-0 bg-primary-active">
           {icon && <Chip.Icon>{icon}</Chip.Icon>}
           <Chip.Label>{chip.label}</Chip.Label>
         </Chip>
@@ -198,7 +198,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       "max-h-32 min-h-8 overflow-y-auto py-2 px-3 text-md",
       "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
       // The editor element — ProseMirror-owned DOM, out of JSX reach.
-      "**:data-[slot=composer-editor]:w-full **:data-[slot=composer-editor]:max-w-none **:data-[slot=composer-editor]:font-book **:data-[slot=composer-editor]:leading-[1.7] [&_[data-slot=composer-editor]:focus]:outline-none",
+      "**:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:font-book **:data-composer-editor:leading-[1.7] [&_[data-composer-editor]:focus]:outline-none",
       // Active-prefix badge: the composer's own borderless surface (matching the
       // committed chip above, not the bordered CHIP_SURFACE_CLASS used in
       // messages/docs) so the badge and the chip it becomes share one baseline —
@@ -206,7 +206,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
       // The badge's hint element — ghost-text completion or the empty-query
       // placeholder (the package renders whichever applies into one slot).
-      "**:data-[slot=command-hint]:pointer-events-none **:data-[slot=command-hint]:whitespace-nowrap **:data-[slot=command-hint]:text-ink-tertiary",
+      "**:data-command-hint:pointer-events-none **:data-command-hint:whitespace-nowrap **:data-command-hint:text-ink-tertiary",
       disabled && "opacity-50 cursor-not-allowed",
       className,
     )}

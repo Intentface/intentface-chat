@@ -95,7 +95,7 @@ const ReasoningRoot = memo(
         <Collapsible
           open={isOpen}
           onOpenChange={(open) => setIsOpen(open)}
-          data-slot="reasoning"
+          data-reasoning=""
           data-streaming={isStreaming ? "" : undefined}
           {...props}
         >
@@ -111,13 +111,13 @@ ReasoningRoot.displayName = "Reasoning";
 export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger>;
 
 const ReasoningTrigger = (props: ReasoningTriggerProps) => (
-  <Collapsible.Trigger data-slot="reasoning-trigger" {...props} />
+  <Collapsible.Trigger data-reasoning-trigger="" {...props} />
 );
 
 export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel>;
 
 const ReasoningContent = (props: ReasoningContentProps) => (
-  <Collapsible.Panel data-slot="reasoning-content" {...props} />
+  <Collapsible.Panel data-reasoning-content="" {...props} />
 );
 
 export const Reasoning = Object.assign(ReasoningRoot, {

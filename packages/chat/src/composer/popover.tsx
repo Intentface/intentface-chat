@@ -71,7 +71,7 @@ export const ComposerPopover = ({
       stateAttributesMapping: openStateMapping,
       props: [
         {
-          "data-slot": "composer-popover",
+          "data-composer-popover": "",
           // position/left/top are written imperatively by useAnchorPositioning; the styled
           // layer only supplies box/animation styling, not positioning.
           // Keep the editor focused when clicking the popover chrome so it

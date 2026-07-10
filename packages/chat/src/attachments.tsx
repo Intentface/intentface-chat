@@ -90,7 +90,7 @@ const AttachmentsRoot = ({ className, render, style, ...elementProps }: Attachme
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "attachments" }, elementProps] },
+    { props: [{ "data-attachments": "" }, elementProps] },
   );
 
 export type AttachmentsItemProps = PrimitiveProps<"div">;
@@ -102,7 +102,7 @@ const AttachmentsItem = ({ className, render, style, ...elementProps }: Attachme
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "attachments-item" }, elementProps] },
+    { props: [{ "data-attachments-item": "" }, elementProps] },
   );
 
 export type AttachmentsRemoveProps = PrimitiveProps<"button"> & {
@@ -123,7 +123,7 @@ const AttachmentsRemove = ({
       props: [
         {
           "aria-label": "Remove attachment",
-          "data-slot": "attachments-remove",
+          "data-attachments-remove": "",
           onClick: onRemove,
         },
         elementProps,
@@ -168,7 +168,7 @@ const AttachmentsDropzone = ({
     {
       enabled: visible || keepMounted,
       state: { visible },
-      props: [{ "data-slot": "attachments-dropzone", children }, elementProps],
+      props: [{ "data-attachments-dropzone": "", children }, elementProps],
     },
   );
 
@@ -183,7 +183,7 @@ const AttachmentsError = ({ className, render, style, ...elementProps }: Attachm
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-slot": "attachments-error" }, elementProps] },
+    { props: [{ "data-attachments-error": "" }, elementProps] },
   );
 
 export type AttachmentsTriggerProps = PrimitiveProps<"button">;
@@ -197,7 +197,7 @@ const AttachmentsTrigger = ({
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "data-slot": "attachments-trigger" }, elementProps] },
+    { props: [{ "data-attachments-trigger": "" }, elementProps] },
   );
 
 export const Attachments = Object.assign(AttachmentsRoot, {

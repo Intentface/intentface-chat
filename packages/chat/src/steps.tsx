@@ -25,7 +25,7 @@ const StepsRoot = ({ className, render, style, ...elementProps }: StepsRootProps
   useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-slot": "steps" }, elementProps] },
+    { props: [{ "data-steps": "" }, elementProps] },
   );
 
 StepsRoot.displayName = "Steps";
@@ -62,7 +62,7 @@ const StepsItem = ({ status = "complete", defaultOpen, ...props }: StepsItemProp
       <StepStatusContext value={status}>
         <Collapsible
           defaultOpen={defaultOpen ?? status === "active"}
-          data-slot="steps-item"
+          data-steps-item=""
           data-status={status}
           data-nested={isNested || undefined}
           {...props}
@@ -77,16 +77,14 @@ StepsItem.displayName = "StepsItem";
 export type StepsTriggerProps = ComponentProps<typeof Collapsible.Trigger>;
 
 const StepsTrigger = (props: StepsTriggerProps) => (
-  <Collapsible.Trigger data-slot="steps-trigger" {...props} />
+  <Collapsible.Trigger data-steps-trigger="" {...props} />
 );
 
 StepsTrigger.displayName = "StepsTrigger";
 
 export type StepsPanelProps = ComponentProps<typeof Collapsible.Panel>;
 
-const StepsPanel = (props: StepsPanelProps) => (
-  <Collapsible.Panel data-slot="steps-panel" {...props} />
-);
+const StepsPanel = (props: StepsPanelProps) => <Collapsible.Panel data-steps-panel="" {...props} />;
 
 StepsPanel.displayName = "StepsPanel";
 
@@ -107,7 +105,7 @@ const StepsIcon = ({ status, className, render, style, ...elementProps }: StepsI
     { className, render, style },
     {
       state: { status: resolvedStatus },
-      props: [{ "data-slot": "steps-icon", "aria-hidden": true }, elementProps],
+      props: [{ "data-steps-icon": "", "aria-hidden": true }, elementProps],
     },
   );
 };
@@ -126,7 +124,7 @@ const StepsLabel = ({ status, className, render, style, ...elementProps }: Steps
     { className, render, style },
     {
       state: { status: resolvedStatus },
-      props: [{ "data-slot": "steps-label" }, elementProps],
+      props: [{ "data-steps-label": "" }, elementProps],
     },
   );
 };

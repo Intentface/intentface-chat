@@ -167,7 +167,7 @@ export const ComposerRoot = ({
     {
       state: { submitting: isSubmitting, dragging: isDragging },
       ref: formRef,
-      props: [{ "data-slot": "composer-root", onSubmit: handleFormSubmit }, elementProps],
+      props: [{ "data-composer-root": "", onSubmit: handleFormSubmit }, elementProps],
     },
   );
 

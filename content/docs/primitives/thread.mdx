@@ -162,13 +162,13 @@ scrollbar drag away from the bottom releases it via the sentinel.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a `data-slot` unless noted.
+[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 Only part-specific props and state-driven attributes are listed below.
 
 ### Thread
 
 The root: a positioned, overflow-clipped container that owns the scroll
-subsystem and measures the composer dock. Renders `data-slot="thread-root"`.
+subsystem and measures the composer dock. Renders `data-thread-root`.
 
 export const rootProps = [
   { name: "autoScroll", type: '"off" | "bottom" | "jump" | "follow"', default: '"follow"', description: "Landing + follow behavior (see Auto-scroll)." },
@@ -179,7 +179,7 @@ export const rootProps = [
 <PropsTable rows={rootProps} />
 
 export const rootAttrs = [
-  { attribute: "data-slot", values: '"thread-root"', description: "The root element." },
+  { attribute: "data-thread-root", description: "The root element." },
   { attribute: "data-at-top", description: "Present while the top edge is in view (start of the transcript) — the CSS-only mirror of useThread().isAtTop." },
   { attribute: "data-at-bottom", description: "Present while the bottom edge is in view (at the live end) — the CSS-only mirror of useThread().isAtBottom." },
 ];
@@ -198,7 +198,7 @@ export const overlayProps = [
 <PropsTable rows={overlayProps} />
 
 export const overlayAttrs = [
-  { attribute: "data-slot", values: '"thread-overlay-top" | "thread-overlay-bottom"', description: "The overlay element (the top one is also the top-inset measurement target)." },
+  { attribute: "data-thread-overlay", values: '"top" | "bottom"', description: "The overlay element (the top one is also the top-inset measurement target)." },
   { attribute: "data-thread-overlay", values: '"top" | "bottom"', description: "Which edge, for styling the fade direction." },
 ];
 
@@ -210,10 +210,10 @@ The scroll container plus the measured content column and the 1px edge sentinels
 (top + bottom). Focusable so keyboard users can scroll it.
 
 export const viewportAttrs = [
-  { attribute: "data-slot", values: '"thread-scroller"', description: "The scroll container (role=region, tabIndex 0, aria-label \"Messages\")." },
-  { attribute: "data-slot", values: '"thread-content"', description: "The content column (role=log, aria-relevant=\"additions\") where your messages render." },
-  { attribute: "data-slot", values: '"thread-top"', description: "The 1px at-top sentinel the IntersectionObserver watches." },
-  { attribute: "data-slot", values: '"thread-bottom"', description: "The 1px at-bottom sentinel the IntersectionObserver watches." },
+  { attribute: "data-thread-scroller", description: "The scroll container (role=region, tabIndex 0, aria-label \"Messages\")." },
+  { attribute: "data-thread-content", description: "The content column (role=log, aria-relevant=\"additions\") where your messages render." },
+  { attribute: "data-thread-top", description: "The 1px at-top sentinel the IntersectionObserver watches." },
+  { attribute: "data-thread-bottom", description: "The 1px at-bottom sentinel the IntersectionObserver watches." },
 ];
 
 <AttributesTable rows={viewportAttrs} />
@@ -221,12 +221,12 @@ export const viewportAttrs = [
 ### Thread.Composer
 
 Bottom-docked slot; its height is measured to inset the viewport. Renders
-`data-slot="thread-composer"`.
+`data-thread-composer`.
 
 ### Thread.Placeholder
 
 Empty-state slot, shown when there are no messages. Renders
-`data-slot="thread-placeholder"`.
+`data-thread-placeholder`.
 
 ### Thread.ScrollButton
 

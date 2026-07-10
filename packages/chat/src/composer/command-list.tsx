@@ -297,42 +297,18 @@ export const ComposerCommand = ({
 
   // Scroll the highlighted row into view as it becomes the highlight. Stable, so
   // React calls it only on highlight change — no per-render scroll, no effect.
-  // Scroll *only* the list's own scroll container, never any ancestor: plain
-  // scrollIntoView bubbles to the window too, so when the list is a portaled overlay
-  // sitting near a viewport edge it would yank the whole page to reveal the row.
   //
-  // Retirement condition: once WebKit/Gecko ship the ScrollIntoViewOptions
-  // `container` option (Chromium already has it), this whole function collapses
-  // to node.scrollIntoView({ block: "nearest", container: "nearest" }) — it
-  // scopes the scroll to the nearest scroll container and honors scroll-padding
-  // natively, retiring the scroller walk and the padding math below.
+  // INVARIANT: native block:"nearest" is safe here only because the collision
+  // positioner keeps the popover fully inside the viewport. scrollIntoView
+  // scrolls every ancestor scrolling box — the window included — whenever the
+  // row isn't viewport-visible, so if the positioner's containment ever
+  // regresses, arrowing through the list will scroll the page behind the
+  // popup (the pre-positioner bug a hand-rolled scoped scroll used to guard
+  // against; its implementation lives in this function's git history).
+  // Bonus of native: the scroller's CSS scroll-padding (scroll-py-* in the
+  // styled layer) is honored without any manual math.
   const scrollHighlightedIntoView = useCallback((node: HTMLElement | null) => {
-    if (!node) return;
-    let scroller = node.parentElement;
-    while (scroller) {
-      const overflowY = getComputedStyle(scroller).overflowY;
-      if (
-        (overflowY === "auto" || overflowY === "scroll") &&
-        scroller.scrollHeight > scroller.clientHeight
-      ) {
-        break;
-      }
-      scroller = scroller.parentElement;
-    }
-    if (!scroller) return;
-    // Honor the scroller's CSS scroll-padding: the native scrollIntoView this
-    // math replaced (regressed in the collision-positioner change) consulted
-    // it, so the styled layer's scroll-py-* declaration keeps working — the
-    // consumer declares the inset, the package respects it.
-    const scrollerStyle = getComputedStyle(scroller);
-    const scrollPaddingTop = Number.parseFloat(scrollerStyle.scrollPaddingTop) || 0;
-    const scrollPaddingBottom = Number.parseFloat(scrollerStyle.scrollPaddingBottom) || 0;
-    const item = node.getBoundingClientRect();
-    const view = scroller.getBoundingClientRect();
-    const viewTop = view.top + scrollPaddingTop;
-    const viewBottom = view.bottom - scrollPaddingBottom;
-    if (item.top < viewTop) scroller.scrollTop -= viewTop - item.top;
-    else if (item.bottom > viewBottom) scroller.scrollTop += item.bottom - viewBottom;
+    node?.scrollIntoView({ block: "nearest" });
   }, []);
 
   const navContext = useMemo<CommandListNavContextValue>(

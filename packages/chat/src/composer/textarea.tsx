@@ -86,18 +86,35 @@ export const ComposerTextarea = ({
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   "aria-describedby": ariaDescribedBy,
+  // Interactive callbacks route to the editable element (not the wrapper),
+  // native-textarea style: they run before the engine, and preventDefault in
+  // onKeyDown/onPaste/onCopy/onCut overrides the engine's handling.
+  onFocus,
+  onBlur,
+  onKeyDown,
+  onKeyUp,
+  onPaste,
+  onCopy,
+  onCut,
   renderChip,
   children,
   ...elementProps
 }: ComposerTextareaProps) => {
   const store = useComposerContextStore();
-  const { attachRoot, chipPortals, hasContent, serializedText } = useComposerEditor({
+  const { attachRoot, editableProps, chipPortals, hasContent, serializedText } = useComposerEditor({
     disabled,
     autoFocus,
     maxLength,
     value,
     onValueChange,
     renderChip,
+    onFocus,
+    onBlur,
+    onKeyDown,
+    onKeyUp,
+    onPaste,
+    onCopy,
+    onCut,
   });
 
   const editorContent = (
@@ -126,6 +143,7 @@ export const ComposerTextarea = ({
         inputMode={inputMode}
         dir={dir}
         style={{ whiteSpace: "break-spaces", overflowWrap: "break-word" }}
+        {...editableProps}
       />
       {!hasContent && children && (
         <div

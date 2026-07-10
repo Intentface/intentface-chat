@@ -120,5 +120,9 @@ export type {
   RegisteredEditor,
   TriggerRule,
 } from "./types";
-export type { UseComposerEditorOptions, UseComposerEditorResult } from "./use-composer-editor";
+export type {
+  ComposerEditableProps,
+  UseComposerEditorOptions,
+  UseComposerEditorResult,
+} from "./use-composer-editor";
 export { useComposerEditor } from "./use-composer-editor";

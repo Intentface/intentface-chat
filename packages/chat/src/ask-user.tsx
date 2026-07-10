@@ -22,25 +22,38 @@ import { useComposer } from "./composer/store";
 import type { PrimitiveProps } from "./internal/primitive-props";
 import { useRenderElement } from "./internal/render/useRenderElement";
 
+// Shared ids so Options can label itself from the question text and describe
+// itself from the step indicator without any consumer wiring: Root mints both,
+// Label/StepLabel stamp them, Options references them.
+type AskUserIdsContextValue = { labelId: string; stepLabelId: string };
+
+const AskUserIdsContext = createContext<AskUserIdsContextValue>({ labelId: "", stepLabelId: "" });
+
 /** AskUser root container. Stateless — consumers manage all state externally. */
 export type AskUserRootProps = PrimitiveProps<"div">;
 
-const AskUserRoot = ({ className, render, style, ...elementProps }: AskUserRootProps) =>
-  useRenderElement(
+const AskUserRoot = ({ className, render, style, ...elementProps }: AskUserRootProps) => {
+  const labelId = useId();
+  const stepLabelId = useId();
+  const element = useRenderElement(
     "div",
     { className, render, style },
     { props: [{ "data-ask-user": "" }, elementProps] },
   );
+  return <AskUserIdsContext value={{ labelId, stepLabelId }}>{element}</AskUserIdsContext>;
+};
 
-/** Question heading text. */
+/** Question heading text. Carries the id `Options` uses as its accessible name. */
 export type AskUserLabelProps = PrimitiveProps<"p">;
 
-const AskUserLabel = ({ className, render, style, ...elementProps }: AskUserLabelProps) =>
-  useRenderElement(
+const AskUserLabel = ({ className, render, style, ...elementProps }: AskUserLabelProps) => {
+  const { labelId } = use(AskUserIdsContext);
+  return useRenderElement(
     "p",
     { className, render, style },
-    { props: [{ "data-ask-user-label": "" }, elementProps] },
+    { props: [{ id: labelId || undefined, "data-ask-user-label": "" }, elementProps] },
   );
+};
 
 /** Row container for `Label` and optional `Navigation`. */
 export type AskUserHeaderProps = PrimitiveProps<"div">;
@@ -62,24 +75,24 @@ const AskUserNavigation = ({ className, render, style, ...elementProps }: AskUse
     { props: [{ "data-ask-user-navigation": "" }, elementProps] },
   );
 
-/** Navigate to the previous step. */
+/** Navigate to the previous step. Default accessible name; override via aria-label. */
 export type AskUserPreviousProps = PrimitiveProps<"button">;
 
 const AskUserPrevious = ({ className, render, style, ...elementProps }: AskUserPreviousProps) =>
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "data-ask-user-previous": "" }, elementProps] },
+    { props: [{ "aria-label": "Previous question", "data-ask-user-previous": "" }, elementProps] },
   );
 
-/** Navigate to the next step. */
+/** Navigate to the next step. Default accessible name; override via aria-label. */
 export type AskUserNextProps = PrimitiveProps<"button">;
 
 const AskUserNext = ({ className, render, style, ...elementProps }: AskUserNextProps) =>
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "data-ask-user-next": "" }, elementProps] },
+    { props: [{ "aria-label": "Next question", "data-ask-user-next": "" }, elementProps] },
   );
 
 /** Step indicator. Reads the current step + total from the composer store; the
@@ -100,12 +113,18 @@ const AskUserStepLabel = ({
 }: AskUserStepLabelProps) => {
   const current = useComposer((composer) => composer.askUser.step) + 1;
   const total = useComposer((composer) => composer.askUser.questions?.length ?? 0);
+  const { stepLabelId } = use(AskUserIdsContext);
   const content = typeof children === "function" ? children({ current, total }) : children;
 
   return useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-ask-user-step-label": "", children: content }, elementProps] },
+    {
+      props: [
+        { id: stepLabelId || undefined, "data-ask-user-step-label": "", children: content },
+        elementProps,
+      ],
+    },
   );
 };
 
@@ -115,7 +134,7 @@ type OptionsContextValue = {
   groupName: string;
   highlightedValue: string | null;
   items: RefObject<string[]>;
-  register: (value: string) => () => void;
+  register: (value: string, getElement: () => HTMLElement | null) => () => void;
   onItemHover: (value: string) => void;
 };
 
@@ -132,11 +151,15 @@ export const useAskUserOptions = () => use(OptionsContext);
 
 /** Imperative handle exposed by `AskUser.Options` for keyboard navigation. */
 export type AskUserOptionsHandle = {
-  /** Move highlight by direction. Returns the new highlighted value (null = past the list boundary). */
+  /** Move highlight by direction, focusing the newly highlighted option (roving tabindex). Returns the new highlighted value (null = past the list boundary). */
   navigate: (direction: number) => string | null;
   select: () => { value: string } | null;
   clearHighlight: () => void;
   resetHighlight: () => void;
+  /** Move DOM focus onto the highlighted option (or the first option when none is highlighted). */
+  focusHighlighted: () => void;
+  /** The options container element — the composer attaches its question-mode keydown handling here. */
+  getElement: () => HTMLElement | null;
   highlightedValue: string | null;
 };
 
@@ -160,14 +183,18 @@ const AskUserOptions = ({
   ...elementProps
 }: AskUserOptionsProps) => {
   const registeredItems = useRef<string[]>([]);
+  const itemElements = useRef<Map<string, () => HTMLElement | null>>(new Map());
+  const containerRef = useRef<HTMLFieldSetElement | null>(null);
+  const { labelId, stepLabelId } = use(AskUserIdsContext);
   const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
 
   // Track highlight in a ref so imperative methods see latest value without re-binding
   const highlightedValueRef = useRef(highlightedValue);
   highlightedValueRef.current = highlightedValue;
 
-  const register = useCallback((itemValue: string) => {
+  const register = useCallback((itemValue: string, getElement: () => HTMLElement | null) => {
     registeredItems.current = [...registeredItems.current, itemValue];
+    itemElements.current.set(itemValue, getElement);
     // Auto-highlight whenever an item registers while nothing is highlighted.
     // Using length === 1 here is fragile: during a step transition, React can
     // interleave old-item cleanups with new-item setups, so the new first
@@ -178,6 +205,7 @@ const AskUserOptions = ({
     }
     return () => {
       registeredItems.current = registeredItems.current.filter((v) => v !== itemValue);
+      itemElements.current.delete(itemValue);
       // Clear highlight when the highlighted item deregisters — allows auto-highlight
       // to fire for the next set of items (e.g. on step change)
       if (highlightedValueRef.current === itemValue) {
@@ -189,6 +217,12 @@ const AskUserOptions = ({
 
   const onItemHover = useCallback((itemValue: string) => {
     setHighlightedValue(itemValue);
+  }, []);
+
+  // Roving tabindex: DOM focus follows the highlight for keyboard navigation.
+  const focusValue = useCallback((itemValue: string | null) => {
+    if (itemValue === null) return;
+    itemElements.current.get(itemValue)?.()?.focus();
   }, []);
 
   useImperativeHandle(
@@ -209,6 +243,7 @@ const AskUserOptions = ({
         }
         highlightedValueRef.current = next;
         setHighlightedValue(next);
+        focusValue(next);
         return next;
       },
       select: () => {
@@ -226,17 +261,40 @@ const AskUserOptions = ({
         highlightedValueRef.current = null;
         setHighlightedValue(null);
       },
+      focusHighlighted: () => {
+        const target = highlightedValueRef.current ?? registeredItems.current[0] ?? null;
+        if (target !== null && highlightedValueRef.current === null) {
+          highlightedValueRef.current = target;
+          setHighlightedValue(target);
+        }
+        focusValue(target);
+      },
+      getElement: () => containerRef.current,
       get highlightedValue() {
         return highlightedValueRef.current;
       },
     }),
-    [],
+    [focusValue],
   );
 
   const element = useRenderElement(
     "fieldset",
     { className, render, style },
-    { props: [{ "data-ask-user-options": "", children }, elementProps] },
+    {
+      ref: containerRef,
+      props: [
+        {
+          // The options are the real selectable controls (role radio/checkbox
+          // on each option), so the container is their labelled group.
+          role: multiSelect ? "group" : "radiogroup",
+          "aria-labelledby": labelId || undefined,
+          "aria-describedby": stepLabelId || undefined,
+          "data-ask-user-options": "",
+          children,
+        },
+        elementProps,
+      ],
+    },
   );
 
   return (
@@ -296,37 +354,44 @@ const AskUserOption = ({
   ...elementProps
 }: AskUserOptionProps) => {
   const id = useId();
-  const { highlightedValue, register, onItemHover } = use(OptionsContext);
+  const { multiSelect, highlightedValue, register, onItemHover } = use(OptionsContext);
+  const optionRef = useRef<HTMLLabelElement | null>(null);
   const isHighlighted = value === highlightedValue;
 
   // Self-register on mount, deregister on unmount (true subscription side effect)
   const registerRef = useRef(register);
   registerRef.current = register;
-  useItemRegistration(value, registerRef);
+  useItemRegistration(value, registerRef, optionRef);
 
   const element = useRenderElement(
     "label",
     { className, render, style },
     {
+      ref: optionRef,
       state: { highlighted: isHighlighted, selected },
       props: [
         {
-          htmlFor: id,
+          // The option IS the selectable control: role + checked state live
+          // here, and the roving tabindex makes the highlighted option the
+          // group's single tab stop. Never a native input — the composer's
+          // question-mode key scoping treats inputs as foreign editables.
+          id,
+          role: multiSelect ? "checkbox" : "radio",
+          "aria-checked": selected,
+          tabIndex: isHighlighted ? 0 : -1,
           "data-ask-user-option": "",
           onMouseMove: () => onItemHover(value),
-          // Self-contained click selection. If the click landed on an
-          // associated control (the checkbox/radio the styled layer renders),
-          // let that control drive selection — otherwise it and the label's
-          // native forwarding would both fire onSelect (double toggle). If the
-          // option chrome itself is the target, cancel the label's native
-          // control-forwarding and select directly, so a bare option with no
-          // inner control is still clickable.
+          // Keep highlight and DOM focus unified when focus arrives by other
+          // means (Tab into the group, SR virtual-cursor activation).
+          onFocus: () => onItemHover(value),
+          // Self-contained click selection. The option itself is the control
+          // now, so only a *different* nested interactive element defers —
+          // a bare option stays fully clickable.
           onClick: (event: React.MouseEvent<HTMLLabelElement>) => {
-            if (
-              (event.target as HTMLElement).closest("input,button,[role=checkbox],[role=radio]")
-            ) {
-              return;
-            }
+            const nested = (event.target as HTMLElement).closest(
+              "input,button,[role=checkbox],[role=radio]",
+            );
+            if (nested && nested !== event.currentTarget) return;
             event.preventDefault();
             onSelect?.();
           },
@@ -340,15 +405,16 @@ const AskUserOption = ({
   return <OptionContext value={{ id, value, selected, onSelect }}>{element}</OptionContext>;
 };
 
-/** Registers an item value with the parent Options container synchronously before paint and deregisters on unmount. */
+/** Registers an item value + element with the parent Options container synchronously before paint and deregisters on unmount. */
 const useItemRegistration = (
   value: string,
-  registerRef: RefObject<(value: string) => () => void>,
+  registerRef: RefObject<(value: string, getElement: () => HTMLElement | null) => () => void>,
+  elementRef: RefObject<HTMLElement | null>,
 ) => {
   // useLayoutEffect ensures items are registered before paint so the initial highlight resolves immediately
   useLayoutEffect(() => {
-    return registerRef.current(value);
-  }, [value, registerRef]);
+    return registerRef.current(value, () => elementRef.current);
+  }, [value, registerRef, elementRef]);
 };
 
 /** Flex column wrapper for `OptionLabel` and `OptionDescription`. */

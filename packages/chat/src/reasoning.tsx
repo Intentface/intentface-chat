@@ -95,6 +95,7 @@ const ReasoningRoot = memo(
         <Collapsible
           open={isOpen}
           onOpenChange={(open) => setIsOpen(open)}
+          aria-busy={isStreaming || undefined}
           data-reasoning=""
           data-streaming={isStreaming ? "" : undefined}
           {...props}

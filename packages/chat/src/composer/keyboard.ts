@@ -9,6 +9,7 @@ export type EditorKeyAction =
   | { type: "command-navigate"; direction: 1 | -1 }
   | { type: "command-caret"; direction: 1 | -1 }
   | { type: "ask-user-arrow"; direction: 1 | -1 }
+  | { type: "ask-user-dismiss" }
   | { type: "remove-last-attachment" }
   | { type: "submit-form" }
   | { type: "soft-break" };
@@ -52,6 +53,10 @@ export const interpretEditorKey = (
       return { type: "ask-user-arrow", direction: -1 };
     case hasActiveAskUser && key === "ArrowDown":
       return { type: "ask-user-arrow", direction: 1 };
+    // Question-mode keys now attach to the options container (roving focus),
+    // so an editor-focused Escape must dismiss from here.
+    case hasActiveAskUser && key === "Escape":
+      return { type: "ask-user-dismiss" };
 
     case key === "Backspace" && context.isEditorEmpty && context.hasAttachments:
       return { type: "remove-last-attachment" };
@@ -107,6 +112,10 @@ export const interpretAskUserKey = (
     case key === "ArrowDown":
       return { type: "navigate-options", direction: 1 };
     case key === "Enter":
+      return { type: "select-option" };
+    // APG radio/checkbox: Space toggles the focused option. Wins over the
+    // printable branch — an answer can't meaningfully start with a space.
+    case key === " ":
       return { type: "select-option" };
     case key === "ArrowLeft":
       return { type: "go-back" };

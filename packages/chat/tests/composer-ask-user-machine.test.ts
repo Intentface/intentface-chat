@@ -29,7 +29,7 @@ describe("transitionAskUser", () => {
 
     expect(next.step).toBe(1);
     expect(next.answers.get(0)?.selected.has("A")).toBe(true);
-    expect(effects.map((e) => e.type)).toEqual(["clear-input", "reset-highlight", "blur-input"]);
+    expect(effects.map((e) => e.type)).toEqual(["clear-input", "reset-highlight", "focus-options"]);
   });
 
   test("select-option on the last step compiles and submits", () => {

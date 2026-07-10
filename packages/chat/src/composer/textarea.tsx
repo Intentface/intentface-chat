@@ -17,7 +17,7 @@ import type { ChipData } from "../chip-markdown";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import type { ComposerSubmitOn } from "./keyboard";
-import { useComposerContextStore } from "./store";
+import { useComposer, useComposerContextStore } from "./store";
 import { useComposerEditor } from "./use-composer-editor";
 
 export type ComposerTextareaState = {
@@ -108,6 +108,10 @@ export const ComposerTextarea = ({
   ...elementProps
 }: ComposerTextareaProps) => {
   const store = useComposerContextStore();
+  // Combobox wiring: expanded state and the highlighted option's id flow from
+  // the store mirrors the command machinery already maintains.
+  const commandsActive = useComposer((composer) => composer.commands.active);
+  const activeOptionId = useComposer((composer) => composer.commands.activeOptionId);
   const { attachRoot, editableProps, chipPortals, hasContent, isComposing, serializedText } =
     useComposerEditor({
       disabled,
@@ -143,9 +147,20 @@ export const ComposerTextarea = ({
         aria-multiline="true"
         aria-placeholder={placeholder}
         aria-disabled={disabled || undefined}
+        aria-required={required || undefined}
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         aria-describedby={ariaDescribedBy}
+        // Combobox wiring, textbox flavor: ARIA 1.2 forbids aria-expanded on
+        // textbox and aria-multiline on combobox — for a multiline chat field
+        // multiline wins, so the popup announces through haspopup + controls +
+        // live activedescendant narration instead (the deliberate deviation is
+        // documented in composer.mdx). The popup is portaled to <body>, so
+        // these references are the ONLY field↔list association AT perceives.
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        aria-controls={commandsActive ? store.listboxId : undefined}
+        aria-activedescendant={activeOptionId ?? undefined}
         data-composer-editor=""
         spellCheck={spellCheck}
         autoCapitalize={autoCapitalize}

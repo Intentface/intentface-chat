@@ -31,7 +31,7 @@ export type AskUserEffect =
   | { type: "clear-input" }
   | { type: "set-input-text"; text: string }
   | { type: "focus-input" }
-  | { type: "blur-input" }
+  | { type: "focus-options" }
   | { type: "reset-highlight" }
   | { type: "submit-answers"; answers: ComposerAnswerEntry[] };
 
@@ -157,7 +157,7 @@ const advanceStep = (
   if (state.step < questions.length - 1) {
     return {
       next,
-      effects: [{ type: "clear-input" }, { type: "reset-highlight" }, { type: "blur-input" }],
+      effects: [{ type: "clear-input" }, { type: "reset-highlight" }, { type: "focus-options" }],
     };
   }
   return {
@@ -192,7 +192,7 @@ const transitionToStep = (
     effects: [
       { type: "set-input-text", text: answers.get(targetStep)?.freeText ?? "" },
       { type: "reset-highlight" },
-      { type: "blur-input" },
+      { type: "focus-options" },
     ],
   };
 };

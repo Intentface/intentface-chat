@@ -156,8 +156,15 @@ scrollbar drag away from the bottom releases it via the sentinel.
 - **Viewport** is a focusable `role="region"` with a default
   `aria-label="Messages"` (overridable), so it's reachable and scrollable by
   keyboard.
-- **Content column** is a `role="log"` with `aria-relevant="additions"`, so new
-  turns are announced as they stream in.
+- **Content column** is a `role="log"` with `aria-relevant="additions"`: a turn
+  announces when its row is **added**. In-place text mutation — tokens
+  streaming into an existing row — deliberately does not re-announce
+  (token-by-token narration would be noise). If you want end-of-response
+  announcements, add a consumer-owned `role="status"` region that flips on
+  completion.
+- **Reduced motion.** Programmatic scrolls requested as `"smooth"`
+  (`scrollToBottom`, `scrollToTop`, `scrollToMessage`, and the auto-follow)
+  downgrade to instant when the OS has `prefers-reduced-motion` set.
 
 ## API reference
 

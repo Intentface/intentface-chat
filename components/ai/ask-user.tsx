@@ -6,12 +6,10 @@ import {
   useAskUserOption,
   useAskUserOptions,
 } from "@intentface/chat/ask-user";
-import { ChevronLeftIcon, ChevronRightIcon, CircleHelpIcon } from "lucide-react";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CircleHelpIcon } from "lucide-react";
 import { type ComponentProps, type RefObject, useState } from "react";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible } from "@/components/ui/collapsible";
-import { RadioGroup } from "@/components/ui/radio-group";
 import type { AskUserQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
 
@@ -82,38 +80,19 @@ const AskUserStepLabel = ({ className, ...props }: AskUserStepLabelProps) => (
   />
 );
 
-/** Fieldset wrapper for `Option` items. When `multiSelect` is false, wraps children in a `RadioGroup`. */
+/** Fieldset wrapper for `Option` items. The primitive owns the radiogroup/group
+ * semantics and roving focus; selection flows through Option selected/onSelect. */
 type AskUserOptionsProps = ComponentProps<typeof AskUserPrimitive.Options> & {
-  /** The currently selected value (used as RadioGroup value when not multiSelect). */
-  value?: string;
-  /** Called when the RadioGroup value changes (single-select mode only). */
-  onValueChange?: (value: string) => void;
   ref?: RefObject<AskUserOptionsHandle | null>;
 };
 
-const AskUserOptions = ({
-  multiSelect = false,
-  value,
-  onValueChange,
-  className,
-  ...props
-}: AskUserOptionsProps) => {
-  const content = (
-    <AskUserPrimitive.Options
-      multiSelect={multiSelect}
-      className={cn("flex flex-col gap-1.5", className)}
-      {...props}
-    />
-  );
-
-  if (multiSelect) return content;
-
-  return (
-    <RadioGroup value={value} onValueChange={onValueChange} className="gap-0">
-      {content}
-    </RadioGroup>
-  );
-};
+const AskUserOptions = ({ multiSelect = false, className, ...props }: AskUserOptionsProps) => (
+  <AskUserPrimitive.Options
+    multiSelect={multiSelect}
+    className={cn("flex flex-col gap-1.5", className)}
+    {...props}
+  />
+);
 
 /** Selectable card. Self-registers with parent `Options` on mount (cmdk pattern). */
 type AskUserOptionProps = ComponentProps<typeof AskUserPrimitive.Option>;
@@ -123,53 +102,55 @@ const AskUserOption = ({ className, ...props }: AskUserOptionProps) => (
     className={cn(
       "flex cursor-pointer items-start gap-2 rounded-lg p-2 leading-tight transition-colors",
       "data-highlighted:bg-primary-hover",
+      // Options carry real focus (roving tabindex), but focus always tracks
+      // the highlight — the bg-primary-hover highlight IS the focus
+      // indication, same as command items. No extra ring.
+      "outline-none",
       className,
     )}
     {...props}
   />
 );
 
-/** Renders a `Checkbox` or native radio based on the parent `Options` `multiSelect` prop. Reads all state from context. */
+/** Decorative selection indicator. The Option element itself carries the
+ * radio/checkbox role and checked state, so this is pure presentation —
+ * aria-hidden, no id, never focusable (a nested control would be invalid
+ * inside role=radio and would break the composer's key scoping). */
 const AskUserOptionInput = () => {
   const options = useAskUserOptions();
-  const option = useAskUserOption();
+  return options.multiSelect ? <AskUserOptionCheckIndicator /> : <AskUserOptionIndexIndicator />;
+};
 
-  return options.multiSelect ? (
-    <AskUserOptionCheckbox id={option.id} />
-  ) : (
-    <AskUserOptionRadio id={option.id} />
+const INDICATOR_CLASS = cn(
+  "flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
+);
+
+const INDICATOR_SELECTED_CLASS = "border-tertiary-active bg-tertiary-active text-ink-primary";
+
+const AskUserOptionCheckIndicator = () => {
+  const option = useAskUserOption();
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(INDICATOR_CLASS, option.selected && INDICATOR_SELECTED_CLASS)}
+    >
+      {option.selected && <CheckIcon className="size-3" />}
+    </span>
   );
 };
 
-/** Checkbox input that reads `checked` and `onCheckedChange` from `Option` context. */
-const AskUserOptionCheckbox = (
-  props: Omit<Parameters<typeof Checkbox>[0], "checked" | "onCheckedChange">,
-) => {
-  const option = useAskUserOption();
-  return <Checkbox checked={option.selected} onCheckedChange={option.onSelect} {...props} />;
-};
-
-/** Numbered radio indicator for single-select options. Shows the item's 1-based index instead of a dot. */
-const AskUserOptionRadio = ({
-  className,
-  ...props
-}: Omit<Parameters<typeof RadioGroup.Item>[0], "value" | "children">) => {
+/** Numbered indicator for single-select options: the item's 1-based index. */
+const AskUserOptionIndexIndicator = () => {
   const option = useAskUserOption();
   const { items } = useAskUserOptions();
   const index = items.current.indexOf(option.value) + 1;
-
   return (
-    <RadioGroup.Item
-      value={option.value}
-      className={cn(
-        "size-lh rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
-        "data-checked:bg-tertiary-active data-checked:border-tertiary-active data-checked:text-ink-primary",
-        className,
-      )}
-      {...props}
+    <span
+      aria-hidden="true"
+      className={cn(INDICATOR_CLASS, option.selected && INDICATOR_SELECTED_CLASS)}
     >
       {index}
-    </RadioGroup.Item>
+    </span>
   );
 };
 
@@ -267,8 +248,6 @@ export const AskUser = Object.assign(AskUserRoot, {
   Options: AskUserOptions,
   Option: AskUserOption,
   OptionInput: AskUserOptionInput,
-  OptionCheckbox: AskUserOptionCheckbox,
-  OptionRadio: AskUserOptionRadio,
   OptionContent: AskUserOptionContent,
   OptionLabel: AskUserOptionLabel,
   OptionDescription: AskUserOptionDescription,

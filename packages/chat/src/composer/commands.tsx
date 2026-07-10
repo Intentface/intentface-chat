@@ -5,6 +5,7 @@
 // and keyboard behavior live in the composer's command plumbing; styling belongs
 // to the styled layer. Not a public export.
 
+import { createContext, use, useId } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 
@@ -17,14 +18,26 @@ const CommandsRoot = ({ className, render, style, ...elementProps }: CommandsRoo
     { props: [{ "data-command-list": "" }, elementProps] },
   );
 
+// Group → its label association: the group mints the id, the label stamps it.
+// role="group" keeps listbox→option ownership intact through the wrapper div.
+const GroupLabelIdContext = createContext<string>("");
+
 type CommandsGroupProps = PrimitiveProps<"div">;
 
-const CommandsGroup = ({ className, render, style, ...elementProps }: CommandsGroupProps) =>
-  useRenderElement(
+const CommandsGroup = ({ className, render, style, ...elementProps }: CommandsGroupProps) => {
+  const labelId = useId();
+  const element = useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-command-group": "" }, elementProps] },
+    {
+      props: [
+        { role: "group", "aria-labelledby": labelId, "data-command-group": "" },
+        elementProps,
+      ],
+    },
   );
+  return <GroupLabelIdContext value={labelId}>{element}</GroupLabelIdContext>;
+};
 
 type CommandsGroupLabelProps = PrimitiveProps<"div">;
 
@@ -33,12 +46,14 @@ const CommandsGroupLabel = ({
   render,
   style,
   ...elementProps
-}: CommandsGroupLabelProps) =>
-  useRenderElement(
+}: CommandsGroupLabelProps) => {
+  const labelId = use(GroupLabelIdContext);
+  return useRenderElement(
     "div",
     { className, render, style },
-    { props: [{ "data-command-group-label": "" }, elementProps] },
+    { props: [{ id: labelId || undefined, "data-command-group-label": "" }, elementProps] },
   );
+};
 
 export type CommandsItemState = {
   /** Present as data-highlighted while keyboard/hover highlighted. */
@@ -61,7 +76,10 @@ const CommandsItem = ({
     { className, render, style },
     {
       state: { highlighted },
-      props: [{ "data-command-item": "" }, elementProps],
+      // Options, not buttons: keyboard selection stays in the editor
+      // (activedescendant pattern), so rows must never be tab stops or
+      // announce as "button".
+      props: [{ role: "option", tabIndex: -1, "data-command-item": "" }, elementProps],
     },
   );
 

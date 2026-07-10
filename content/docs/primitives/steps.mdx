@@ -60,6 +60,34 @@ takes a `status` and publishes it through context; `Steps.Icon` and
 *own prop → inherited → `"complete"`*. Every status-aware part reflects it as
 `data-status` for styling.
 
+## Keyboard
+
+Each item is a standard disclosure: `Steps.Trigger` is a real button, so
+`Tab` moves between triggers and `Enter`/`Space` toggle the nearest item.
+Nested items nest their own triggers — there is no roving focus or composite
+widget; the tree is plain sequential tab order.
+
+## Accessibility
+
+Disclosure semantics are inherited from the underlying Collapsible:
+`aria-expanded`/`aria-controls` on the trigger, an id-linked, `hidden`-managed
+panel. The item whose `status` is `"active"` additionally carries
+`aria-current="step"` — the same "active" convention `defaultOpen` already
+keys off.
+
+Status itself is invisible to assistive tech by default: `Steps.Icon` is
+`aria-hidden` and color never announces. Mount `Steps.Status` inside rows
+whose status matters — it renders a visually-hidden span speaking the resolved
+status string, and takes `children` for localized copy:
+
+```tsx
+<Steps.Trigger>
+  <Steps.Icon />
+  <Steps.Label>Searching the web</Steps.Label>
+  <Steps.Status />
+</Steps.Trigger>
+```
+
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
@@ -71,7 +99,8 @@ The timeline root. Renders `data-steps`. No part-specific props.
 
 ### Steps.Item
 
-One node of the tree (a disclosure). Renders `data-steps-item`.
+One node of the tree (a disclosure). Renders `data-steps-item`, plus
+`aria-current="step"` while `status` is `"active"`.
 
 export const itemProps = [
   { name: "status", type: "string", default: '"complete"', description: "Node status (commonly complete / active / pending); seeds context for Icon/Label and drives data-status." },
@@ -153,3 +182,22 @@ export const labelAttrs = [
 ];
 
 <AttributesTable rows={labelAttrs} />
+
+### Steps.Status
+
+Visually-hidden status announcement. Renders `<span data-steps-status>` with
+screen-reader-only styling (overridable via `style`/`className`), containing
+the resolved status string unless `children` provide localized copy.
+
+export const statusProps = [
+  { name: "status", type: "string", description: "Overrides the inherited status for this announcement." },
+  { name: "children", type: "ReactNode", default: "the resolved status string", description: "Localized copy to announce instead of the raw status value." },
+];
+
+<PropsTable rows={statusProps} />
+
+export const statusAttrs = [
+  { attribute: "data-steps-status", description: "The status element." },
+];
+
+<AttributesTable rows={statusAttrs} />

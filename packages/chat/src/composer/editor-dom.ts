@@ -305,11 +305,21 @@ export const renderDocumentToDom = (
     if (id && !existingSpans.has(id)) existingSpans.set(id, span);
   }
 
+  const chipsById = new Map(
+    doc.flatMap((segment) =>
+      segment.type === "chip" ? [[segment.id, segment.chip] as const] : [],
+    ),
+  );
+
   const chipElements = new Map<string, HTMLElement>();
   const children = documentToDomSpec(doc).map((spec): Node => {
     if (spec.kind === "text") return document.createTextNode(spec.text);
     if (spec.kind === "br") return document.createElement("br");
     const span = existingSpans.get(spec.id) ?? createChipSpan(spec.id);
+    // Without an accessible boundary the chip reads as bare prose inside the
+    // textbox — label + type gives AT an atomic token ("Rasmus, @ mention").
+    const chip = chipsById.get(spec.id);
+    if (chip) span.setAttribute("aria-label", `${chip.label}, ${chip.prefix} mention`);
     chipElements.set(spec.id, span);
     return span;
   });

@@ -143,6 +143,11 @@ const useResolvedItems = (
 
 const EMPTY_ITEMS: CommandItemData[] = [];
 
+// Deterministic option-row id shared by the row itself and the editor's
+// aria-activedescendant. Values sanitize to valid id tokens.
+export const optionDomId = (listboxId: string, value: string): string =>
+  `${listboxId}-option-${value.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+
 // The badge's hint chrome: non-editable so the caret can't enter it, no chip
 // id so the reader/mappers treat it as zero-width presentation, aria-hidden
 // so screen readers skip the ghost. Styled via its part attribute like any other part.
@@ -238,6 +243,19 @@ export const ComposerCommand = ({
     }
     const hint = existingHint ?? createHintElement(badge);
     if (hint.textContent !== hintText) hint.textContent = hintText;
+  });
+
+  // Mirror the highlighted row's DOM id into the store — the editor renders
+  // it as aria-activedescendant. This is where the raw highlight index
+  // resolves against the actual item list, so the id can only be derived here.
+  // Only the ACTIVE command writes: with several Commands mounted, an inactive
+  // sibling writing null would ping-pong against the active one's id forever
+  // (max-update-depth). Clearing on close is setCommands' job.
+  useIsomorphicLayoutEffect(() => {
+    if (!isActive) return;
+    store.setActiveOptionId(
+      highlightedItem ? optionDomId(store.listboxId, highlightedItem.value) : null,
+    );
   });
 
   const selectByValue = useCallback(
@@ -398,7 +416,8 @@ export const ComposerCommandList = <Item extends CommandItemData>({
   children: renderItem,
   ...elementProps
 }: ComposerCommandListProps<Item>): ReactNode => {
-  const { items } = useCommandListItems<Item>();
+  const { items, state } = useCommandListItems<Item>();
+  const store = useComposerContextStore();
 
   return useRenderElement(
     "div",
@@ -406,6 +425,12 @@ export const ComposerCommandList = <Item extends CommandItemData>({
     {
       props: [
         {
+          // The combobox popup: the editor references this element via
+          // aria-controls and points aria-activedescendant at its rows.
+          role: "listbox",
+          id: store.listboxId,
+          "aria-label": "Suggestions",
+          "aria-busy": state === "loading" || undefined,
           "data-composer-command-items": "",
           children: items.map((item, index) => (
             <Fragment key={item.value ?? `__cmd_${index}`}>{renderItem(item)}</Fragment>
@@ -447,7 +472,7 @@ export const ComposerCommandEmpty = ({
     "div",
     { className, render, style },
     {
-      props: [{ "data-composer-command-empty": "", children }, elementProps],
+      props: [{ role: "status", "data-composer-command-empty": "", children }, elementProps],
     },
   );
 
@@ -471,6 +496,7 @@ export const ComposerCommandDismiss = ({
     {
       props: [
         {
+          tabIndex: -1,
           "data-composer-command-dismiss": "",
           onMouseDown: (event: React.MouseEvent) => {
             event.preventDefault();
@@ -490,12 +516,15 @@ export type ComposerCommandItemProps = Omit<ComponentProps<typeof Commands.Item>
 
 export const ComposerCommandItem = ({ value, ...props }: ComposerCommandItemProps) => {
   const navContext = useCommandListNav("CommandItem");
+  const store = useComposerContextStore();
 
   const isHighlighted = navContext.highlightedValue === value;
 
   return (
     <Commands.Item
       ref={isHighlighted ? navContext.scrollHighlightedIntoView : undefined}
+      id={optionDomId(store.listboxId, value)}
+      aria-selected={isHighlighted}
       data-composer-command-item=""
       highlighted={isHighlighted}
       onMouseDown={(event) => {

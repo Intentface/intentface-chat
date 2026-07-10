@@ -235,11 +235,7 @@ describe("presentation-only elements (badge hint)", () => {
 
   test("hints are zero-width for position mapping; points inside clamp", () => {
     const hintLabel = textNode("smus");
-    const hint = element(
-      "SPAN",
-      { "data-command-hint": "", contenteditable: "false" },
-      hintLabel,
-    );
+    const hint = element("SPAN", { "data-command-hint": "", contenteditable: "false" }, hintLabel);
     const after = textNode(" end");
     const root = editorRoot(textNode("hi "), badgeSpan(textNode("@ra"), hint), after);
     // Text after the badge starts at 6 ("hi @ra") — the hint contributes 0.

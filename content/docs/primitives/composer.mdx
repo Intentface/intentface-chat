@@ -191,17 +191,62 @@ for `Escape` to call `onStop`, unless the event was already handled.
 
 ## Accessibility
 
+### Command popup (combobox)
+
+The editor is a `role="textbox"` with combobox wiring: `aria-autocomplete="list"`,
+`aria-haspopup="listbox"`, plus `aria-controls` and `aria-activedescendant`
+while a trigger popup is open. The popup renders `role="listbox"` (labelled
+"Suggestions", overridable) with `role="option"` rows carrying stable ids and
+`aria-selected` on the highlight — keyboard selection stays in the editor, so
+rows are never tab stops. Grouped lists wrap in `role="group"` labelled by
+their `CommandGroupLabel`. Async resolution sets `aria-busy` on the listbox and
+the empty state is a `role="status"` region. Committed mention chips announce
+as atomic tokens ("Label, @ mention").
+
+One deliberate deviation from the strict APG combobox pattern: `aria-expanded`
+is omitted — ARIA 1.2 forbids it on `textbox`, and switching to
+`role="combobox"` would forbid `aria-multiline`, which matters more for a
+multiline chat field. The popup announces through `aria-haspopup` and live
+`aria-activedescendant` narration instead. Tab selects the highlighted option
+while the popup is open (Linear-style) rather than moving focus.
+
+The placeholder overlay is `aria-hidden` — assistive tech hears the string
+`placeholder` prop via `aria-placeholder`. When rich `children` replace the
+string, keep a `placeholder` string alongside (children win visually) so the
+hint still announces.
+
+### Ask-user questions
+
+While `questions` are active, the options form a labelled group: `AskUser.Options`
+renders `role="radiogroup"` (single-select) or `role="group"` (multi-select),
+named by `AskUser.Label` and described by `AskUser.StepLabel` automatically.
+Each `AskUser.Option` is the real control — `role="radio"` / `role="checkbox"`
+with `aria-checked` — and holds the group's single tab stop via roving
+`tabindex`: DOM focus follows the highlight, entering the group on arrival and
+moving with ArrowUp/ArrowDown. Enter and Space select; Escape dismisses the
+step (from the options or the editor); typing any character returns focus to
+the editor as a free-text answer. Never nest an interactive control inside an
+option — the option itself is the control, and the composer's question-mode
+key handling treats native inputs as foreign editables.
+
 - **Form semantics.** The root renders a `<form>`; `Enter` submits and
   `Submit` is a real submit button, so the composer works with standard form
   and assistive-tech expectations.
-- **Click-to-focus.** `Container` is a focus proxy (`role="button"`,
-  `tabIndex={0}`): clicking its chrome focuses the editor, but clicks on nested
-  buttons, links, and inputs pass through.
-- **Ask-user focus.** Activating `questions` blurs the editor and moves key
-  handling to the options; typing any character returns focus to the editor for
-  a free-text answer.
-- **Submit labelling.** While generating, `Submit` sets
-  `aria-label="Stop generating"` so the morphed control is announced correctly.
+- **Click-to-focus.** `Container` is a mouse-only focus passthrough: clicking
+  its chrome focuses the editor, but clicks on nested buttons, links, and
+  inputs pass through. It carries no role and no tab stop — keyboard users tab
+  straight to the editor.
+- **Ask-user focus.** Activating `questions` moves focus into the options
+  group; typing any character returns focus to the editor for a free-text
+  answer.
+- **Default names.** `Submit` is named "Send message", flipping to
+  "Stop generating" while generating so the morphed control announces
+  correctly; `AttachmentTrigger` is named "Add attachment". Both are
+  overridable via `aria-label`.
+- **Busy states.** Submitting/generating are exposed as `data-submitting` on
+  the root and the `Submit` label flip — the package emits no live-region copy;
+  add a consumer-owned `role="status"` region if you want in-flight
+  announcements beyond the button state.
 
 ## API reference
 
@@ -257,8 +302,9 @@ your wire format (this app inlines blob URLs into AI SDK file parts with its
 
 ### Composer.Container
 
-Focus proxy and layout frame. Renders `data-composer-container`
-(`role="button"`, `tabIndex={0}`); clicking its chrome focuses the editor.
+Focus proxy and layout frame. Renders `data-composer-container`; clicking its
+chrome focuses the editor. Not focusable itself — it carries no role or tab
+stop.
 
 ### Composer.Textarea
 
@@ -369,7 +415,8 @@ export const attachmentsProps = [
 ### Composer.AttachmentTrigger
 
 Button that opens the file dialog. Renders
-`data-composer-attachment-trigger`. No part-specific props.
+`data-composer-attachment-trigger` named "Add attachment" by default. No
+part-specific props.
 
 ### Composer.Panel
 

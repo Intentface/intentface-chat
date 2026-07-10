@@ -1,0 +1,4 @@
+[test]
+# DOM environment for the *.a11y.test.tsx layer (happy-dom). The pure suites
+# ignore the globals; accessibility-tree assertions need a real render target.
+preload = ["./tests/a11y/preload.ts"]

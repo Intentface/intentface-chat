@@ -122,6 +122,8 @@ export type ComposerCommandsState = ComposerPanelSlice & {
   trigger: string | null;
   query: string;
   highlightIndex: number;
+  /** DOM id of the highlighted option row — the editor's aria-activedescendant. Written by the mounted Command as the highlight resolves. */
+  activeOptionId: string | null;
 };
 
 export type ComposerState = {
@@ -145,6 +147,14 @@ export type ComposerStore = {
   setHasContent: (value: boolean) => void;
   setIsSubmitting: (value: boolean) => void;
   setCommands: (next: { active: boolean; trigger: string | null; query: string }) => void;
+  setActiveOptionId: (id: string | null) => void;
+  /**
+   * Stable per-instance id for the command listbox — the editor references it
+   * via aria-controls; option rows derive their ids from it. Assigned by the
+   * mounting Composer.Root from React's useId (SSR-stable); the factory can't
+   * mint it because explicit handles are created outside React.
+   */
+  listboxId: string;
   moveHighlight: (direction: number) => void;
   setHighlight: (index: number) => void;
   setQuestions: (questions: AskUserQuestion[] | null) => void;
@@ -179,13 +189,21 @@ export type ComposerStore = {
 // the store factory so activateAskUser reads as just "blur, listen, unlisten".
 // ---------------------------------------------------------------------------
 
-// Scope a document-level listener to this composer: ignore keystrokes aimed at
-// another editable (e.g. a second composer on the same page). Options/body
-// focus (no editable host) still counts as ours, so "type to answer" works.
-const isEventForComposer = (event: KeyboardEvent, editorDom: HTMLElement | undefined) => {
+// Scope a document-level listener to this composer: keystrokes aimed at
+// another editable or inside another composer's options are theirs; our own
+// options/editor and unclaimed targets (body — e.g. after a click on panel
+// chrome dropped focus) are ours, so arrows and "type to answer" keep working.
+const isEventForComposer = (
+  event: KeyboardEvent,
+  editorDom: HTMLElement | undefined,
+  optionsElement: HTMLElement | null,
+) => {
   const target = event.target as HTMLElement | null;
   const editableHost = target?.closest<HTMLElement>('input, textarea, [contenteditable="true"]');
-  return !editableHost || editableHost === editorDom;
+  if (editableHost) return editableHost === editorDom;
+  const optionsHost = target?.closest<HTMLElement>("[data-ask-user-options]");
+  if (optionsHost) return optionsHost === optionsElement;
+  return true;
 };
 
 type AskUserKeydownDeps = {
@@ -200,7 +218,16 @@ type AskUserKeydownDeps = {
 const createAskUserKeydownHandler =
   ({ controller, optionsRef, editorRef, dispatch }: AskUserKeydownDeps) =>
   (event: KeyboardEvent) => {
-    if (!isEventForComposer(event, editorRef.current?.getRootElement() ?? undefined)) return;
+    const scopedOptionsElement = optionsRef.current?.getElement() ?? null;
+    if (
+      !isEventForComposer(
+        event,
+        editorRef.current?.getRootElement() ?? undefined,
+        scopedOptionsElement,
+      )
+    ) {
+      return;
+    }
 
     const optionsHandle = optionsRef.current;
     const action = interpretAskUserKey(
@@ -325,8 +352,19 @@ export const createComposerStore = (): ComposerStore => {
         // exit animation finishes and finalizePanelClose() clears it.
         present: next.active || current.present,
         highlightIndex: resetHighlight ? 0 : current.highlightIndex,
+        // A closed popup has no active descendant; while open, the mounted
+        // Command re-derives it as the highlight resolves.
+        activeOptionId: next.active ? current.activeOptionId : null,
       },
     };
+    notify();
+  };
+
+  // The editor's aria-activedescendant target — written by the mounted
+  // Command, which is where highlight index resolves against the item list.
+  const setActiveOptionId = (id: string | null) => {
+    if (snapshot.commands.activeOptionId === id) return;
+    snapshot = { ...snapshot, commands: { ...snapshot.commands, activeOptionId: id } };
     notify();
   };
 
@@ -383,8 +421,12 @@ export const createComposerStore = (): ComposerStore => {
         case "focus-input":
           controller.focus();
           break;
-        case "blur-input":
-          controller.blur();
+        case "focus-options":
+          // Step advance / navigation: focus lands on the new step's
+          // highlighted option (roving tabindex), never on <body>. Deferred a
+          // microtask so the incoming step's options have registered
+          // (reset-highlight runs first; auto-highlight re-seats on mount).
+          queueMicrotask(() => optionsRef.current?.focusHighlighted());
           break;
         case "reset-highlight":
           optionsRef.current?.resetHighlight();
@@ -437,10 +479,11 @@ export const createComposerStore = (): ComposerStore => {
   };
 
   // Ask-user mode: while questions are active the options own the keyboard.
-  // Entering blurs the editor; document-level keys are interpreted (pure) and
-  // dispatched here, so custom AskUser renders keep the behavior for free.
+  // Entering moves DOM focus onto the highlighted option (roving tabindex),
+  // and the keydown listener sits at the document, scoped by containment
+  // (isEventForComposer) — so keys keep flowing after a chrome click drops
+  // focus to <body>, while a second composer's editor/options never hear them.
   const activateAskUser = () => {
-    controller.blur();
     const handleKeyDown = createAskUserKeydownHandler({
       controller,
       optionsRef,
@@ -448,14 +491,31 @@ export const createComposerStore = (): ComposerStore => {
       dispatch: dispatchAskUser,
     });
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+
+    // The Options part renders in reaction to setQuestions' notify — one
+    // commit after this call — so the entry focus defers a frame.
+    const frame = requestAnimationFrame(() => {
+      optionsRef.current?.focusHighlighted();
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   };
 
   // --- Initial snapshot
   snapshot = {
     textarea: { ...controller, hasContent: false },
     isSubmitting: false,
-    commands: { active: false, present: false, trigger: null, query: "", highlightIndex: 0 },
+    commands: {
+      active: false,
+      present: false,
+      trigger: null,
+      query: "",
+      highlightIndex: 0,
+      activeOptionId: null,
+    },
     attachments: {
       items: attachmentState.items,
       error: attachmentState.error,
@@ -527,6 +587,8 @@ export const createComposerStore = (): ComposerStore => {
     setHasContent,
     setIsSubmitting,
     setCommands,
+    setActiveOptionId,
+    listboxId: "",
     moveHighlight,
     setHighlight,
     setQuestions,

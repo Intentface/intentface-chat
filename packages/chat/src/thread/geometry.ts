@@ -1,10 +1,20 @@
 // Pure DOM geometry + measurement for the thread scroll subsystem. No React —
 // unit-testable with stubbed elements/rects.
 
+// Queried per call, not cached — the OS setting can change mid-session and
+// none of these scrolls are hot paths. Guarded for non-DOM (pure-test) callers.
+export const prefersReducedMotion = (): boolean =>
+  typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// "smooth" downgrades to "auto" under prefers-reduced-motion — deliberate
+// movements still happen, they just don't animate.
+export const resolveScrollBehavior = (behavior: ScrollBehavior): ScrollBehavior =>
+  behavior === "smooth" && prefersReducedMotion() ? "auto" : behavior;
+
 // Single place that performs the scroll, so callers just choose the behavior:
 // 'instant' for jumps that must not animate, 'smooth' for deliberate movements.
 export const scrollContainerTo = (el: HTMLElement, top: number, behavior: ScrollBehavior) => {
-  el.scrollTo({ top, behavior });
+  el.scrollTo({ top, behavior: resolveScrollBehavior(behavior) });
 };
 
 // A prepend = rows were added, nothing removed, and the previously-first row

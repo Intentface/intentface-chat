@@ -107,10 +107,13 @@ const AttachmentsItem = ({ className, render, style, ...elementProps }: Attachme
 
 export type AttachmentsRemoveProps = PrimitiveProps<"button"> & {
   onRemove: () => void;
+  /** Names the control per item ("Remove report.pdf") — without it, N remove buttons announce identically. */
+  filename?: string;
 };
 
 const AttachmentsRemove = ({
   onRemove,
+  filename,
   className,
   render,
   style,
@@ -122,7 +125,7 @@ const AttachmentsRemove = ({
     {
       props: [
         {
-          "aria-label": "Remove attachment",
+          "aria-label": filename ? `Remove ${filename}` : "Remove attachment",
           "data-attachments-remove": "",
           onClick: onRemove,
         },
@@ -179,11 +182,13 @@ const AttachmentsDropzone = ({
 
 export type AttachmentsErrorProps = PrimitiveProps<"span">;
 
+// role="alert" (assertive): a rejected pick/drop is a user-action failure that
+// should announce immediately. The copy inside stays the consumer's.
 const AttachmentsError = ({ className, render, style, ...elementProps }: AttachmentsErrorProps) =>
   useRenderElement(
     "span",
     { className, render, style },
-    { props: [{ "data-attachments-error": "" }, elementProps] },
+    { props: [{ role: "alert", "data-attachments-error": "" }, elementProps] },
   );
 
 export type AttachmentsTriggerProps = PrimitiveProps<"button">;
@@ -197,7 +202,10 @@ const AttachmentsTrigger = ({
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "data-attachments-trigger": "" }, elementProps] },
+    {
+      // Default overridable name — the trigger is typically icon-only.
+      props: [{ "aria-label": "Add attachment", "data-attachments-trigger": "" }, elementProps],
+    },
   );
 
 export const Attachments = Object.assign(AttachmentsRoot, {

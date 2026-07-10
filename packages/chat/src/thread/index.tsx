@@ -37,6 +37,7 @@ import {
   measureDockInset,
   measureTopInset,
   queryDockParts,
+  resolveScrollBehavior,
   scrollContainerTo,
   wasPrepended,
 } from "./geometry";
@@ -327,7 +328,7 @@ const useThreadScroll = (
       row.scrollIntoView({
         block: options.align ?? "start",
         inline: "nearest",
-        behavior: options.behavior ?? "smooth",
+        behavior: resolveScrollBehavior(options.behavior ?? "smooth"),
       });
       return true;
     },

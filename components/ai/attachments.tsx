@@ -121,12 +121,13 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
 
 type AttachmentsRemoveProps = {
   onRemove: () => void;
+  filename?: string;
   className?: string;
 };
 
-const AttachmentsRemove = ({ onRemove, className }: AttachmentsRemoveProps) => (
+const AttachmentsRemove = ({ onRemove, filename, className }: AttachmentsRemoveProps) => (
   <IconButton
-    aria-label="Remove attachment"
+    aria-label={filename ? `Remove ${filename}` : "Remove attachment"}
     className={cn(
       "absolute -top-1.5 -right-1.5 rounded-full  opacity-0 transition-opacity group-hover:opacity-100",
       className,
@@ -206,7 +207,11 @@ const AttachmentsError = ({ code, className, children }: AttachmentsErrorProps) 
   const content = children ?? (code ? ERROR_COPY[code] : null);
   if (!content) return null;
   return (
-    <span data-slot="attachments-error" className={cn("text-xs text-red-500", className)}>
+    <span
+      role="alert"
+      data-slot="attachments-error"
+      className={cn("text-xs text-red-500", className)}
+    >
       {content}
     </span>
   );
@@ -216,7 +221,7 @@ type AttachmentsTriggerProps = ComponentProps<typeof IconButton>;
 
 const AttachmentsTrigger = ({ children, className, ...props }: AttachmentsTriggerProps) => {
   return (
-    <IconButton type="button" variant="ghost" {...props}>
+    <IconButton type="button" variant="ghost" aria-label="Add attachment" {...props}>
       {children ?? <PaperClipIcon />}
     </IconButton>
   );

@@ -300,6 +300,12 @@ export const ComposerCommand = ({
   // Scroll *only* the list's own scroll container, never any ancestor: plain
   // scrollIntoView bubbles to the window too, so when the list is a portaled overlay
   // sitting near a viewport edge it would yank the whole page to reveal the row.
+  //
+  // Retirement condition: once WebKit/Gecko ship the ScrollIntoViewOptions
+  // `container` option (Chromium already has it), this whole function collapses
+  // to node.scrollIntoView({ block: "nearest", container: "nearest" }) — it
+  // scopes the scroll to the nearest scroll container and honors scroll-padding
+  // natively, retiring the scroller walk and the padding math below.
   const scrollHighlightedIntoView = useCallback((node: HTMLElement | null) => {
     if (!node) return;
     let scroller = node.parentElement;

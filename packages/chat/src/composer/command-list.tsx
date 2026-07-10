@@ -314,10 +314,19 @@ export const ComposerCommand = ({
       scroller = scroller.parentElement;
     }
     if (!scroller) return;
+    // Honor the scroller's CSS scroll-padding: the native scrollIntoView this
+    // math replaced (regressed in the collision-positioner change) consulted
+    // it, so the styled layer's scroll-py-* declaration keeps working — the
+    // consumer declares the inset, the package respects it.
+    const scrollerStyle = getComputedStyle(scroller);
+    const scrollPaddingTop = Number.parseFloat(scrollerStyle.scrollPaddingTop) || 0;
+    const scrollPaddingBottom = Number.parseFloat(scrollerStyle.scrollPaddingBottom) || 0;
     const item = node.getBoundingClientRect();
     const view = scroller.getBoundingClientRect();
-    if (item.top < view.top) scroller.scrollTop -= view.top - item.top;
-    else if (item.bottom > view.bottom) scroller.scrollTop += item.bottom - view.bottom;
+    const viewTop = view.top + scrollPaddingTop;
+    const viewBottom = view.bottom - scrollPaddingBottom;
+    if (item.top < viewTop) scroller.scrollTop -= viewTop - item.top;
+    else if (item.bottom > viewBottom) scroller.scrollTop += item.bottom - viewBottom;
   }, []);
 
   const navContext = useMemo<CommandListNavContextValue>(

@@ -1,29 +1,27 @@
 "use client";
 
-import {
-  FlaskConicalIcon,
-  MonitorIcon,
-  MoonIcon,
-  PaletteIcon,
-  PlusIcon,
-  SunIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { FlaskConicalIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import type { ThreadAutoScrollMode } from "@/components/ai/thread";
+import { AppearanceIcon } from "@/components/icons/appearance";
 import { ArrowDownIcon } from "@/components/icons/arrow-down";
+import { ColorSwatchIcon } from "@/components/icons/color-swatch";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
+import { MoonIcon } from "@/components/icons/moon";
+import { PlusMediumIcon } from "@/components/icons/plus-medium";
 import { SettingsIcon } from "@/components/icons/settings";
+import { SunIcon } from "@/components/icons/sun";
+import { TrashIcon } from "@/components/icons/trash";
 import { ThemeConfigurator } from "@/components/theme-configurator";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { useSettingsStore } from "@/lib/store/settings";
-import { FileTextIcon } from "./icons/file-text";
+import { BookIcon } from "./icons/book";
 import { GitHubIcon } from "./icons/github";
 import { NpmIcon } from "./icons/npm";
 
@@ -50,8 +48,9 @@ export const AppSidebar = () => {
 
   return (
     <Sidebar>
-      <Sidebar.Header>
+      <Sidebar.Header className="flex-row items-center justify-between">
         <IntentfaceLogo className="size-6" />
+        <Sidebar.Trigger />
       </Sidebar.Header>
       <Sidebar.Content>
         <Sidebar.Group>
@@ -61,7 +60,7 @@ export const AppSidebar = () => {
                 isActive={pathname === "/"}
                 render={
                   <Link href="/">
-                    <PlusIcon />
+                    <PlusMediumIcon />
                     <span>New Chat</span>
                   </Link>
                 }
@@ -81,7 +80,7 @@ export const AppSidebar = () => {
                       <Link href={`/chat/${chat.id}`}>
                         <span className="flex-1 truncate">{chat.title}</span>
                         <Sidebar.MenuAction showOnHover onClick={() => handleDelete(chat.id)}>
-                          <Trash2Icon />
+                          <TrashIcon />
                           <span className="sr-only">Delete</span>
                         </Sidebar.MenuAction>
                       </Link>
@@ -99,7 +98,7 @@ export const AppSidebar = () => {
             <Sidebar.MenuButton
               render={
                 <Link href="/docs">
-                  <FileTextIcon />
+                  <BookIcon />
                   <span>Docs</span>
                 </Link>
               }
@@ -145,7 +144,7 @@ export const AppSidebar = () => {
               />
               <DropdownMenu.Content side="top" align="start">
                 <DropdownMenu.Item onClick={() => setThemeConfiguratorOpen(true)}>
-                  <PaletteIcon />
+                  <ColorSwatchIcon />
                   Appearance
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
@@ -164,7 +163,7 @@ export const AppSidebar = () => {
                   <DropdownMenu.SubContent>
                     <DropdownMenu.RadioGroup value={theme} onValueChange={setTheme}>
                       <DropdownMenu.RadioItem value="system">
-                        <MonitorIcon />
+                        <AppearanceIcon />
                         System
                       </DropdownMenu.RadioItem>
                       <DropdownMenu.RadioItem value="light">

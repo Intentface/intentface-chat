@@ -6,9 +6,12 @@ import {
   useAskUserOption,
   useAskUserOptions,
 } from "@intentface/chat/ask-user";
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CircleHelpIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import { type ComponentProps, type RefObject, useState } from "react";
 import { ChevronDownIcon } from "@/components/icons/chevron-down";
+import { ChevronLeftMediumIcon } from "@/components/icons/chevron-left-medium";
+import { ChevronRightMediumIcon } from "@/components/icons/chevron-right-medium";
+import { CircleQuestionmarkIcon } from "@/components/icons/circle-questionmark";
 import { Collapsible } from "@/components/ui/collapsible";
 import type { AskUserQuestion } from "@/lib/ai/types";
 import { cn } from "@/lib/utils";
@@ -57,7 +60,7 @@ type AskUserPreviousProps = ComponentProps<typeof AskUserPrimitive.Previous>;
 
 const AskUserPrevious = ({ className, ...props }: AskUserPreviousProps) => (
   <AskUserPrimitive.Previous className={cn(navigationButtonClasses, className)} {...props}>
-    <ChevronLeftIcon className="size-3.5" />
+    <ChevronLeftMediumIcon className="size-3.5" />
   </AskUserPrimitive.Previous>
 );
 
@@ -66,7 +69,7 @@ type AskUserNextProps = ComponentProps<typeof AskUserPrimitive.Next>;
 
 const AskUserNext = ({ className, ...props }: AskUserNextProps) => (
   <AskUserPrimitive.Next className={cn(navigationButtonClasses, className)} {...props}>
-    <ChevronRightIcon className="size-3.5" />
+    <ChevronRightMediumIcon className="size-3.5" />
   </AskUserPrimitive.Next>
 );
 
@@ -213,7 +216,7 @@ const AskUserSummary = ({ questions, answers, className, ...props }: AskUserSumm
         {questions.map((q) => (
           <div key={q.question} className="flex gap-2 leading-tight">
             <div className="flex h-lh shrink-0 items-center justify-center">
-              <CircleHelpIcon className="size-4" />
+              <CircleQuestionmarkIcon className="size-4" />
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium leading-tight">{q.question}</span>

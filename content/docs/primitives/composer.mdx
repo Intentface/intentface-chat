@@ -272,6 +272,7 @@ export const textareaProps = [
   { name: "onValueChange", type: "(text: string) => void", description: "Fires on each editor update with plain text." },
   { name: "disabled", type: "boolean", default: "false", description: "Makes the editor non-editable." },
   { name: "autoFocus", type: "boolean", default: "false", description: "Focus the editor on mount." },
+  { name: "placeholder", type: "string", description: "Native-textarea-style placeholder (also sets aria-placeholder). For rich content, pass children instead." },
   { name: "renderChip", type: "(chip: ChipData) => ReactNode", description: "Custom renderer for a committed chip." },
   { name: "children", type: "ReactNode", description: "Placeholder overlay, shown while empty." },
   { name: "maxLength", type: "number", description: "Logical-length cap — one per character, one per chip. IME input is capped at composition commit." },

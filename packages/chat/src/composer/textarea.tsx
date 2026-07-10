@@ -34,6 +34,8 @@ export type ComposerTextareaProps = Omit<
   onValueChange?: (text: string) => void;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Native-textarea-style placeholder string. For rich placeholder content, pass children instead (children win when both are set). */
+  placeholder?: string;
   /** Logical-length cap: one per character, one per chip. IME input is capped at composition commit. */
   maxLength?: number;
   /** Native form validation via the hidden input — blocks empty submits. */
@@ -75,6 +77,7 @@ export const ComposerTextarea = ({
   style,
   disabled = false,
   autoFocus = false,
+  placeholder,
   maxLength,
   required = false,
   name,
@@ -132,6 +135,7 @@ export const ComposerTextarea = ({
         // disabled editor out of the tab order like a native disabled textarea.
         tabIndex={disabled ? -1 : 0}
         aria-multiline="true"
+        aria-placeholder={placeholder}
         aria-disabled={disabled || undefined}
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
@@ -145,13 +149,13 @@ export const ComposerTextarea = ({
         style={{ whiteSpace: "break-spaces", overflowWrap: "break-word" }}
         {...editableProps}
       />
-      {!hasContent && children && (
+      {!hasContent && (children ?? placeholder) && (
         <div
           data-slot="composer-placeholder"
           style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
           aria-hidden="true"
         >
-          {children}
+          {children ?? placeholder}
         </div>
       )}
     </div>

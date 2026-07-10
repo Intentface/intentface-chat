@@ -142,6 +142,30 @@ describe("ask-user a11y", () => {
     cleanup();
   });
 
+  test("arrows still navigate after a chrome click drops focus to body", async () => {
+    const { unmount } = render(
+      <Composer questions={SINGLE} onSubmit={() => {}}>
+        <AskUserHarness />
+      </Composer>,
+    );
+    await flushFrames();
+
+    const radios = screen.getAllByRole("radio");
+
+    // A click on non-interactive panel chrome dumps focus to <body>. The
+    // document-level listener (containment-scoped) must still hear arrows.
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    expect(document.activeElement).toBe(document.body);
+
+    fireEvent.keyDown(document.body, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(radios[1] ?? null);
+
+    unmount();
+    cleanup();
+  });
+
   test("navigating past the list boundary keeps focus instead of dropping to body", async () => {
     const { unmount } = render(
       <Composer questions={SINGLE} onSubmit={() => {}}>

@@ -189,13 +189,21 @@ export type ComposerStore = {
 // the store factory so activateAskUser reads as just "blur, listen, unlisten".
 // ---------------------------------------------------------------------------
 
-// Scope a document-level listener to this composer: ignore keystrokes aimed at
-// another editable (e.g. a second composer on the same page). Options/body
-// focus (no editable host) still counts as ours, so "type to answer" works.
-const isEventForComposer = (event: KeyboardEvent, editorDom: HTMLElement | undefined) => {
+// Scope a document-level listener to this composer: keystrokes aimed at
+// another editable or inside another composer's options are theirs; our own
+// options/editor and unclaimed targets (body — e.g. after a click on panel
+// chrome dropped focus) are ours, so arrows and "type to answer" keep working.
+const isEventForComposer = (
+  event: KeyboardEvent,
+  editorDom: HTMLElement | undefined,
+  optionsElement: HTMLElement | null,
+) => {
   const target = event.target as HTMLElement | null;
   const editableHost = target?.closest<HTMLElement>('input, textarea, [contenteditable="true"]');
-  return !editableHost || editableHost === editorDom;
+  if (editableHost) return editableHost === editorDom;
+  const optionsHost = target?.closest<HTMLElement>("[data-ask-user-options]");
+  if (optionsHost) return optionsHost === optionsElement;
+  return true;
 };
 
 type AskUserKeydownDeps = {
@@ -210,7 +218,16 @@ type AskUserKeydownDeps = {
 const createAskUserKeydownHandler =
   ({ controller, optionsRef, editorRef, dispatch }: AskUserKeydownDeps) =>
   (event: KeyboardEvent) => {
-    if (!isEventForComposer(event, editorRef.current?.getRootElement() ?? undefined)) return;
+    const scopedOptionsElement = optionsRef.current?.getElement() ?? null;
+    if (
+      !isEventForComposer(
+        event,
+        editorRef.current?.getRootElement() ?? undefined,
+        scopedOptionsElement,
+      )
+    ) {
+      return;
+    }
 
     const optionsHandle = optionsRef.current;
     const action = interpretAskUserKey(
@@ -462,11 +479,10 @@ export const createComposerStore = (): ComposerStore => {
   };
 
   // Ask-user mode: while questions are active the options own the keyboard.
-  // Entering moves DOM focus onto the highlighted option (roving tabindex) —
-  // never to <body> — and the keydown handler attaches to the options
-  // container itself, so keys flow from real focus and a second composer on
-  // the page can never hear them. The document-level listener remains only as
-  // a fallback for consumers that render no Options part.
+  // Entering moves DOM focus onto the highlighted option (roving tabindex),
+  // and the keydown listener sits at the document, scoped by containment
+  // (isEventForComposer) — so keys keep flowing after a chrome click drops
+  // focus to <body>, while a second composer's editor/options never hear them.
   const activateAskUser = () => {
     const handleKeyDown = createAskUserKeydownHandler({
       controller,
@@ -474,25 +490,17 @@ export const createComposerStore = (): ComposerStore => {
       editorRef,
       dispatch: dispatchAskUser,
     });
+    document.addEventListener("keydown", handleKeyDown);
 
     // The Options part renders in reaction to setQuestions' notify — one
-    // commit after this call — so element lookup, focus, and listener
-    // attachment defer a frame.
-    let detach: (() => void) | null = null;
-    let cancelled = false;
+    // commit after this call — so the entry focus defers a frame.
     const frame = requestAnimationFrame(() => {
-      if (cancelled) return;
-      const optionsElement = optionsRef.current?.getElement() ?? null;
       optionsRef.current?.focusHighlighted();
-      const target: EventTarget = optionsElement ?? document;
-      target.addEventListener("keydown", handleKeyDown as EventListener);
-      detach = () => target.removeEventListener("keydown", handleKeyDown as EventListener);
     });
 
     return () => {
-      cancelled = true;
       cancelAnimationFrame(frame);
-      detach?.();
+      document.removeEventListener("keydown", handleKeyDown);
     };
   };
 

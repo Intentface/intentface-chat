@@ -102,3 +102,42 @@ describe("interpretAskUserKey", () => {
     ).toBeNull();
   });
 });
+
+describe("interpretEditorKey: submitOn", () => {
+  const inverted = { ...baseContext, submitOn: "shift-enter" as const };
+
+  test("shift-enter mode swaps the chord mapping", () => {
+    expect(interpretEditorKey({ key: "Enter", shiftKey: true }, inverted)).toEqual({
+      type: "submit-form",
+    });
+    expect(interpretEditorKey({ key: "Enter", shiftKey: false }, inverted)).toEqual({
+      type: "soft-break",
+    });
+  });
+
+  test("an open command list still owns plain Enter (select) in shift-enter mode", () => {
+    expect(
+      interpretEditorKey(
+        { key: "Enter", shiftKey: false },
+        { ...inverted, isCommandListOpen: true },
+      ),
+    ).toEqual({ type: "command-select" });
+  });
+
+  test("the send chord never submits while the command list is open", () => {
+    // Default mode: Shift+Enter (non-send) soft-breaks — unchanged.
+    expect(
+      interpretEditorKey(
+        { key: "Enter", shiftKey: true },
+        { ...baseContext, isCommandListOpen: true },
+      ),
+    ).toEqual({ type: "soft-break" });
+    // Inverted mode: Shift+Enter is the send chord, but the popup suppresses it.
+    expect(
+      interpretEditorKey(
+        { key: "Enter", shiftKey: true },
+        { ...inverted, isCommandListOpen: true },
+      ),
+    ).toEqual({ type: "soft-break" });
+  });
+});

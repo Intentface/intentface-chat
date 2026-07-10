@@ -84,7 +84,7 @@ Every part below is rendered inside the `<Composer>` subtree and reads context v
 Visual wrapper that focuses the editor on click. Standard `div` props.
 
 #### `Composer.Textarea`
-The TipTap editor surface. Handles paste (files + chip markdown), keyboard shortcuts (Enter/Shift+Enter/Backspace), and command-list trigger detection.
+The contenteditable editor surface (flat segment engine; `Composer.TextareaLegacy` keeps the TipTap implementation until the swap PR). Handles paste (files + chip markdown), keyboard shortcuts (Enter/Shift+Enter/Backspace), command-list trigger detection, and form participation (`name`/`required`/`maxLength`).
 
 | Prop | Type | Default | Notes |
 |---|---|---|---|

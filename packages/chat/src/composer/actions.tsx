@@ -158,7 +158,9 @@ export const ComposerSubmit = ({
         {
           type: submit.type,
           "data-composer-submit": "",
-          "aria-label": isGenerating ? "Stop generating" : undefined,
+          // Default overridable names for the (typically icon-only) morphing
+          // control — both states announce, not just the stop affordance.
+          "aria-label": isGenerating ? "Stop generating" : "Send message",
           disabled: submit.disabled,
           // Replaces (not chains) the consumer's onClick while generating —
           // a stop click must never fall through to submit handlers.

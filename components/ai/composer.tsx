@@ -133,7 +133,10 @@ const ComposerAttachments = ({
                   <AnimatePresence initial={false}>
                     {attachments.items.map((attachment) => (
                       <Attachments.Item key={attachment.id} item={attachment}>
-                        <Attachments.Remove onRemove={() => attachments.remove(attachment.id)} />
+                        <Attachments.Remove
+                          filename={attachment.filename}
+                          onRemove={() => attachments.remove(attachment.id)}
+                        />
                       </Attachments.Item>
                     ))}
                   </AnimatePresence>
@@ -317,7 +320,7 @@ const ComposerSubmit = ({
       variant="accent"
       data-slot="composer-submit"
       data-generating={isGenerating ? "" : undefined}
-      aria-label={isGenerating ? "Stop generating" : undefined}
+      aria-label={isGenerating ? "Stop generating" : "Send message"}
       className={cn("rounded-full", className)}
       disabled={submit.disabled}
       onClick={isGenerating ? () => onStop?.() : onClick}

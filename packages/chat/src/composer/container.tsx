@@ -38,10 +38,11 @@ export const ComposerContainer = ({
     {
       // Register the element so Composer.Popover can observe it for repositioning.
       ref: store.containerRef,
+      // No role/tabIndex: the chrome is a mouse-only focus passthrough, not a
+      // control — keyboard users tab straight to the editor, and an unnamed
+      // focusable "button" would only add a broken tab stop.
       props: [
         {
-          role: "button",
-          tabIndex: 0,
           "data-composer-container": "",
           onMouseDown: handleMouseDown,
         },

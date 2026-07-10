@@ -232,14 +232,21 @@ key handling treats native inputs as foreign editables.
 - **Form semantics.** The root renders a `<form>`; `Enter` submits and
   `Submit` is a real submit button, so the composer works with standard form
   and assistive-tech expectations.
-- **Click-to-focus.** `Container` is a focus proxy (`role="button"`,
-  `tabIndex={0}`): clicking its chrome focuses the editor, but clicks on nested
-  buttons, links, and inputs pass through.
+- **Click-to-focus.** `Container` is a mouse-only focus passthrough: clicking
+  its chrome focuses the editor, but clicks on nested buttons, links, and
+  inputs pass through. It carries no role and no tab stop — keyboard users tab
+  straight to the editor.
 - **Ask-user focus.** Activating `questions` moves focus into the options
   group; typing any character returns focus to the editor for a free-text
   answer.
-- **Submit labelling.** While generating, `Submit` sets
-  `aria-label="Stop generating"` so the morphed control is announced correctly.
+- **Default names.** `Submit` is named "Send message", flipping to
+  "Stop generating" while generating so the morphed control announces
+  correctly; `AttachmentTrigger` is named "Add attachment". Both are
+  overridable via `aria-label`.
+- **Busy states.** Submitting/generating are exposed as `data-submitting` on
+  the root and the `Submit` label flip — the package emits no live-region copy;
+  add a consumer-owned `role="status"` region if you want in-flight
+  announcements beyond the button state.
 
 ## API reference
 
@@ -295,8 +302,9 @@ your wire format (this app inlines blob URLs into AI SDK file parts with its
 
 ### Composer.Container
 
-Focus proxy and layout frame. Renders `data-composer-container`
-(`role="button"`, `tabIndex={0}`); clicking its chrome focuses the editor.
+Focus proxy and layout frame. Renders `data-composer-container`; clicking its
+chrome focuses the editor. Not focusable itself — it carries no role or tab
+stop.
 
 ### Composer.Textarea
 
@@ -407,7 +415,8 @@ export const attachmentsProps = [
 ### Composer.AttachmentTrigger
 
 Button that opens the file dialog. Renders
-`data-composer-attachment-trigger`. No part-specific props.
+`data-composer-attachment-trigger` named "Add attachment" by default. No
+part-specific props.
 
 ### Composer.Panel
 

@@ -81,6 +81,8 @@ export const ComposerAttachmentTrigger = ({
     {
       props: [
         {
+          // Default overridable name — the trigger is typically icon-only.
+          "aria-label": "Add attachment",
           "data-composer-attachment-trigger": "",
           onClick: () => attachments.openFileDialog(),
         },

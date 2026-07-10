@@ -44,9 +44,12 @@ With a drop zone and a picker trigger:
 
 ## Accessibility
 
-`Attachments.Remove` renders a `<button aria-label="Remove attachment">`, and
-`Attachments.Trigger` is a real button — both operable and labelled for
-assistive tech.
+`Attachments.Remove` and `Attachments.Trigger` are real buttons with default
+overridable names ("Remove attachment" / "Add attachment"). Pass `filename` to
+`Remove` so each chip announces distinctly ("Remove report.pdf") — without it,
+N remove buttons all read the same. `Attachments.Error` is a `role="alert"`
+live region: content appearing inside it announces immediately (the copy is
+still yours).
 
 ## API reference
 
@@ -82,11 +85,12 @@ export const itemAttrs = [
 
 ### Attachments.Remove
 
-Removal affordance, shown on hover. Renders `<button data-attachments-remove
-aria-label="Remove attachment">`.
+Removal affordance, shown on hover. Renders `<button data-attachments-remove>`
+named "Remove attachment", or "Remove {filename}" when `filename` is set.
 
 export const removeProps = [
   { name: "onRemove", type: "() => void", default: "(required)", description: "Called when the button is clicked." },
+  { name: "filename", type: "string", description: "Interpolated into the accessible name so each chip's remove button announces distinctly." },
 ];
 
 <PropsTable rows={removeProps} />
@@ -114,14 +118,16 @@ export const dropzoneAttrs = [
 
 ### Attachments.Error
 
-Validation message slot. Renders `<span data-attachments-error>`.
-Validation emits a structured `AttachmentErrorCode` (`"accept"`,
-`"max_file_size"`, `"max_files"`) on the composer's attachments state — you map
-codes to your own (localized) copy; the package ships no messages.
+Validation message slot. Renders `<span role="alert" data-attachments-error>`,
+so content appearing inside it announces immediately. Validation emits a
+structured `AttachmentErrorCode` (`"accept"`, `"max_file_size"`, `"max_files"`)
+on the composer's attachments state — you map codes to your own (localized)
+copy; the package ships no messages.
 
 ### Attachments.Trigger
 
-The file-picker button. Renders `<button data-attachments-trigger>`.
+The file-picker button. Renders `<button data-attachments-trigger>` named
+"Add attachment" by default.
 
 ## Utilities
 

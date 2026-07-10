@@ -1,13 +1,17 @@
-// Document — conversions between the live TipTap editor and the wire formats:
-// the opaque snapshot (ProseMirror JSON) and the {text} submit payload (chips
-// ride inline in the text as chip: markdown tokens). Also builds the
-// editor-bound imperative controller, since every controller operation is a
-// document operation.
+// Document — the TipTap side of the editor seam: conversions between the live
+// editor and the wire formats (the opaque snapshot, the {text} submit payload
+// with chips riding inline as chip: markdown tokens), and the RegisteredEditor
+// adapter the mounted Textarea registers with the store.
 
 import type { Editor } from "@tiptap/react";
-import type { RefObject } from "react";
-import { type ChipIconKey, type ChipSegment, encodeChipMarkdown } from "../chip-markdown";
-import type { ComposerEditorHandle, ComposerSnapshot } from "./types";
+import {
+  type ChipData,
+  type ChipIconKey,
+  type ChipSegment,
+  encodeChipMarkdown,
+} from "../chip-markdown";
+import { commandListPluginKey } from "./prefix-plugin";
+import type { ComposerSnapshot, RegisteredEditor } from "./types";
 
 // ---------------------------------------------------------------------------
 // Chip segments → editor nodes. This module owns the mentionChip/paragraph
@@ -120,30 +124,73 @@ export const serializeDocument = (doc: SerializableNode): { text: string } => {
 export const serializeEditorContent = (editor: Editor): { text: string } =>
   serializeDocument(editor.state.doc as unknown as SerializableNode);
 
-// The single ComposerEditorHandle implementation plus the read/serialize
-// operations internal callers need — a null-safe port over the store's
-// registered editor instance.
-export type ComposerEditorState = ComposerEditorHandle & {
-  getText: () => string;
-  setText: (text: string) => void;
-  serialize: () => { text: string };
-  ensureFocus: () => void;
+// ---------------------------------------------------------------------------
+// Command-commit helpers — the editor mutations a command selection performs
+// (moved here from the command list, which now speaks RegisteredEditor).
+// ---------------------------------------------------------------------------
+
+// The active trigger's document range, read from the plugin's mirror. Falls
+// back to the caret when the plugin has no active token.
+const resolveTriggerRange = (editor: Editor): { from: number; to: number } => {
+  const pluginState = commandListPluginKey.getState(editor.state);
+  return {
+    from: pluginState?.triggerStartPosition ?? 0,
+    to: pluginState?.triggerEndPosition ?? editor.state.selection.$from.pos,
+  };
 };
 
-export const createEditorController = (
-  editorRef: RefObject<Editor | null>,
-): ComposerEditorState => ({
-  focus: () => editorRef.current?.commands.focus(),
-  blur: () => editorRef.current?.commands.blur(),
-  clear: () => editorRef.current?.commands.setContent(""),
-  insertText: (text) => editorRef.current?.commands.insertContent(text),
-  insertChip: (chip) =>
-    editorRef.current?.commands.insertContent({ type: "mentionChip", attrs: chip }),
-  getText: () => editorRef.current?.getText() ?? "",
-  setText: (text) => editorRef.current?.commands.setContent(text),
-  serialize: () => (editorRef.current ? serializeEditorContent(editorRef.current) : { text: "" }),
-  ensureFocus: () => {
-    const editor = editorRef.current;
-    if (editor && !editor.isFocused) editor.commands.focus();
+// Replace the trigger range with a mention chip. Adds a trailing space so the
+// user can keep typing — unless one already follows (mid-sentence mention), to
+// avoid doubling it.
+const insertMentionChip = (editor: Editor, chip: ChipData, range: { from: number; to: number }) => {
+  const docEnd = editor.state.doc.content.size;
+  const charAfter = range.to < docEnd ? editor.state.doc.textBetween(range.to, range.to + 1) : "";
+  const chain = editor
+    .chain()
+    .focus()
+    .deleteRange(range)
+    .insertContentAt(range.from, {
+      type: "mentionChip",
+      attrs: {
+        prefix: chip.prefix,
+        label: chip.label,
+        value: chip.value,
+        icon: chip.icon ?? null,
+      },
+    });
+  if (charAfter !== " ") chain.insertContent(" ");
+  chain.run();
+};
+
+const closeCommandPopup = (editor: Editor) => {
+  editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
+};
+
+// ---------------------------------------------------------------------------
+// RegisteredEditor adapter — wraps a live TipTap instance into the
+// engine-agnostic contract the store and the shared command list speak.
+// ---------------------------------------------------------------------------
+
+export const createTiptapRegisteredEditor = (editor: Editor): RegisteredEditor => ({
+  focus: () => editor.commands.focus(),
+  blur: () => editor.commands.blur(),
+  clear: () => editor.commands.setContent(""),
+  insertText: (text) => editor.commands.insertContent(text),
+  insertChip: (chip) => editor.commands.insertContent({ type: "mentionChip", attrs: chip }),
+  getText: () => editor.getText(),
+  setText: (text) => editor.commands.setContent(text),
+  serialize: () => serializeEditorContent(editor),
+  isFocused: () => editor.isFocused,
+  getRootElement: () => editor.view.dom,
+  getSnapshot: () => snapshotFromEditor(editor),
+  applySnapshot: (snapshot) => applySnapshotToEditor(editor, snapshot),
+  insertChipAtTrigger: (chip) => insertMentionChip(editor, chip, resolveTriggerRange(editor)),
+  deleteTrigger: () => {
+    editor.chain().focus().deleteRange(resolveTriggerRange(editor)).run();
+  },
+  closeCommands: () => closeCommandPopup(editor),
+  dismissCommands: () => {
+    editor.view.focus();
+    closeCommandPopup(editor);
   },
 });

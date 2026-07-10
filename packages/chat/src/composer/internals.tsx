@@ -4,7 +4,6 @@
 // (command registry, editor-update reporting) and the small hooks the parts
 // build on. Not consumer API.
 
-import type { Editor } from "@tiptap/react";
 import {
   createContext,
   type RefObject,
@@ -15,9 +14,8 @@ import {
   useRef,
 } from "react";
 import { createDragHandlers } from "./attachments-machine";
-import { applySnapshotToEditor, snapshotFromEditor } from "./document";
-import type { RegisteredPrefix } from "./prefix-plugin";
-import type { ComposerCommandsMap, ComposerSnapshot } from "./types";
+import type { RegisteredPrefix } from "./prefix-detection";
+import type { ComposerCommandsMap, ComposerSnapshot, RegisteredEditor } from "./types";
 
 // ---------------------------------------------------------------------------
 // Generic hooks — small, composer-agnostic utilities the parts build on.
@@ -47,7 +45,7 @@ export const useAsRef = <T,>(value: T) => {
 export type ComposerInternalsValue = {
   commands: ComposerCommandsMap;
   getRegisteredPrefixes: () => RegisteredPrefix[];
-  reportEditorUpdate: (editor: Editor) => void;
+  reportEditorUpdate: () => void;
 };
 
 export const ComposerInternalsContext = createContext<ComposerInternalsValue | null>(null);
@@ -121,11 +119,11 @@ export const useComposerSnapshot = ({
   value,
   onValueChange,
 }: {
-  editorRef: RefObject<Editor | null>;
+  editorRef: RefObject<RegisteredEditor | null>;
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
-}): { reportEditorUpdate: (editor: Editor) => void } => {
+}): { reportEditorUpdate: () => void } => {
   const isControlled = value !== undefined;
   const lastAppliedRef = useRef<ComposerSnapshot | null>(null);
   const initializedRef = useRef(false);
@@ -136,7 +134,7 @@ export const useComposerSnapshot = ({
     const editor = editorRef.current;
     if (!editor || initializedRef.current) return;
     if (defaultValue) {
-      applySnapshotToEditor(editor, defaultValue);
+      editor.applySnapshot(defaultValue);
       lastAppliedRef.current = defaultValue;
     }
     initializedRef.current = true;
@@ -147,16 +145,17 @@ export const useComposerSnapshot = ({
     const editor = editorRef.current;
     if (!editor || !value) return;
     if (lastAppliedRef.current === value) return;
-    applySnapshotToEditor(editor, value);
+    editor.applySnapshot(value);
     lastAppliedRef.current = value;
   }, [editorRef, isControlled, value]);
 
-  const reportEditorUpdate = useCallback((editor: Editor) => {
-    if (!onValueChangeRef.current) return;
-    const snapshot = snapshotFromEditor(editor);
+  const reportEditorUpdate = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor || !onValueChangeRef.current) return;
+    const snapshot = editor.getSnapshot();
     lastAppliedRef.current = snapshot;
     onValueChangeRef.current(snapshot);
-  }, []);
+  }, [editorRef]);
 
   return { reportEditorUpdate };
 };

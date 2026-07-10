@@ -14,7 +14,6 @@
 // handler (client-only), so server renders only ever read the pristine
 // snapshot.
 
-import type { Editor } from "@tiptap/react";
 import { createContext, type RefObject, use, useSyncExternalStore } from "react";
 import type { AskUserOptionsHandle } from "../ask-user";
 import {
@@ -37,9 +36,44 @@ import {
   attachmentReducer,
   INITIAL_ATTACHMENT_STATE,
 } from "./attachments-machine";
-import { type ComposerEditorState, createEditorController } from "./document";
 import { interpretAskUserKey } from "./keyboard";
-import type { AskUserQuestion, ComposerAnswerEntry } from "./types";
+import type {
+  AskUserQuestion,
+  ComposerAnswerEntry,
+  ComposerEditorHandle,
+  RegisteredEditor,
+} from "./types";
+
+// ---------------------------------------------------------------------------
+// Editor controller — the null-safe imperative surface over the store's
+// registered editor. Safe to hold before any editor mounts and across
+// engine swaps; every call no-ops (or returns an empty value) while no
+// editor is registered.
+// ---------------------------------------------------------------------------
+
+export type ComposerEditorState = ComposerEditorHandle & {
+  getText: () => string;
+  setText: (text: string) => void;
+  serialize: () => { text: string };
+  ensureFocus: () => void;
+};
+
+const createEditorController = (
+  editorRef: RefObject<RegisteredEditor | null>,
+): ComposerEditorState => ({
+  focus: () => editorRef.current?.focus(),
+  blur: () => editorRef.current?.blur(),
+  clear: () => editorRef.current?.clear(),
+  insertText: (text) => editorRef.current?.insertText(text),
+  insertChip: (chip) => editorRef.current?.insertChip(chip),
+  getText: () => editorRef.current?.getText() ?? "",
+  setText: (text) => editorRef.current?.setText(text),
+  serialize: () => editorRef.current?.serialize() ?? { text: "" },
+  ensureFocus: () => {
+    const editor = editorRef.current;
+    if (editor && !editor.isFocused()) editor.focus();
+  },
+});
 
 // ---------------------------------------------------------------------------
 // State slices
@@ -121,11 +155,12 @@ export type ComposerStore = {
   // this once its close animation finishes, so closing content stays mounted until then.
   finalizePanelClose: () => void;
   reset: () => void;
-  // The store's editor instance: registered by the mounted Textarea, driven
-  // through the controller (a null-safe port over editorRef).
-  editorRef: RefObject<Editor | null>;
+  // The store's editor engine: registered by the mounted Textarea as a
+  // RegisteredEditor adapter, driven through the controller (a null-safe port
+  // over editorRef).
+  editorRef: RefObject<RegisteredEditor | null>;
   controller: ComposerEditorState;
-  registerEditor: (editor: Editor) => () => void;
+  registerEditor: (editor: RegisteredEditor) => () => void;
   // The mounted Composer.Container's element, registered by its render ref.
   // Composer.Popover anchors to the active command badge inside the editor, but
   // observes this box to reposition — the badge moves when the container grows
@@ -156,7 +191,7 @@ const isEventForComposer = (event: KeyboardEvent, editorDom: HTMLElement | undef
 type AskUserKeydownDeps = {
   controller: ComposerEditorState;
   optionsRef: RefObject<AskUserOptionsHandle | null>;
-  editorRef: RefObject<Editor | null>;
+  editorRef: RefObject<RegisteredEditor | null>;
   dispatch: (action: AskUserAction) => void;
 };
 
@@ -165,7 +200,7 @@ type AskUserKeydownDeps = {
 const createAskUserKeydownHandler =
   ({ controller, optionsRef, editorRef, dispatch }: AskUserKeydownDeps) =>
   (event: KeyboardEvent) => {
-    if (!isEventForComposer(event, editorRef.current?.view.dom)) return;
+    if (!isEventForComposer(event, editorRef.current?.getRootElement() ?? undefined)) return;
 
     const optionsHandle = optionsRef.current;
     const action = interpretAskUserKey(
@@ -220,10 +255,10 @@ export const createComposerStore = (): ComposerStore => {
     for (const listener of listeners) listener();
   };
 
-  // Per-store editor instance behind a null-safe controller.
-  const editorRef: RefObject<Editor | null> = { current: null };
+  // Per-store editor engine behind a null-safe controller.
+  const editorRef: RefObject<RegisteredEditor | null> = { current: null };
   const controller = createEditorController(editorRef);
-  const registerEditor = (editor: Editor) => {
+  const registerEditor = (editor: RegisteredEditor) => {
     editorRef.current = editor;
     return () => {
       if (editorRef.current === editor) editorRef.current = null;
@@ -334,8 +369,8 @@ export const createComposerStore = (): ComposerStore => {
   // --- Ask-user
   // The execute half of the ask-user flow: replay a transition's effects
   // against the editor controller, the options handle, and the submit
-  // callback. Input-content state is the editor's own job — tiptap v3 emits
-  // update events for programmatic setContent/clearContent.
+  // callback. Input-content state is the editor engine's own job — engines
+  // report programmatic setText/clear through their update path.
   const executeAskUserEffects = (effects: AskUserEffect[]) => {
     for (const effect of effects) {
       switch (effect.type) {

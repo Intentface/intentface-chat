@@ -5,7 +5,6 @@
 // Composer.createStore() handle via the store prop, or an instance created for
 // this mount. Every bare <Composer> is fully isolated.
 
-import type { Editor } from "@tiptap/react";
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
@@ -116,7 +115,7 @@ export const ComposerRoot = ({
   });
 
   const { reportEditorUpdate } = useComposerSnapshot({
-    editorRef: store.editorRef as { current: Editor | null },
+    editorRef: store.editorRef,
     defaultValue,
     value,
     onValueChange,

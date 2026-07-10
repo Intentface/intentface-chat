@@ -51,7 +51,7 @@ export const ComposerPopover = ({
   // across scroll/resize/container growth. A getter (not a captured element) so the
   // re-rendered badge decoration is always the current one.
   const getBadge = useCallback(
-    () => store.editorRef.current?.view.dom.querySelector("[data-command-badge]") ?? null,
+    () => store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]") ?? null,
     [store],
   );
   useAnchorPositioning(getBadge, elementRef, {

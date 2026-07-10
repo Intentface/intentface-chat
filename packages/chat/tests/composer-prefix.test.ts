@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { detectActivePrefix } from "../src/composer/prefix-plugin";
+import { detectActivePrefix } from "../src/composer/prefix-detection";
 
 // Helper: build the detect args from a one-line document with a caret marker.
 // "|"" marks the caret; positions are 1-based like ProseMirror text blocks

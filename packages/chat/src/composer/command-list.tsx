@@ -297,27 +297,23 @@ export const ComposerCommand = ({
 
   // Scroll the highlighted row into view as it becomes the highlight. Stable, so
   // React calls it only on highlight change — no per-render scroll, no effect.
-  // Scroll *only* the list's own scroll container, never any ancestor: plain
-  // scrollIntoView bubbles to the window too, so when the list is a portaled overlay
-  // sitting near a viewport edge it would yank the whole page to reveal the row.
+  //
+  // container:"nearest" hard-scopes the scroll to the list on Chromium.
+  // Safari/Firefox silently ignore the member (unknown dictionary keys) and
+  // run an UNSCOPED block:"nearest" — scrollIntoView then scrolls every
+  // ancestor scrolling box, the window included, whenever the row isn't
+  // viewport-visible.
+  //
+  // KNOWN BUG (accepted 2026-07-10): on Safari, arrowing through the list
+  // while the popup opens can scroll the page behind it (reproduced; the
+  // positioner's viewport containment is not sufficient there). Accepted in
+  // exchange for native scroll-padding support and −24 lines; goes away when
+  // WebKit ships `container`. If it starts to hurt sooner, the scoped manual
+  // implementation lives in this function's git history (PR #39, first
+  // commit).
   const scrollHighlightedIntoView = useCallback((node: HTMLElement | null) => {
-    if (!node) return;
-    let scroller = node.parentElement;
-    while (scroller) {
-      const overflowY = getComputedStyle(scroller).overflowY;
-      if (
-        (overflowY === "auto" || overflowY === "scroll") &&
-        scroller.scrollHeight > scroller.clientHeight
-      ) {
-        break;
-      }
-      scroller = scroller.parentElement;
-    }
-    if (!scroller) return;
-    const item = node.getBoundingClientRect();
-    const view = scroller.getBoundingClientRect();
-    if (item.top < view.top) scroller.scrollTop -= view.top - item.top;
-    else if (item.bottom > view.bottom) scroller.scrollTop += item.bottom - view.bottom;
+    // Cast: lib.dom doesn't know the `container` member yet (Chromium-only).
+    node?.scrollIntoView({ block: "nearest", container: "nearest" } as ScrollIntoViewOptions);
   }, []);
 
   const navContext = useMemo<CommandListNavContextValue>(

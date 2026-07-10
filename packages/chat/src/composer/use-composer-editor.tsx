@@ -37,7 +37,7 @@ import {
   writeCaretToDom,
 } from "./editor-dom";
 import { useAsRef, useComposerInternals, useIsomorphicLayoutEffect } from "./internals";
-import { interpretEditorKey } from "./keyboard";
+import { type ComposerSubmitOn, interpretEditorKey } from "./keyboard";
 import { CLOSED_COMMAND_STATE, type RegisteredPrefix } from "./prefix-detection";
 import {
   diffFlatText,
@@ -71,6 +71,8 @@ export type UseComposerEditorOptions = {
   disabled: boolean;
   autoFocus: boolean;
   maxLength?: number;
+  /** Which Enter chord sends; the other soft-breaks. Defaults to "enter". */
+  submitOn?: ComposerSubmitOn;
   value?: string;
   onValueChange?: (text: string) => void;
   renderChip?: (chip: ChipData) => ReactNode;
@@ -411,7 +413,7 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     // window) during composition — 229 covers engines that omit isComposing.
     if (event.isComposing || event.keyCode === 229) return;
 
-    const { store } = getDependencies();
+    const { store, options } = getDependencies();
     const action = interpretEditorKey(
       { key: event.key, shiftKey: event.shiftKey },
       {
@@ -419,6 +421,7 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
         hasActiveAskUser: (store.getSnapshot().askUser.questions?.length ?? 0) > 0,
         isEditorEmpty: getPlainText(doc) === "",
         hasAttachments: store.getSnapshot().attachments.items.length > 0,
+        submitOn: options.submitOn,
       },
     );
     if (!action) return;
@@ -479,6 +482,10 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
         // Unlike the legacy engine (a ProseMirror split replaced default
         // Enter), the browser's own insertParagraph must be blocked.
         event.preventDefault();
+        // A line break is a deliberate exit from an active trigger token —
+        // dismiss it like Escape (with re-entry suppression) before inserting,
+        // so the popup doesn't linger under the new line.
+        if (commandState.isOpen) closeCommands();
         insertPlainText("\n");
         return;
       }

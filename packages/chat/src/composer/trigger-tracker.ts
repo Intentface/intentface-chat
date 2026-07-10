@@ -74,12 +74,22 @@ export const trackActiveToken = (
     const prefixIntact =
       start + trigger.length <= scanText.length &&
       scanText.slice(start, start + trigger.length) === trigger;
-    // Stay open while the prefix survives and the caret is still inside.
-    if (prefixIntact && end >= start + trigger.length && caret >= start && caret <= end) {
+    const tokenText = scanText.slice(start, end);
+    // Stay open while the prefix survives and the caret is still inside — but
+    // a token can never span a line break: the sticky end would otherwise
+    // absorb an inserted "\n" (soft break, pasted newline) and drag the badge
+    // across lines.
+    if (
+      prefixIntact &&
+      end >= start + trigger.length &&
+      caret >= start &&
+      caret <= end &&
+      !tokenText.includes("\n")
+    ) {
       return {
         isOpen: true,
         trigger,
-        query: scanText.slice(start + trigger.length, end),
+        query: tokenText.slice(trigger.length),
         triggerStartPosition: start,
         triggerEndPosition: end,
         dismissedAt,

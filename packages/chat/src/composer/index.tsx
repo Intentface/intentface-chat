@@ -69,7 +69,7 @@ export {
   snapshotFromEditor,
 } from "./document";
 export { filterArrayItems, fuzzyScore } from "./fuzzy";
-export type { EditorKeyAction, EditorKeyContext } from "./keyboard";
+export type { ComposerSubmitOn, EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";
 export { createMentionChipExtension } from "./mention-chip";

@@ -13,11 +13,16 @@ export type EditorKeyAction =
   | { type: "submit-form" }
   | { type: "soft-break" };
 
+/** Which Enter chord sends the message; the other inserts a soft break. */
+export type ComposerSubmitOn = "enter" | "shift-enter";
+
 export type EditorKeyContext = {
   isCommandListOpen: boolean;
   hasActiveAskUser: boolean;
   isEditorEmpty: boolean;
   hasAttachments: boolean;
+  /** Defaults to "enter" (Enter sends, Shift+Enter breaks). */
+  submitOn?: ComposerSubmitOn;
 };
 
 export const interpretEditorKey = (
@@ -51,10 +56,16 @@ export const interpretEditorKey = (
     case key === "Backspace" && context.isEditorEmpty && context.hasAttachments:
       return { type: "remove-last-attachment" };
 
-    case key === "Enter" && !shiftKey:
-      return { type: "submit-form" };
-    case key === "Enter" && shiftKey:
-      return { type: "soft-break" };
+    // Send / soft break — the chord mapping swaps on submitOn. Sending stays
+    // suppressed while the command list is open (its own Enter branch above
+    // selects; the surviving chord falls through to a soft break here, so
+    // neither mapping can submit mid-popup).
+    case key === "Enter": {
+      const sendChordPressed = (context.submitOn ?? "enter") === "enter" ? !shiftKey : shiftKey;
+      return sendChordPressed && !isCommandListOpen
+        ? { type: "submit-form" }
+        : { type: "soft-break" };
+    }
 
     default:
       return null;

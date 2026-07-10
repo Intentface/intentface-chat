@@ -1,6 +1,5 @@
 "use client";
 
-import { useCommandListItems } from "@intentface/chat/composer";
 import { FileCodeIcon, FileSpreadsheetIcon, FileTextIcon, ScanIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { type CommandItemData, Composer } from "@/components/ai/composer";
@@ -139,44 +138,26 @@ const fetchPlaygroundIssues = async (
 };
 
 // ---------------------------------------------------------------------------
-// Grouped command list (prototype) — manual grouping over the flat, library-
-// filtered items. There's no first-class group support: we read the resolved
-// items with useCommandListItems(), partition by our own `group` field, and
-// render a CommandGroup + CommandGroupLabel per bucket, mapping the bucket's
-// items directly. Empty groups fall away for free (a filtered-out group never
-// appears).
+// Grouped command list — Composer.CommandGroup owns the partition: give it a
+// `groupBy` (our own `group` field) and it buckets the resolved, library-filtered
+// items in first-appearance order (so nav still flows top-to-bottom), rendering the
+// callback once per group. A group whose items all filter out just doesn't render.
 // ---------------------------------------------------------------------------
 
-// Insertion order = first appearance, which (since the source is group-sorted)
-// matches the flat highlight order — so nav flows top-to-bottom across groups.
-const partitionByGroup = (items: GroupedIssue[]): [string, GroupedIssue[]][] => {
-  const groups = new Map<string, GroupedIssue[]>();
-  for (const item of items) {
-    const bucket = groups.get(item.group);
-    if (bucket) bucket.push(item);
-    else groups.set(item.group, [item]);
-  }
-  return [...groups];
-};
-
-const GroupedIssueList = () => {
-  const { items } = useCommandListItems<GroupedIssue>();
-
-  return (
-    <>
-      {partitionByGroup(items).map(([group, groupItems]) => (
-        <Composer.CommandGroup key={group}>
-          <Composer.CommandGroupLabel>{group}</Composer.CommandGroupLabel>
-          {groupItems.map((item) => (
-            <Composer.CommandItem key={item.value} value={item.value}>
-              <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
-            </Composer.CommandItem>
-          ))}
-        </Composer.CommandGroup>
-      ))}
-    </>
-  );
-};
+const GroupedIssueList = () => (
+  <Composer.CommandGroup groupBy={(item: GroupedIssue) => item.group}>
+    {(group, items) => (
+      <>
+        <Composer.CommandGroupLabel>{group}</Composer.CommandGroupLabel>
+        {items.map((item) => (
+          <Composer.CommandItem key={item.value} value={item.value}>
+            <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+          </Composer.CommandItem>
+        ))}
+      </>
+    )}
+  </Composer.CommandGroup>
+);
 
 const GroupedIssueCommands = () => (
   <Composer.CommandList prefix="#">

@@ -490,14 +490,27 @@ export const commandItemAttrs = [
 `Composer.CommandLoading` (`composer-command-loading`),
 `Composer.CommandEmpty` (`composer-command-empty`), and
 `Composer.CommandDismiss` (`composer-command-dismiss`, a button) fill the list
-states — all render only your children, so you supply the copy. `Composer.CommandGroup` renders
-`data-slot="command-group"` (the inner primitive's slot, **not**
-`composer-`-prefixed) with `Composer.CommandGroupLabel`
-(`composer-command-group-label`). To group, read the resolved items with
-`useCommandListItems()`, partition them by your own field, and render a
-`CommandGroup` + `CommandGroupLabel` per bucket, mapping the bucket's items to
-`CommandItem`s — keyboard nav still flows top-to-bottom because the resolved order
-is store-driven, not derived from the render tree.
+states — all render only your children, so you supply the copy. To group, give
+`Composer.CommandGroup` a `groupBy` and a render callback: it buckets the resolved
+(already-filtered) items by your key — in first-appearance order, so keyboard nav
+still flows top-to-bottom — and calls the callback once per group with
+`(group, items)`, wrapping each in `data-slot="command-group"`. You render
+`Composer.CommandGroupLabel` (`composer-command-group-label`) + the group's items:
+
+```tsx
+<Composer.CommandGroup groupBy={(item: Issue) => item.group}>
+  {(group, items) => (
+    <>
+      <Composer.CommandGroupLabel>{group}</Composer.CommandGroupLabel>
+      {items.map((item) => (
+        <Composer.CommandItem key={item.value} value={item.value}>
+          <Composer.CommandItemLabel>{item.label}</Composer.CommandItemLabel>
+        </Composer.CommandItem>
+      ))}
+    </>
+  )}
+</Composer.CommandGroup>
+```
 
 ### Composer.AskUser
 

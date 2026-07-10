@@ -559,11 +559,31 @@ export const ComposerCommandItemDescription = ({
     { props: [{ "data-slot": "composer-command-item-description" }, elementProps] },
   );
 
-export type ComposerCommandGroupProps = ComponentProps<typeof Commands.Group>;
+export type ComposerCommandGroupProps<Item extends CommandItemData = CommandItemData> = {
+  /** Bucket the resolved items by this key (defines the app's grouping taxonomy). */
+  groupBy: (item: Item) => string;
+  /** Render one group: its key + that group's already-filtered items. */
+  children: (group: string, items: Item[]) => ReactNode;
+};
 
-export const ComposerCommandGroup = (props: ComposerCommandGroupProps) => (
-  <Commands.Group {...props} />
-);
+// Grouping is a render concern: this reads the resolved items, buckets them by `groupBy`
+// with `Map.groupBy` (which preserves first-appearance order — Object.groupBy would reorder
+// integer-like keys), and renders the child once per group inside a `command-group`
+// container. Nav order stays store-driven, so a group whose items all filter out just
+// doesn't render. Annotate `groupBy`'s param to type the items (no inline JSX generic).
+export const ComposerCommandGroup = <Item extends CommandItemData = CommandItemData>({
+  groupBy,
+  children: renderGroup,
+}: ComposerCommandGroupProps<Item>): ReactNode => {
+  const { items } = useCommandListItems<Item>();
+  return (
+    <>
+      {[...Map.groupBy(items, groupBy)].map(([group, groupItems]) => (
+        <Commands.Group key={group}>{renderGroup(group, groupItems)}</Commands.Group>
+      ))}
+    </>
+  );
+};
 
 export type ComposerCommandGroupLabelProps = PrimitiveProps<"div">;
 

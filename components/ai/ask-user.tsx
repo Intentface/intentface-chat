@@ -102,6 +102,10 @@ const AskUserOption = ({ className, ...props }: AskUserOptionProps) => (
     className={cn(
       "flex cursor-pointer items-start gap-2 rounded-lg p-2 leading-tight transition-colors",
       "data-highlighted:bg-primary-hover",
+      // Options carry real focus (roving tabindex), but focus always tracks
+      // the highlight — the bg-primary-hover highlight IS the focus
+      // indication, same as command items. No extra ring.
+      "outline-none",
       className,
     )}
     {...props}

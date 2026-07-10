@@ -186,7 +186,9 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
     renderChip={(chip) => {
       const icon = chip.icon && isChipIconKey(chip.icon) ? CHIP_ICONS[chip.icon] : undefined;
       return (
-        <Chip>
+        // The composer input uses the plain borderless chip surface; the
+        // bordered/filled CHIP_SURFACE_CLASS is reserved for message/docs chips.
+        <Chip className="border-0 bg-transparent">
           {icon && <Chip.Icon>{icon}</Chip.Icon>}
           <Chip.Label>{chip.label}</Chip.Label>
         </Chip>
@@ -197,12 +199,14 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
       // The editor element — ProseMirror-owned DOM, out of JSX reach.
       "**:data-[slot=composer-editor]:w-full **:data-[slot=composer-editor]:max-w-none **:data-[slot=composer-editor]:font-book **:data-[slot=composer-editor]:leading-[1.7] [&_[data-slot=composer-editor]:focus]:outline-none",
-      // Active-prefix badge: same inline text-flow surface as a committed chip
-      // (CHIP_SURFACE_CLASS in chip.tsx) so the badge and the chip it becomes
-      // share one baseline — no jump on commit.
-      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:border **:data-command-badge:border-primary-border **:data-command-badge:bg-primary **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:text-ink-primary",
-      // Type-to-filter hint while the command query is empty.
-      "[&_[data-command-placeholder]::after]:content-['Type_to_filter'] [&_[data-command-placeholder]::after]:pointer-events-none [&_[data-command-placeholder]::after]:whitespace-nowrap [&_[data-command-placeholder]::after]:text-ink-tertiary",
+      // Active-prefix badge: the composer's own borderless surface (matching the
+      // committed chip above, not the bordered CHIP_SURFACE_CLASS used in
+      // messages/docs) so the badge and the chip it becomes share one baseline —
+      // no jump on commit.
+      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
+      // The badge's hint element — ghost-text completion or the empty-query
+      // placeholder (the package renders whichever applies into one slot).
+      "**:data-[slot=command-hint]:pointer-events-none **:data-[slot=command-hint]:whitespace-nowrap **:data-[slot=command-hint]:text-ink-tertiary",
       disabled && "opacity-50 cursor-not-allowed",
       className,
     )}

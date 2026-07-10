@@ -54,6 +54,14 @@ export const toReadable = (node: Node): ReadableNode => node as unknown as Reada
 const chipIdOf = (node: ReadableNode): string | null =>
   node.nodeType === ELEMENT_NODE ? (node.getAttribute?.("data-chip-id") ?? null) : null;
 
+// Non-editable elements without a chip identity are pure presentation (the
+// badge's hint span) — invisible to the model: the reader skips them and the
+// position mappers give them zero width.
+const isPresentationOnly = (node: ReadableNode): boolean =>
+  node.nodeType === ELEMENT_NODE &&
+  node.getAttribute?.("contenteditable") === "false" &&
+  chipIdOf(node) === null;
+
 // ---------------------------------------------------------------------------
 // Reader — DOM → segments. Adjacent text concatenates (fragmentation is
 // normalized logically, never via root.normalize() — WebKit collapses the
@@ -118,6 +126,9 @@ export const readDocumentFromDom = (
       lastWasBreak = false;
       return;
     }
+
+    // Presentation-only elements (the badge's hint span) never reach the model.
+    if (isPresentationOnly(node)) return;
 
     // Badge span / unknown inline: transparent wrapper. Block elements also
     // read through, but flag the document for renormalization.
@@ -185,6 +196,16 @@ export const logicalRangeFromDom = (
         return true;
       }
       position += 1;
+      return false;
+    }
+
+    // Presentation-only elements are zero-width; a point inside one clamps to
+    // its boundary.
+    if (isPresentationOnly(node)) {
+      if (node === targetNode || contains(node, targetNode)) {
+        found = position;
+        return true;
+      }
       return false;
     }
 
@@ -323,6 +344,8 @@ export const domPointFromLogical = (
         remaining -= 1;
         continue;
       }
+      // Presentation-only (the badge's hint span): zero width, never a target.
+      if (isPresentationOnly(toReadable(element))) continue;
       // Transparent wrapper (badge span): descend.
       const inner = walk(element);
       if (inner) return inner;
@@ -376,10 +399,25 @@ const badgeSpansOf = (root: HTMLElement): HTMLElement[] => [
 const unwrapBadgeSpan = (span: HTMLElement): void => {
   const parent = span.parentNode;
   if (!parent) return;
+  // Presentation children (the hint span) are the badge's own chrome — they
+  // die with it rather than spilling into content.
+  for (const child of [...span.children]) {
+    if (isPresentationOnly(toReadable(child))) child.remove();
+  }
   while (span.firstChild) parent.insertBefore(span.firstChild, span);
   parent.removeChild(span);
   // No parent.normalize() — the reader concatenates fragmented text nodes,
   // and merging the selection's node collapses the caret in WebKit.
+};
+
+// The badge's logical text length: direct text nodes only — the hint span is
+// zero-width presentation and must not count toward the token range.
+const badgeTextLength = (span: HTMLElement): number => {
+  let length = 0;
+  for (const child of [...span.childNodes]) {
+    if (child.nodeType === TEXT_NODE) length += (child as Text).data.length;
+  }
+  return length;
 };
 
 /**
@@ -404,7 +442,7 @@ export const syncBadge = (root: HTMLElement, token: BadgeToken | null): boolean 
     if (parent) {
       const index = [...parent.childNodes].indexOf(span);
       const spanStart = logicalRangeFromDom(toReadable(root), toReadable(parent), index);
-      const spanLength = (span.textContent ?? "").length;
+      const spanLength = badgeTextLength(span);
       const hasPlaceholder = span.hasAttribute("data-command-placeholder");
       if (
         spanStart === token.start &&

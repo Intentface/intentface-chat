@@ -44,3 +44,12 @@ export const filterArrayItems = (items: CommandItemData[], query: string): Comma
   scored.sort((a, b) => b.score - a.score);
   return scored.map(({ item }) => item);
 };
+
+// Ghost-text completion: the part of the highlighted item's label that would
+// complete the query — only for a case-insensitive prefix match (a fuzzy hit
+// completed inline would read as broken), with the label's own casing.
+export const suggestionRemainder = (query: string, label: string): string | null => {
+  if (!label.toLowerCase().startsWith(query.toLowerCase())) return null;
+  const remainder = label.slice(query.length);
+  return remainder.length > 0 ? remainder : null;
+};

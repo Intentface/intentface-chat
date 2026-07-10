@@ -219,3 +219,32 @@ describe("logicalRangeFromDom", () => {
     expect(logicalRangeFromDom(root, textNode("elsewhere"), 0)).toBeNull();
   });
 });
+
+describe("presentation-only elements (badge hint)", () => {
+  const hintSpan = (text: string) =>
+    element("SPAN", { "data-slot": "command-hint", contenteditable: "false" }, textNode(text));
+
+  test("the reader skips hint content without flagging dirty", () => {
+    const { doc, dirty } = readDocumentFromDom(
+      editorRoot(textNode("hi "), badgeSpan(textNode("@ra"), hintSpan("smus"))),
+      resolveChip,
+    );
+    expect(doc).toEqual([{ type: "text", text: "hi @ra" }]);
+    expect(dirty).toBe(false);
+  });
+
+  test("hints are zero-width for position mapping; points inside clamp", () => {
+    const hintLabel = textNode("smus");
+    const hint = element(
+      "SPAN",
+      { "data-slot": "command-hint", contenteditable: "false" },
+      hintLabel,
+    );
+    const after = textNode(" end");
+    const root = editorRoot(textNode("hi "), badgeSpan(textNode("@ra"), hint), after);
+    // Text after the badge starts at 6 ("hi @ra") — the hint contributes 0.
+    expect(logicalRangeFromDom(root, after, 0)).toBe(6);
+    // A point inside the hint clamps to its boundary.
+    expect(logicalRangeFromDom(root, hintLabel, 2)).toBe(6);
+  });
+});

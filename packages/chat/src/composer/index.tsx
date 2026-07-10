@@ -68,7 +68,7 @@ export {
   serializeEditorContent,
   snapshotFromEditor,
 } from "./document";
-export { filterArrayItems, fuzzyScore } from "./fuzzy";
+export { filterArrayItems, fuzzyScore, suggestionRemainder } from "./fuzzy";
 export type { ComposerSubmitOn, EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { MentionChipOptions } from "./mention-chip";

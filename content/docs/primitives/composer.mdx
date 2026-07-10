@@ -217,7 +217,7 @@ prop → store bridges. Renders `data-slot="composer-root"`.
 
 export const rootProps = [
   { name: "onSubmit", type: "(data: ComposerSubmitData) => void | Promise<void>", description: "Fires on message submit and on ask-user answers. Discriminate on data.kind." },
-  { name: "commands", type: "ComposerCommandsMap", default: "{}", description: "Prefix → command config (kind, trigger, items). Drives the command lists." },
+  { name: "commands", type: "ComposerCommandsMap", default: "{}", description: "Prefix → command config (kind, trigger, items, suggestion, placeholder). suggestion: false disables ghost-text completion; placeholder sets the per-prefix empty-query hint (never shown alongside a suggestion — the suggestion wins)." },
   { name: "questions", type: "AskUserQuestion[]", description: "When set, arms the ask-user flow (blurs the editor, flips askUser.active)." },
   { name: "isSubmitting", type: "boolean", default: "false", description: "Flips Submit to a stop affordance and gates re-submits." },
   { name: "value", type: "ComposerSnapshot", description: "Controlled editor content." },
@@ -291,6 +291,7 @@ export const textareaAttrs = [
   { attribute: "data-disabled", description: "Present when disabled." },
   { attribute: "data-command-badge", description: "On the active trigger token decoration (e.g. the leading @)." },
   { attribute: "data-command-placeholder", description: "On the inline hint decoration after a trigger." },
+  { attribute: 'data-slot="command-hint"', description: "The badge's hint element — ghost-text completion of the highlighted item, or the empty-query placeholder. A real span: style it like any other slot." },
 ];
 
 <AttributesTable rows={textareaAttrs} />

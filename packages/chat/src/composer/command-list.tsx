@@ -21,8 +21,8 @@ import {
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { Commands } from "./commands";
-import { filterArrayItems } from "./fuzzy";
-import { useAsRef, useComposerInternals } from "./internals";
+import { filterArrayItems, suggestionRemainder } from "./fuzzy";
+import { useAsRef, useComposerInternals, useIsomorphicLayoutEffect } from "./internals";
 import { useComposer, useComposerContextStore } from "./store";
 import type { CommandItemData, ComposerCommandsItems, PrefixOnSelectContext } from "./types";
 
@@ -143,6 +143,18 @@ const useResolvedItems = (
 
 const EMPTY_ITEMS: CommandItemData[] = [];
 
+// The badge's hint chrome: non-editable so the caret can't enter it, no chip
+// id so the reader/mappers treat it as zero-width presentation, aria-hidden
+// so screen readers skip the ghost. Styled via data-slot like any other part.
+const createHintElement = (badge: Element): HTMLElement => {
+  const hint = badge.ownerDocument.createElement("span");
+  hint.setAttribute("data-slot", "command-hint");
+  hint.setAttribute("contenteditable", "false");
+  hint.setAttribute("aria-hidden", "true");
+  badge.appendChild(hint);
+  return hint;
+};
+
 export type ComposerCommandState = {
   /** Present as data-loading while an async items callback is in flight. */
   loading: boolean;
@@ -198,7 +210,35 @@ export const ComposerCommand = ({
   const highlightIndex = useComposer((composer) => composer.commands.highlightIndex);
   const activeIndex =
     items.length > 0 ? ((highlightIndex % items.length) + items.length) % items.length : -1;
-  const effectiveHighlight = items[activeIndex]?.value ?? null;
+  const highlightedItem = items[activeIndex] ?? null;
+  const effectiveHighlight = highlightedItem?.value ?? null;
+
+  // Badge hint — one real element (span[data-slot="command-hint"], appended
+  // inside the badge) carrying either the ghost-text completion of the
+  // highlighted item or the per-prefix empty-query placeholder. One slot, one
+  // value: the suggestion wins by a plain ?? chain, so exclusivity is code,
+  // not CSS specificity. The reader and position mappers treat non-editable,
+  // non-chip elements as zero-width presentation, so the hint never reaches
+  // the model. The badge is engine-owned DOM out of JSX reach — same access
+  // pattern as the popover's anchor query — so this is a true DOM-integration
+  // effect. No deps: badge identity changes on token rewraps, which always
+  // coincide with a re-render here (query/highlight subscribed).
+  const suggestion =
+    isActive && highlightedItem && (config?.suggestion ?? true)
+      ? suggestionRemainder(query, highlightedItem.label)
+      : null;
+  const hintText =
+    suggestion ?? (isActive && query === "" ? (config?.placeholder ?? "Type to filter") : null);
+  useIsomorphicLayoutEffect(() => {
+    const badge = store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]");
+    const existingHint = badge?.querySelector('[data-slot="command-hint"]') ?? null;
+    if (!badge || !hintText) {
+      existingHint?.remove();
+      return;
+    }
+    const hint = existingHint ?? createHintElement(badge);
+    if (hint.textContent !== hintText) hint.textContent = hintText;
+  });
 
   const selectByValue = useCallback(
     (value: string) => {

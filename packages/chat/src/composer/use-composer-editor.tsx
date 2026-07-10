@@ -171,8 +171,7 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     syncBadgeAndCaret();
 
     const plainText = getPlainText(nextDoc);
-    const hasChips = nextDoc.some((segment) => segment.type === "chip");
-    store.setHasContent(plainText.trim().length > 0 || hasChips);
+    refreshHasContent();
     // Single-select questions clear their selection once the user starts
     // typing a free-text answer.
     if (docChanged && plainText.trim().length > 0) {
@@ -188,6 +187,13 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
       reportEditorUpdate();
       bumpVersion();
     }
+  };
+
+  // hasContent from the model — the placeholder overlay and data-filled key
+  // off this through the store.
+  const refreshHasContent = () => {
+    const hasChips = doc.some((segment) => segment.type === "chip");
+    getDependencies().store.setHasContent(getPlainText(doc).trim().length > 0 || hasChips);
   };
 
   // Make the badge span match the tracker state; a DOM change moves the
@@ -372,11 +378,18 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
 
   const handleCompositionStart = () => {
     isComposing = true;
+    // The browser paints marked text without any commit (input is guarded
+    // during composition), so the placeholder would sit on top of the
+    // composition preview. Hide it optimistically; compositionend recomputes
+    // truthfully below — a cancelled composition on an empty editor produces
+    // no diff and therefore no commit.
+    getDependencies().store.setHasContent(true);
   };
 
   const handleCompositionEnd = () => {
     isComposing = false;
     syncFromDom();
+    refreshHasContent();
     // insertCompositionText is not cancelable — the cap is enforced at commit:
     // the one sanctioned post-IME rewrite.
     const { maxLength } = getDependencies().options;

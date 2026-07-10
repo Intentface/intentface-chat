@@ -618,8 +618,6 @@ const ComposerAskUser = () => {
           ref={askUser.optionsRef}
           multiSelect={!!display.multiSelect}
           groupName={`q-${askUser.step}`}
-          value={[...entry.selected][0] ?? ""}
-          onValueChange={askUser.toggleOption}
         >
           {display.options.map((option) => (
             <AskUser.Option

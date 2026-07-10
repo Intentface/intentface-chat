@@ -383,8 +383,12 @@ export const createComposerStore = (): ComposerStore => {
         case "focus-input":
           controller.focus();
           break;
-        case "blur-input":
-          controller.blur();
+        case "focus-options":
+          // Step advance / navigation: focus lands on the new step's
+          // highlighted option (roving tabindex), never on <body>. Deferred a
+          // microtask so the incoming step's options have registered
+          // (reset-highlight runs first; auto-highlight re-seats on mount).
+          queueMicrotask(() => optionsRef.current?.focusHighlighted());
           break;
         case "reset-highlight":
           optionsRef.current?.resetHighlight();
@@ -437,18 +441,38 @@ export const createComposerStore = (): ComposerStore => {
   };
 
   // Ask-user mode: while questions are active the options own the keyboard.
-  // Entering blurs the editor; document-level keys are interpreted (pure) and
-  // dispatched here, so custom AskUser renders keep the behavior for free.
+  // Entering moves DOM focus onto the highlighted option (roving tabindex) —
+  // never to <body> — and the keydown handler attaches to the options
+  // container itself, so keys flow from real focus and a second composer on
+  // the page can never hear them. The document-level listener remains only as
+  // a fallback for consumers that render no Options part.
   const activateAskUser = () => {
-    controller.blur();
     const handleKeyDown = createAskUserKeydownHandler({
       controller,
       optionsRef,
       editorRef,
       dispatch: dispatchAskUser,
     });
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+
+    // The Options part renders in reaction to setQuestions' notify — one
+    // commit after this call — so element lookup, focus, and listener
+    // attachment defer a frame.
+    let detach: (() => void) | null = null;
+    let cancelled = false;
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return;
+      const optionsElement = optionsRef.current?.getElement() ?? null;
+      optionsRef.current?.focusHighlighted();
+      const target: EventTarget = optionsElement ?? document;
+      target.addEventListener("keydown", handleKeyDown as EventListener);
+      detach = () => target.removeEventListener("keydown", handleKeyDown as EventListener);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      detach?.();
+    };
   };
 
   // --- Initial snapshot

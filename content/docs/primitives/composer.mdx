@@ -191,6 +191,20 @@ for `Escape` to call `onStop`, unless the event was already handled.
 
 ## Accessibility
 
+### Ask-user questions
+
+While `questions` are active, the options form a labelled group: `AskUser.Options`
+renders `role="radiogroup"` (single-select) or `role="group"` (multi-select),
+named by `AskUser.Label` and described by `AskUser.StepLabel` automatically.
+Each `AskUser.Option` is the real control — `role="radio"` / `role="checkbox"`
+with `aria-checked` — and holds the group's single tab stop via roving
+`tabindex`: DOM focus follows the highlight, entering the group on arrival and
+moving with ArrowUp/ArrowDown. Enter and Space select; Escape dismisses the
+step (from the options or the editor); typing any character returns focus to
+the editor as a free-text answer. Never nest an interactive control inside an
+option — the option itself is the control, and the composer's question-mode
+key handling treats native inputs as foreign editables.
+
 - **Form semantics.** The root renders a `<form>`; `Enter` submits and
   `Submit` is a real submit button, so the composer works with standard form
   and assistive-tech expectations.

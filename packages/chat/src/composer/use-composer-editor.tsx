@@ -474,9 +474,16 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
         return;
       }
       case "ask-user-arrow": {
+        // navigate() moves DOM focus onto the newly highlighted option
+        // (roving tabindex) — never blur to <body>. At the list boundary
+        // (null) focus stays in the editor.
         event.preventDefault();
         store.getSnapshot().askUser.optionsRef.current?.navigate(action.direction);
-        root?.blur();
+        return;
+      }
+      case "ask-user-dismiss": {
+        event.preventDefault();
+        store.getSnapshot().askUser.dismissStep();
         return;
       }
       case "remove-last-attachment": {

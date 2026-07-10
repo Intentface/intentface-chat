@@ -20,9 +20,14 @@ export const ComposerAskUser = () => {
         <AskUser.Header>
           <AskUser.Label>Which package manager should the setup use?</AskUser.Label>
         </AskUser.Header>
-        <AskUser.Options value={value} onValueChange={setValue}>
+        <AskUser.Options>
           {OPTIONS.map((option) => (
-            <AskUser.Option key={option.value} value={option.value}>
+            <AskUser.Option
+              key={option.value}
+              value={option.value}
+              selected={value === option.value}
+              onSelect={() => setValue(option.value)}
+            >
               <AskUser.OptionInput />
               <AskUser.OptionContent>
                 <AskUser.OptionLabel>{option.label}</AskUser.OptionLabel>

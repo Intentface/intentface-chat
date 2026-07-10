@@ -141,3 +141,34 @@ describe("interpretEditorKey: submitOn", () => {
     ).toEqual({ type: "soft-break" });
   });
 });
+
+describe("interpretAskUserKey: Space selects", () => {
+  test("Space toggles the highlighted option (APG radio/checkbox)", () => {
+    expect(
+      interpretAskUserKey(
+        { key: " ", ctrlKey: false, metaKey: false, altKey: false, defaultPrevented: false },
+        { hasHighlight: true },
+      ),
+    ).toEqual({ type: "select-option" });
+  });
+});
+
+describe("interpretEditorKey: ask-user dismiss", () => {
+  test("editor-focused Escape dismisses the active question", () => {
+    expect(
+      interpretEditorKey(
+        { key: "Escape", shiftKey: false },
+        { ...baseContext, hasActiveAskUser: true },
+      ),
+    ).toEqual({ type: "ask-user-dismiss" });
+  });
+
+  test("command list still owns Escape when both are active", () => {
+    expect(
+      interpretEditorKey(
+        { key: "Escape", shiftKey: false },
+        { ...baseContext, hasActiveAskUser: true, isCommandListOpen: true },
+      ),
+    ).toEqual({ type: "command-close" });
+  });
+});

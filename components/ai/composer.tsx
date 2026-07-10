@@ -188,7 +188,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       return (
         // The composer input uses the plain borderless chip surface; the
         // bordered/filled CHIP_SURFACE_CLASS is reserved for message/docs chips.
-        <Chip className="border-0 bg-transparent">
+        <Chip className="border-0 bg-primary-active">
           {icon && <Chip.Icon>{icon}</Chip.Icon>}
           <Chip.Label>{chip.label}</Chip.Label>
         </Chip>

@@ -186,10 +186,8 @@ export const useMessageSelectionScope = () => {
   const [contentElement, setContentElement] = useState<HTMLElement | null>(null);
 
   const anchorRef = useCallback((node: HTMLElement | null) => {
-    const messageRoot = node?.closest<HTMLElement>('[data-message]');
-    setContentElement(
-      messageRoot?.querySelector<HTMLElement>('[data-message-content]') ?? null,
-    );
+    const messageRoot = node?.closest<HTMLElement>("[data-message]");
+    setContentElement(messageRoot?.querySelector<HTMLElement>("[data-message-content]") ?? null);
   }, []);
 
   return { anchorRef, contentElement };

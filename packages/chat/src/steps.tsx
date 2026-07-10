@@ -84,9 +84,7 @@ StepsTrigger.displayName = "StepsTrigger";
 
 export type StepsPanelProps = ComponentProps<typeof Collapsible.Panel>;
 
-const StepsPanel = (props: StepsPanelProps) => (
-  <Collapsible.Panel data-steps-panel="" {...props} />
-);
+const StepsPanel = (props: StepsPanelProps) => <Collapsible.Panel data-steps-panel="" {...props} />;
 
 StepsPanel.displayName = "StepsPanel";
 

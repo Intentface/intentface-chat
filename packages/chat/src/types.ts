@@ -4,15 +4,10 @@
 
 // Every primitive stamps a bespoke part-identity attribute (data-composer-root,
 // data-thread-scroller, …) — `data-slot` stays free for the consumer layer.
-// Declared on React's HTMLAttributes so internal props objects typecheck —
-// TS only special-cases data-* attributes inside JSX literals, not in plain
-// object literals handed to the render machinery.
-declare module "react" {
-  // biome-ignore lint/correctness/noUnusedVariables: augmentation must repeat React's type parameter
-  interface HTMLAttributes<T> {
-    [dataAttribute: `data-${string}`]: string | undefined;
-  }
-}
+// The data-* index signature that lets internal props objects typecheck lives
+// on the render machinery's HTMLProps (internal/render/baseTypes.ts), NOT as a
+// React module augmentation — augmentation leaks into every consumer's app
+// types and breaks structural assignability (e.g. react-markdown Components).
 
 /**
  * The minimal part contract. Every part has a `type`; parts this package does

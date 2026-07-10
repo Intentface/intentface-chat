@@ -24,8 +24,7 @@ export const DEFAULT_BOTTOM_OFFSET = 128;
 // Breathing room between the last line of content and the composer dock. The
 // bottom overlay spans it in the styled layer.
 const COMPOSER_GAP = 32;
-export const DEFAULT_DOCK_SELECTOR =
-  '[data-composer-context-window], [data-composer-container]';
+export const DEFAULT_DOCK_SELECTOR = "[data-composer-context-window], [data-composer-container]";
 
 // `dockSelector` is public API, so it may be an invalid selector string.
 // Degrade to "no dock parts" rather than letting querySelectorAll throw a

@@ -1,5 +1,6 @@
 // Vendored from @base-ui/react v1.6.0 (MIT) — packages/react/src/internals/useRenderElement.tsx
-// https://github.com/mui/base-ui — exact copy; only import specifiers rewired.
+// https://github.com/mui/base-ui — import specifiers rewired; one local departure:
+// the `props` config accepts bespoke data-* part attributes (WithDataAttributes).
 
 import * as React from 'react';
 import { useMergedRefs, useMergedRefsN } from './useMergedRefs';
@@ -8,6 +9,7 @@ import { mergeObjects } from './mergeObjects';
 import { warn } from './warn';
 import { EMPTY_OBJECT } from './empty';
 import type { BaseUIComponentProps, ComponentRenderFn, HTMLProps } from './types';
+import type { WithDataAttributes } from './baseTypes';
 import { getStateAttributesProps, type StateAttributesMapping } from './getStateAttributesProps';
 import { resolveClassName } from './resolveClassName';
 import { resolveStyle } from './resolveStyle';
@@ -254,12 +256,13 @@ export type UseRenderElementParameters<
    */
   state?: State | undefined;
   /**
-   * Intrinsic props to be spread on the rendered element.
+   * Intrinsic props to be spread on the rendered element. Accepts bespoke
+   * data-* part attributes in plain object literals (WithDataAttributes).
    */
   props?:
-    | RenderFunctionProps<TagName>
+    | WithDataAttributes<RenderFunctionProps<TagName>>
     | Array<
-        | RenderFunctionProps<TagName>
+        | WithDataAttributes<RenderFunctionProps<TagName>>
         | undefined
         | ((props: RenderFunctionProps<TagName>) => RenderFunctionProps<TagName>)
       >

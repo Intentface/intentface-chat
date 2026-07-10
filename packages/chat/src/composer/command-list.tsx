@@ -231,7 +231,7 @@ export const ComposerCommand = ({
     suggestion ?? (isActive && query === "" ? (config?.placeholder ?? "Type to filter") : null);
   useIsomorphicLayoutEffect(() => {
     const badge = store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]");
-    const existingHint = badge?.querySelector('[data-command-hint]') ?? null;
+    const existingHint = badge?.querySelector("[data-command-hint]") ?? null;
     if (!badge || !hintText) {
       existingHint?.remove();
       return;

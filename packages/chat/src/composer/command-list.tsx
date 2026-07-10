@@ -6,7 +6,6 @@
 // mutations don't re-render every row). All unstyled; state panels as
 // data-state / data-highlighted.
 
-import type { Editor } from "@tiptap/react";
 import {
   type ComponentProps,
   createContext,
@@ -24,7 +23,6 @@ import { useRenderElement } from "../internal/render/useRenderElement";
 import { Commands } from "./commands";
 import { filterArrayItems } from "./fuzzy";
 import { useAsRef, useComposerInternals } from "./internals";
-import { commandListPluginKey } from "./prefix-plugin";
 import { useComposer, useComposerContextStore } from "./store";
 import type { CommandItemData, ComposerCommandsItems, PrefixOnSelectContext } from "./types";
 
@@ -138,49 +136,6 @@ const useResolvedItems = (
 };
 
 // ---------------------------------------------------------------------------
-// Selection helpers — the editor mutations a selection performs, split out of
-// the CommandList component so its `selectByValue` reads as a plain dispatch.
-// ---------------------------------------------------------------------------
-
-// The active trigger's document range, read from the plugin's mirror. Falls
-// back to the caret when the plugin has no active token.
-const resolveTriggerRange = (editor: Editor): { from: number; to: number } => {
-  const pluginState = commandListPluginKey.getState(editor.state);
-  return {
-    from: pluginState?.triggerStartPosition ?? 0,
-    to: pluginState?.triggerEndPosition ?? editor.state.selection.$from.pos,
-  };
-};
-
-// Replace the trigger range with a mention chip. Adds a trailing space so the
-// user can keep typing — unless one already follows (mid-sentence mention), to
-// avoid doubling it.
-const insertMentionChip = (
-  editor: Editor,
-  prefix: string,
-  item: CommandItemData,
-  range: { from: number; to: number },
-) => {
-  const docEnd = editor.state.doc.content.size;
-  const charAfter = range.to < docEnd ? editor.state.doc.textBetween(range.to, range.to + 1) : "";
-  const chain = editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .insertContentAt(range.from, {
-      type: "mentionChip",
-      attrs: {
-        prefix,
-        label: item.label ?? item.value,
-        value: item.value,
-        icon: item.icon ?? null,
-      },
-    });
-  if (charAfter !== " ") chain.insertContent(" ");
-  chain.run();
-};
-
-// ---------------------------------------------------------------------------
 // Composer.Command — the orchestrator: resolves items for the active
 // prefix, owns the highlight/selection/dismiss logic, and provides the two
 // contexts. Renders null unless this prefix is the active one.
@@ -252,12 +207,15 @@ export const ComposerCommand = ({
       const item = items.find((candidate) => candidate.value === value);
       if (!item) return;
 
-      const range = resolveTriggerRange(editor);
-
       if (kind === "insert") {
-        insertMentionChip(editor, prefix, item, range);
+        editor.insertChipAtTrigger({
+          prefix,
+          value: item.value,
+          label: item.label ?? item.value,
+          icon: item.icon,
+        });
       } else {
-        editor.chain().focus().deleteRange(range).run();
+        editor.deleteTrigger();
         // Read the attachment actions lazily at selection time — their
         // identities are store-stable, so subscribing would only re-render the
         // list on unrelated attachment changes.
@@ -269,16 +227,13 @@ export const ComposerCommand = ({
         item.onSelect?.(onSelectContext);
       }
 
-      editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
+      editor.closeCommands();
     },
     [store, items, kind, prefix],
   );
 
   const dismiss = useCallback(() => {
-    const editor = store.editorRef.current;
-    if (!editor) return;
-    editor.view.focus();
-    editor.view.dispatch(editor.state.tr.setMeta(commandListPluginKey, { close: true }));
+    store.editorRef.current?.dismissCommands();
   }, [store]);
 
   // The editor's keydown handler invokes the current selection through

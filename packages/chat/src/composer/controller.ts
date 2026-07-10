@@ -4,8 +4,7 @@
 // Composer.createStore() handle carries the same surface directly:
 // store.controller.focus() — no hook, no context.
 
-import type { ComposerEditorState } from "./document";
-import { useComposerContextStore } from "./store";
+import { type ComposerEditorState, useComposerContextStore } from "./store";
 
 export type { ComposerEditorState };
 

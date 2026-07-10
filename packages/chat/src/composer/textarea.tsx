@@ -11,12 +11,12 @@ import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
 import Text from "@tiptap/extension-text";
 import { TextSelection } from "@tiptap/pm/state";
-import { EditorContent, useEditor } from "@tiptap/react";
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
+import { type Editor, EditorContent, useEditor } from "@tiptap/react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { type ChipData, parseChipSegments } from "../chip-markdown";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
-import { chipSegmentsToParagraphJSON } from "./document";
+import { chipSegmentsToParagraphJSON, createTiptapRegisteredEditor } from "./document";
 import { useAsRef, useComposerInternals } from "./internals";
 import { interpretEditorKey } from "./keyboard";
 import { createMentionChipExtension } from "./mention-chip";
@@ -64,6 +64,12 @@ export const ComposerTextarea = ({
 
   const onValueChangeRef = useAsRef(onValueChange);
   const renderChipRef = useAsRef(renderChip);
+
+  // The live TipTap instance for this component's own engine-specific ops
+  // (paste handling below). The store only ever sees the RegisteredEditor
+  // adapter, registered in onMount and released in onUnmount.
+  const tiptapInstanceRef = useRef<Editor | null>(null);
+  const unregisterEditorRef = useRef<(() => void) | null>(null);
 
   // Single-select questions clear their selection once the user starts typing
   // a free-text answer. Stable across renders — event-time reads go through
@@ -120,7 +126,7 @@ export const ComposerTextarea = ({
         const segments = parseChipSegments(pastedText);
         if (!segments.some((segment) => segment.type === "chip")) return false;
 
-        const editor = store.editorRef.current;
+        const editor = tiptapInstanceRef.current;
         if (!editor) return false;
 
         const paragraphs = chipSegmentsToParagraphJSON(segments);
@@ -223,10 +229,13 @@ export const ComposerTextarea = ({
       instance.view.dispatch(instance.state.tr.setMeta(commandListPluginKey, { close: true }));
     },
     onMount: ({ editor: instance }) => {
-      store.editorRef.current = instance;
+      tiptapInstanceRef.current = instance;
+      unregisterEditorRef.current = store.registerEditor(createTiptapRegisteredEditor(instance));
     },
     onUnmount: () => {
-      store.editorRef.current = null;
+      tiptapInstanceRef.current = null;
+      unregisterEditorRef.current?.();
+      unregisterEditorRef.current = null;
     },
     onUpdate: ({ editor: instance }) => {
       const text = instance.getText();
@@ -236,7 +245,7 @@ export const ComposerTextarea = ({
         store.getSnapshot().askUser.optionsRef.current?.clearHighlight();
       }
       onValueChangeRef.current?.(text);
-      reportEditorUpdate(instance);
+      reportEditorUpdate();
     },
     // Command state changes on selection and meta-only transactions too (caret
     // moving inside the token, Escape / Dismiss closing it), not just on doc
@@ -261,12 +270,6 @@ export const ComposerTextarea = ({
       tiptapEditor.commands.setContent(value);
     }
   }, [value, tiptapEditor, isControlled]);
-
-  // Register the live editor with the store's controller (cleanup on unmount).
-  useLayoutEffect(() => {
-    if (!tiptapEditor) return;
-    return store.registerEditor(tiptapEditor);
-  }, [store, tiptapEditor]);
 
   const editorContent =
     tiptapEditor !== null ? (

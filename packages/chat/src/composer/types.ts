@@ -34,6 +34,30 @@ export type ComposerEditorHandle = {
   insertChip: (chip: ChipData) => void;
 };
 
+// The contract a mounted editor engine registers with the composer store.
+// The store, internals, and the shared command list speak only this interface —
+// never a concrete editor — so engines are interchangeable behind it. The
+// engine owns its document model, trigger-token tracking, and DOM; the
+// composer drives it through these operations.
+export type RegisteredEditor = ComposerEditorHandle & {
+  getText: () => string;
+  setText: (text: string) => void;
+  serialize: () => { text: string };
+  isFocused: () => boolean;
+  /** The editable root element — event scoping and badge queries anchor to it. */
+  getRootElement: () => HTMLElement | null;
+  getSnapshot: () => ComposerSnapshot;
+  applySnapshot: (snapshot: ComposerSnapshot) => void;
+  /** Replace the active trigger token with a chip, plus a trailing space unless one follows. */
+  insertChipAtTrigger: (chip: ChipData) => void;
+  /** Remove the active trigger token (execute-kind command selections). */
+  deleteTrigger: () => void;
+  /** Close the command popup state after a selection committed. */
+  closeCommands: () => void;
+  /** Refocus the editor and close the command popup — the Escape/Dismiss path. */
+  dismissCommands: () => void;
+};
+
 export type AttachmentsApi = {
   add: (files: File[] | FileList) => void;
   remove: (id: string) => void;

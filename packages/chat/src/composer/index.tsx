@@ -59,8 +59,12 @@ export type { CommandListState, ComposerCommandProps } from "./command-list";
 export { useCommandListItems } from "./command-list";
 export type { ComposerContainerProps } from "./container";
 export { useComposerController } from "./controller";
-export type { ComposerEditorState } from "./document";
-export { applySnapshotToEditor, serializeEditorContent, snapshotFromEditor } from "./document";
+export {
+  applySnapshotToEditor,
+  createTiptapRegisteredEditor,
+  serializeEditorContent,
+  snapshotFromEditor,
+} from "./document";
 export { filterArrayItems, fuzzyScore } from "./fuzzy";
 export type { EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
@@ -69,13 +73,15 @@ export { createMentionChipExtension } from "./mention-chip";
 export type { ComposerPanelProps } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
 export type { ComposerPopoverProps } from "./popover";
-export type { CommandListPluginState, RegisteredPrefix } from "./prefix-plugin";
-export { CLOSED_COMMAND_STATE, commandListPluginKey, detectActivePrefix } from "./prefix-plugin";
+export type { CommandListPluginState, RegisteredPrefix } from "./prefix-detection";
+export { CLOSED_COMMAND_STATE, detectActivePrefix } from "./prefix-detection";
+export { commandListPluginKey } from "./prefix-plugin";
 export type { ComposerRootProps } from "./root";
 export type {
   ComposerAskUserState,
   ComposerAttachmentsState,
   ComposerCommandsState,
+  ComposerEditorState,
   ComposerPanelSlice,
   ComposerState,
   ComposerStore,
@@ -99,5 +105,6 @@ export type {
   ComposerSnapshot,
   ComposerSubmitData,
   PrefixOnSelectContext,
+  RegisteredEditor,
   TriggerRule,
 } from "./types";

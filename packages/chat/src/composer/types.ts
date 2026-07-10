@@ -113,6 +113,12 @@ export type ComposerCommandsConfig = {
   kind: CommandItemKind;
   trigger: TriggerRule;
   items: ComposerCommandsItems;
+  /**
+   * Ghost-text completion of the highlighted item in the active token
+   * (data-command-suggestion). Defaults to true; turn off per prefix when the
+   * highlight is unstable (e.g. async sources re-ranking while typing).
+   */
+  suggestion?: boolean;
 };
 
 export type ComposerCommandsMap = Record<string, ComposerCommandsConfig>;

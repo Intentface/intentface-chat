@@ -208,7 +208,9 @@ export const ComposerCommand = ({
   // DOM-integration effect. No deps: badge identity changes on token rewraps,
   // which always coincide with a re-render here (query/highlight subscribed).
   const suggestion =
-    isActive && highlightedItem ? suggestionRemainder(query, highlightedItem.label) : null;
+    isActive && highlightedItem && (config?.suggestion ?? true)
+      ? suggestionRemainder(query, highlightedItem.label)
+      : null;
   useIsomorphicLayoutEffect(() => {
     const badge = store.editorRef.current?.getRootElement()?.querySelector("[data-command-badge]");
     if (!badge) return;

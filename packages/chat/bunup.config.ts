@@ -12,7 +12,7 @@ export default defineConfig({
     "src/types.ts",
     "src/composer/index.tsx",
     "src/chip.tsx",
-    "src/thread.tsx",
+    "src/thread/index.tsx",
     "src/reasoning.tsx",
     "src/steps.tsx",
     "src/attachments.tsx",

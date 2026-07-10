@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { BrainIcon } from "@/components/icons/brain";
-import { BugIcon } from "@/components/icons/bug";
 import { BubbleWideSparkleIcon } from "@/components/icons/bubble-wide-sparkle";
+import { BugIcon } from "@/components/icons/bug";
 import { CodeIcon } from "@/components/icons/code";
 import { FileChartIcon } from "@/components/icons/file-chart";
 import { FileTextIcon } from "@/components/icons/file-text";

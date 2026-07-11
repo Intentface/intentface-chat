@@ -14,6 +14,7 @@ export type ChatMetadata = {
 type ChatStore = {
   chats: ChatMetadata[];
   createChat: (id: string, title: string) => void;
+  renameChat: (id: string, title: string) => void;
   deleteChat: (id: string) => void;
   updateChatTimestamp: (id: string) => void;
   getMessages: (id: string) => AppUIMessage[];
@@ -57,6 +58,8 @@ export const useChatStore = create<ChatStore>()(
           chats: [{ id, title, createdAt: now, updatedAt: now }, ...existing],
         });
       },
+      renameChat: (id, title) =>
+        set({ chats: get().chats.map((c) => (c.id === id ? { ...c, title } : c)) }),
       deleteChat: (id) => {
         deleteStoredMessages(id);
         set({ chats: get().chats.filter((c) => c.id !== id) });

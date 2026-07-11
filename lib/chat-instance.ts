@@ -46,6 +46,13 @@ export const getChatInstance = (chatId: string): Chat<AppUIMessage> => {
       body: () => ({ model: useModelStore.getState().model }),
     }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    // Transient parts (never in message.parts) arrive here — the server pushes
+    // a generated thread title mid-stream on the first turn.
+    onData: (dataPart) => {
+      if (dataPart.type === "data-thread-title") {
+        useChatStore.getState().renameChat(chatId, dataPart.data.title);
+      }
+    },
     onFinish: ({ messages, isAbort, isError }) => {
       if (isError) return;
       // On abort, keep the partial turn (tagged stopped) or drop it if empty —

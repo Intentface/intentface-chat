@@ -13,6 +13,7 @@ import { listDataSources } from "@/tools/list-data-sources";
 import { listDocsPages } from "@/tools/list-docs-pages";
 import { queryData } from "@/tools/query-data";
 import { readDocsPage } from "@/tools/read-docs-page";
+import { readSourceFile } from "@/tools/read-source-file";
 import { sortData } from "@/tools/sort-data";
 import { webSearch } from "@/tools/web-search";
 
@@ -30,7 +31,8 @@ const SYSTEM_PROMPT = `You are the assistant in the Intentface Chat playground �
 When the user asks about @intentface/chat — its primitives (composer, thread, message, chip, steps, reasoning, attachments), installation, theming, state, or how this playground is built:
 1. Call listDocsPages to see the documentation index
 2. Read the relevant pages with readDocsPage before answering
-- Answer strictly from the documentation — never invent props, exports, or APIs
+3. For implementation internals ("how does X work under the hood"), read the code with readSourceFile — each docs page's source field names its component under packages/chat/src
+- Answer strictly from the documentation and source — never invent props, exports, or APIs
 - Link to pages inline using their url from the tool output, e.g. [Composer](/docs/primitives/composer)
 - If the documentation doesn't cover something, say so instead of guessing
 
@@ -81,6 +83,7 @@ export async function POST(req: Request) {
       askUser,
       listDocsPages,
       readDocsPage,
+      readSourceFile,
       listDataSources,
       connectDataSource,
       queryData,

@@ -22,6 +22,11 @@ export const DEFAULT_TOOL_LABELS: ToolLabels = {
     active: (i) => `Reading docs: ${i.slug ?? "page"}`,
     complete: (i) => `Read docs: ${i.slug ?? "page"}`,
   },
+  readSourceFile: {
+    active: (i) =>
+      i.path && i.path !== "." ? `Reading source: ${i.path}` : "Listing source files",
+    complete: (i) => (i.path && i.path !== "." ? `Read source: ${i.path}` : "Listed source files"),
+  },
   webSearch: {
     active: (i) => `Searching for '${i.query ?? ""}'`,
     complete: (i) => `Searched for '${i.query ?? ""}'`,

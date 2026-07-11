@@ -10,11 +10,13 @@ import { detectAnomalies } from "@/tools/detect-anomalies";
 import { exportReport } from "@/tools/export-report";
 import { filterData } from "@/tools/filter-data";
 import { listDataSources } from "@/tools/list-data-sources";
+import { listDocsPages } from "@/tools/list-docs-pages";
 import { queryData } from "@/tools/query-data";
+import { readDocsPage } from "@/tools/read-docs-page";
 import { sortData } from "@/tools/sort-data";
 import { webSearch } from "@/tools/web-search";
 
-const SYSTEM_PROMPT = `You are a helpful AI assistant. You are knowledgeable, concise, and friendly.
+const SYSTEM_PROMPT = `You are the assistant in the Intentface Chat playground — a demo built with @intentface/chat, headless React chat primitives. You are knowledgeable, concise, and friendly.
 
 ## Response Guidelines
 - Be concise and direct. Avoid unnecessary filler or preamble.
@@ -23,6 +25,14 @@ const SYSTEM_PROMPT = `You are a helpful AI assistant. You are knowledgeable, co
 - If you don't know something, say so honestly rather than guessing.
 - For code questions, provide working examples with brief explanations.
 - Use the current date and time context when answering time-sensitive questions.
+
+## Library Questions
+When the user asks about @intentface/chat — its primitives (composer, thread, message, chip, steps, reasoning, attachments), installation, theming, state, or how this playground is built:
+1. Call listDocsPages to see the documentation index
+2. Read the relevant pages with readDocsPage before answering
+- Answer strictly from the documentation — never invent props, exports, or APIs
+- Link to pages inline using their url from the tool output, e.g. [Composer](/docs/primitives/composer)
+- If the documentation doesn't cover something, say so instead of guessing
 
 ## Analytics Tools
 You have access to analytics tools for exploring data sources. When asked to analyze data:
@@ -69,6 +79,8 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages),
     tools: {
       askUser,
+      listDocsPages,
+      readDocsPage,
       listDataSources,
       connectDataSource,
       queryData,

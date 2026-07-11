@@ -14,6 +14,14 @@ export type ToolLabels = Record<
 >;
 
 export const DEFAULT_TOOL_LABELS: ToolLabels = {
+  listDocsPages: {
+    active: () => "Browsing the documentation",
+    complete: () => "Browsed the documentation",
+  },
+  readDocsPage: {
+    active: (i) => `Reading docs: ${i.slug ?? "page"}`,
+    complete: (i) => `Read docs: ${i.slug ?? "page"}`,
+  },
   webSearch: {
     active: (i) => `Searching for '${i.query ?? ""}'`,
     complete: (i) => `Searched for '${i.query ?? ""}'`,

@@ -143,7 +143,7 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
               {...props}
             >
               <Button
-                variant="secondary"
+                variant="primary"
                 size="sm"
                 onClick={handleScrollToBottom}
                 className="rounded-full shadow-xs"

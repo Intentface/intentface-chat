@@ -122,15 +122,25 @@
   );
   --base: oklch(from var(--bg) max(0, calc(l + var(--base-lightness))) c h);
 
-  /* Text shifts negative in dark — fg sits near white, so secondary
-     and tertiary move toward black bg instead of toward white. */
   --text-secondary: oklch(from var(--fg) calc(l - 0.3) c h);
   --text-tertiary: oklch(from var(--fg) calc(l - 0.45) c h);
+
+  --shadow-border-opacity: 0.06;
 }
 
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --font-weight-normal: 450;
+
+  /* Borderless card edge: a 1px ring + soft drop, replacing border utilities
+     so the edge never affects layout. The ring uses the theme's primary
+     border token, so it tracks light/dark and the theme-configurator seeds;
+     the drop layers stay neutral black. */
+
+  /* 0px 0px 0px 1px oklch(from var(--primary-border) l c h / 1), */
+  --shadow-border: 0px 1px 2px -1px rgb(0 0 0 / 0.06), 0px 2px 4px 0px rgb(0 0 0 / 0.04);
 
   /* Background */
   --color-base: var(--base);
@@ -219,14 +229,9 @@
   }
 
   body {
-    @apply bg-base font-sans text-ink-primary;
+    @apply bg-base font-sans font-normal text-ink-primary;
     font-synthesis: none;
   }
-}
-
-@utility font-book {
-  font-weight: 450;
-  font-variation-settings: "wght" 450;
 }
 
 /* Streamdown element styles */

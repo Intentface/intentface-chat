@@ -43,6 +43,8 @@ const MessageRoot = ({ className, ...props }: MessageRootProps) => (
     }
     className={cn(
       "group flex w-full flex-col gap-2 data-[role=assistant]:items-start data-[role=user]:items-end",
+      // Sticky turns pin the user message as a header — stretch it full width.
+      "data-[role=user]:group-data-sticky/turn:items-stretch",
       className,
     )}
     {...props}
@@ -62,8 +64,12 @@ type MessageTurnProps = ComponentProps<typeof MessagePrimitive.Turn> & {
 
 const MessageTurn = ({ sticky, className, ...props }: MessageTurnProps) => (
   <MessagePrimitive.Turn
+    // data-sticky lets descendants restyle for the pinned presentation: a
+    // pinned user message reads as a section header, so it goes full-width
+    // and left-aligned instead of a right-hugging bubble.
+    data-sticky={sticky ? "" : undefined}
     className={cn(
-      "flex w-full flex-col gap-4 [overflow-anchor:none]",
+      "group/turn flex w-full flex-col gap-4 [overflow-anchor:none]",
       sticky && "*:data-[role=user]:sticky *:data-[role=user]:top-4 *:data-[role=user]:z-2",
       className,
     )}
@@ -77,8 +83,11 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
     data-slot="message-content"
     className={cn(
       "flex flex-col gap-4 overflow-hidden border",
-      // User message styling
-      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border-primary-border group-data-[role=user]:bg-primary group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
+      // User message styling — edge is shadow-drawn (shadow-border), matching
+      // the composer and playground cards.
+      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border group-data-[role=user]:bg-primary group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:border-primary-border group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
+      // Sticky turns: the pinned user message spans the column, text left.
+      "group-data-[role=user]:group-data-sticky/turn:max-w-none",
       // Assistant message styling
       "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-none",
       // Error styling — presence attribute (data-error=""), not a value match.

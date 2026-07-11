@@ -24,7 +24,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { type CommandItemData, Composer, type ComposerSubmitData } from "@/components/ai/composer";
+import {
+  type CommandItemData,
+  Composer,
+  type ComposerCommandsMap,
+  type ComposerSubmitData,
+} from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { Steps } from "@/components/ai/steps";
@@ -40,6 +45,7 @@ import { ExclamationTriangleIcon } from "@/components/icons/exclamation-triangle
 import { OpenQuote2Icon } from "@/components/icons/open-quote-2";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
+import { PlaygroundSettings } from "@/components/playground-settings";
 import { Markdown } from "@/components/ui/markdown";
 import { useChatInstance } from "@/hooks/use-chat-instance";
 import { useThrottledText } from "@/hooks/use-throttled-text";
@@ -54,8 +60,14 @@ import { getAskUserInfo, getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/st
 import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
 import type { AppUIMessage, AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
 import { applyStopToMessages } from "@/lib/chat-instance";
+import {
+  DEMO_CONTEXT_FILES,
+  fetchPlaygroundIssues,
+  GroupedIssueCommands,
+} from "@/lib/playground-demo";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
+import { usePlaygroundStore } from "@/lib/store/playground";
 import { useSettingsStore } from "@/lib/store/settings";
 import { cn } from "@/lib/utils";
 import { IntentfaceLogo } from "./icons/intentface-logo";
@@ -405,6 +417,8 @@ type ChatMessageItemProps = {
 const ChatMessageItem = memo(
   ({ message, isLast, isStreaming, isError, skipAnimation }: ChatMessageItemProps) => {
     const { regenerate, addSelection } = useChatSession();
+    const showSources = useSettingsStore((state) => state.showSources);
+    const showActions = useSettingsStore((state) => state.showActions);
     const { parts } = message;
     const isAssistant = message.role === "assistant";
     const isUser = message.role === "user";
@@ -490,7 +504,7 @@ const ChatMessageItem = memo(
         {isAssistant && <Message.Selection onAdd={addSelection} />}
 
         {/* Source URL pills */}
-        {sourcesInfo?.hasSources && (
+        {showSources && sourcesInfo?.hasSources && (
           <Message.Sources>
             {sourcesInfo.sources.map((source) => (
               <Message.Source key={source.domain} url={source.url} domain={source.domain} />
@@ -502,7 +516,7 @@ const ChatMessageItem = memo(
         {isAssistant && message.metadata?.stopped && <Message.Stopped />}
 
         {/* Actions — hide while waiting for tool input */}
-        {!askUser.isAwaitingInput && (
+        {showActions && !askUser.isAwaitingInput && (
           <Message.Actions>
             {isAssistant && (
               <Message.Action
@@ -693,6 +707,17 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const isNewChat = isEmpty;
 
+  // Playground knobs: which command prefixes mount, ghost suggestions, the
+  // command surface, the submit chord (persisted config) — plus the ephemeral
+  // demo state (injected ask-user questions, the workspace-files context strip).
+  const commandToggles = useSettingsStore((state) => state.commands);
+  const suggestions = useSettingsStore((state) => state.suggestions);
+  const commandSurface = useSettingsStore((state) => state.commandSurface);
+  const submitOn = useSettingsStore((state) => state.submitOn);
+  const demoQuestions = usePlaygroundStore((state) => state.demoQuestions);
+  const setDemoQuestions = usePlaygroundStore((state) => state.setDemoQuestions);
+  const showContextStrip = usePlaygroundStore((state) => state.showContextStrip);
+
   // Tool toggles (web search, thinking) are app state, not the composer's —
   // we own them here and feed them into the request body at submit time.
   const [toolValues, setToolValues] = useState<Record<string, boolean>>({});
@@ -736,12 +761,49 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
     [setTool],
   );
 
-  const isAskUser = panelState.type === "ask-user";
+  // The composer mounts only the prefixes the Composer card enables; the
+  // ghost-suggestion flag rides along per config.
+  const composerCommands = useMemo<ComposerCommandsMap>(() => {
+    const map: ComposerCommandsMap = {};
+    if (commandToggles.mentions) {
+      map["@"] = {
+        kind: "insert",
+        trigger: "after-whitespace",
+        items: MENTION_ITEMS,
+        suggestion: suggestions,
+      };
+    }
+    if (commandToggles.slash) {
+      map["/"] = {
+        kind: "execute",
+        trigger: "doc-start",
+        items: commandItems,
+        suggestion: suggestions,
+      };
+    }
+    if (commandToggles.issues) {
+      map["#"] = {
+        kind: "insert",
+        trigger: "after-whitespace",
+        items: fetchPlaygroundIssues,
+        suggestion: suggestions,
+      };
+    }
+    return map;
+  }, [commandToggles, suggestions, commandItems]);
+
+  const isAskUser = panelState.type === "ask-user" || demoQuestions != null;
   const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;
 
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
       if (data.kind === "answers") {
+        // Demo questions from the playground card: the flow completing IS the
+        // demo — discard the answers and clear the injection.
+        if (demoQuestions) {
+          setDemoQuestions(null);
+          return;
+        }
         if (panelState.type !== "ask-user") return;
         // Project the composer's per-question entries into a question→answer map — the
         // shape the tool output is read back as (getAskUserInfo / getAskUserStepInfo).
@@ -817,6 +879,8 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
       toolValues,
       selections,
       clearSelections,
+      demoQuestions,
+      setDemoQuestions,
     ],
   );
 
@@ -824,30 +888,22 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
     <Composer
       onSubmit={handleSubmit}
       isSubmitting={isSending}
-      commands={{
-        "@": {
-          kind: "insert",
-          trigger: "after-whitespace",
-          items: MENTION_ITEMS,
-        },
-        "/": {
-          kind: "execute",
-          trigger: "doc-start",
-          items: commandItems,
-        },
-      }}
-      questions={askUserQuestions ?? undefined}
+      commands={composerCommands}
+      questions={demoQuestions ?? askUserQuestions ?? undefined}
     >
       <Composer.Panel>
         {(composer) => {
           // One at a time, by priority: an active command list wins, else the
           // composer's own ask-user flow. (Tool/step status now lives in the
-          // assistant message, not the composer.)
-          if (composer.commands.active) {
+          // assistant message, not the composer.) With the popover surface
+          // selected, the command list lifts out of the panel — ask-user
+          // always stays in-flow.
+          if (composer.commands.active && commandSurface === "panel") {
             return (
               <>
                 <Composer.Commands prefix="@" />
                 <Composer.Commands prefix="/" />
+                <GroupedIssueCommands />
               </>
             );
           }
@@ -855,8 +911,34 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
           return null;
         }}
       </Composer.Panel>
+      {commandSurface === "popover" && (
+        <Composer.Popover>
+          {(composer) =>
+            composer.commands.active ? (
+              <>
+                <Composer.Commands prefix="@" />
+                <Composer.Commands prefix="/" />
+                <GroupedIssueCommands />
+              </>
+            ) : null
+          }
+        </Composer.Popover>
+      )}
 
       <Composer.ContextWindow>
+        {showContextStrip && (
+          <div data-slot="context-files" className="flex items-center gap-1.5">
+            {DEMO_CONTEXT_FILES.map((file) => (
+              <span
+                key={file.id}
+                className="inline-flex items-center gap-1 rounded-md bg-primary-hover px-1.5 py-0.5 text-ink-secondary"
+              >
+                <file.icon className="size-3.5 text-ink-tertiary" />
+                {file.name}
+              </span>
+            ))}
+          </div>
+        )}
         {selections.length > 0 && (
           <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
             <OpenQuote2Icon className="size-3.5" />
@@ -876,7 +958,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
       </Composer.ContextWindow>
       <Composer.Container>
         <Composer.Attachments />
-        <Composer.Textarea autoFocus>
+        <Composer.Textarea autoFocus submitOn={submitOn}>
           <Composer.Placeholder
             placeholder={
               isAskUser
@@ -964,6 +1046,8 @@ const ChatPlaceholder = () => {
 const ChatDefaultLayout = memo(() => {
   const { isEmpty } = useChatSession();
   const scrollMode = useSettingsStore((s) => s.scrollMode);
+  const showScrollButton = useSettingsStore((s) => s.showScrollButton);
+  const showOverlays = useSettingsStore((s) => s.showOverlays);
 
   return (
     <>
@@ -972,7 +1056,7 @@ const ChatDefaultLayout = memo(() => {
           following, "follow" lands at the top and follows, "off" disables it. */}
       <Thread autoScroll={scrollMode}>
         <Header />
-        <Thread.Overlay direction="top" />
+        {showOverlays && <Thread.Overlay direction="top" />}
         <Thread.Viewport>
           {isEmpty ? (
             <Thread.Placeholder>
@@ -983,10 +1067,13 @@ const ChatDefaultLayout = memo(() => {
           )}
         </Thread.Viewport>
         <Thread.Composer>
-          <Thread.ScrollButton />
+          {showScrollButton && <Thread.ScrollButton />}
           <ChatInput />
         </Thread.Composer>
-        <Thread.Overlay direction="bottom" />
+        {showOverlays && <Thread.Overlay direction="bottom" />}
+        {/* Rendered last so the card triggers come after the composer in tab
+            order; absolute positioning puts them in the top-right regardless. */}
+        <PlaygroundSettings />
       </Thread>
     </>
   );

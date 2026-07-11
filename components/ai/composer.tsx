@@ -9,6 +9,7 @@ import {
   type CommandItemData as CommandItemDataPrimitive,
   Composer as ComposerPrimitive,
   type ComposerStore,
+  type ComposerSubmitOn,
   useComposer,
   useComposerController,
   useComposerStore,
@@ -56,6 +57,7 @@ export type {
   ComposerMessageSubmit,
   ComposerSnapshot,
   ComposerSubmitData,
+  ComposerSubmitOn,
   PrefixOnSelectContext,
   TriggerRule,
 } from "@intentface/chat/composer";
@@ -80,8 +82,9 @@ const ComposerContainer = ({ className, ...props }: ComposerContainerProps) => (
   <ComposerPrimitive.Container
     className={cn(
       // Positioned so it paints above the context window peeking out from
-      // behind its top edge.
-      "relative border border-primary-border bg-primary rounded-4xl shadow-xs [corner-shape:squircle] cursor-text transition-colors",
+      // behind its top edge. Edge is shadow-drawn (shadow-border), not a
+      // border, matching the playground cards.
+      "relative bg-primary rounded-4xl border border-primary-border shadow-xs [corner-shape:squircle] cursor-text transition-colors",
       className,
     )}
     {...props}
@@ -178,6 +181,8 @@ type ComposerTextareaProps = {
   className?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Which Enter chord sends the message; the other inserts a soft break. */
+  submitOn?: ComposerSubmitOn;
   children?: ReactNode;
 };
 
@@ -210,6 +215,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       // The badge's hint element — ghost-text completion or the empty-query
       // placeholder (the package renders whichever applies into one slot).
       "**:data-command-hint:pointer-events-none **:data-command-hint:whitespace-nowrap **:data-command-hint:text-ink-tertiary",
+
       disabled && "opacity-50 cursor-not-allowed",
       className,
     )}
@@ -239,9 +245,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
 
   if (!isLooping && items.length === 1) {
     return (
-      <div className={cn("min-h-lh text-ink-tertiary font-book leading-[1.7]", className)}>
-        {items[0]}
-      </div>
+      <div className={cn("min-h-lh text-ink-tertiary leading-[1.7]", className)}>{items[0]}</div>
     );
   }
 
@@ -523,7 +527,10 @@ const ComposerCommandItemLabel = ({
   className,
   ...props
 }: ComponentProps<typeof ComposerPrimitive.CommandItemLabel>) => (
-  <ComposerPrimitive.CommandItemLabel className={cn("text-sm font-book", className)} {...props} />
+  <ComposerPrimitive.CommandItemLabel
+    className={cn("min-w-0 truncate text-sm font-book", className)}
+    {...props}
+  />
 );
 
 const ComposerCommandItemDescription = ({

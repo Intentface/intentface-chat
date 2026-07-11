@@ -251,7 +251,7 @@ function DropdownMenuSwitchItem({
       {children}
       <DropdownMenuIndicator
         data-slot="dropdown-menu-switch-item-indicator"
-        className="px-0.5 flex items-center justify-start h-4 w-7 rounded-full transition-colors bg-quaternary group-data-checked/dropdown-menu-switch-item:bg-accent"
+        className="px-0.5 flex items-center justify-start h-4 w-7 rounded-full transition-colors bg-base group-data-checked/dropdown-menu-switch-item:bg-accent"
       >
         <MenuPrimitive.CheckboxItemIndicator
           keepMounted

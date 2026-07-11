@@ -427,7 +427,11 @@ const PLAYGROUND_TABS = [
 export const PlaygroundSettings = () => (
   <div data-slot="playground-settings" className="absolute top-2 right-2 z-20 hidden md:block">
     <Popover>
-      <Popover.Trigger render={<IconButton variant="ghost" aria-label="Playground settings" />}>
+      <Popover.Trigger
+        render={
+          <IconButton variant="primary" className="rounded-full" aria-label="Playground settings" />
+        }
+      >
         <SettingsIcon className="size-4 text-ink-tertiary" />
       </Popover.Trigger>
       <Popover.Content align="end" sideOffset={4} className="w-80 p-0">

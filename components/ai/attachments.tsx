@@ -90,7 +90,7 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
         isImageAttachment(mediaType) ? "image" : isPdfAttachment(mediaType) ? "pdf" : "file"
       }
       className={cn(
-        "group relative flex h-12 max-w-48 items-center gap-2 rounded-lg border border-secondary-border bg-secondary px-2",
+        "group relative flex h-12 max-w-48 items-center gap-2 rounded-lg border border-secondary-border bg-secondary-bg px-2",
         className,
       )}
     >
@@ -103,7 +103,7 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
           src={item.url}
         />
       ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-hover">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-bg-hover">
           <Icon className="size-4 text-muted-foreground" />
         </div>
       )}
@@ -151,9 +151,9 @@ type AttachmentsDropzoneProps = {
 
 const dropzoneVariants = {
   inline:
-    "absolute inset-0 m-1 flex items-center justify-center rounded-xl border border-dashed border-secondary-border bg-secondary",
+    "absolute inset-0 m-1 flex items-center justify-center rounded-xl border border-dashed border-secondary-border bg-secondary-bg",
   global:
-    "absolute inset-0 z-50 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-secondary-border bg-secondary/80 backdrop-blur-xs",
+    "absolute inset-0 z-50 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-secondary-border bg-secondary-bg/80 backdrop-blur-xs",
 };
 
 const GLOBAL_DROPZONE_SELECTOR = '[data-slot="sidebar-inset"]';

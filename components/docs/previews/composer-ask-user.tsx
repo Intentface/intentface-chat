@@ -15,7 +15,7 @@ export const ComposerAskUser = () => {
   const [value, setValue] = useState("bun");
 
   return (
-    <div className="w-full max-w-md rounded-xl border border-primary-border bg-secondary p-2">
+    <div className="w-full max-w-md rounded-xl border border-primary-border bg-secondary-bg p-2">
       <AskUser>
         <AskUser.Header>
           <AskUser.Label>Which package manager should the setup use?</AskUser.Label>

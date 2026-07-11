@@ -41,7 +41,7 @@ const SettingsSubtitle = ({ className, children, ...props }: ComponentProps<"p">
 const SettingsCard = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="settings-card"
-    className={cn("flex flex-col rounded-lg border border-primary-border bg-primary", className)}
+    className={cn("flex flex-col rounded-lg border border-primary-border bg-primary-bg", className)}
     {...props}
   >
     {children}
@@ -62,11 +62,7 @@ const SettingsRow = ({ className, children, ...props }: ComponentProps<"div">) =
 );
 
 const SettingsLabel = ({ className, children, ...props }: ComponentProps<"span">) => (
-  <span
-    data-slot="settings-label"
-    className={cn("text-sm text-ink-primary font-book", className)}
-    {...props}
-  >
+  <span data-slot="settings-label" className={cn("text-sm text-ink-primary", className)} {...props}>
     {children}
   </span>
 );

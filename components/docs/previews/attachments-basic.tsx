@@ -40,7 +40,7 @@ export const AttachmentsBasic = () => {
         <button
           type="button"
           onClick={() => setItems(INITIAL)}
-          className="text-accent text-sm hover:text-accent-hover"
+          className="text-accent-bg text-sm hover:text-accent-bg-hover"
         >
           Reset
         </button>

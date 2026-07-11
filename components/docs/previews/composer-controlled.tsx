@@ -6,7 +6,7 @@ import { Composer, type ComposerSubmitData } from "@/components/ai/composer";
 // The Textarea's plain-text value is controlled by the parent: the buttons
 // drive it, and typing reports back through onValueChange.
 const previewButtonClass =
-  "cursor-pointer rounded-full border border-primary-border bg-primary px-4 py-1.5 font-medium text-ink-secondary text-sm transition-colors hover:bg-primary-hover";
+  "cursor-pointer rounded-full border border-primary-border bg-primary-bg px-4 py-1.5 font-medium text-ink-secondary text-sm transition-colors hover:bg-primary-bg-hover";
 
 export const ComposerControlled = () => {
   const [text, setText] = useState("");

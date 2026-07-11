@@ -53,7 +53,7 @@ export const Scaler = ({
       <SliderPrimitive.Control className="relative flex h-full w-full items-stretch">
         <SliderPrimitive.Track
           className={cn(
-            "relative h-full w-full overflow-hidden bg-base",
+            "relative h-full w-full overflow-hidden bg-base-bg",
             size === "default" && "rounded-md",
           )}
         >

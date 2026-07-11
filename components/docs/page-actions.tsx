@@ -12,7 +12,7 @@ type PageActionsProps = {
 };
 
 const actionButtonClass =
-  "h-9 rounded-full px-4 text-md font-medium text-ink-secondary hover:bg-secondary-hover hover:text-ink-primary";
+  "h-9 rounded-full px-4 text-md font-medium text-ink-secondary hover:bg-secondary-bg-hover hover:text-ink-primary";
 
 // "View as Markdown" (raw .mdx as text) + "View source" (the component on
 // GitHub), mirroring Base UI's page header.

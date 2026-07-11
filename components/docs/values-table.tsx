@@ -22,7 +22,7 @@ export const ValuesTable = ({ rows }: ValuesTableProps) => (
         <col className="w-[72%]" />
       </colgroup>
       <thead>
-        <tr className="border-secondary-border border-b bg-tertiary">
+        <tr className="border-secondary-border border-b bg-tertiary-bg">
           <th className="px-4 py-2.5 font-medium text-ink-primary">Value</th>
           <th className="px-4 py-2.5 font-medium text-ink-primary">Description</th>
         </tr>
@@ -34,7 +34,7 @@ export const ValuesTable = ({ rows }: ValuesTableProps) => (
               <div className="flex flex-wrap items-center gap-2">
                 <code className="font-mono text-ink-primary text-xs">{row.value}</code>
                 {row.default ? (
-                  <span className="rounded border border-secondary-border bg-tertiary px-1.5 py-px font-medium text-2xs text-ink-tertiary">
+                  <span className="rounded border border-secondary-border bg-tertiary-bg px-1.5 py-px font-medium text-2xs text-ink-tertiary">
                     default
                   </span>
                 ) : null}

@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { SidebarIcon } from "@/components/icons/sidebar";
 import Drawer from "@/components/ui/drawer";
 import Input from "@/components/ui/input";
 import Separator from "@/components/ui/separator";
@@ -149,7 +150,7 @@ const SidebarProvider = ({
     <SidebarContext.Provider value={contextValue}>
       <div
         data-slot="sidebar-wrapper"
-        className={cn("group/sidebar-wrapper flex min-h-svh w-full bg-base", className)}
+        className={cn("group/sidebar-wrapper flex min-h-svh w-full bg-base-bg", className)}
         data-state={state}
         onPointerMove={handleWrapperPointerMove}
         {...props}
@@ -269,7 +270,7 @@ const SidebarRoot = ({
       <div
         data-slot="sidebar"
         className={cn(
-          "fixed z-10 hidden w-(--sidebar-width) border border-transparent bg-base overflow-hidden transition-[left,right,top,bottom,border-color,border-radius,box-shadow] duration-150 ease-linear motion-reduce:transition-none md:flex",
+          "fixed z-10 hidden w-(--sidebar-width) border border-transparent bg-base-bg overflow-hidden transition-[left,right,top,bottom,border-color,border-radius,box-shadow] duration-150 ease-linear motion-reduce:transition-none md:flex",
           side === "left"
             ? cn(
                 "left-0 inset-y-0",
@@ -311,35 +312,6 @@ const SidebarRoot = ({
   );
 };
 
-// Inlined so the registry-distributed sidebar stays self-contained — it must
-// not depend on the app's icon set.
-const SidebarIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    aria-hidden="true"
-    width="24px"
-    height="24px"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    {...props}
-  >
-    <g>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M4.75 4C3.23122 4 2 5.23122 2 6.75V17.25C2 18.7688 3.23122 20 4.75 20H19.25C20.7688 20 22 18.7688 22 17.25V6.75C22 5.23122 20.7688 4 19.25 4H4.75ZM3.5 6.75C3.5 6.05964 4.05964 5.5 4.75 5.5H10.5V18.5H4.75C4.05964 18.5 3.5 17.9404 3.5 17.25V6.75Z"
-        fill="currentColor"
-      />
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M7 9.5C6.44772 9.5 6 9.05228 6 8.5C6 7.94772 6.44772 7.5 7 7.5C7.55228 7.5 8 7.94772 8 8.5C8 9.05228 7.55228 9.5 7 9.5ZM7 13C6.44772 13 6 12.5523 6 12C6 11.4477 6.44772 11 7 11C7.55228 11 8 11.4477 8 12C8 12.5523 7.55228 13 7 13ZM7 16.5C6.44772 16.5 6 16.0523 6 15.5C6 14.9477 6.44772 14.5 7 14.5C7.55228 14.5 8 14.9477 8 15.5C8 16.0523 7.55228 16.5 7 16.5Z"
-        fill="currentColor"
-      />
-    </g>
-  </svg>
-);
-
 const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button">) => {
   const { toggleSidebar } = useSidebar();
 
@@ -352,10 +324,10 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
       data-slot="sidebar-trigger"
       onClick={handleClick}
       variant="ghost"
-      className={cn("hover:bg-base-hover", className)}
+      className={cn("hover:bg-base-bg-hover", className)}
       {...props}
     >
-      <SidebarIcon className="size-4 text-ink-tertiary" />
+      <SidebarIcon />
       <span className="sr-only">Toggle Sidebar</span>
     </IconButton>
   );
@@ -369,7 +341,7 @@ const SidebarInset = ({ className, children, ...props }: ComponentProps<"main">)
       data-slot="sidebar-inset"
       data-expanded={state === "expanded" ? "" : undefined}
       className={cn(
-        "group/sidebar-inset bg-base relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
+        "group/sidebar-inset bg-base-bg relative flex w-full h-dvh flex-1 flex-col overflow-hidden",
         "data-expanded:p-2 transition-padding duration-150 ease-out motion-reduce:transition-none",
         className,
       )}
@@ -384,7 +356,7 @@ const SidebarViewport = ({ className, children, ...props }: ComponentProps<"div"
   <div
     data-slot="sidebar-viewport"
     className={cn(
-      "flex h-full min-h-0 flex-1 bg-secondary overflow-hidden border border-transparent",
+      "flex h-full min-h-0 flex-1 bg-secondary-bg overflow-hidden border border-transparent",
       "group-data-expanded/sidebar-inset:border-secondary-border group-data-expanded/sidebar-inset:rounded-xl",
       className,
     )}
@@ -461,7 +433,7 @@ const SidebarGroupLabel = ({ className, render, ...props }: useRender.ComponentP
       "data-slot": "sidebar-group-label",
       ...props,
       className: cn(
-        "text-ink-tertiary flex shrink-0 items-center rounded-md px-3 py-1.5 text-md font-medium outline-hidden focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-ink-tertiary flex shrink-0 items-center rounded-md px-2 py-1.5 text-sm font-medium outline-hidden focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         className,
       ),
     },
@@ -511,13 +483,13 @@ const SidebarMenuItem = ({ className, ...props }: ComponentProps<"li">) => (
 const sidebarMenuButtonVariants = cva(
   [
     "peer/menu-button cursor-pointer flex w-full items-center gap-2",
-    "overflow-hidden rounded-md px-3 h-8 font-medium text-left text-md text-ink-secondary outline-hidden",
+    "overflow-hidden rounded-md px-2 h-8 font-medium text-left text-md/none text-ink-secondary outline-hidden",
     "focus-visible:ring-1",
-    "hover:bg-base-hover hover:text-ink-primary data-active:bg-base-hover data-active:text-ink-primary",
+    "hover:bg-base-bg-hover hover:text-ink-primary data-active:bg-base-bg-hover data-active:text-ink-primary",
     "disabled:pointer-events-none disabled:opacity-50",
     "group-has-data-[slot=sidebar-menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",
-    "data-[state=open]:bg-base-hover data-[state=open]:text-ink-primary",
+    "data-[state=open]:bg-base-bg-hover data-[state=open]:text-ink-primary",
     "[&>span:last-child]:truncate [&_svg]:text-ink-secondary [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-ink-primary data-active:[&>svg]:text-ink-primary",
   ],
   {
@@ -603,9 +575,9 @@ const SidebarMenuAction = ({
       onClick: handleClick,
       ...props,
       className: cn(
-        "text-ink-secondary cursor-pointer hover:text-ink-primary flex aspect-square size-5 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-3.5 [&>svg]:shrink-0",
+        "hover:bg-primary-bg-hover text-ink-secondary cursor-pointer hover:text-ink-primary flex aspect-square size-5 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-3.5 [&>svg]:shrink-0",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
+          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-popup-open:opacity-100 data-pressed:opacity-100 md:opacity-0",
         className,
       ),
     },

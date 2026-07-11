@@ -1,10 +1,9 @@
-import { FileCodeIcon, FileSpreadsheetIcon, FileTextIcon } from "lucide-react";
 import { type CommandItemData, Composer } from "@/components/ai/composer";
 import type { AskUserQuestion } from "@/lib/ai/types";
 
 // Demo data for the playground cards (formerly app/playground/page.tsx): the
 // ask-user question sets, the fake async issue list behind the `#` command,
-// and the "open in the workspace" context files. Pure fixtures — the toggles
+// and the "open in the workspace" context strip. Pure fixtures — the toggles
 // that mount them live in the Composer card.
 
 export const singleQuestion: AskUserQuestion[] = [
@@ -125,14 +124,6 @@ export const fetchPlaygroundIssues = async (
   if (!lowered) return PLAYGROUND_ISSUES;
   return PLAYGROUND_ISSUES.filter((item) => item.label.toLowerCase().includes(lowered));
 };
-
-// Demo: files "open in the workspace" surfaced as the AI's context, shown in
-// the strip peeking above the composer and toggled from the Composer card.
-export const DEMO_CONTEXT_FILES = [
-  { id: "prd", name: "PRD.md", icon: FileTextIcon },
-  { id: "auth", name: "auth-service.ts", icon: FileCodeIcon },
-  { id: "metrics", name: "metrics.xlsx", icon: FileSpreadsheetIcon },
-];
 
 // ---------------------------------------------------------------------------
 // Grouped command list for the `#` prefix — Composer.CommandGroup owns the

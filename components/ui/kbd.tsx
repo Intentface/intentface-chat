@@ -14,7 +14,7 @@ const kbdVariants = cva(
         lg: "h-6 min-w-6 px-1.5 text-sm [&>svg]:size-3.5",
       },
       variant: {
-        default: "border-secondary-border bg-secondary text-ink-secondary",
+        default: "border-secondary-border bg-secondary-bg text-ink-secondary",
         frosted: "border-white/15 bg-white/25 text-white backdrop-blur-sm",
       },
       square: {

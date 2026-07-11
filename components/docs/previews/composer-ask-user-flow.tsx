@@ -37,7 +37,7 @@ const QUESTIONS: AskUserQuestion[] = [
 ];
 
 const previewButtonClass =
-  "cursor-pointer rounded-full border border-primary-border bg-primary px-4 py-1.5 font-medium text-ink-secondary text-sm transition-colors hover:bg-primary-hover";
+  "cursor-pointer rounded-full border border-primary-border bg-primary-bg px-4 py-1.5 font-medium text-ink-secondary text-sm transition-colors hover:bg-primary-bg-hover";
 
 export const ComposerAskUserFlow = () => {
   const [questions, setQuestions] = useState<AskUserQuestion[]>(QUESTIONS);

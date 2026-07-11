@@ -42,6 +42,8 @@ type SettingsStore = {
   setShowActions: (showActions: boolean) => void;
   suggestions: boolean;
   setSuggestions: (suggestions: boolean) => void;
+  loopingPlaceholder: boolean;
+  setLoopingPlaceholder: (loopingPlaceholder: boolean) => void;
   commands: CommandToggles;
   setCommandEnabled: (command: keyof CommandToggles, enabled: boolean) => void;
   commandSurface: CommandSurface;
@@ -70,6 +72,8 @@ export const useSettingsStore = create<SettingsStore>()(
       setShowActions: (showActions) => set({ showActions }),
       suggestions: true,
       setSuggestions: (suggestions) => set({ suggestions }),
+      loopingPlaceholder: true,
+      setLoopingPlaceholder: (loopingPlaceholder) => set({ loopingPlaceholder }),
       commands: { mentions: true, slash: true, issues: false },
       setCommandEnabled: (command, enabled) =>
         set((state) => ({ commands: { ...state.commands, [command]: enabled } })),

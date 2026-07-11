@@ -9,8 +9,8 @@ const Checkbox = ({ className, ...props }: CheckboxPrimitive.Root.Props) => (
   <CheckboxPrimitive.Root
     data-slot="checkbox"
     className={cn(
-      "flex size-4 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary transition-colors",
-      "data-checked:bg-tertiary-active data-checked:text-ink-primary",
+      "flex size-4 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary-bg transition-colors",
+      "data-checked:bg-tertiary-bg-active data-checked:text-ink-primary",
       "focus-visible:ring-2 focus-visible:ring-slate-8 focus-visible:outline-none",
       "disabled:cursor-not-allowed disabled:opacity-50",
       "peer relative shrink-0",

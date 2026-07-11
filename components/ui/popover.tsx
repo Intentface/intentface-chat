@@ -7,11 +7,8 @@ import { cn } from "@/lib/utils";
 
 const PopoverRoot = (props: PopoverPrimitive.Root.Props) => <PopoverPrimitive.Root {...props} />;
 
-const PopoverTrigger = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Trigger>) => (
-  <PopoverPrimitive.Trigger data-slot="popover-trigger" className={cn(className)} {...props} />
+const PopoverTrigger = (props: React.ComponentProps<typeof PopoverPrimitive.Trigger>) => (
+  <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
 );
 
 type PopoverContentProps = React.ComponentProps<typeof PopoverPrimitive.Popup> &
@@ -37,7 +34,7 @@ const PopoverContent = ({
       <PopoverPrimitive.Popup
         data-slot="popover-content"
         className={cn(
-          "z-50 origin-(--transform-origin) rounded-lg border border-primary-border bg-primary p-3 shadow-md outline-none",
+          "z-50 origin-(--transform-origin) rounded-lg border border-primary-border bg-primary-bg p-3 shadow-md outline-none",
           "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
           "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           "data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2",

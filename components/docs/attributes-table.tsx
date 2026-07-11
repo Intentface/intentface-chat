@@ -27,7 +27,7 @@ export const AttributesTable = ({ rows }: AttributesTableProps) => {
           <col className={hasValues ? "w-[44%]" : "w-[72%]"} />
         </colgroup>
         <thead>
-          <tr className="border-secondary-border border-b bg-tertiary">
+          <tr className="border-secondary-border border-b bg-tertiary-bg">
             <th className="px-4 py-2.5 font-medium text-ink-primary">Attribute</th>
             {hasValues ? (
               <th className="px-4 py-2.5 font-medium text-ink-primary">Values</th>
@@ -44,7 +44,7 @@ export const AttributesTable = ({ rows }: AttributesTableProps) => {
               {hasValues ? (
                 <td className="px-4 py-2.5 align-top">
                   {row.values ? (
-                    <code className="wrap-break-word font-mono text-accent text-xs">
+                    <code className="wrap-break-word font-mono text-accent-bg text-xs">
                       {row.values}
                     </code>
                   ) : (

@@ -15,8 +15,7 @@ const toggleGroupRootVariants = cva("inline-flex items-center", {
   variants: {
     variant: {
       default: "gap-1",
-      segmented:
-        "w-fit gap-0 rounded-full border border-primary-border bg-quaternary p-0.5 shadow-xs",
+      segmented: "w-fit gap-0 rounded-full border border-primary-border bg-primary-bg p-0.5",
     },
   },
   defaultVariants: {
@@ -26,9 +25,9 @@ const toggleGroupRootVariants = cva("inline-flex items-center", {
 
 const toggleGroupItemVariants = cva(
   [
-    "inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
+    "inline-flex items-center border border-transparent justify-center gap-1.5 whitespace-nowrap",
     "transition-colors outline-none cursor-pointer select-none",
-    "focus-visible:ring-2 focus-visible:ring-accent/50",
+    "focus-visible:ring-2 focus-visible:ring-accent-bg/50",
     "disabled:cursor-not-allowed disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
   ],
@@ -37,11 +36,11 @@ const toggleGroupItemVariants = cva(
       variant: {
         default: [
           "rounded-full text-ink-secondary hover:text-ink-primary",
-          "data-pressed:bg-tertiary data-pressed:text-ink-primary",
+          "data-pressed:bg-tertiary-bg data-pressed:text-ink-primary",
         ],
         segmented: [
           "rounded-full text-ink-tertiary shadow-none hover:text-ink-secondary",
-          "data-pressed:bg-primary data-pressed:text-ink-primary data-pressed:shadow-xs",
+          "data-pressed:bg-quaternary-bg data-pressed:text-ink-primary data-pressed:border-tertiary-border",
         ],
       },
       size: {

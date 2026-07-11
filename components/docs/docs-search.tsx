@@ -30,17 +30,17 @@ export const DocsSearch = () => {
     <Dialog open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
         className={cn(
-          "flex h-8 min-h-8 w-full shrink-0 cursor-pointer items-center gap-2 rounded-md border border-primary-border bg-primary pl-2.5 pr-1.5",
-          "text-md text-ink-tertiary transition-colors duration-0 hover:bg-primary-hover",
+          "flex h-8 min-h-8 w-full shrink-0 cursor-pointer items-center gap-2 rounded-md border border-primary-border bg-primary-bg pl-2.5 pr-1.5",
+          "text-md text-ink-tertiary transition-colors duration-0 hover:bg-primary-bg-hover",
         )}
       >
         <SearchIcon className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate text-left">Search docs</span>
         <span className="hidden shrink-0 items-center gap-1 lg:inline-flex">
-          <Kbd size="md" className="shrink-0 border-primary-border bg-secondary">
+          <Kbd size="md" className="shrink-0 border-primary-border bg-secondary-bg">
             ⌘
           </Kbd>
-          <Kbd size="md" className="shrink-0 border-primary-border bg-secondary">
+          <Kbd size="md" className="shrink-0 border-primary-border bg-secondary-bg">
             K
           </Kbd>
         </span>
@@ -70,7 +70,7 @@ export const DocsSearch = () => {
                     href={result.url}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary-hover",
+                      "block rounded-md px-3 py-2 text-sm transition-colors hover:bg-secondary-bg-hover",
                       result.type === "page"
                         ? "font-medium text-ink-primary"
                         : "pl-6 text-ink-secondary",

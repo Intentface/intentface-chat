@@ -10,11 +10,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-primary border-primary-border text-ink-primary hover:bg-primary-hover",
-        secondary: "bg-secondary border-secondary-border text-ink-primary hover:bg-secondary-hover",
-        tertiary: "bg-tertiary border-tertiary-border text-ink-primary hover:bg-tertiary-hover",
-        ghost: "hover:bg-primary-hover",
-        link: "text-primary underline-offset-4 hover:underline",
+        primary:
+          "bg-primary-bg border-primary-border text-ink-primary hover:bg-primary-bg-hover hover:border-primary-border-hover",
+        secondary:
+          "bg-secondary-bg border-secondary-border text-ink-primary hover:bg-secondary-bg-hover",
+        tertiary:
+          "bg-tertiary-bg border-tertiary-border text-ink-primary hover:bg-tertiary-bg-hover",
+        ghost: "hover:bg-primary-bg-hover",
+        link: "text-primary-bg underline-offset-4 hover:underline",
       },
       size: {
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",

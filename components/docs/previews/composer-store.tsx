@@ -24,7 +24,7 @@ export const ComposerStoreDemo = () => {
       <button
         type="button"
         onClick={() => store.controller.insertText("@channel ")}
-        className="cursor-pointer rounded-full border border-primary-border bg-primary px-4 py-1.5 font-medium text-ink-secondary text-sm transition-colors hover:bg-primary-hover"
+        className="cursor-pointer rounded-full border border-primary-border bg-primary-bg px-4 py-1.5 font-medium text-ink-secondary text-sm transition-colors hover:bg-primary-bg-hover"
       >
         Insert from outside
       </button>

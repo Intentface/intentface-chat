@@ -85,7 +85,7 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
       "flex flex-col gap-4 overflow-hidden border",
       // User message styling — edge is shadow-drawn (shadow-border), matching
       // the composer and playground cards.
-      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border group-data-[role=user]:bg-primary group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:border-primary-border group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
+      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border group-data-[role=user]:bg-primary-bg group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:border-primary-border group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
       // Sticky turns: the pinned user message spans the column, text left.
       "group-data-[role=user]:group-data-sticky/turn:max-w-none",
       // Assistant message styling
@@ -217,7 +217,7 @@ const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
     className={cn("flex w-full justify-center", className)}
     {...props}
   >
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-border bg-primary px-2.5 py-1 text-xs text-ink-secondary">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-border bg-primary-bg px-2.5 py-1 text-xs text-ink-secondary">
       <StopIcon className="size-3 shrink-0" />
       Stopped
     </span>
@@ -286,7 +286,7 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
   return (
     <div
       className={cn(
-        "flex h-10 max-w-48 items-center gap-2 rounded-lg border border-slate-7 bg-primary px-2",
+        "flex h-10 max-w-48 items-center gap-2 rounded-lg border border-slate-7 bg-primary-bg px-2",
         className,
       )}
       {...props}
@@ -313,7 +313,7 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
           </HoverCard.Content>
         </HoverCard>
       ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-hover">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-bg-hover">
           <Icon className="size-4 text-muted-foreground" />
         </div>
       )}
@@ -386,7 +386,7 @@ const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
               initialFocus={false}
               finalFocus={false}
               className={cn(
-                "flex items-center gap-1 rounded-full border border-primary-border bg-primary p-0.5 shadow-md outline-none",
+                "flex items-center gap-1 rounded-full border border-primary-border bg-primary-bg p-0.5 shadow-md outline-none",
                 "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
                 "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                 "duration-100",
@@ -435,7 +435,7 @@ const MessageSource = ({
     target="_blank"
     rel="noopener noreferrer"
     className={cn(
-      "inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary px-2 py-1 text-xs text-ink-secondary transition-colors hover:bg-primary-hover",
+      "inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary-bg px-2 py-1 text-xs text-ink-secondary transition-colors hover:bg-primary-bg-hover",
       className,
     )}
     {...props}

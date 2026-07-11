@@ -55,7 +55,7 @@ const ThreadOverlay = memo(({ className, direction, ...props }: ThreadOverlayPro
     <ProgressiveBlur
       direction={direction}
       className={cn(
-        "h-full w-full bg-linear-to-b from-secondary to-transparent pointer-events-none",
+        "h-full w-full bg-linear-to-b from-secondary-bg to-transparent pointer-events-none",
         "group-data-[thread-overlay='top']/thread-overlay:bg-linear-to-b",
         "group-data-[thread-overlay='bottom']/thread-overlay:bg-linear-to-t",
       )}

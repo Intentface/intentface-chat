@@ -53,7 +53,7 @@ const AskUserNavigation = ({ className, ...props }: AskUserNavigationProps) => (
 );
 
 const navigationButtonClasses =
-  "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30";
+  "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-bg-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30";
 
 /** Navigate to the previous step. */
 type AskUserPreviousProps = ComponentProps<typeof AskUserPrimitive.Previous>;
@@ -104,9 +104,9 @@ const AskUserOption = ({ className, ...props }: AskUserOptionProps) => (
   <AskUserPrimitive.Option
     className={cn(
       "flex cursor-pointer items-start gap-2 rounded-lg p-2 leading-tight transition-colors",
-      "data-highlighted:bg-primary-hover",
+      "data-highlighted:bg-primary-bg-hover",
       // Options carry real focus (roving tabindex), but focus always tracks
-      // the highlight — the bg-primary-hover highlight IS the focus
+      // the highlight — the bg-primary-bg-hover highlight IS the focus
       // indication, same as command items. No extra ring.
       "outline-none",
       className,
@@ -125,10 +125,11 @@ const AskUserOptionInput = () => {
 };
 
 const INDICATOR_CLASS = cn(
-  "flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary text-2xs font-medium tabular-nums text-ink-secondary",
+  "flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary-bg text-2xs font-medium tabular-nums text-ink-secondary",
 );
 
-const INDICATOR_SELECTED_CLASS = "border-tertiary-active bg-tertiary-active text-ink-primary";
+const INDICATOR_SELECTED_CLASS =
+  "border-tertiary-border-active bg-tertiary-bg-active text-ink-primary";
 
 const AskUserOptionCheckIndicator = () => {
   const option = useAskUserOption();

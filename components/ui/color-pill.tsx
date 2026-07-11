@@ -55,7 +55,7 @@ export const ColorPill = ({
       >
         <Popover.Trigger
           disabled={disabled}
-          className="flex size-5 shrink-0 items-center justify-center rounded-sm outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex size-5 shrink-0 items-center justify-center rounded-sm outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent-bg/50 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Pick color"
         >
           <EyedropperIcon className="size-3.5" />

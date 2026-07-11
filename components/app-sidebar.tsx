@@ -9,8 +9,10 @@ import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
 import { BookIcon } from "./icons/book";
+import { DotGrid1x3VerticalTightIcon } from "./icons/dot-grid-1x3-vertical-tight";
 import { GitHubIcon } from "./icons/github";
 import { NpmIcon } from "./icons/npm";
+import DropdownMenu from "./ui/dropdown-menu";
 
 export const AppSidebar = () => {
   const pathname = usePathname();
@@ -60,10 +62,26 @@ export const AppSidebar = () => {
                     render={
                       <Link href={`/chat/${chat.id}`}>
                         <span className="flex-1 truncate">{chat.title}</span>
-                        <Sidebar.MenuAction showOnHover onClick={() => handleDelete(chat.id)}>
-                          <TrashIcon />
-                          <span className="sr-only">Delete</span>
-                        </Sidebar.MenuAction>
+                        <DropdownMenu>
+                          <DropdownMenu.Trigger
+                            render={
+                              <Sidebar.MenuAction showOnHover>
+                                <DotGrid1x3VerticalTightIcon />
+                                <span className="sr-only">Delete</span>
+                              </Sidebar.MenuAction>
+                            }
+                          />
+                          <DropdownMenu.Content>
+                            <DropdownMenu.Item
+                              onClick={() => handleDelete(chat.id)}
+                              aria-label="Delete"
+                            >
+                              <TrashIcon />
+                              Delete
+                              <span className="sr-only">Delete</span>
+                            </DropdownMenu.Item>
+                          </DropdownMenu.Content>
+                        </DropdownMenu>
                       </Link>
                     }
                   />

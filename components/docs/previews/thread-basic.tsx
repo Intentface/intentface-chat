@@ -41,7 +41,7 @@ export const ThreadBasic = () => {
   };
 
   return (
-    <div className="h-[440px] w-full max-w-xl overflow-hidden rounded-xl border border-primary-border bg-secondary [--thread-width:100%]">
+    <div className="h-[440px] w-full max-w-xl overflow-hidden rounded-xl border border-primary-border bg-secondary-bg [--thread-width:100%]">
       <Thread>
         <Thread.Viewport>
           {messages.map((message, index) => (

@@ -42,7 +42,7 @@ import { type CommandSurface, useSettingsStore } from "@/lib/store/settings";
 import { cn } from "@/lib/utils";
 
 // Right-aligned compact controls share one footprint across the rows.
-const COMPACT_CONTROL_CLASS = "ml-auto box-border h-8 w-28 shrink-0";
+const COMPACT_CONTROL_CLASS = "h-8 w-28 shrink-0";
 
 const PLAYGROUND_ROW_CLASS = "min-h-11 border-0 px-3 py-2";
 
@@ -144,7 +144,7 @@ const ThemeTab = () => {
           variant="segmented"
           value={mode}
           onValueChange={handleModeChange}
-          className="ml-auto w-fit"
+          className="w-fit"
         >
           {MODE_OPTIONS.map(({ value, label, Icon }) => (
             <ToggleGroup.Item key={value} value={value} size="xs" aria-label={label}>
@@ -156,7 +156,7 @@ const ThemeTab = () => {
 
       <LabeledRow label="Preset" description="Pick a starter palette">
         <Select value={selectedPresetValue} onValueChange={handlePresetChange}>
-          <Select.Trigger className={cn(COMPACT_CONTROL_CLASS, "rounded-md")} size="sm">
+          <Select.Trigger className={cn(COMPACT_CONTROL_CLASS, "rounded-md px-1")} size="sm">
             <Select.Value>
               <div className="flex items-center gap-2">
                 <PresetSwatch seeds={seeds} />
@@ -303,6 +303,8 @@ const ComposerTab = () => {
   const setCommandSurface = useSettingsStore((state) => state.setCommandSurface);
   const suggestions = useSettingsStore((state) => state.suggestions);
   const setSuggestions = useSettingsStore((state) => state.setSuggestions);
+  const loopingPlaceholder = useSettingsStore((state) => state.loopingPlaceholder);
+  const setLoopingPlaceholder = useSettingsStore((state) => state.setLoopingPlaceholder);
   const submitOn = useSettingsStore((state) => state.submitOn);
   const setSubmitOn = useSettingsStore((state) => state.setSubmitOn);
   const setDemoQuestions = usePlaygroundStore((state) => state.setDemoQuestions);
@@ -384,6 +386,12 @@ const ComposerTab = () => {
           onCheckedChange={setSuggestions}
         />
         <ToggleRow
+          label="Looping placeholder"
+          description="Rotate prompt ideas when empty"
+          checked={loopingPlaceholder}
+          onCheckedChange={setLoopingPlaceholder}
+        />
+        <ToggleRow
           label="Context strip"
           description="Demo workspace files"
           checked={showContextStrip}
@@ -432,7 +440,7 @@ export const PlaygroundSettings = () => (
           <IconButton variant="primary" className="rounded-full" aria-label="Playground settings" />
         }
       >
-        <SettingsIcon className="size-4 text-ink-tertiary" />
+        <SettingsIcon className="size-4" />
       </Popover.Trigger>
       <Popover.Content align="end" sideOffset={4} className="w-80 p-0">
         <Tabs.Root defaultValue="theme">
@@ -443,8 +451,8 @@ export const PlaygroundSettings = () => (
                 value={tab.value}
                 className={cn(
                   "flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm font-medium text-ink-secondary outline-none transition-colors border border-transparent",
-                  "hover:bg-primary-hover hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent/50",
-                  "data-active:bg-primary-active data-active:text-ink-primary data-active:border-primary-border",
+                  "hover:bg-primary-bg-hover hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent-bg/50",
+                  "data-active:bg-primary-bg-active data-active:text-ink-primary data-active:border-primary-border-active",
                   "[&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:text-ink-tertiary data-active:[&>svg]:text-ink-primary",
                 )}
               >

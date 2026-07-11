@@ -38,8 +38,8 @@ const selectTriggerVariants = cva(
     variants: {
       variant: {
         primary:
-          "border-border bg-primary hover:bg-primary-hover aria-expanded:bg-muted aria-expanded:text-foreground",
-        ghost: "border-transparent hover:bg-primary-hover aria-expanded:bg-primary-hover",
+          "border-border bg-primary-bg hover:bg-primary-bg-hover hover:border-primary-border-hover aria-expanded:bg-muted aria-expanded:text-foreground",
+        ghost: "border-transparent hover:bg-primary-bg-hover aria-expanded:bg-primary-bg-hover",
       },
       size: {
         sm: "h-8 pr-2 pl-2.5 text-sm *:data-[slot=select-value]:text-sm *:data-[slot=select-icon]:size-3.5",
@@ -60,7 +60,7 @@ const SelectValue = ({ className, ...props }: SelectPrimitive.Value.Props) => {
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
-      className={cn(["flex flex-1 text-left"], className)}
+      className={cn(["flex flex-1 text-left truncate"], className)}
       {...props}
     />
   );
@@ -119,7 +119,7 @@ function SelectContent({
               // "w-(--anchor-width)",
               // Styling
               "rounded-lg p-1 shadow-md",
-              "bg-primary text-ink-primary border border-primary-border",
+              "bg-primary-bg text-ink-primary border border-primary-border",
               // Overflow
               "overflow-x-hidden overflow-y-auto",
               // Animation base
@@ -175,9 +175,9 @@ const SelectItem = ({ className, children, ...props }: SelectPrimitive.Item.Prop
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-md text-sm font-book flex w-full items-center gap-2",
+        "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-md text-sm flex w-full items-center gap-2",
         // Focus states
-        "data-highlighted:bg-primary-hover",
+        "data-highlighted:bg-primary-bg-hover",
         "not-data-[variant=destructive]:focus:**:text-accent-foreground",
         // Disabled states
         "data-disabled:pointer-events-none data-disabled:opacity-50",
@@ -226,7 +226,7 @@ const SelectScrollUpButton = ({
           "top-0 z-10 flex w-full items-center justify-center",
           "py-1",
           // Styling
-          "cursor-default hover:bg-primary-hover",
+          "cursor-default hover:bg-primary-bg-hover",
           // SVG sizing
           "[&_svg:not([class*='size-'])]:size-4",
         ],
@@ -251,7 +251,7 @@ const SelectScrollDownButton = ({
         "bottom-0 z-10 flex w-full items-center justify-center",
         "py-1",
         // Styling
-        "cursor-default hover:bg-primary-hover",
+        "cursor-default hover:bg-primary-bg-hover",
         // SVG sizing
         "[&_svg:not([class*='size-'])]:size-4",
 

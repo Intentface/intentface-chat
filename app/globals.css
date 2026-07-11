@@ -20,8 +20,8 @@
      darker. Surfaces sit near white; a positive Δ would clamp at #fff.
      The .dark block below flips signs so states lift toward white. */
   --state-hover: calc(-0.08 * var(--con));
-  --state-active: calc(-0.16 * var(--con));
-  --state-border: calc(-0.24 * var(--con));
+  --state-active: calc(-0.14 * var(--con));
+  --state-border: calc(-0.2 * var(--con));
 
   /* Surface lightness steps. Each tier offsets from --bg by step ×
      --con. Positive lifts above bg; negative sinks below.
@@ -37,40 +37,54 @@
   --quaternary-lightness: calc(-0.01 * var(--con));
   --base-lightness: calc(-0.05 * var(--con));
 
-  /* Surface families. secondary is passthrough = --bg (canvas). */
-  --primary: oklch(from var(--bg) calc(l + var(--primary-lightness)) c h);
-  --secondary: var(--bg);
-  --tertiary: oklch(from var(--bg) calc(l + var(--tertiary-lightness)) c h);
-  --quaternary: oklch(from var(--bg) calc(l + var(--quaternary-lightness)) c h);
-  --base: oklch(from var(--bg) calc(l + var(--base-lightness)) c h);
+  /* Surface families + state variants — defined once; in .dark the deltas
+     flip sign and the surfaces redefine, so these formulas pick up both.
+     secondary is passthrough = --bg (canvas). Border states derive from the
+     border token, not the surface, so the deltas stack — a hovered border
+     keeps its separation from the hovered background instead of collapsing
+     into it. */
+  --primary-bg: oklch(from var(--bg) calc(l + var(--primary-lightness)) c h);
+  --primary-bg-hover: oklch(from var(--primary-bg) calc(l + var(--state-hover)) c h);
+  --primary-bg-active: oklch(from var(--primary-bg) calc(l + var(--state-active)) c h);
+  --primary-border: oklch(from var(--primary-bg) calc(l + var(--state-border)) c h);
+  --primary-border-hover: oklch(from var(--primary-border) calc(l + var(--state-hover)) c h);
+  --primary-border-active: oklch(from var(--primary-border) calc(l + var(--state-active)) c h);
 
-  /* Surface state variants — defined once; in .dark the deltas flip
-     sign and the surfaces redefine, so these formulas pick up both. */
-  --primary-hover: oklch(from var(--primary) calc(l + var(--state-hover)) c h);
-  --primary-active: oklch(from var(--primary) calc(l + var(--state-active)) c h);
-  --primary-border: oklch(from var(--primary) calc(l + var(--state-border)) c h);
+  --secondary-bg: var(--bg);
+  --secondary-bg-hover: oklch(from var(--secondary-bg) calc(l + var(--state-hover)) c h);
+  --secondary-bg-active: oklch(from var(--secondary-bg) calc(l + var(--state-active)) c h);
+  --secondary-border: oklch(from var(--secondary-bg) calc(l + var(--state-border)) c h);
+  --secondary-border-hover: oklch(from var(--secondary-border) calc(l + var(--state-hover)) c h);
+  --secondary-border-active: oklch(from var(--secondary-border) calc(l + var(--state-active)) c h);
 
-  --secondary-hover: oklch(from var(--secondary) calc(l + var(--state-hover)) c h);
-  --secondary-active: oklch(from var(--secondary) calc(l + var(--state-active)) c h);
-  --secondary-border: oklch(from var(--secondary) calc(l + var(--state-border)) c h);
+  --tertiary-bg: oklch(from var(--bg) calc(l + var(--tertiary-lightness)) c h);
+  --tertiary-bg-hover: oklch(from var(--tertiary-bg) calc(l + var(--state-hover)) c h);
+  --tertiary-bg-active: oklch(from var(--tertiary-bg) calc(l + var(--state-active)) c h);
+  --tertiary-border: oklch(from var(--tertiary-bg) calc(l + var(--state-border)) c h);
+  --tertiary-border-hover: oklch(from var(--tertiary-border) calc(l + var(--state-hover)) c h);
+  --tertiary-border-active: oklch(from var(--tertiary-border) calc(l + var(--state-active)) c h);
 
-  --tertiary-hover: oklch(from var(--tertiary) calc(l + var(--state-hover)) c h);
-  --tertiary-active: oklch(from var(--tertiary) calc(l + var(--state-active)) c h);
-  --tertiary-border: oklch(from var(--tertiary) calc(l + var(--state-border)) c h);
+  --quaternary-bg: oklch(from var(--bg) calc(l + var(--quaternary-lightness)) c h);
+  --quaternary-bg-hover: oklch(from var(--quaternary-bg) calc(l + var(--state-hover)) c h);
+  --quaternary-bg-active: oklch(from var(--quaternary-bg) calc(l + var(--state-active)) c h);
+  --quaternary-border: oklch(from var(--quaternary-bg) calc(l + var(--state-border)) c h);
+  --quaternary-border-hover: oklch(from var(--quaternary-border) calc(l + var(--state-hover)) c h);
+  --quaternary-border-active: oklch(from var(--quaternary-border) calc(l + var(--state-active)) c h);
 
-  --quaternary-hover: oklch(from var(--quaternary) calc(l + var(--state-hover)) c h);
-  --quaternary-active: oklch(from var(--quaternary) calc(l + var(--state-active)) c h);
-  --quaternary-border: oklch(from var(--quaternary) calc(l + var(--state-border)) c h);
-
-  --base-hover: oklch(from var(--base) calc(l + var(--state-hover)) c h);
-  --base-active: oklch(from var(--base) calc(l + var(--state-active)) c h);
-  --base-border: oklch(from var(--base) calc(l + var(--state-border)) c h);
+  --base-bg: oklch(from var(--bg) calc(l + var(--base-lightness)) c h);
+  --base-bg-hover: oklch(from var(--base-bg) calc(l + var(--state-hover)) c h);
+  --base-bg-active: oklch(from var(--base-bg) calc(l + var(--state-active)) c h);
+  --base-border: oklch(from var(--base-bg) calc(l + var(--state-border)) c h);
+  --base-border-hover: oklch(from var(--base-border) calc(l + var(--state-hover)) c h);
+  --base-border-active: oklch(from var(--base-border) calc(l + var(--state-active)) c h);
 
   /* Accent — tinted from --acc, no surface derivation. */
-  --accent: var(--acc);
-  --accent-hover: oklch(from var(--accent) calc(l + var(--state-hover)) c h);
-  --accent-active: oklch(from var(--accent) calc(l + var(--state-active)) c h);
-  --accent-border: oklch(from var(--accent) calc(l + var(--state-border)) c h);
+  --accent-bg: var(--acc);
+  --accent-bg-hover: oklch(from var(--accent-bg) calc(l + var(--state-hover)) c h);
+  --accent-bg-active: oklch(from var(--accent-bg) calc(l + var(--state-active)) c h);
+  --accent-border: oklch(from var(--accent-bg) calc(l + var(--state-border)) c h);
+  --accent-border-hover: oklch(from var(--accent-border) calc(l + var(--state-hover)) c h);
+  --accent-border-active: oklch(from var(--accent-border) calc(l + var(--state-active)) c h);
 
   /* Text. Independent of --con: contrast shouldn't soften when
      surfaces flatten. Primary = --fg verbatim. Secondary/tertiary
@@ -112,15 +126,17 @@
   --tertiary-floor: calc(0.142 + 0.075 * var(--con));
   --quaternary-floor: calc(0.194 + 0.063 * var(--con));
 
-  --primary: oklch(from var(--bg) max(var(--primary-floor), calc(l + var(--primary-lightness))) c h);
-  --secondary: var(--bg);
-  --tertiary: oklch(
+  --primary-bg: oklch(
+    from var(--bg) max(var(--primary-floor), calc(l + var(--primary-lightness))) c h
+  );
+  --secondary-bg: var(--bg);
+  --tertiary-bg: oklch(
     from var(--bg) max(var(--tertiary-floor), calc(l + var(--tertiary-lightness))) c h
   );
-  --quaternary: oklch(
+  --quaternary-bg: oklch(
     from var(--bg) max(var(--quaternary-floor), calc(l + var(--quaternary-lightness))) c h
   );
-  --base: oklch(from var(--bg) max(0, calc(l + var(--base-lightness))) c h);
+  --base-bg: oklch(from var(--bg) max(0, calc(l + var(--base-lightness))) c h);
 
   --text-secondary: oklch(from var(--fg) calc(l - 0.3) c h);
   --text-tertiary: oklch(from var(--fg) calc(l - 0.45) c h);
@@ -143,39 +159,51 @@
   --shadow-border: 0px 1px 2px -1px rgb(0 0 0 / 0.06), 0px 2px 4px 0px rgb(0 0 0 / 0.04);
 
   /* Background */
-  --color-base: var(--base);
-  --color-base-hover: var(--base-hover);
-  --color-base-active: var(--base-active);
+  --color-base-bg: var(--base-bg);
+  --color-base-bg-hover: var(--base-bg-hover);
+  --color-base-bg-active: var(--base-bg-active);
   --color-base-border: var(--base-border);
+  --color-base-border-hover: var(--base-border-hover);
+  --color-base-border-active: var(--base-border-active);
 
   /* Surface: secondary (panels, sidebar) */
-  --color-secondary: var(--secondary);
-  --color-secondary-hover: var(--secondary-hover);
-  --color-secondary-active: var(--secondary-active);
+  --color-secondary-bg: var(--secondary-bg);
+  --color-secondary-bg-hover: var(--secondary-bg-hover);
+  --color-secondary-bg-active: var(--secondary-bg-active);
   --color-secondary-border: var(--secondary-border);
+  --color-secondary-border-hover: var(--secondary-border-hover);
+  --color-secondary-border-active: var(--secondary-border-active);
 
   /* Surface: primary (cards, inputs, composer) */
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-active: var(--primary-active);
+  --color-primary-bg: var(--primary-bg);
+  --color-primary-bg-hover: var(--primary-bg-hover);
+  --color-primary-bg-active: var(--primary-bg-active);
   --color-primary-border: var(--primary-border);
+  --color-primary-border-hover: var(--primary-border-hover);
+  --color-primary-border-active: var(--primary-border-active);
 
   /* Surface: tertiary (filled controls) */
-  --color-tertiary: var(--tertiary);
-  --color-tertiary-hover: var(--tertiary-hover);
-  --color-tertiary-active: var(--tertiary-active);
+  --color-tertiary-bg: var(--tertiary-bg);
+  --color-tertiary-bg-hover: var(--tertiary-bg-hover);
+  --color-tertiary-bg-active: var(--tertiary-bg-active);
   --color-tertiary-border: var(--tertiary-border);
+  --color-tertiary-border-hover: var(--tertiary-border-hover);
+  --color-tertiary-border-active: var(--tertiary-border-active);
 
   /* Surface: quaternary (filled controls) */
-  --color-quaternary: var(--quaternary);
-  --color-quaternary-hover: var(--quaternary-hover);
-  --color-quaternary-active: var(--quaternary-active);
+  --color-quaternary-bg: var(--quaternary-bg);
+  --color-quaternary-bg-hover: var(--quaternary-bg-hover);
+  --color-quaternary-bg-active: var(--quaternary-bg-active);
   --color-quaternary-border: var(--quaternary-border);
+  --color-quaternary-border-hover: var(--quaternary-border-hover);
+  --color-quaternary-border-active: var(--quaternary-border-active);
 
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-active: var(--accent-active);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-bg-hover: var(--accent-bg-hover);
+  --color-accent-bg-active: var(--accent-bg-active);
   --color-accent-border: var(--accent-border);
+  --color-accent-border-hover: var(--accent-border-hover);
+  --color-accent-border-active: var(--accent-border-active);
 
   /* Text */
   --color-ink-primary: var(--text-primary);
@@ -229,7 +257,7 @@
   }
 
   body {
-    @apply bg-base font-sans font-normal text-ink-primary;
+    @apply bg-base-bg font-sans font-normal text-ink-primary;
     font-synthesis: none;
   }
 }
@@ -249,17 +277,17 @@
 }
 
 [data-streamdown="code-block"] {
-  @apply my-3 overflow-hidden rounded-lg border border-primary-border bg-primary [corner-shape:squircle];
+  @apply my-3 overflow-hidden rounded-lg border border-primary-border bg-primary-bg [corner-shape:squircle];
 }
 [data-streamdown="code-block-header"] {
-  @apply flex items-center justify-between border-b border-primary-border bg-primary p-3 text-xs text-ink-primary;
+  @apply flex items-center justify-between border-b border-primary-border bg-primary-bg p-3 text-xs text-ink-primary;
 }
 [data-streamdown="code-block-body"] {
-  @apply overflow-x-auto p-3 bg-primary text-sm leading-relaxed;
+  @apply overflow-x-auto p-3 bg-primary-bg text-sm leading-relaxed;
 }
 
 [data-streamdown="inline-code"] {
-  @apply rounded-sm bg-primary px-1 py-0.5 text-sm text-ink-primary;
+  @apply rounded-sm bg-primary-bg px-1 py-0.5 text-sm text-ink-primary;
 }
 
 [data-streamdown="link"] {
@@ -305,7 +333,7 @@
   @apply w-full text-sm;
 }
 [data-streamdown="table-header"] {
-  @apply border-b border-primary-border bg-primary;
+  @apply border-b border-primary-border bg-primary-bg;
 }
 [data-streamdown="table-header-cell"] {
   @apply px-3 py-1.5 text-left font-medium text-ink-primary;

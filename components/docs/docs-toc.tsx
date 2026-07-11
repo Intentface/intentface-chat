@@ -55,7 +55,7 @@ export const DocsTOC = ({ items }: DocsTOCProps) => {
       "-ml-px border-transparent border-l py-1 text-sm transition-colors",
       depth >= 3 ? "pl-6" : "pl-4",
       isActive
-        ? "border-accent font-medium text-ink-primary"
+        ? "border-accent-bg font-medium text-ink-primary"
         : "text-ink-tertiary hover:text-ink-secondary",
     );
 

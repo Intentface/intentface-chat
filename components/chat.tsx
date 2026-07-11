@@ -31,6 +31,7 @@ import {
   type ComposerSubmitData,
 } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
+import { CHIP_SURFACE_CLASS } from "@/components/ai/chip";
 import { Reasoning } from "@/components/ai/reasoning";
 import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
@@ -43,6 +44,7 @@ import { CircleQuestionmarkIcon } from "@/components/icons/circle-questionmark";
 import { CrossMediumIcon } from "@/components/icons/cross-medium";
 import { ExclamationTriangleIcon } from "@/components/icons/exclamation-triangle";
 import { OpenQuote2Icon } from "@/components/icons/open-quote-2";
+import { PlaygroundIcon } from "@/components/icons/playground";
 import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
 import { PlaygroundSettings } from "@/components/playground-settings";
@@ -61,7 +63,6 @@ import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
 import type { AppUIMessage, AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
 import { applyStopToMessages } from "@/lib/chat-instance";
 import {
-  DEMO_CONTEXT_FILES,
   fetchPlaygroundIssues,
   GroupedIssueCommands,
 } from "@/lib/playground-demo";
@@ -207,7 +208,7 @@ const TimelineToolCall = ({ part }: { part: ToolPart }) => {
           {sources.map((source, index) => (
             <span
               key={index}
-              className="inline-flex items-center rounded-md border border-primary-border bg-primary px-2 py-0.5 text-xs text-ink-secondary"
+              className="inline-flex items-center rounded-md border border-primary-border bg-primary-bg px-2 py-0.5 text-xs text-ink-secondary"
             >
               {source.domain}
             </span>
@@ -714,6 +715,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
   const suggestions = useSettingsStore((state) => state.suggestions);
   const commandSurface = useSettingsStore((state) => state.commandSurface);
   const submitOn = useSettingsStore((state) => state.submitOn);
+  const loopingPlaceholder = useSettingsStore((state) => state.loopingPlaceholder);
   const demoQuestions = usePlaygroundStore((state) => state.demoQuestions);
   const setDemoQuestions = usePlaygroundStore((state) => state.setDemoQuestions);
   const showContextStrip = usePlaygroundStore((state) => state.showContextStrip);
@@ -927,17 +929,16 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
 
       <Composer.ContextWindow>
         {showContextStrip && (
-          <div data-slot="context-files" className="flex items-center gap-1.5">
-            {DEMO_CONTEXT_FILES.map((file) => (
-              <span
-                key={file.id}
-                className="inline-flex items-center gap-1 rounded-md bg-primary-hover px-1.5 py-0.5 text-ink-secondary"
-              >
-                <file.icon className="size-3.5 text-ink-tertiary" />
-                {file.name}
-              </span>
-            ))}
-          </div>
+          <span
+            data-slot="context-playground"
+            className={cn(
+              CHIP_SURFACE_CLASS,
+              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-secondary",
+            )}
+          >
+            <PlaygroundIcon className="size-3.5 opacity-70" aria-hidden />
+            Playground
+          </span>
         )}
         {selections.length > 0 && (
           <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
@@ -948,7 +949,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
             <button
               type="button"
               aria-label="Clear selections"
-              className="cursor-pointer rounded-full p-0.5 hover:bg-primary-hover hover:text-ink-primary"
+              className="cursor-pointer rounded-full p-0.5 hover:bg-primary-bg-hover hover:text-ink-primary"
               onClick={clearSelections}
             >
               <CrossMediumIcon className="size-3" />
@@ -964,20 +965,22 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
               isAskUser
                 ? "Or type your own answer..."
                 : !hasSubmitted
-                  ? [
-                      "Ask me anything...",
-                      "Recall past conversations...",
-                      "Search the web...",
-                      "Generate a report...",
-                      "Explain a concept...",
-                      "Help with a project...",
-                      "Give a tutorial...",
-                      "Provide a recommendation...",
-                      "Translate text...",
-                      "Summarize a document...",
-                      "Write a story...",
-                      "Create a presentation...",
-                    ]
+                  ? loopingPlaceholder
+                    ? [
+                        "Ask me anything...",
+                        "Recall past conversations...",
+                        "Search the web...",
+                        "Generate a report...",
+                        "Explain a concept...",
+                        "Help with a project...",
+                        "Give a tutorial...",
+                        "Provide a recommendation...",
+                        "Translate text...",
+                        "Summarize a document...",
+                        "Write a story...",
+                        "Create a presentation...",
+                      ]
+                    : "Ask me anything..."
                   : "Ask a follow-up question..."
             }
           />

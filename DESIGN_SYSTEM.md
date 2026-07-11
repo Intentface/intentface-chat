@@ -40,11 +40,11 @@ Four variables in `:root`. Everything else is computed from them.
   --acc: #4a9eed;
 
   /* Surface bases retuned for dark — see the table below */
-  --base: var(--bg);
-  --primary: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));
-  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));
-  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));
-  --quaternary: color-mix(
+  --base-bg: var(--bg);
+  --primary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));
+  --secondary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));
+  --tertiary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));
+  --quaternary-bg: color-mix(
     in oklch,
     var(--bg),
     var(--fg) calc(56% * var(--con))
@@ -56,16 +56,16 @@ Four variables in `:root`. Everything else is computed from them.
 }
 ```
 
-The `-hover`, `-active`, and `-border` derivatives don't need redefining — their `:root` formulas reference `var(--primary)`, `var(--mix-hover)`, etc., so they automatically pick up the dark base values. The `--accent` family also cascades from `:root` (only the `--acc` seed changes).
+The `-bg-hover`, `-bg-active`, and `-border*` derivatives don't need redefining — their `:root` formulas reference `var(--primary-bg)`, `var(--mix-hover)`, etc., so they automatically pick up the dark base values. The `--accent-*` family also cascades from `:root` (only the `--acc` seed changes).
 
 Two structural shifts to be aware of:
 
-- **`--base` and `--primary` swap roles between modes.** In light, `--primary` _is_ `--bg` and `--base` is slightly darker; in dark, `--base` _is_ `--bg` and `--primary` is slightly lifted. The body background stays anchored to `--base` in both modes.
+- **`--base-bg` and `--primary-bg` swap roles between modes.** In light, `--primary-bg` _is_ `--bg` and `--base-bg` is slightly darker; in dark, `--base-bg` _is_ `--bg` and `--primary-bg` is slightly lifted. The body background stays anchored to `--base-bg` in both modes.
 - **Quaternary is much stronger in dark** (56% vs 24%) so it stays visible against the dark base.
 
 ### Layer 2 — Derived semantic tokens
 
-All surfaces and text colors are mixed from the seeds via `color-mix(in oklch, ...)`. Every surface family has four states: base, `-hover`, `-active`, `-border`.
+All surfaces and text colors are mixed from the seeds via `color-mix(in oklch, ...)`. Every surface family has six states: `-bg`, `-bg-hover`, `-bg-active`, `-border`, `-border-hover`, `-border-active`. Border states stack from the border token (border delta first, then the state delta on top), so a hovered border keeps its separation from the hovered background.
 
 **Shared deltas** scale with `--con`:
 
@@ -75,18 +75,18 @@ All surfaces and text colors are mixed from the seeds via `color-mix(in oklch, .
 --mix-border: calc(24% * var(--con));
 ```
 
-**Surface families** (each with `-hover`, `-active`, `-border` variants):
+**Surface families** (each with `-bg-hover`, `-bg-active`, `-border`, `-border-hover`, `-border-active` variants):
 
-| Token          | Role                               | Light mix from `--bg` | Dark mix from `--bg` |
-| -------------- | ---------------------------------- | --------------------- | -------------------- |
-| `--base`       | body background                    | `fg 10% × con`        | `var(--bg)`          |
-| `--primary`    | cards, inputs, dropdowns, composer | `var(--bg)`           | `fg 12% × con`       |
-| `--secondary`  | panels, sidebar                    | `fg 4% × con`         | `fg 3% × con`        |
-| `--tertiary`   | filled controls (buttons, tags)    | `fg 2% × con`         | `fg 20% × con`       |
-| `--quaternary` | subtle fills, dividers             | `fg 24% × con`        | `fg 56% × con`       |
-| `--accent`     | branded interactive elements       | `acc + fg 28% × con`  | _(same formula)_     |
+| Token             | Role                               | Light mix from `--bg` | Dark mix from `--bg` |
+| ----------------- | ---------------------------------- | --------------------- | -------------------- |
+| `--base-bg`       | body background                    | `fg 10% × con`        | `var(--bg)`          |
+| `--primary-bg`    | cards, inputs, dropdowns, composer | `var(--bg)`           | `fg 12% × con`       |
+| `--secondary-bg`  | panels, sidebar                    | `fg 4% × con`         | `fg 3% × con`        |
+| `--tertiary-bg`   | filled controls (buttons, tags)    | `fg 2% × con`         | `fg 20% × con`       |
+| `--quaternary-bg` | subtle fills, dividers             | `fg 24% × con`        | `fg 56% × con`       |
+| `--accent-bg`     | branded interactive elements       | `acc + fg 28% × con`  | _(same formula)_     |
 
-**State deltas** (apply to all surfaces except `--accent` for `-hover`/`-active`/`-border`):
+**State deltas** (apply to all surfaces; the `--accent-*` states mix from the `--acc` seed):
 
 | Delta          | Light       | Dark        |
 | -------------- | ----------- | ----------- |
@@ -115,9 +115,10 @@ The `@theme inline` block maps CSS vars to Tailwind utility classes. The naming 
 
 ```css
 @theme inline {
-  --color-base: var(--base);
-  --color-base-hover: var(--base-hover);
+  --color-base-bg: var(--base-bg);
+  --color-base-bg-hover: var(--base-bg-hover);
   --color-base-border: var(--base-border);
+  --color-base-border-hover: var(--base-border-hover);
   /* …same pattern for secondary, primary, tertiary, quaternary, accent… */
 
   --color-ink-primary: var(--text-primary);
@@ -141,7 +142,7 @@ The `@theme inline` block maps CSS vars to Tailwind utility classes. The naming 
 
 Resulting classes used throughout the app:
 
-- Surfaces — `bg-base`, `bg-primary`, `bg-secondary-hover`, `border-primary-border`, …
+- Surfaces — `bg-base-bg`, `bg-primary-bg`, `bg-secondary-bg-hover`, `border-primary-border`, `hover:border-primary-border-hover`, …
 - Text — `text-ink-primary`, `text-ink-secondary`, `text-ink-tertiary`
 - Radii — `rounded-md`, `rounded-2xl`, …
 - Type scale — `text-sm`, `text-md`, `text-lg`, …
@@ -233,9 +234,9 @@ const iconButtonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary border-primary-border text-ink-primary hover:bg-primary-hover",
-        secondary: "bg-secondary text-ink-primary hover:bg-secondary-hover",
-        ghost: "hover:bg-primary-hover hover:text-ink-primary",
+          "bg-primary-bg border-primary-border text-ink-primary hover:bg-primary-bg-hover",
+        secondary: "bg-secondary-bg text-ink-primary hover:bg-secondary-bg-hover",
+        ghost: "hover:bg-primary-bg-hover hover:text-ink-primary",
         accent: "bg-accent text-white hover:bg-accent-hover",
         link: "text-primary underline-offset-4 hover:underline",
       },

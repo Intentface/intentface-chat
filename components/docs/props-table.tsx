@@ -29,7 +29,7 @@ export const PropsTable = ({ rows }: PropsTableProps) => (
         <col className="w-[28%]" />
       </colgroup>
       <thead>
-        <tr className="border-secondary-border border-b bg-tertiary">
+        <tr className="border-secondary-border border-b bg-tertiary-bg">
           <th className="px-4 py-2.5 font-medium text-ink-primary">Prop</th>
           <th className="px-4 py-2.5 font-medium text-ink-primary">Type</th>
           <th className="px-4 py-2.5 font-medium text-ink-primary">Default</th>
@@ -50,14 +50,14 @@ const PropsRow = ({ row }: { row: PropRow }) => {
   return (
     <>
       <tr
-        className="cursor-pointer border-secondary-border/60 border-b last:border-0 hover:bg-primary-hover/50"
+        className="cursor-pointer border-secondary-border/60 border-b last:border-0 hover:bg-primary-bg-hover/50"
         onClick={() => setOpen((current) => !current)}
       >
         <td className="px-4 py-2.5 align-top">
           <code className="font-mono text-ink-primary text-xs">{row.name}</code>
         </td>
         <td className="truncate px-4 py-2.5 align-top">
-          <code className="font-mono text-accent text-xs">{row.type}</code>
+          <code className="font-mono text-accent-bg text-xs">{row.type}</code>
         </td>
         <td className="px-4 py-2.5 align-top">
           <div className="flex items-center justify-between gap-2">
@@ -85,7 +85,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
       </tr>
       <tr
         aria-hidden={!open}
-        className={cn(open && "border-secondary-border/60 border-b bg-base/40")}
+        className={cn(open && "border-secondary-border/60 border-b bg-base-bg/40")}
       >
         <td colSpan={3} className="p-0">
           <motion.div
@@ -113,7 +113,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
                 <span className="text-ink-secondary">{row.description}</span>
               </DetailRow>
               <DetailRow label="Type">
-                <code className="block w-fit max-w-full overflow-x-auto rounded border border-base-border bg-base px-1 py-px font-mono text-accent text-xs">
+                <code className="block w-fit max-w-full overflow-x-auto rounded border border-base-border bg-base-bg px-1 py-px font-mono text-accent-bg text-xs">
                   {row.type}
                 </code>
               </DetailRow>

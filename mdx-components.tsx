@@ -50,13 +50,13 @@ const proseComponents: MDXComponents = {
   a: ({ href, ...props }: ComponentProps<"a">) => (
     <Link
       href={href ?? "#"}
-      className="font-medium text-accent underline underline-offset-4 hover:text-accent-hover"
+      className="font-medium text-accent-bg underline underline-offset-4 hover:text-accent-bg-hover"
       {...props}
     />
   ),
   blockquote: (props) => (
     <blockquote
-      className="my-4 border-accent border-l-2 pl-4 text-ink-tertiary italic"
+      className="my-4 border-accent-bg border-l-2 pl-4 text-ink-tertiary italic"
       {...props}
     />
   ),
@@ -80,7 +80,7 @@ const proseComponents: MDXComponents = {
   // Inline code; fenced blocks arrive as <pre><code> and are handled by `pre`.
   code: (props) => (
     <code
-      className="rounded border border-base-border bg-base px-1 py-px font-mono text-[0.85em] text-ink-primary"
+      className="rounded border border-base-border bg-base-bg px-1 py-px font-mono text-[0.85em] text-ink-primary"
       {...props}
     />
   ),

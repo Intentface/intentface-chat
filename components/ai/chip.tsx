@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 // doesn't grow the line box; `box-decoration-clone` keeps padding/bg intact if a
 // chip wraps; `leading-[inherit]` so it never inflates the editor's line height.
 export const CHIP_SURFACE_CLASS =
-  "box-decoration-clone inline rounded-sm border border-primary-border bg-primary px-0.75 py-0.5 align-baseline font-book leading-[inherit] whitespace-nowrap text-ink-primary";
+  "box-decoration-clone inline rounded-sm border border-primary-border bg-primary-bg px-0.75 py-0.5 align-baseline font-book leading-[inherit] whitespace-nowrap text-ink-primary";
 
 const chipVariants = cva(CHIP_SURFACE_CLASS, {
   variants: {

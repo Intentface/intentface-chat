@@ -84,7 +84,7 @@ const ComposerContainer = ({ className, ...props }: ComposerContainerProps) => (
       // Positioned so it paints above the context window peeking out from
       // behind its top edge. Edge is shadow-drawn (shadow-border), not a
       // border, matching the playground cards.
-      "relative bg-primary rounded-4xl border border-primary-border shadow-xs [corner-shape:squircle] cursor-text transition-colors",
+      "relative bg-primary-bg rounded-4xl border border-primary-border shadow-xs [corner-shape:squircle] cursor-text transition-colors",
       className,
     )}
     {...props}
@@ -196,7 +196,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       return (
         // The composer input uses the plain borderless chip surface; the
         // bordered/filled CHIP_SURFACE_CLASS is reserved for message/docs chips.
-        <Chip className="border-0 bg-primary-active">
+        <Chip className="border-tertiary-border bg-tertiary-bg">
           {icon && <Chip.Icon>{icon}</Chip.Icon>}
           <Chip.Label>{chip.label}</Chip.Label>
         </Chip>
@@ -211,7 +211,7 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       // committed chip above, not the bordered CHIP_SURFACE_CLASS used in
       // messages/docs) so the badge and the chip it becomes share one baseline —
       // no jump on commit.
-      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-hover **:data-command-badge:text-ink-primary",
+      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-bg-hover **:data-command-badge:text-ink-primary",
       // The badge's hint element — ghost-text completion or the empty-query
       // placeholder (the package renders whichever applies into one slot).
       "**:data-command-hint:pointer-events-none **:data-command-hint:whitespace-nowrap **:data-command-hint:text-ink-tertiary",
@@ -278,10 +278,7 @@ type ComposerContextWindowProps = ComponentProps<typeof ComposerPrimitive.Contex
 const ComposerContextWindow = ({ className, ...props }: ComposerContextWindowProps) => (
   <ComposerPrimitive.ContextWindow
     className={cn(
-      "relative z-0 overflow-hidden flex items-center transition-all duration-200 px-3 text-xs",
-      // Background drawn by ::before so only the top corners round — the
-      // bottom edge stays square and hides behind the container below.
-      'before:content-[""] before:absolute before:inset-0 before:-z-10 before:rounded-t-2xl before:bg-base before:pointer-events-none',
+      "relative z-0 overflow-hidden flex items-center transition-all duration-200 px-1.5 text-xs rounded-t-2xl bg-secondary-bg-active",
       // Visible: 32px band peeking above the container plus 16px submerged
       // beneath it (negative margin pulls the container up over the
       // bottom-padded zone).
@@ -369,7 +366,7 @@ const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => (
       // coordinates); portaled to the body, so it never reserves layout in the composer.
       // Match the composer Container's width via the positioner's --anchor-width var.
       "absolute z-50 w-(--anchor-width) overflow-hidden",
-      "rounded-4xl border border-primary-border bg-primary [corner-shape:squircle]",
+      "rounded-4xl border border-primary-border bg-primary-bg [corner-shape:squircle]",
       "transition-[opacity,transform] duration-150 ease-out",
       "data-starting-style:opacity-0 data-ending-style:opacity-0",
       // Slide from the anchored edge: default (above) drops in from below; flipped
@@ -399,7 +396,7 @@ const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => {
         // off the anchor token with a stronger shadow. `absolute` is the base positioning
         // context (the positioner then writes left/top in page coordinates); z-50 keeps
         // the portaled popover above the thread.
-        "absolute z-50 w-72 overflow-hidden border border-primary-border bg-primary rounded-4xl shadow-lg [corner-shape:squircle]",
+        "absolute z-50 w-72 overflow-hidden border border-primary-border bg-primary-bg rounded-4xl shadow-lg [corner-shape:squircle]",
         "transition-[opacity,transform,filter] duration-150 ease-out",
         "data-closed:opacity-0 data-closed:blur-[3px]",
         // Slide from the anchored edge — opens upward by default, downward when flipped.
@@ -474,7 +471,7 @@ const ComposerCommandEmpty = ({
       "hidden group-data-empty/composer-command-list:flex",
       // Shown only when nothing matches, where it acts as the single highlighted
       // option whose selection dismisses — so it carries the highlight styling.
-      "items-center gap-2 rounded-lg bg-primary-hover px-3 h-8 text-sm text-ink-primary",
+      "items-center gap-2 rounded-lg bg-primary-bg-hover px-3 h-8 text-sm text-ink-primary",
       className,
     )}
     {...props}
@@ -503,7 +500,7 @@ const ComposerCommandItem = ({ className, ...props }: ComposerCommandItemProps) 
     className={cn(
       // Radius is the popover's 16px (rounded-2xl) minus the 5px gap to its edge
       // (1px border + p-1) so the highlight corner stays concentric with it.
-      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm font-book text-ink-primary cursor-pointer data-highlighted:bg-primary-hover",
+      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm font-book text-ink-primary cursor-pointer data-highlighted:bg-primary-bg-hover",
       className,
     )}
     {...props}

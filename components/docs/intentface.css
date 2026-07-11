@@ -16,35 +16,61 @@
   --mix-active: calc(20% * var(--con));
   --mix-border: calc(24% * var(--con));
 
-  --base: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--con)));
-  --base-hover: color-mix(in oklch, var(--base), var(--fg) var(--mix-hover));
-  --base-active: color-mix(in oklch, var(--base), var(--fg) var(--mix-active));
-  --base-border: color-mix(in oklch, var(--base), var(--fg) var(--mix-border));
+  /* Border states stack from the border token so a hovered border keeps its
+     separation from the hovered background. */
+  --base-bg: color-mix(in oklch, var(--bg), var(--fg) calc(10% * var(--con)));
+  --base-bg-hover: color-mix(in oklch, var(--base-bg), var(--fg) var(--mix-hover));
+  --base-bg-active: color-mix(in oklch, var(--base-bg), var(--fg) var(--mix-active));
+  --base-border: color-mix(in oklch, var(--base-bg), var(--fg) var(--mix-border));
+  --base-border-hover: color-mix(in oklch, var(--base-border), var(--fg) var(--mix-hover));
+  --base-border-active: color-mix(in oklch, var(--base-border), var(--fg) var(--mix-active));
 
-  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(4% * var(--con)));
-  --secondary-hover: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-hover));
-  --secondary-active: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-active));
-  --secondary-border: color-mix(in oklch, var(--secondary), var(--fg) var(--mix-border));
+  --secondary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(4% * var(--con)));
+  --secondary-bg-hover: color-mix(in oklch, var(--secondary-bg), var(--fg) var(--mix-hover));
+  --secondary-bg-active: color-mix(in oklch, var(--secondary-bg), var(--fg) var(--mix-active));
+  --secondary-border: color-mix(in oklch, var(--secondary-bg), var(--fg) var(--mix-border));
+  --secondary-border-hover: color-mix(in oklch, var(--secondary-border), var(--fg) var(--mix-hover));
+  --secondary-border-active: color-mix(
+    in oklch,
+    var(--secondary-border),
+    var(--fg) var(--mix-active)
+  );
 
-  --primary: var(--bg);
-  --primary-hover: color-mix(in oklch, var(--primary), var(--fg) var(--mix-hover));
-  --primary-active: color-mix(in oklch, var(--primary), var(--fg) var(--mix-active));
-  --primary-border: color-mix(in oklch, var(--primary), var(--fg) var(--mix-border));
+  --primary-bg: var(--bg);
+  --primary-bg-hover: color-mix(in oklch, var(--primary-bg), var(--fg) var(--mix-hover));
+  --primary-bg-active: color-mix(in oklch, var(--primary-bg), var(--fg) var(--mix-active));
+  --primary-border: color-mix(in oklch, var(--primary-bg), var(--fg) var(--mix-border));
+  --primary-border-hover: color-mix(in oklch, var(--primary-border), var(--fg) var(--mix-hover));
+  --primary-border-active: color-mix(in oklch, var(--primary-border), var(--fg) var(--mix-active));
 
-  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(2% * var(--con)));
-  --tertiary-hover: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-hover));
-  --tertiary-active: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-active));
-  --tertiary-border: color-mix(in oklch, var(--tertiary), var(--fg) var(--mix-border));
+  --tertiary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(2% * var(--con)));
+  --tertiary-bg-hover: color-mix(in oklch, var(--tertiary-bg), var(--fg) var(--mix-hover));
+  --tertiary-bg-active: color-mix(in oklch, var(--tertiary-bg), var(--fg) var(--mix-active));
+  --tertiary-border: color-mix(in oklch, var(--tertiary-bg), var(--fg) var(--mix-border));
+  --tertiary-border-hover: color-mix(in oklch, var(--tertiary-border), var(--fg) var(--mix-hover));
+  --tertiary-border-active: color-mix(in oklch, var(--tertiary-border), var(--fg) var(--mix-active));
 
-  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(24% * var(--con)));
-  --quaternary-hover: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-hover));
-  --quaternary-active: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-active));
-  --quaternary-border: color-mix(in oklch, var(--quaternary), var(--fg) var(--mix-border));
+  --quaternary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(24% * var(--con)));
+  --quaternary-bg-hover: color-mix(in oklch, var(--quaternary-bg), var(--fg) var(--mix-hover));
+  --quaternary-bg-active: color-mix(in oklch, var(--quaternary-bg), var(--fg) var(--mix-active));
+  --quaternary-border: color-mix(in oklch, var(--quaternary-bg), var(--fg) var(--mix-border));
+  --quaternary-border-hover: color-mix(
+    in oklch,
+    var(--quaternary-border),
+    var(--fg) var(--mix-hover)
+  );
+  --quaternary-border-active: color-mix(
+    in oklch,
+    var(--quaternary-border),
+    var(--fg) var(--mix-active)
+  );
 
-  --accent: color-mix(in oklch, var(--acc), var(--fg) calc(28% * var(--con)));
-  --accent-hover: color-mix(in oklch, var(--acc), var(--fg) var(--mix-hover));
-  --accent-active: color-mix(in oklch, var(--acc), var(--fg) var(--mix-active));
+  --accent-bg: color-mix(in oklch, var(--acc), var(--fg) calc(28% * var(--con)));
+  --accent-bg-hover: color-mix(in oklch, var(--acc), var(--fg) var(--mix-hover));
+  --accent-bg-active: color-mix(in oklch, var(--acc), var(--fg) var(--mix-active));
   --accent-border: color-mix(in oklch, var(--acc), var(--fg) var(--mix-border));
+  --accent-border-hover: color-mix(in oklch, var(--accent-border), var(--fg) var(--mix-hover));
+  --accent-border-active: color-mix(in oklch, var(--accent-border), var(--fg) var(--mix-active));
 
   --text-primary: color-mix(in oklch, var(--bg), var(--fg) 85%);
   --text-secondary: color-mix(in oklch, var(--bg), var(--fg) 58%);
@@ -61,11 +87,11 @@
   --fg: #fcfcfc;
   --acc: #4a9eed;
 
-  --base: var(--bg);
-  --primary: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));
-  --secondary: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));
-  --tertiary: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));
-  --quaternary: color-mix(in oklch, var(--bg), var(--fg) calc(56% * var(--con)));
+  --base-bg: var(--bg);
+  --primary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(12% * var(--con)));
+  --secondary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(3% * var(--con)));
+  --tertiary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(20% * var(--con)));
+  --quaternary-bg: color-mix(in oklch, var(--bg), var(--fg) calc(56% * var(--con)));
 
   --mix-hover: calc(16% * var(--con));
   --mix-active: calc(18% * var(--con));
@@ -73,30 +99,42 @@
 }
 
 @theme inline {
-  --color-base: var(--base);
-  --color-base-hover: var(--base-hover);
-  --color-base-active: var(--base-active);
+  --color-base-bg: var(--base-bg);
+  --color-base-bg-hover: var(--base-bg-hover);
+  --color-base-bg-active: var(--base-bg-active);
   --color-base-border: var(--base-border);
-  --color-secondary: var(--secondary);
-  --color-secondary-hover: var(--secondary-hover);
-  --color-secondary-active: var(--secondary-active);
+  --color-base-border-hover: var(--base-border-hover);
+  --color-base-border-active: var(--base-border-active);
+  --color-secondary-bg: var(--secondary-bg);
+  --color-secondary-bg-hover: var(--secondary-bg-hover);
+  --color-secondary-bg-active: var(--secondary-bg-active);
   --color-secondary-border: var(--secondary-border);
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-active: var(--primary-active);
+  --color-secondary-border-hover: var(--secondary-border-hover);
+  --color-secondary-border-active: var(--secondary-border-active);
+  --color-primary-bg: var(--primary-bg);
+  --color-primary-bg-hover: var(--primary-bg-hover);
+  --color-primary-bg-active: var(--primary-bg-active);
   --color-primary-border: var(--primary-border);
-  --color-tertiary: var(--tertiary);
-  --color-tertiary-hover: var(--tertiary-hover);
-  --color-tertiary-active: var(--tertiary-active);
+  --color-primary-border-hover: var(--primary-border-hover);
+  --color-primary-border-active: var(--primary-border-active);
+  --color-tertiary-bg: var(--tertiary-bg);
+  --color-tertiary-bg-hover: var(--tertiary-bg-hover);
+  --color-tertiary-bg-active: var(--tertiary-bg-active);
   --color-tertiary-border: var(--tertiary-border);
-  --color-quaternary: var(--quaternary);
-  --color-quaternary-hover: var(--quaternary-hover);
-  --color-quaternary-active: var(--quaternary-active);
+  --color-tertiary-border-hover: var(--tertiary-border-hover);
+  --color-tertiary-border-active: var(--tertiary-border-active);
+  --color-quaternary-bg: var(--quaternary-bg);
+  --color-quaternary-bg-hover: var(--quaternary-bg-hover);
+  --color-quaternary-bg-active: var(--quaternary-bg-active);
   --color-quaternary-border: var(--quaternary-border);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-active: var(--accent-active);
+  --color-quaternary-border-hover: var(--quaternary-border-hover);
+  --color-quaternary-border-active: var(--quaternary-border-active);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-bg-hover: var(--accent-bg-hover);
+  --color-accent-bg-active: var(--accent-bg-active);
   --color-accent-border: var(--accent-border);
+  --color-accent-border-hover: var(--accent-border-hover);
+  --color-accent-border-active: var(--accent-border-active);
   --color-ink-primary: var(--text-primary);
   --color-ink-secondary: var(--text-secondary);
   --color-ink-tertiary: var(--text-tertiary);

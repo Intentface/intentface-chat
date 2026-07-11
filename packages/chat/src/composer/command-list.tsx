@@ -209,13 +209,17 @@ export const ComposerCommand = ({
   const { items, state } = isActive ? resolved : lastResolvedRef.current;
 
   // The highlight index lives in the store (so the editor's keydown handler can
-  // move it). It's raw/unbounded; wrap it by the current item count here. An
-  // empty list has no highlighted row — the "No results" row stands in as the
-  // sole selectable.
+  // move it). It's raw/unbounded; wrap it by the current item count here. The
+  // wrap runs over the enabled subset only, so disabled rows render but never
+  // take the highlight — arrow keys hop over them for free. An empty list has
+  // no highlighted row — the "No results" row stands in as the sole selectable.
+  const enabledItems = useMemo(() => items.filter((item) => !item.disabled), [items]);
   const highlightIndex = useComposer((composer) => composer.commands.highlightIndex);
   const activeIndex =
-    items.length > 0 ? ((highlightIndex % items.length) + items.length) % items.length : -1;
-  const highlightedItem = items[activeIndex] ?? null;
+    enabledItems.length > 0
+      ? ((highlightIndex % enabledItems.length) + enabledItems.length) % enabledItems.length
+      : -1;
+  const highlightedItem = enabledItems[activeIndex] ?? null;
   const effectiveHighlight = highlightedItem?.value ?? null;
 
   // Badge hint — one real element (span[data-command-hint], appended
@@ -263,7 +267,7 @@ export const ComposerCommand = ({
       const editor = store.editorRef.current;
       if (!editor) return;
       const item = items.find((candidate) => candidate.value === value);
-      if (!item) return;
+      if (!item || item.disabled) return;
 
       if (kind === "insert") {
         editor.insertChipAtTrigger({
@@ -338,14 +342,14 @@ export const ComposerCommand = ({
     () => ({
       highlightedValue: effectiveHighlight,
       setHighlightedValue: (value) => {
-        const index = value === null ? -1 : items.findIndex((item) => item.value === value);
+        const index = value === null ? -1 : enabledItems.findIndex((item) => item.value === value);
         if (index >= 0) store.setHighlight(index);
       },
       selectByValue,
       dismiss,
       scrollHighlightedIntoView,
     }),
-    [effectiveHighlight, items, selectByValue, dismiss, scrollHighlightedIntoView, store],
+    [effectiveHighlight, enabledItems, selectByValue, dismiss, scrollHighlightedIntoView, store],
   );
 
   const itemsContext = useMemo<CommandListItemsContextValue>(
@@ -510,15 +514,24 @@ export const ComposerCommandDismiss = ({
   );
 };
 
-export type ComposerCommandItemProps = Omit<ComponentProps<typeof Commands.Item>, "highlighted"> & {
+export type ComposerCommandItemProps = Omit<
+  ComponentProps<typeof Commands.Item>,
+  "highlighted" | "disabled"
+> & {
   value: string;
 };
 
 export const ComposerCommandItem = ({ value, ...props }: ComposerCommandItemProps) => {
   const navContext = useCommandListNav("CommandItem");
+  const itemsContext = use(CommandListItemsContext);
   const store = useComposerContextStore();
 
   const isHighlighted = navContext.highlightedValue === value;
+  // Disabled comes from the item data (CommandItemData.disabled) — the same
+  // source the nav wrap skips — so the row can never disagree with the
+  // keyboard behavior. Not a prop: two writers would let them drift.
+  const isDisabled =
+    itemsContext?.items.some((item) => item.value === value && item.disabled) ?? false;
 
   return (
     <Commands.Item
@@ -527,11 +540,14 @@ export const ComposerCommandItem = ({ value, ...props }: ComposerCommandItemProp
       aria-selected={isHighlighted}
       data-composer-command-item=""
       highlighted={isHighlighted}
+      disabled={isDisabled}
       onMouseDown={(event) => {
+        // preventDefault even when disabled — the click must never steal
+        // focus from the editor.
         event.preventDefault();
-        navContext.selectByValue(value);
+        if (!isDisabled) navContext.selectByValue(value);
       }}
-      onMouseEnter={() => navContext.setHighlightedValue(value)}
+      onMouseEnter={isDisabled ? undefined : () => navContext.setHighlightedValue(value)}
       {...props}
     />
   );

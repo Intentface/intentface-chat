@@ -58,14 +58,18 @@ const CommandsGroupLabel = ({
 export type CommandsItemState = {
   /** Present as data-highlighted while keyboard/hover highlighted. */
   highlighted: boolean;
+  /** Present as data-disabled while the row is inert. */
+  disabled: boolean;
 };
 
 export type CommandsItemProps = PrimitiveProps<"button", CommandsItemState> & {
   highlighted?: boolean;
+  disabled?: boolean;
 };
 
 const CommandsItem = ({
   highlighted = false,
+  disabled = false,
   className,
   render,
   style,
@@ -75,11 +79,21 @@ const CommandsItem = ({
     "button",
     { className, render, style },
     {
-      state: { highlighted },
+      state: { highlighted, disabled },
       // Options, not buttons: keyboard selection stays in the editor
       // (activedescendant pattern), so rows must never be tab stops or
-      // announce as "button".
-      props: [{ role: "option", tabIndex: -1, "data-command-item": "" }, elementProps],
+      // announce as "button". Disabled is aria-disabled, never the native
+      // attribute — a natively disabled button swallows the mousedown that
+      // keeps focus in the editor.
+      props: [
+        {
+          role: "option",
+          tabIndex: -1,
+          "aria-disabled": disabled || undefined,
+          "data-command-item": "",
+        },
+        elementProps,
+      ],
     },
   );
 

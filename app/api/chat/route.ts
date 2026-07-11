@@ -1,5 +1,14 @@
 import { openai } from "@ai-sdk/openai";
-import { convertToModelMessages, smoothStream, stepCountIs, streamText } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  generateText,
+  smoothStream,
+  stepCountIs,
+  streamText,
+} from "ai";
+import type { AppUIMessage } from "@/lib/ai/types";
 import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
 import { aggregateData } from "@/tools/aggregate-data";
 import { askUser } from "@/tools/ask-user";
@@ -10,11 +19,14 @@ import { detectAnomalies } from "@/tools/detect-anomalies";
 import { exportReport } from "@/tools/export-report";
 import { filterData } from "@/tools/filter-data";
 import { listDataSources } from "@/tools/list-data-sources";
+import { listDocsPages } from "@/tools/list-docs-pages";
 import { queryData } from "@/tools/query-data";
+import { readDocsPage } from "@/tools/read-docs-page";
+import { readSourceFile } from "@/tools/read-source-file";
 import { sortData } from "@/tools/sort-data";
 import { webSearch } from "@/tools/web-search";
 
-const SYSTEM_PROMPT = `You are a helpful AI assistant. You are knowledgeable, concise, and friendly.
+const SYSTEM_PROMPT = `You are the assistant in the Intentface Chat playground — a demo built with @intentface/chat, headless React chat primitives. You are knowledgeable, concise, and friendly.
 
 ## Response Guidelines
 - Be concise and direct. Avoid unnecessary filler or preamble.
@@ -23,6 +35,15 @@ const SYSTEM_PROMPT = `You are a helpful AI assistant. You are knowledgeable, co
 - If you don't know something, say so honestly rather than guessing.
 - For code questions, provide working examples with brief explanations.
 - Use the current date and time context when answering time-sensitive questions.
+
+## Library Questions
+When the user asks about @intentface/chat — its primitives (composer, thread, message, chip, steps, reasoning, attachments), installation, theming, state, or how this playground is built:
+1. Call listDocsPages to see the documentation index
+2. Read the relevant pages with readDocsPage before answering
+3. For implementation internals ("how does X work under the hood"), read the code with readSourceFile — each docs page's source field names its component under packages/chat/src
+- Answer strictly from the documentation and source — never invent props, exports, or APIs
+- Link to pages inline using their url from the tool output, e.g. [Composer](/docs/primitives/composer)
+- If the documentation doesn't cover something, say so instead of guessing
 
 ## Analytics Tools
 You have access to analytics tools for exploring data sources. When asked to analyze data:
@@ -53,6 +74,31 @@ You MUST call the askUser tool any time you need input from the user. This is NO
 DO NOT write questions, options, or bullet-listed choices as plain text. The user has an interactive UI for answering — use it. Call askUser with 2-5 concrete options, then STOP and wait.
 `;
 
+// Generate a sidebar title from the first user message with a small model.
+// Runs concurrently with the main response; failures degrade to the client's
+// truncated-text placeholder, never the stream.
+const generateThreadTitle = async (message: AppUIMessage): Promise<string | null> => {
+  const text = message.parts
+    .filter((part) => part.type === "text")
+    .map((part) => part.text)
+    .join("\n")
+    .trim();
+  if (!text) return null;
+
+  try {
+    const { text: title } = await generateText({
+      model: openai("gpt-5-mini"),
+      system:
+        "Generate a title for a chat that opens with the given user message. 2-5 words, plain text — no quotes, no trailing punctuation.",
+      prompt: text.slice(0, 2000),
+      temperature: 0,
+    });
+    return title.trim() || null;
+  } catch {
+    return null;
+  }
+};
+
 export async function POST(req: Request) {
   const {
     messages,
@@ -63,37 +109,59 @@ export async function POST(req: Request) {
 
   const modelId = isValidModelId(model) ? model : DEFAULT_MODEL;
 
-  const result = streamText({
-    model: openai(modelId),
-    system: SYSTEM_PROMPT,
-    messages: await convertToModelMessages(messages),
-    tools: {
-      askUser,
-      listDataSources,
-      connectDataSource,
-      queryData,
-      filterData,
-      aggregateData,
-      sortData,
-      computeStats,
-      detectAnomalies,
-      createVisualization,
-      exportReport,
-      ...(webSearchEnabled && { webSearch }),
-    },
-    stopWhen: stepCountIs(15),
-    ...(thinkingEnabled && {
-      providerOptions: {
-        openai: {
-          reasoningEffort: "medium",
+  const stream = createUIMessageStream<AppUIMessage>({
+    execute: async ({ writer }) => {
+      // First turn = no assistant message yet (tool-continuation rounds and
+      // later turns always carry one). Kick the title off before the main
+      // stream so it generates in parallel and lands mid-stream.
+      const isFirstTurn = !messages.some((message: AppUIMessage) => message.role === "assistant");
+      const titlePromise = isFirstTurn ? generateThreadTitle(messages.at(-1)) : null;
+
+      const result = streamText({
+        model: openai(modelId),
+        system: SYSTEM_PROMPT,
+        messages: await convertToModelMessages(messages),
+        tools: {
+          askUser,
+          listDocsPages,
+          readDocsPage,
+          readSourceFile,
+          listDataSources,
+          connectDataSource,
+          queryData,
+          filterData,
+          aggregateData,
+          sortData,
+          computeStats,
+          detectAnomalies,
+          createVisualization,
+          exportReport,
+          ...(webSearchEnabled && { webSearch }),
         },
-      },
-    }),
-    experimental_transform: smoothStream({ chunking: "word", delayInMs: 20 }),
+        stopWhen: stepCountIs(15),
+        ...(thinkingEnabled && {
+          providerOptions: {
+            openai: {
+              reasoningEffort: "medium",
+            },
+          },
+        }),
+        experimental_transform: smoothStream({ chunking: "word", delayInMs: 20 }),
+      });
+
+      writer.merge(
+        result.toUIMessageStream({
+          sendReasoning: true,
+          sendSources: true,
+        }),
+      );
+
+      const title = await titlePromise;
+      if (title) {
+        writer.write({ type: "data-thread-title", data: { title }, transient: true });
+      }
+    },
   });
 
-  return result.toUIMessageStreamResponse({
-    sendReasoning: true,
-    sendSources: true,
-  });
+  return createUIMessageStreamResponse({ stream });
 }

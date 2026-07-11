@@ -31,3 +31,5 @@ export type DocPage = Page<undefined, DocPageData>;
 
 export const getPage = (slug: string[] | undefined): DocPage | undefined =>
   source.getPage(slug) as DocPage | undefined;
+
+export const getPages = (): DocPage[] => source.getPages() as DocPage[];

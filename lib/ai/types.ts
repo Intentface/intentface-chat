@@ -2,9 +2,12 @@ import type { AskUserQuestion as ComposerAskUserQuestion } from "@intentface/cha
 import type { ChatMessage, ChatStatus, FilePart } from "@intentface/chat/types";
 import type * as sdk from "ai";
 
-export type AppUIMessage = sdk.UIMessage<{
-  stopped?: boolean;
-}>;
+export type AppUIMessage = sdk.UIMessage<
+  { stopped?: boolean },
+  // Transient stream-only parts (delivered via onData, never persisted into
+  // message.parts): the server pushes the generated thread title mid-stream.
+  { "thread-title": { title: string } }
+>;
 
 // This app's askUser tool contract — the tool's input wire shape. The app owns
 // it (the zod schema in tools/ask-user.ts is the source of truth); the

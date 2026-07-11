@@ -436,15 +436,15 @@ export const PlaygroundSettings = () => (
       </Popover.Trigger>
       <Popover.Content align="end" sideOffset={4} className="w-80 p-0">
         <Tabs.Root defaultValue="theme">
-          <Tabs.List className="flex gap-1 border-b border-primary-border p-2">
+          <Tabs.List className="flex gap-2 border-b border-primary-border p-2">
             {PLAYGROUND_TABS.map((tab) => (
               <Tabs.Tab
                 key={tab.value}
                 value={tab.value}
                 className={cn(
-                  "flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm font-medium text-ink-secondary outline-none transition-colors",
+                  "flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm font-medium text-ink-secondary outline-none transition-colors border border-transparent",
                   "hover:bg-primary-hover hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent/50",
-                  "data-active:bg-primary-active data-active:text-ink-primary",
+                  "data-active:bg-primary-active data-active:text-ink-primary data-active:border-primary-border",
                   "[&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:text-ink-tertiary data-active:[&>svg]:text-ink-primary",
                 )}
               >

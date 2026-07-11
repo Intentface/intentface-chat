@@ -201,6 +201,7 @@ type CommandItemData = {
   icon?: ChipIconKey;             // see lib/ai/chip-icons
   variant?: ChipVariant;          // "primary" | "accent" | "warning"
   keywords?: string;              // extra search terms
+  disabled?: boolean;             // inert row: aria-disabled, skipped by nav/selection
   onSelect?: (ctx: PrefixOnSelectContext) => void;
 };
 

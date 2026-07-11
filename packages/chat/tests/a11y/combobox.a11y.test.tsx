@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Composer } from "../../src/composer";
 import type { CommandItemData } from "../../src/composer/types";
 import { expectNoAxeViolations } from "./axe";
@@ -84,6 +84,64 @@ describe("composer combobox a11y", () => {
     });
     expect(textbox.getAttribute("aria-controls")).toBeNull();
     expect(textbox.getAttribute("aria-activedescendant")).toBeNull();
+
+    await expectNoAxeViolations(container);
+    cleanup();
+  });
+
+  // Disabled options render with aria-disabled and stay perceivable, but the
+  // highlight wrap skips them: arrows hop over, hover doesn't take, mousedown
+  // doesn't select. Wrapping runs over the enabled subset only.
+  test("disabled options are announced but skipped by highlight and selection", async () => {
+    const store = Composer.createStore();
+    const mixed: CommandItemData[] = [
+      { value: "rasmus", label: "Rasmus" },
+      { value: "maija", label: "Maija", disabled: true },
+      { value: "ville", label: "Ville" },
+    ];
+    const { container } = render(
+      <Composer
+        store={store}
+        onSubmit={() => {}}
+        commands={{ "@": { kind: "insert", trigger: "after-whitespace", items: mixed } }}
+      >
+        <Composer.Textarea aria-label="Message" />
+        <CommandsHarness prefix="@" />
+      </Composer>,
+    );
+
+    act(() => {
+      store.setCommands({ active: true, trigger: "@", query: "" });
+    });
+
+    const textbox = screen.getByRole("textbox", { name: "Message" });
+    const options = screen.getAllByRole("option");
+    expect(options.length).toBe(3);
+    expect(options[1]?.getAttribute("aria-disabled")).toBe("true");
+    expect(options[1]?.hasAttribute("data-disabled")).toBe(true);
+    expect(options[0]?.getAttribute("aria-disabled")).toBeNull();
+
+    // Arrow down skips the disabled middle row; another wraps past it back to the top.
+    expect(options[0]?.getAttribute("aria-selected")).toBe("true");
+    act(() => {
+      store.moveHighlight(1);
+    });
+    expect(options[2]?.getAttribute("aria-selected")).toBe("true");
+    expect(options[1]?.getAttribute("aria-selected")).toBe("false");
+    expect(textbox.getAttribute("aria-activedescendant")).toBe(options[2]?.id ?? null);
+    act(() => {
+      store.moveHighlight(1);
+    });
+    expect(options[0]?.getAttribute("aria-selected")).toBe("true");
+
+    // Hover doesn't move the highlight onto a disabled row.
+    fireEvent.mouseEnter(options[1] as HTMLElement);
+    expect(options[0]?.getAttribute("aria-selected")).toBe("true");
+
+    // Mousedown on a disabled row selects nothing and leaves the popup open.
+    fireEvent.mouseDown(options[1] as HTMLElement);
+    expect(screen.getByRole("listbox", { name: "Suggestions" })).toBeTruthy();
+    expect(options[0]?.getAttribute("aria-selected")).toBe("true");
 
     await expectNoAxeViolations(container);
     cleanup();

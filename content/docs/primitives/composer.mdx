@@ -525,7 +525,10 @@ export const commandItemsProps = [
 
 ### Composer.CommandItem
 
-One selectable row. Renders `data-composer-command-item`.
+One selectable row. Renders `data-composer-command-item`. To disable a row, set
+`disabled: true` on its item data (not on this component) — the row renders
+inert (`aria-disabled` + `data-disabled`), the keyboard highlight skips it, and
+mouse selection is a no-op. Disabled rows still match the filter.
 
 export const commandItemProps = [
   { name: "value", type: "string", default: "(required)", description: "Item identity, matched against the highlight and selection." },
@@ -536,6 +539,7 @@ export const commandItemProps = [
 export const commandItemAttrs = [
   { attribute: "data-composer-command-item", description: "The row button." },
   { attribute: "data-highlighted", description: "Present when this row is the active highlight." },
+  { attribute: "data-disabled", description: "Present when the item data marks this row disabled." },
 ];
 
 <AttributesTable rows={commandItemAttrs} />

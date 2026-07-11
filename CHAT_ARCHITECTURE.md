@@ -222,7 +222,7 @@ Pass a `commands` map to the root:
 | `trigger` | `"doc-start"` (prefix only at position 0) or `"after-whitespace"` (anywhere after a space) |
 | `items`   | `CommandItemData[]` **or** an async `(query, { signal }) => CommandItemData[]` for remote search |
 
-`CommandItemData` is `{ value, label, description?, icon?, variant?, keywords?, onSelect? }`. There is **no `filter` field** — array items are fuzzy-scored on `label + keywords` internally; async `items` filter themselves (and receive an `AbortSignal`).
+`CommandItemData` is `{ value, label, description?, icon?, variant?, keywords?, disabled?, onSelect? }`. A `disabled` item renders `aria-disabled`/`data-disabled` and is skipped by the highlight and selection. There is **no `filter` field** — array items are fuzzy-scored on `label + keywords` internally; async `items` filter themselves (and receive an `AbortSignal`).
 
 `Composer.Commands` is the zero-config default: it renders one `CommandList` per registered prefix. For custom layouts, render lists yourself inside `Composer.PanelItem value="command-list"`:
 

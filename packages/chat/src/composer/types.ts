@@ -75,6 +75,11 @@ export type CommandItemData = {
   description?: string;
   icon?: ChipIconKey;
   keywords?: string;
+  /**
+   * Renders the row inert (aria-disabled / data-disabled) and removes it from
+   * keyboard navigation and selection. Disabled rows still match the filter.
+   */
+  disabled?: boolean;
   onSelect?: (context: PrefixOnSelectContext) => void;
 };
 

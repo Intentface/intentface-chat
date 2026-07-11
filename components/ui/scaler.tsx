@@ -70,7 +70,7 @@ export const Scaler = ({
             </div>
           )}
           <SliderPrimitive.Indicator className="rounded-none bg-ink-primary/10" />
-          <SliderPrimitive.Thumb className="h-4 w-0.5 rounded-full border-0 bg-ink-primary opacity-0 shadow-none transition-opacity group-hover:opacity-80 focus-visible:opacity-100 data-[active]:opacity-100" />
+          <SliderPrimitive.Thumb className="h-4 w-0.5 rounded-full border-0 bg-ink-primary opacity-0 shadow-none transition-opacity group-hover:opacity-80 focus-visible:opacity-100 data-active:opacity-100" />
         </SliderPrimitive.Track>
       </SliderPrimitive.Control>
       <div

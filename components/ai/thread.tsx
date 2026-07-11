@@ -73,7 +73,7 @@ ThreadOverlay.displayName = "ThreadOverlay";
 export type ThreadViewportProps = ComponentProps<"div">;
 
 const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => (
-  <ThreadPrimitive.Viewport className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] [scrollbar-gutter:stable] [scrollbar-width:thin] [scrollbar-color:var(--color-ink-tertiary)_transparent] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50">
+  <ThreadPrimitive.Viewport className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] scrollbar-gutter-stable scrollbar-thin [scrollbar-color:var(--color-ink-tertiary)_transparent] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50">
     <div
       data-slot="thread-viewport"
       className={cn(

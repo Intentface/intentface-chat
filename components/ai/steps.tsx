@@ -59,7 +59,7 @@ const StepsPanel = ({ className, children, ...props }: StepsPanelProps) => (
       // The rail: a nested item's panel indents behind a vertical line, so
       // depth reads visually without any depth counter. `[data-nested]` is set
       // by the primitive on items that sit inside another item.
-      "[[data-nested]_&]:ml-2 [[data-nested]_&]:border-l [[data-nested]_&]:border-slate-6 [[data-nested]_&]:pl-4",
+      "in-data-nested:ml-2 in-data-nested:border-l in-data-nested:border-slate-6 in-data-nested:pl-4",
       className,
     )}
     {...props}

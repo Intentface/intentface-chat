@@ -273,12 +273,12 @@ const SidebarRoot = ({
           side === "left"
             ? cn(
                 "left-0 inset-y-0",
-                "group-data-[state=collapsed]:left-[calc(var(--sidebar-width)*-1)]",
+                "group-data-[state=collapsed]:-left-(--sidebar-width)",
                 "group-data-[state=collapsed]:group-data-peek:left-2",
                 "group-data-[state=collapsed]:inset-y-2 group-data-[state=collapsed]:rounded-xl group-data-[state=collapsed]:border-secondary-border",
                 "group-data-peek:shadow-lg",
               )
-            : "right-0 inset-y-0 group-data-[state=collapsed]:right-[calc(var(--sidebar-width)*-1)]",
+            : "right-0 inset-y-0 group-data-[state=collapsed]:-right-(--sidebar-width)",
           className,
         )}
         onPointerEnter={handlePanelEnter}

@@ -14,10 +14,23 @@ type ColorPillProps = {
   value: string;
   onValueChange: (next: string) => void;
   disabled?: boolean;
+  size?: "default" | "compact";
   className?: string;
 };
 
-export const ColorPill = ({ id, value, onValueChange, disabled, className }: ColorPillProps) => {
+const colorPillSizes = {
+  default: "box-border h-9 w-full px-2.5",
+  compact: "box-border h-8 w-28 shrink-0 px-2",
+} as const;
+
+export const ColorPill = ({
+  id,
+  value,
+  onValueChange,
+  disabled,
+  size = "default",
+  className,
+}: ColorPillProps) => {
   const [draft, setDraft] = useState<string | null>(null);
 
   const handleBlur = useCallback(() => {
@@ -31,7 +44,8 @@ export const ColorPill = ({ id, value, onValueChange, disabled, className }: Col
     <Popover>
       <div
         className={cn(
-          "relative flex h-9 w-full items-center gap-2 rounded-md border border-primary-border px-2.5",
+          "relative flex items-center gap-1.5 rounded-md border border-primary-border",
+          colorPillSizes[size],
           className,
         )}
         style={{
@@ -55,7 +69,9 @@ export const ColorPill = ({ id, value, onValueChange, disabled, className }: Col
           spellCheck={false}
           className="flex-1 bg-transparent font-mono text-xs uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
         />
-        <ChevronDownMediumIcon className="size-3 shrink-0 opacity-70" />
+        <ChevronDownMediumIcon
+          className={cn("size-3 shrink-0 opacity-70", size === "compact" && "hidden")}
+        />
       </div>
       <Popover.Content align="end" className="w-auto p-2">
         <HexColorPicker color={value} onChange={onValueChange} />

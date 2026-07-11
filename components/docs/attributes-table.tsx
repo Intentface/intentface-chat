@@ -44,7 +44,9 @@ export const AttributesTable = ({ rows }: AttributesTableProps) => {
               {hasValues ? (
                 <td className="px-4 py-2.5 align-top">
                   {row.values ? (
-                    <code className="break-words font-mono text-accent text-xs">{row.values}</code>
+                    <code className="wrap-break-word font-mono text-accent text-xs">
+                      {row.values}
+                    </code>
                   ) : (
                     <span className="text-ink-tertiary">—</span>
                   )}

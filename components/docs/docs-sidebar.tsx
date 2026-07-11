@@ -141,9 +141,10 @@ export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
       <TreeNodes nodes={tree.children} />
     </nav>
     <div className="flex flex-col gap-0.5 border-secondary-border border-t pt-2">
-      {/* Internal route — next/link, not the external-anchor ExternalLink. */}
+      {/* Internal route — next/link, not the external-anchor ExternalLink.
+          The chat root IS the playground (corner config cards). */}
       <Link
-        href="/playground"
+        href="/"
         className="flex h-8 items-center gap-2 rounded-md px-3 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-hover hover:text-ink-primary"
       >
         <span className="[&>svg]:size-4">

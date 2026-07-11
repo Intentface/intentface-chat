@@ -1,41 +1,22 @@
 "use client";
 
-import { FlaskConicalIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import { useState } from "react";
-import type { ThreadAutoScrollMode } from "@/components/ai/thread";
-import { AppearanceIcon } from "@/components/icons/appearance";
-import { ArrowDownIcon } from "@/components/icons/arrow-down";
-import { ColorSwatchIcon } from "@/components/icons/color-swatch";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
-import { MoonIcon } from "@/components/icons/moon";
 import { PlusMediumIcon } from "@/components/icons/plus-medium";
-import { SettingsIcon } from "@/components/icons/settings";
-import { SunIcon } from "@/components/icons/sun";
 import { TrashIcon } from "@/components/icons/trash";
-import { ThemeConfigurator } from "@/components/theme-configurator";
-import DropdownMenu from "@/components/ui/dropdown-menu";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
-import { useSettingsStore } from "@/lib/store/settings";
 import { BookIcon } from "./icons/book";
 import { GitHubIcon } from "./icons/github";
 import { NpmIcon } from "./icons/npm";
 
 export const AppSidebar = () => {
-  const { theme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
   const chats = useChatStore((state) => state.chats);
   const deleteChat = useChatStore((state) => state.deleteChat);
-  const scrollMode = useSettingsStore((state) => state.scrollMode);
-  const setScrollMode = useSettingsStore((state) => state.setScrollMode);
-  const stickyMessages = useSettingsStore((state) => state.stickyMessages);
-  const setStickyMessages = useSettingsStore((state) => state.setStickyMessages);
-  const [themeConfiguratorOpen, setThemeConfiguratorOpen] = useState(false);
 
   const handleDelete = (chatId: string) => {
     const isActive = pathname === `/chat/${chatId}`;
@@ -130,81 +111,6 @@ export const AppSidebar = () => {
                   <span>npm</span>
                 </a>
               }
-            />
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <DropdownMenu>
-              <DropdownMenu.Trigger
-                render={
-                  <Sidebar.MenuButton>
-                    <SettingsIcon />
-                    <span>Settings</span>
-                  </Sidebar.MenuButton>
-                }
-              />
-              <DropdownMenu.Content side="top" align="start">
-                <DropdownMenu.Item onClick={() => setThemeConfiguratorOpen(true)}>
-                  <ColorSwatchIcon />
-                  Appearance
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  render={
-                    <Link href="/playground">
-                      <FlaskConicalIcon />
-                      Playground
-                    </Link>
-                  }
-                />
-                <DropdownMenu.Sub>
-                  <DropdownMenu.SubTrigger>
-                    <SunIcon />
-                    Theme
-                  </DropdownMenu.SubTrigger>
-                  <DropdownMenu.SubContent>
-                    <DropdownMenu.RadioGroup value={theme} onValueChange={setTheme}>
-                      <DropdownMenu.RadioItem value="system">
-                        <AppearanceIcon />
-                        System
-                      </DropdownMenu.RadioItem>
-                      <DropdownMenu.RadioItem value="light">
-                        <SunIcon />
-                        Light
-                      </DropdownMenu.RadioItem>
-                      <DropdownMenu.RadioItem value="dark">
-                        <MoonIcon />
-                        Dark
-                      </DropdownMenu.RadioItem>
-                    </DropdownMenu.RadioGroup>
-                  </DropdownMenu.SubContent>
-                </DropdownMenu.Sub>
-                <DropdownMenu.Sub>
-                  <DropdownMenu.SubTrigger>
-                    <ArrowDownIcon />
-                    Scroll
-                  </DropdownMenu.SubTrigger>
-                  <DropdownMenu.SubContent>
-                    <DropdownMenu.RadioGroup
-                      value={scrollMode}
-                      onValueChange={(value) => setScrollMode(value as ThreadAutoScrollMode)}
-                    >
-                      <DropdownMenu.RadioItem value="follow">Follow</DropdownMenu.RadioItem>
-                      <DropdownMenu.RadioItem value="jump">Jump to top</DropdownMenu.RadioItem>
-                      <DropdownMenu.RadioItem value="bottom">Bottom</DropdownMenu.RadioItem>
-                      <DropdownMenu.RadioItem value="off">Off</DropdownMenu.RadioItem>
-                    </DropdownMenu.RadioGroup>
-                  </DropdownMenu.SubContent>
-                </DropdownMenu.Sub>
-                <DropdownMenu.CheckboxItem
-                  checked={stickyMessages}
-                  onCheckedChange={setStickyMessages}
-                >
-                  Sticky messages
-                </DropdownMenu.CheckboxItem>
-              </DropdownMenu.Content>
-            </DropdownMenu>
-            <ThemeConfigurator
-              open={themeConfiguratorOpen}
-              onOpenChange={setThemeConfiguratorOpen}
             />
           </Sidebar.MenuItem>
         </Sidebar.Menu>

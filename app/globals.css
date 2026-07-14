@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@source "../node_modules/streamdown/dist/*.js";
+/* @source "../node_modules/streamdown/dist/*.js"; */
 
 @custom-variant dark (&:is(.dark *));
 
@@ -277,17 +277,17 @@
 }
 
 [data-streamdown="code-block"] {
-  @apply my-3 overflow-hidden rounded-lg border border-primary-border bg-primary-bg [corner-shape:squircle];
+  @apply my-3 p-0 gap-0 flex flex-col rounded-lg border-0 ring ring-primary-border shadow-xs;
 }
 [data-streamdown="code-block-header"] {
-  @apply flex items-center justify-between border-b border-primary-border bg-primary-bg p-3 text-xs text-ink-primary;
+  @apply flex items-center justify-between [&>span]:font-sans h-auto px-3 py-4 -my-2 bg-tertiary-bg border-0 text-xs text-ink-primary;
 }
 [data-streamdown="code-block-body"] {
-  @apply overflow-x-auto p-3 bg-primary-bg text-sm leading-relaxed;
+  @apply overflow-x-auto border-0 p-3 bg-primary-bg ring ring-tertiary-border text-sm leading-relaxed;
 }
 
 [data-streamdown="inline-code"] {
-  @apply rounded-sm bg-primary-bg px-1 py-0.5 text-sm text-ink-primary;
+  @apply rounded-sm bg-primary-bg border border-primary-border px-1 py-0.5 text-sm text-ink-secondary;
 }
 
 [data-streamdown="link"] {
@@ -327,39 +327,29 @@
 }
 
 [data-streamdown="table-wrapper"] {
-  @apply my-3 overflow-x-auto;
+  @apply my-3 border-0 p-0 gap-0 flex flex-col  ring ring-secondary-border overflow-x-auto [&_div]:border-0;
 }
 [data-streamdown="table"] {
-  @apply w-full text-sm;
+  @apply w-full text-sm border-0 p-0 gap-0 bg-tertiary-bg;
 }
 [data-streamdown="table-header"] {
-  @apply border-b border-primary-border bg-primary-bg;
+  @apply [&_tr]:border-0 [&_tr]:bg-tertiary-bg [&_th]:px-4 [&_th]:py-2 [&>tr]:-my-2;
+}
+
+[data-streamdown="table-body"] {
+  @apply rounded-xl overflow-hidden;
+  clip-path: inset(0 round 12px);
 }
 [data-streamdown="table-header-cell"] {
-  @apply px-3 py-1.5 text-left font-medium text-ink-primary;
+  @apply px-3 py-1.5 text-left font-medium text-ink-primary overflow-hidden;
 }
 [data-streamdown="table-row"] {
-  @apply border-b border-primary-border;
+  @apply border-b border-primary-border overflow-hidden;
 }
 [data-streamdown="table-cell"] {
-  @apply px-3 py-1.5 text-ink-primary;
+  @apply px-3 py-1.5 text-ink-primary bg-primary-bg overflow-hidden;
 }
 
 [data-streamdown="image"] {
   @apply max-w-full rounded-md;
-}
-
-/* ─── Shiki dual-theme code blocks ───
-   CodeBlock highlights with { light: github-light, dark: github-dark } and
-   defaultColor:false, so shiki emits per-token CSS variables instead of a fixed
-   color. Activate light by default and swap to dark under the .dark class. Only
-   the text color switches — the <pre> keeps its own bg-secondary surface. */
-.shiki,
-.shiki span {
-  color: var(--shiki-light);
-}
-
-.dark .shiki,
-.dark .shiki span {
-  color: var(--shiki-dark);
 }

@@ -99,20 +99,27 @@ const MessageText = ({
   renderChip,
   ...elementProps
 }: MessageTextProps) => {
-  const segments = parseChipSegments(children);
-
-  const segmentNodes = segments.map((segment, index) =>
-    segment.type === "text" ? (
-      <Fragment key={index}>{renderText ? renderText(segment.text, index) : segment.text}</Fragment>
-    ) : (
-      <Fragment key={index}>
-        {renderChip ? (
-          renderChip(segment, index)
+  // Settled rows re-render for reasons other than their text (data-last flips,
+  // parent context) — memoizing on the text keeps them from re-parsing and
+  // rebuilding the segment tree each time.
+  const segmentNodes = useMemo(
+    () =>
+      parseChipSegments(children).map((segment, index) =>
+        segment.type === "text" ? (
+          <Fragment key={index}>
+            {renderText ? renderText(segment.text, index) : segment.text}
+          </Fragment>
         ) : (
-          <span data-message-chip="">{segment.label}</span>
-        )}
-      </Fragment>
-    ),
+          <Fragment key={index}>
+            {renderChip ? (
+              renderChip(segment, index)
+            ) : (
+              <span data-message-chip="">{segment.label}</span>
+            )}
+          </Fragment>
+        ),
+      ),
+    [children, renderText, renderChip],
   );
 
   return useRenderElement(

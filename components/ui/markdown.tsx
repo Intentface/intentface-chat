@@ -1,3 +1,4 @@
+import { code } from "@streamdown/code";
 import type { ComponentProps } from "react";
 import type { Components } from "streamdown";
 import { Streamdown } from "streamdown";
@@ -63,12 +64,14 @@ const Markdown = ({
   ...props
 }: ComponentProps<typeof Streamdown>) => (
   <Streamdown
+    plugins={{ code }}
     controls={false}
     components={{ ...markdownComponents, ...components }}
     className={cn(
-      "text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+      "px-px text-md [&_p]:whitespace-pre-wrap [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
       className,
     )}
+    shikiTheme={["github-light", "vesper"]}
     {...props}
   />
 );

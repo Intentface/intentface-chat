@@ -51,6 +51,13 @@ export const encodeChipMarkdown = (chip: ChipData): string => {
 };
 
 export const parseChipSegments = (text: string): ChipSegment[] => {
+  // Fast path — every chip token contains this literal, and most message text
+  // carries no chips; an includes() probe is far cheaper than a regex scan of
+  // the full text (which the streaming row would otherwise repeat per token).
+  if (!text.includes("](chip:")) {
+    return text.length > 0 ? [{ type: "text", text }] : [];
+  }
+
   const segments: ChipSegment[] = [];
   let lastIndex = 0;
   for (const match of text.matchAll(CHIP_REF_PATTERN)) {

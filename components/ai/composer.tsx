@@ -84,7 +84,7 @@ const ComposerContainer = ({ className, ...props }: ComposerContainerProps) => (
       // Positioned so it paints above the context window peeking out from
       // behind its top edge. Edge is shadow-drawn (shadow-border), not a
       // border, matching the playground cards.
-      "relative bg-primary-bg rounded-4xl border border-primary-border shadow-xs [corner-shape:squircle] cursor-text transition-colors",
+      "relative bg-primary-bg rounded-2xl border border-primary-border shadow-xs cursor-text transition-colors",
       className,
     )}
     {...props}
@@ -188,6 +188,7 @@ type ComposerTextareaProps = {
 
 const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTextareaProps) => (
   <ComposerPrimitive.Textarea
+    data-slot="composer-textarea"
     disabled={disabled}
     // The wire format carries the icon as an opaque string; narrow it to this
     // app's concrete keys here — unknown values fall back to no icon.
@@ -203,7 +204,8 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
       );
     }}
     className={cn(
-      "max-h-32 min-h-8 overflow-y-auto py-2 px-3 text-md",
+      "max-h-32 min-h-8 overflow-y-auto py-2 text-md",
+      "**:data-composer-editor:px-3 **:data-composer-placeholder:px-3",
       "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
       // The editor element — ProseMirror-owned DOM, out of JSX reach.
       "**:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:font-book **:data-composer-editor:leading-[1.7] [&_[data-composer-editor]:focus]:outline-none",
@@ -366,7 +368,7 @@ const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => (
       // coordinates); portaled to the body, so it never reserves layout in the composer.
       // Match the composer Container's width via the positioner's --anchor-width var.
       "absolute z-50 w-(--anchor-width) overflow-hidden",
-      "rounded-4xl border border-primary-border bg-primary-bg [corner-shape:squircle]",
+      "rounded-2xl border border-primary-border bg-primary-bg",
       "transition-[opacity,transform] duration-150 ease-out",
       "data-starting-style:opacity-0 data-ending-style:opacity-0",
       // Slide from the anchored edge: default (above) drops in from below; flipped
@@ -396,7 +398,7 @@ const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => {
         // off the anchor token with a stronger shadow. `absolute` is the base positioning
         // context (the positioner then writes left/top in page coordinates); z-50 keeps
         // the portaled popover above the thread.
-        "absolute z-50 w-72 overflow-hidden border border-primary-border bg-primary-bg rounded-4xl shadow-lg [corner-shape:squircle]",
+        "absolute z-50 w-72 overflow-hidden border border-primary-border bg-primary-bg rounded-2xl shadow-lg",
         "transition-[opacity,transform,filter] duration-150 ease-out",
         "data-closed:opacity-0 data-closed:blur-[3px]",
         // Slide from the anchored edge — opens upward by default, downward when flipped.

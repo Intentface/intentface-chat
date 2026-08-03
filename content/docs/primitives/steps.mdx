@@ -1,7 +1,7 @@
 ---
 title: Steps
 description: A collapsible timeline of a run — reasoning, tool calls, and answered questions as chronological steps.
-source: steps.tsx
+source: steps
 ---
 
 <ComponentPreview name="steps-basic" />
@@ -20,7 +20,7 @@ A timeline is a top-level item whose panel holds rows; a row is an `Icon` +
 `Label`, and a row that expands is itself a nested `Steps.Item`:
 
 ```tsx
-<Steps>
+<Steps.Root>
   <Steps.Item defaultOpen>
     <Steps.Trigger>
       <span>Worked for 3 seconds</span>
@@ -48,7 +48,7 @@ A timeline is a top-level item whose panel holds rows; a row is an `Icon` +
       </div>
     </Steps.Panel>
   </Steps.Item>
-</Steps>
+</Steps.Root>
 ```
 
 ## Status

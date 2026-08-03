@@ -1,7 +1,7 @@
 ---
 title: Attachments
 description: The file-attachment tray — item chips, a remove affordance, and inline or global drop zones.
-source: attachments.tsx
+source: attachments
 ---
 
 <ComponentPreview name="attachments-basic" />
@@ -17,13 +17,13 @@ source: attachments.tsx
 ## Anatomy
 
 ```tsx
-<Attachments show={items.length > 0}>
+<Attachments.Root show={items.length > 0}>
   {items.map((item) => (
     <Attachments.Item key={item.id} item={item}>
       <Attachments.Remove onRemove={() => remove(item.id)} />
     </Attachments.Item>
   ))}
-</Attachments>
+</Attachments.Root>
 ```
 
 With a drop zone and a picker trigger:
@@ -31,13 +31,13 @@ With a drop zone and a picker trigger:
 ```tsx
 <>
   <Attachments.Dropzone visible={isDragging} variant="global" />
-  <Attachments show={items.length > 0}>
+  <Attachments.Root show={items.length > 0}>
     {items.map((item) => (
       <Attachments.Item key={item.id} item={item}>
         <Attachments.Remove onRemove={() => remove(item.id)} />
       </Attachments.Item>
     ))}
-  </Attachments>
+  </Attachments.Root>
   <Attachments.Trigger onClick={openFileDialog} />
 </>
 ```

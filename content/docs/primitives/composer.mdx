@@ -19,7 +19,7 @@ source: composer
 The bare nesting — every part is optional except `Composer` and `Container`:
 
 ```tsx
-<Composer onSubmit={handleSubmit}>
+<Composer.Root onSubmit={handleSubmit}>
   <Composer.Panel>
     {(composer) =>
       composer.commands.active && (
@@ -45,7 +45,7 @@ The bare nesting — every part is optional except `Composer` and `Container`:
       <Composer.Submit />
     </Composer.Actions>
   </Composer.Container>
-</Composer>
+</Composer.Root>
 ```
 
 `Composer.Panel` takes plain children or a callback receiving the composer
@@ -110,7 +110,7 @@ drive the composer from anywhere — a toolbar, a shortcut — through
 
 ## Multiple instances
 
-Every `<Composer>` creates its own isolated store, so several composers can
+Every `<Composer.Root>` creates its own isolated store, so several composers can
 live on one page with no wiring. To reach a composer from outside its tree —
 toolbars, keyboard shortcuts, status bars — create an explicit handle with
 `Composer.createStore()`, pass it via the `store` prop, and use
@@ -137,7 +137,7 @@ const ChatInput = () => {
 };
 
 const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => (
-  <Composer /* … the actual composer tree … */ />
+  <Composer.Root /* … the actual composer tree … */ />
 ));
 ```
 
@@ -422,7 +422,7 @@ part-specific props.
 
 A surface region above the field. `children` is either plain nodes or a callback
 `(composer) => ReactNode` receiving the composer state, so you pick what to show
-by priority (`commands.active ? <Command/> : askUser.active ? <AskUser/> :
+by priority (`commands.active ? <Command/> : askUser.active ? <AskUser.Root/> :
 null`). By default (`anchor`) it renders as a **collision-aware, portaled overlay**
 anchored to the `Container` — flipping / shifting / sizing to stay on screen (via
 `@floating-ui/dom`); anchor a ref/element elsewhere, or pass `anchor={false}` for an
@@ -592,7 +592,7 @@ to switch continue/submit wording.
 ### Hooks
 
 export const hooks = [
-  { name: "useComposer", type: "(selector?) => Selected", description: "Subscribe to a slice of the nearest composer's store. Throws outside <Composer>." },
+  { name: "useComposer", type: "(selector?) => Selected", description: "Subscribe to a slice of the nearest composer's store. Throws outside <Composer.Root>." },
   { name: "useComposerStore", type: "(store, selector?) => Selected", description: "Same, for an explicit createStore() handle — the outside-the-tree twin." },
   { name: "useComposerController", type: "() => ComposerEditorState", description: "The nearest composer's imperative editor controls (focus, insert, clear, …)." },
   { name: "useComposerSubmit", type: "(options) => ComposerSubmitState", description: "Computes Submit's type/disabled/generating; auto-disables while empty or submitting; aborts on Escape." },

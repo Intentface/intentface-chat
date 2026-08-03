@@ -8,6 +8,14 @@ bring your own.
 This is the Base UI model applied to chat: **install the logic from npm, copy
 the look from the docs.**
 
+## Status
+
+Pre-1.0. The primitives are in real use, but the API is still settling and
+minor releases may contain breaking changes — the usual `0.x` semver contract.
+Pin an exact version if that matters to you, and check the
+[changelog](https://github.com/Intentface/intentface-chat/blob/main/packages/chat/CHANGELOG.md)
+when upgrading.
+
 ## Install
 
 ```bash

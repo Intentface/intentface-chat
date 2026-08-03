@@ -47,13 +47,7 @@
     "postpack": "node scripts/swap-exports.mjs post"
   },
   "dependencies": {
-    "@floating-ui/dom": "1.7.6",
-    "@tiptap/core": "^3.27.1",
-    "@tiptap/extension-document": "^3.27.1",
-    "@tiptap/extension-paragraph": "^3.27.1",
-    "@tiptap/extension-text": "^3.27.1",
-    "@tiptap/pm": "^3.27.1",
-    "@tiptap/react": "^3.27.1",
+    "@floating-ui/dom": "^1.7.6",
     "nanoid": "^5.1.11"
   },
   "peerDependencies": {

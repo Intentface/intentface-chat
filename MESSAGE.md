@@ -155,6 +155,6 @@ Most prop types are inline (see the parts above). What the modules export:
 - **Message** — `Message` only. Prop types aren't re-exported; reach for `ComponentProps<typeof Message>` if you need them.
 - **Steps** — `Steps` only.
 - **Reasoning** — `Reasoning`, the `useReasoning` hook, and `ReasoningRootProps`, `ReasoningTriggerProps`, `ReasoningContentProps`.
-- **Chip** — `Chip`, `ChipVariant`, and `CHIP_SURFACE_CLASS` (the shared inline text-flow surface; reuse it for custom inline chips or ProseMirror decorations that must align with committed chips).
+- **Chip** — `Chip`, `ChipVariant`, and `CHIP_SURFACE_CLASS` (the shared inline text-flow surface; reuse it for custom inline chips or editor decorations that must align with committed chips).
 
 `ChipData` (used by `Message.Text`, `Message.Chip`, and chips throughout) is exported from `@/components/ai/composer`.

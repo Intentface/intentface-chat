@@ -499,8 +499,8 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
         return;
       }
       case "soft-break": {
-        // Unlike the legacy engine (a ProseMirror split replaced default
-        // Enter), the browser's own insertParagraph must be blocked.
+        // The browser's own insertParagraph must be blocked — it would split
+        // the editable into block children the flat model doesn't represent.
         event.preventDefault();
         // A line break is a deliberate exit from an active trigger token —
         // dismiss it like Escape (with re-entry suppression) before inserting,
@@ -614,12 +614,12 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     getRootElement: () => root,
     getSnapshot: () =>
       ({
-        __pmDoc: { type: "doc", content: segmentsToParagraphJSON(doc) },
+        __doc: { type: "doc", content: segmentsToParagraphJSON(doc) },
         __brand: "ComposerSnapshot",
       }) as ComposerSnapshot,
     applySnapshot: (snapshot) => {
-      const pmDoc = snapshot.__pmDoc as { content?: SnapshotParagraphNode[] };
-      const nextDoc = segmentsFromParagraphJSON(pmDoc.content ?? []);
+      const snapshotDoc = snapshot.__doc as { content?: SnapshotParagraphNode[] };
+      const nextDoc = segmentsFromParagraphJSON(snapshotDoc.content ?? []);
       const previousLength = documentLength(doc);
       applyDocument(nextDoc, documentLength(nextDoc), {
         rangeStart: 0,

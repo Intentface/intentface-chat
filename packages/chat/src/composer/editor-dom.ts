@@ -282,8 +282,9 @@ const createChipSpan = (id: string): HTMLElement => {
   span.contentEditable = "false";
   span.setAttribute("data-mention-chip", "");
   span.setAttribute("data-chip-id", id);
-  // Parity with the legacy NodeView wrapper plus tiptap's injected
-  // [contenteditable=false] { white-space: normal } rule.
+  // A chip is atomic inline content: it must sit on the text baseline and must
+  // not inherit the editor's break-spaces whitespace mode, or its label wraps
+  // mid-chip.
   span.style.display = "inline";
   span.style.verticalAlign = "baseline";
   span.style.whiteSpace = "normal";

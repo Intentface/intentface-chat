@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
+  type ActiveTokenState,
   CLOSED_COMMAND_STATE,
-  type CommandListPluginState,
   type RegisteredPrefix,
 } from "../src/composer/prefix-detection";
 import { closeActiveToken, trackActiveToken } from "../src/composer/trigger-tracker";
@@ -10,11 +10,11 @@ import { closeActiveToken, trackActiveToken } from "../src/composer/trigger-trac
 // each edit plus the TextChange that produced it (null for caret-only moves).
 // These tests port the PM plugin's sticky-token behaviors onto the flat model.
 
-const AT: RegisteredPrefix[] = [{ prefix: "@", triggerRule: "after-whitespace" }];
+const AT: RegisteredPrefix[] = [{ prefix: "@", triggerRule: "word-boundary" }];
 const SLASH: RegisteredPrefix[] = [{ prefix: "/", triggerRule: "doc-start" }];
 
 const typeAt = (
-  previous: CommandListPluginState,
+  previous: ActiveTokenState,
   scanText: string,
   caret: number,
   change: { rangeStart: number; rangeEnd: number; insertedLength: number } | null,

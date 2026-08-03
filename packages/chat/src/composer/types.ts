@@ -22,7 +22,15 @@ export type AskUserQuestion = {
 
 export type CommandItemKind = "insert" | "execute";
 
-export type TriggerRule = "doc-start" | "after-whitespace";
+/**
+ * Where a prefix is allowed to open its command list.
+ *
+ * - `doc-start` — only when the prefix is the very first thing in the document
+ *   (the `/` slash-command convention).
+ * - `word-boundary` — at the start of a line or after whitespace, so `@` opens
+ *   a mention but the `@` in `user@example.com` does not.
+ */
+export type TriggerRule = "doc-start" | "word-boundary";
 
 export type { ChipData };
 
@@ -83,8 +91,13 @@ export type CommandItemData = {
   onSelect?: (context: PrefixOnSelectContext) => void;
 };
 
+/**
+ * Opaque editor content for the controlled `value` / `defaultValue` API. Treat
+ * it as a token: persist and hand it back, but don't read into `__doc` — the
+ * payload shape is an implementation detail (currently paragraph JSON).
+ */
 export type ComposerSnapshot = {
-  readonly __pmDoc: object;
+  readonly __doc: object;
   readonly __brand: "ComposerSnapshot";
 };
 

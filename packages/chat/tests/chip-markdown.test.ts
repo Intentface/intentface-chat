@@ -59,4 +59,28 @@ describe("encodeChipMarkdown / parseChipSegments round trip", () => {
   test("text without chips is a single text segment", () => {
     expect(parseChipSegments("no chips here")).toEqual([{ type: "text", text: "no chips here" }]);
   });
+
+  // Regression: the label class used to be [^\]]+, which made an unclosed
+  // bracket run quadratic — the engine consumed to end-of-string, failed,
+  // backtracked over every position, advanced one character and repeated.
+  // Message text is untrusted, so that was a remote client-side hang. Scaling
+  // is asserted rather than absolute time: quadratic growth would show up as a
+  // ~16x jump when the input quadruples, and the old pattern took ~355ms at 32k
+  // where this budget is 100ms for a much larger input.
+  test("an unclosed bracket run does not blow up (ReDoS regression)", () => {
+    const started = performance.now();
+    const segments = parseChipSegments("[".repeat(200_000));
+    const elapsed = performance.now() - started;
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0]).toMatchObject({ type: "text" });
+    expect(elapsed).toBeLessThan(100);
+  });
+
+  test("a bracket run followed by a real chip still finds the chip", () => {
+    const segments = parseChipSegments(`${"[".repeat(5_000)} [ada](chip:user:ada)`);
+    expect(segments.filter((s) => s.type === "chip")).toEqual([
+      { type: "chip", label: "ada", prefix: "user", value: "ada" },
+    ]);
+  });
 });

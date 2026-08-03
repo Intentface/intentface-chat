@@ -10,7 +10,15 @@
  */
 export type ChipIconKey = string;
 
-export const CHIP_REF_PATTERN = /\[([^\]]+)\]\(chip:([^:)]+):([^)?]+)(?:\?([^)]*))?\)/g;
+// The label class excludes "[" as well as "]" — deliberately, and it is what
+// keeps this pattern linear. With `[^\]]+`, input containing a long run of "["
+// and no "]" made the engine consume to end-of-string, fail, backtrack over
+// every position, advance one character and repeat: quadratic in the text
+// length. Message text is untrusted (it comes from the model), so that was a
+// remote client-side hang. Excluding "[" means a bracket run cannot be consumed
+// by the label group at all, which also matches the format's intent — an
+// unescaped bracket inside a label was never valid.
+export const CHIP_REF_PATTERN = /\[([^[\]]+)\]\(chip:([^:)]+):([^)?]+)(?:\?([^)]*))?\)/g;
 
 export type ChipData = {
   prefix: string;

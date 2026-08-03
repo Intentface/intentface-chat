@@ -10,6 +10,12 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege, stated explicitly. The repo default is already read-only, but
+# an explicit block means a change to the repo-wide default can't silently widen
+# what CI can do — and this job only ever needs to read the checkout.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest

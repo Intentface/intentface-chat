@@ -9,6 +9,9 @@ import type { TriggerRule } from "./types";
 // Types & constants
 // ---------------------------------------------------------------------------
 
+// Non-global: `.test` on a global regex advances lastIndex between calls.
+const WHITESPACE = /\s/;
+
 export type RegisteredPrefix = {
   prefix: string;
   triggerRule: TriggerRule;
@@ -82,16 +85,19 @@ export const detectActivePrefix = (args: {
     // taken from both sides of the caret so it stays whole as the caret moves
     // within it. Text chars map 1:1 to positions and an atomic chip can never
     // sit inside a run, so the run length is the position delta on each side.
-    const leftRun = textBeforeCursor.match(/\S*$/)?.[0] ?? "";
+    // Scanned backwards, not /\S*$/ — that backtracks quadratically when the
+    // text ends in whitespace, on a path that runs per keystroke.
+    let runStart = textBeforeCursor.length;
+    while (runStart > 0 && !WHITESPACE.test(textBeforeCursor[runStart - 1] as string)) runStart--;
+    const leftRun = textBeforeCursor.slice(runStart);
+    // Start-anchored, so this one cannot backtrack.
     const rightRun = textAfterCursor.match(/^\S*/)?.[0] ?? "";
     const runText = leftRun + rightRun;
     if (!runText.startsWith(entry.prefix)) continue;
 
     // The prefix must sit at a word boundary: line start or after whitespace.
-    const charBeforeRun = textBeforeCursor
-      .slice(0, textBeforeCursor.length - leftRun.length)
-      .at(-1);
-    if (charBeforeRun !== undefined && !/\s/.test(charBeforeRun)) continue;
+    const charBeforeRun = runStart > 0 ? textBeforeCursor[runStart - 1] : undefined;
+    if (charBeforeRun !== undefined && !WHITESPACE.test(charBeforeRun)) continue;
 
     return {
       isOpen: true,

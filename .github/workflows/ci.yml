@@ -10,6 +10,10 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Explicit least privilege, so a change to the repo-wide default can't widen it.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest

@@ -59,4 +59,36 @@ describe("encodeChipMarkdown / parseChipSegments round trip", () => {
   test("text without chips is a single text segment", () => {
     expect(parseChipSegments("no chips here")).toEqual([{ type: "text", text: "no chips here" }]);
   });
+
+  // ReDoS regression. The old pattern took ~355ms at 32k characters here.
+  test("an unclosed bracket run does not blow up (ReDoS regression)", () => {
+    const started = performance.now();
+    const segments = parseChipSegments("[".repeat(200_000));
+    const elapsed = performance.now() - started;
+
+    expect(segments).toHaveLength(1);
+    expect(segments[0]).toMatchObject({ type: "text" });
+    expect(elapsed).toBeLessThan(100);
+  });
+
+  test("a bracket run followed by a real chip still finds the chip", () => {
+    const segments = parseChipSegments(`${"[".repeat(5_000)} [ada](chip:user:ada)`);
+    expect(segments.filter((s) => s.type === "chip")).toEqual([
+      { type: "chip", label: "ada", prefix: "user", value: "ada" },
+    ]);
+  });
+
+  // The second blowup: token openings with no closing paren, which backtracked
+  // through the value group from many start positions. ~264ms at 88k before.
+  test.each([
+    ["unterminated openings", "[a](chip:x:"],
+    ["unterminated queries", "[a](chip:x:y?"],
+  ])("%s do not blow up (ReDoS regression)", (_name, unit) => {
+    const started = performance.now();
+    const segments = parseChipSegments(unit.repeat(20_000));
+    const elapsed = performance.now() - started;
+
+    expect(segments.every((segment) => segment.type === "text")).toBe(true);
+    expect(elapsed).toBeLessThan(100);
+  });
 });

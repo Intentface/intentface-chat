@@ -10,7 +10,9 @@
  */
 export type ChipIconKey = string;
 
-export const CHIP_REF_PATTERN = /\[([^\]]+)\]\(chip:([^:)]+):([^)?]+)(?:\?([^)]*))?\)/g;
+// Every class excludes "[" so no group can consume past the next one — without
+// that this backtracks quadratically, and message text is untrusted.
+export const CHIP_REF_PATTERN = /\[([^[\]]+)\]\(chip:([^[:)]+):([^[)?]+)(?:\?([^[)]*))?\)/g;
 
 export type ChipData = {
   prefix: string;

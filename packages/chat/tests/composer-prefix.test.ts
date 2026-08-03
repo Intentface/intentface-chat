@@ -61,3 +61,28 @@ describe("detectActivePrefix", () => {
     expect(state.isOpen).toBe(false);
   });
 });
+
+// ReDoS regression: /\S*$/ took ~16s on this input before the index scan.
+describe("detectActivePrefix performance", () => {
+  const mention = [{ prefix: "@", triggerRule: "word-boundary" as const }];
+
+  test("a long run followed by whitespace does not blow up", () => {
+    const text = `${"a".repeat(200_000)} `;
+    const args = {
+      registered: mention,
+      blockStart: 1,
+      blockEnd: 1 + text.length,
+      cursorPosition: 1 + text.length,
+      textBeforeCursor: text,
+      textAfterCursor: "",
+      fullDocText: text,
+    };
+
+    const started = performance.now();
+    const state = detectActivePrefix(args);
+    const elapsed = performance.now() - started;
+
+    expect(state.isOpen).toBe(false);
+    expect(elapsed).toBeLessThan(100);
+  });
+});

@@ -20,8 +20,8 @@ const ISSUES: CommandItemData[] = [
 ];
 
 const COMMANDS = {
-  "@": { kind: "insert" as const, trigger: "after-whitespace" as const, items: ITEMS },
-  "#": { kind: "insert" as const, trigger: "after-whitespace" as const, items: ISSUES },
+  "@": { kind: "insert" as const, trigger: "word-boundary" as const, items: ITEMS },
+  "#": { kind: "insert" as const, trigger: "word-boundary" as const, items: ISSUES },
 };
 
 const CommandsHarness = ({ prefix }: { prefix: string }) => (
@@ -103,7 +103,7 @@ describe("composer combobox a11y", () => {
       <Composer
         store={store}
         onSubmit={() => {}}
-        commands={{ "@": { kind: "insert", trigger: "after-whitespace", items: mixed } }}
+        commands={{ "@": { kind: "insert", trigger: "word-boundary", items: mixed } }}
       >
         <Composer.Textarea aria-label="Message" />
         <CommandsHarness prefix="@" />

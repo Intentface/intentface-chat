@@ -10,38 +10,30 @@ the look from the docs.**
 
 ## Install
 
-Most people don't install this package directly — the styled components pull it
-in for you via the shadcn CLI:
-
-```bash
-bunx shadcn@latest add @intentface/composer
-```
-
-To build against the headless primitives yourself:
-
 ```bash
 bun add @intentface/chat
 ```
 
-`react` and `react-dom` (v19+) are peer dependencies.
+`react` and `react-dom` (v19+) are peer dependencies. Nothing else ships with
+it beyond two small runtime deps (`@floating-ui/dom` for anchored positioning,
+`nanoid` for attachment ids) — no editor framework, no animation library.
 
 ## What's inside
 
 Each primitive is a separate entry point, exporting an unstyled compound
 component that renders semantic DOM with `data-*` state attributes, context
-hooks, and render props — no classes, no animation library:
+hooks, and a `render` prop for swapping the underlying element:
 
 | Import | What it is |
 | --- | --- |
-| `@intentface/chat/composer` | Rich-text input: TipTap editor, `/` and `@` command palette, attachments, ask-user flow. Instance-per-`Composer.Provider` with a global-store fallback. |
+| `@intentface/chat/composer` | Rich-text input over a purpose-built contenteditable engine: `/` and `@` command palette, inline chips, attachments, ask-user flow. One store per `<Composer>`, or bring your own via `Composer.createStore()`. |
 | `@intentface/chat/thread` | Scroll container with at-bottom detection and auto-follow. |
 | `@intentface/chat/message` | Message parts, turns, chip-segmented text, sources, actions. |
-| `@intentface/chat/steps`, `/reasoning`, `/step-queue` | Tool-call timelines and reasoning disclosure. |
+| `@intentface/chat/steps`, `/reasoning` | Tool-call timelines and reasoning disclosure. |
 | `@intentface/chat/chip`, `/attachments`, `/ask-user` | The remaining building blocks. |
 | `@intentface/chat/types` | The structural message contract + part type guards. |
 | `@intentface/chat/message-utils` | Part segmentation, turn grouping, reasoning/source derivation. |
 | `@intentface/chat/chip-markdown` | The self-describing chip wire format. |
-| `@intentface/chat/chat-status` | Derives composer panel state from messages + status. |
 
 ## AI SDK, structurally
 

@@ -9,7 +9,6 @@ This file provides guidance to coding agents when working with code in this repo
 - UI Libraries:
   - Base UI (`@base-ui/react`) for headless accessible components
   - Motion (`motion/react`) for animations
-  - TipTap (`@tiptap/react`) for rich text editor
   - Streamdown for animated markdown rendering
 - Styling: Tailwind CSS v4 with `@tailwindcss/postcss`, custom design tokens
 - Forms: TanStack Form (`@tanstack/react-form`)
@@ -80,7 +79,7 @@ The chat API follows Vercel AI SDK conventions
 7. Follow Biome rules and formatting.
 8. Use data attributes for styling and state selectors: app components (`components/ai`, `components/ui`) stamp `data-slot` / `data-role`; package primitives (`packages/chat`) emit bespoke part attributes instead (`data-composer-editor`, `data-command-badge`) — `data-slot` belongs to the consumer layer.
 9. Leverage Motion for entrance/exit animations.
-10. Use TipTap for rich text editing needs.
+10. Rich text editing goes through `Composer` from `@intentface/chat/composer` — no editor framework; don't add one.
 11. Follow AI SDK patterns (`useChat()`, `streamText()`, `toUIMessageStreamResponse()`).
 12. No monolithic components — always decompose into composable sub-components with `Object.assign`. Consumers compose the pieces; components never hardcode their own layout.
 13. Do not use index/barrel files (`index.ts` that re-exports from other files). Import directly from the specific module instead.

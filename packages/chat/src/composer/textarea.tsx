@@ -8,9 +8,9 @@
 // styling crosses this boundary.
 //
 // The editable div renders with no JSX children — the engine owns its DOM;
-// React never reconciles inside it. The inline white-space styles replace
-// what TipTap used to inject at runtime: without break-spaces, consecutive
-// spaces corrupt to NBSP in the model.
+// React never reconciles inside it. The inline white-space styles are load-
+// bearing, not cosmetic: without break-spaces, the browser corrupts
+// consecutive spaces to NBSP and the model drifts from what's on screen.
 
 import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import type { ChipData } from "../chip-markdown";

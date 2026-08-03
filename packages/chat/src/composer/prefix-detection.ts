@@ -1,7 +1,7 @@
 // Prefix detection — the engine-agnostic kernel of the command system: the
 // active-token state shape and the pure scan that derives it from the text
-// around the caret. Engine integrations (the ProseMirror plugin today) own
-// sticky range tracking and dismissal memory on top of this.
+// around the caret. Sticky range tracking and dismissal memory live one layer
+// up, in trigger-tracker.ts.
 
 import type { TriggerRule } from "./types";
 
@@ -14,7 +14,7 @@ export type RegisteredPrefix = {
   triggerRule: TriggerRule;
 };
 
-export type CommandListPluginState = {
+export type ActiveTokenState = {
   isOpen: boolean;
   trigger: string | null;
   query: string;
@@ -30,7 +30,7 @@ export type CommandListPluginState = {
   dismissedAt: number | null;
 };
 
-export const CLOSED_COMMAND_STATE: CommandListPluginState = {
+export const CLOSED_COMMAND_STATE: ActiveTokenState = {
   isOpen: false,
   trigger: null,
   query: "",
@@ -52,7 +52,7 @@ export const detectActivePrefix = (args: {
   textBeforeCursor: string;
   textAfterCursor: string;
   fullDocText: string;
-}): CommandListPluginState => {
+}): ActiveTokenState => {
   const {
     registered,
     blockStart,

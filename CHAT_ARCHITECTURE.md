@@ -6,7 +6,7 @@ A reference for the chat surface in this project — the UI primitives (`Compose
 
 - **Vercel AI SDK** (`ai@^6`) and **`@ai-sdk/react@^3`** — `Chat` class, `useChat()`, `DefaultChatTransport`, `UIMessage` parts as the wire format
 - **`@ai-sdk/openai@^3`** — the only model provider; chat models are selectable demo ids (`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini` / `gpt-5.4-nano`, default `gpt-5.4-mini`)
-- **TipTap** (`@tiptap/react` + `@tiptap/pm`, v3) — composer editor with inline chips and prefix-triggered command lists
+- **No editor framework** — the composer's contenteditable engine (inline chips, prefix-triggered command lists) is hand-rolled in `packages/chat/src/composer/`
 - **Zustand** (`^5`, with `persist`) — chat-list metadata, model selection, and settings
 - **Streamdown** (`^2`) — streaming-safe markdown renderer used by `Message.Markdown`
 - **Base UI** (`@base-ui/react`) + **motion** — popovers, collapsibles, transitions
@@ -111,7 +111,7 @@ The nesting hierarchy at a glance:
 
 ### Root — `<Composer>`
 
-Owns a TipTap editor, attachment state, command/mention popovers, and the ask-user (questionnaire) state machine. State is exposed through `useComposer()`. There is **no provider and no `ref`** — the composer is a single-instance-per-page singleton (`composerController` + a module-level store), so it can be driven from anywhere in or out of the tree.
+Owns the editor, attachment state, command/mention popovers, and the ask-user (questionnaire) state machine. `<Composer>` is itself the provider: each mount creates and owns a store, and parts resolve it from context via `useComposer()` — there is **no `ref`**. To drive a composer from outside its tree (toolbars, shortcut handlers), create the store yourself with `Composer.createStore()`, pass it as the `store` prop, and read it with `useComposerStore(store, selector)` or imperatively through `store.controller`.
 
 ```tsx
 export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit" | "ref"> & {
@@ -144,7 +144,7 @@ type ComposerAnswersSubmit = {
 
 Parent components dispatch on `data.kind`: a `"message"` submit goes to `chat.sendMessage`, an `"answers"` submit goes to `addToolOutput` (resolving the open `askUser` tool call).
 
-**`ComposerSnapshot`** is an opaque, branded wrapper around ProseMirror JSON (`{ __pmDoc, __brand }`) used by the controlled `value` / `defaultValue` API — distinct from `Composer.Textarea`'s plain-string `value`.
+**`ComposerSnapshot`** is an opaque, branded wrapper around the editor's paragraph JSON (`{ __doc, __brand }`) used by the controlled `value` / `defaultValue` API — distinct from `Composer.Textarea`'s plain-string `value`. Treat it as a token: persist it and hand it back, but don't read into `__doc`.
 
 ### `useComposer()`
 
@@ -172,7 +172,7 @@ The same controller surface is also exported as the module singleton **`composer
 | `Composer.Container`         | The visible shell — clicking it focuses the editor (unless the click lands on a button/link/input) |
 | `Composer.Attachments`       | Hidden file input + animated tray of pending uploads + dropzone + error. Props: `accept`, `maxFiles`, `maxFileSize`, `multiple`, `globalDrop` |
 | `Composer.AttachmentTrigger` | Icon button that opens the file dialog                                          |
-| `Composer.Textarea`          | The TipTap editor surface; finds a child `Placeholder` and overlays it while empty |
+| `Composer.Textarea`          | The contenteditable editor surface; finds a child `Placeholder` and overlays it while empty |
 | `Composer.Placeholder`       | Shown over an empty editor. `placeholder` is `string \| string[]` — an array cycles every 3s with an animated transition |
 | `Composer.Actions`           | Trailing flex row for the bottom action bar                                     |
 | `Composer.Submit`            | Send button; auto-disabled with no content and no attachments. With `isGenerating` it morphs into a Stop control (cross-fades to a stop icon; click or Escape calls `onStop`) |
@@ -210,7 +210,7 @@ Pass a `commands` map to the root:
 ```tsx
 <Composer
   commands={{
-    "@": { kind: "insert",  trigger: "after-whitespace", items: MENTION_ITEMS },
+    "@": { kind: "insert",  trigger: "word-boundary", items: MENTION_ITEMS },
     "/": { kind: "execute", trigger: "doc-start",        items: COMMAND_ITEMS },
   }}
 >
@@ -219,7 +219,7 @@ Pass a `commands` map to the root:
 | Field     | Meaning                                                                          |
 | --------- | -------------------------------------------------------------------------------- |
 | `kind`    | `"insert"` (selecting an item inserts a chip) or `"execute"` (runs the item's `onSelect`) |
-| `trigger` | `"doc-start"` (prefix only at position 0) or `"after-whitespace"` (anywhere after a space) |
+| `trigger` | `"doc-start"` (prefix only at position 0) or `"word-boundary"` (anywhere after a space) |
 | `items`   | `CommandItemData[]` **or** an async `(query, { signal }) => CommandItemData[]` for remote search |
 
 `CommandItemData` is `{ value, label, description?, icon?, variant?, keywords?, disabled?, onSelect? }`. A `disabled` item renders `aria-disabled`/`data-disabled` and is skipped by the highlight and selection. There is **no `filter` field** — array items are fuzzy-scored on `label + keywords` internally; async `items` filter themselves (and receive an `AbortSignal`).
@@ -246,15 +246,19 @@ Pass a `commands` map to the root:
 
 `Composer.CommandItems` is the render-prop loop over resolved items; `CommandLoading` shows while an async fetch is in flight; `CommandEmpty` is the selectable "No results" row (Tab/Enter on it dismisses). `CommandGroup` + `CommandGroupLabel` group items under headers; `CommandCollection` is the low-level generic loop for interleaving groups with custom JSX.
 
-### TipTap setup
+### Editor engine
 
-- Extensions: `Document`, `Paragraph`, `Text`, plus a custom `mentionChip` node and a ProseMirror plugin for command prefixes.
-- The `mentionChip` node is an inline atom with `prefix` / `label` / `value` / `icon` / `variant` attrs; its React node view renders a `<Chip>`.
-- The plugin watches doc changes and decorates a registered prefix (per command `trigger`) with an inline badge, opening the popover list. Fuzzy scoring favours prefix matches over scattered matches, and consecutive-character runs over single matches.
+The composer runs on a purpose-built contenteditable engine (`packages/chat/src/composer/`), not an editor framework:
+
+- **Document model** (`segments.ts`) — a flat list of text and chip segments. Every mutation reduces to one contiguous range replacement (`TextChange`), which makes position mapping a single arithmetic rule.
+- **DOM reconciliation** (`editor-dom.ts`) — renders the canonical child list, reusing chip spans by id so a moved chip keeps its React portal instead of remounting.
+- **Command triggers** (`prefix-detection.ts` + `trigger-tracker.ts`) — a pure scan derives the active token from the text around the caret; the tracker layers sticky range tracking and dismissal memory on top, mapping positions forward through each edit. Fuzzy scoring favours prefix matches over scattered matches, and consecutive-character runs over single matches.
+
+Chips are atomic inline `contenteditable=false` spans carrying `prefix` / `label` / `value` / `icon`; a React portal renders a `<Chip>` into each.
 
 #### Chip wire format
 
-A `mentionChip` node serializes to a self-describing markdown-link token (`lib/ai/chip-markdown.ts`):
+A chip segment serializes to a self-describing markdown-link token (`packages/chat/src/chip-markdown.ts`):
 
 ```
 [Label](chip:prefix:value?variant=…&icon=…)
@@ -588,7 +592,7 @@ const ChatSurface = ({ chatId }: { chatId: string }) => {
             );
           }}
           questions={panelState.type === "ask-user" ? panelState.questions : undefined}
-          commands={{ "@": { kind: "insert", trigger: "after-whitespace", items: MENTIONS } }}
+          commands={{ "@": { kind: "insert", trigger: "word-boundary", items: MENTIONS } }}
         >
           <Composer.Panel value={panelState.type}>
             <Composer.PanelItem value="command-list">{/* CommandLists */}</Composer.PanelItem>

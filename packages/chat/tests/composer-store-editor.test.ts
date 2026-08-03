@@ -29,7 +29,7 @@ const createFakeEditor = (
     serialize: () => ({ text: "hello @world" }),
     isFocused: () => false,
     getRootElement: () => null,
-    getSnapshot: () => ({ __pmDoc: {}, __brand: "ComposerSnapshot" }) as never,
+    getSnapshot: () => ({ __doc: {}, __brand: "ComposerSnapshot" }) as never,
     applySnapshot: record("applySnapshot"),
     insertChipAtTrigger: record("insertChipAtTrigger"),
     deleteTrigger: record("deleteTrigger"),

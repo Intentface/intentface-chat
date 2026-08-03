@@ -33,7 +33,7 @@
   "exports": {
     "./types": "./src/types.ts",
     "./composer": "./src/composer/index.tsx",
-    "./chip": "./src/chip.tsx",
+    "./chip": "./src/chip/index.ts",
     "./thread": "./src/thread/index.tsx",
     "./reasoning": "./src/reasoning.tsx",
     "./steps": "./src/steps.tsx",
@@ -79,8 +79,8 @@
         "default": "./dist/composer/index.js"
       },
       "./chip": {
-        "types": "./dist/chip.d.ts",
-        "default": "./dist/chip.js"
+        "types": "./dist/chip/index.d.ts",
+        "default": "./dist/chip/index.js"
       },
       "./thread": {
         "types": "./dist/thread/index.d.ts",

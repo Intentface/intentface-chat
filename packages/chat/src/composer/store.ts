@@ -127,9 +127,11 @@ export type ComposerCommandsState = ComposerPanelSlice & {
 };
 
 export type ComposerState = {
-  // The editor controller methods (stable identities) plus the reactive
-  // hasContent flag: const textarea = useComposer((c) => c.textarea)
-  textarea: ComposerEditorState & { hasContent: boolean };
+  // Data only — the reactive editor flags. The imperative methods live on
+  // store.controller (or useComposerController()), so a component that only
+  // needs to know whether the editor has content doesn't hold a handle to
+  // everything that can mutate it.
+  textarea: { hasContent: boolean };
   isSubmitting: boolean;
   commands: ComposerCommandsState;
   attachments: ComposerAttachmentsState;
@@ -506,7 +508,7 @@ export const createComposerStore = (): ComposerStore => {
 
   // --- Initial snapshot
   snapshot = {
-    textarea: { ...controller, hasContent: false },
+    textarea: { hasContent: false },
     isSubmitting: false,
     commands: {
       active: false,

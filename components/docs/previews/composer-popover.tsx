@@ -18,7 +18,7 @@ export const ComposerPopover = () => {
     <Composer
       onSubmit={handleSubmit}
       commands={{
-        "@": { kind: "insert", trigger: "after-whitespace", items: MENTIONS },
+        "@": { kind: "insert", trigger: "word-boundary", items: MENTIONS },
       }}
     >
       <Composer.Popover>

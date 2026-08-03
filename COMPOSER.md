@@ -84,7 +84,7 @@ Every part below is rendered inside the `<Composer>` subtree and reads context v
 Visual wrapper that focuses the editor on click. Standard `div` props.
 
 #### `Composer.Textarea`
-The contenteditable editor surface (flat segment engine; `Composer.TextareaLegacy` keeps the TipTap implementation until the swap PR). Handles paste (files + chip markdown), keyboard shortcuts (Enter/Shift+Enter/Backspace), command-list trigger detection, and form participation (`name`/`required`/`maxLength`).
+The contenteditable editor surface, over the flat segment engine. Handles paste (files + chip markdown), keyboard shortcuts (Enter/Shift+Enter/Backspace), command-list trigger detection, and form participation (`name`/`required`/`maxLength`).
 
 | Prop | Type | Default | Notes |
 |---|---|---|---|
@@ -172,7 +172,7 @@ Configure prefixes via the root `commands` prop:
 const commands: ComposerCommandsMap = {
   "@": {
     kind: "insert",              // selecting an item inserts an inline chip
-    trigger: "after-whitespace", // active when "@" follows whitespace or starts a word
+    trigger: "word-boundary", // active when "@" follows whitespace or starts a word
     items: mentionItems,
   },
   "/": {
@@ -188,7 +188,7 @@ const commands: ComposerCommandsMap = {
 | Field | Type | Notes |
 |---|---|---|
 | `kind` | `CommandItemKind` (`"insert" \| "execute"`) | `insert` → selecting inserts a `Chip` into the editor. `execute` → selecting runs the item's `onSelect`. |
-| `trigger` | `"doc-start" \| "after-whitespace"` | When the prefix activates. |
+| `trigger` | `"doc-start" \| "word-boundary"` | When the prefix activates. |
 | `items` | `CommandItemData[]` or `(query, { signal }) => CommandItemData[] \| Promise<CommandItemData[]>` | Selectable rows. The function form runs on each query change for async/remote lookups; `signal` aborts superseded requests. |
 
 #### `CommandItemData`

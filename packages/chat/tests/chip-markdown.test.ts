@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { encodeChipMarkdown, parseChipSegments } from "../src/chip-markdown";
-import { chipSegmentsToParagraphJSON } from "../src/composer/document";
 
 describe("encodeChipMarkdown / parseChipSegments round trip", () => {
   test("plain chip", () => {
@@ -59,26 +58,5 @@ describe("encodeChipMarkdown / parseChipSegments round trip", () => {
 
   test("text without chips is a single text segment", () => {
     expect(parseChipSegments("no chips here")).toEqual([{ type: "text", text: "no chips here" }]);
-  });
-});
-
-describe("chipSegmentsToParagraphJSON", () => {
-  test("splits text segments on newlines into paragraphs", () => {
-    const paragraphs = chipSegmentsToParagraphJSON([
-      { type: "text", text: "line one\nline two" },
-      { type: "chip", label: "chip", prefix: "p", value: "v" },
-    ]);
-
-    expect(paragraphs).toHaveLength(2);
-    expect(paragraphs[0]?.content).toEqual([{ type: "text", text: "line one" }]);
-    expect(paragraphs[1]?.content).toEqual([
-      { type: "text", text: "line two" },
-      { type: "mentionChip", attrs: { prefix: "p", value: "v", label: "chip" } },
-    ]);
-  });
-
-  test("drops empty paragraphs", () => {
-    const paragraphs = chipSegmentsToParagraphJSON([{ type: "text", text: "a\n\nb" }]);
-    expect(paragraphs).toHaveLength(2);
   });
 });

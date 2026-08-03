@@ -76,6 +76,5 @@ export const parseChipSegments = (text: string): ChipSegment[] => {
   return segments;
 };
 
-// Editor-node building (mentionChip / paragraph ProseMirror JSON) lives with
-// the editor schema in composer/document.ts — this module is only the neutral
-// wire format.
+// Building editor nodes from these segments lives with the document model in
+// composer/segments.ts — this module is only the neutral wire format.

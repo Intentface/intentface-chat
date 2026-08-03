@@ -767,7 +767,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
     if (commandToggles.mentions) {
       map["@"] = {
         kind: "insert",
-        trigger: "after-whitespace",
+        trigger: "word-boundary",
         items: MENTION_ITEMS,
         suggestion: suggestions,
       };
@@ -783,7 +783,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
     if (commandToggles.issues) {
       map["#"] = {
         kind: "insert",
-        trigger: "after-whitespace",
+        trigger: "word-boundary",
         items: fetchPlaygroundIssues,
         suggestion: suggestions,
       };

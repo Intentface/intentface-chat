@@ -9,7 +9,6 @@ Conventions for authoring components in `components/ai/` and `components/ui/`. R
 - **CVA** (`class-variance-authority`) for variant matrices
 - **`cn()`** from `lib/utils.ts` (`clsx` + `tailwind-merge`) for class merging
 - **Motion** (`motion/react`) for entrance/exit animations
-- **TipTap** for rich text
 
 ## The compound component pattern
 

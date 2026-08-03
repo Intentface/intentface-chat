@@ -1,17 +1,15 @@
-// Trigger tracker — the engine-side port of the ProseMirror command-list
-// plugin's apply(): sticky active-token state over the flat position model.
+// Trigger tracker — sticky active-token state over the flat position model.
 // Pure: consumes the scan text (chips read as " ", so a token can never span
 // a chip and positions stay 1:1) plus an optional TextChange, and produces the
-// same CommandListPluginState shape the store mirrors and the command list
-// consumes.
+// ActiveTokenState shape the store mirrors and the command list consumes.
 //
-// Divergences from the PM plugin, both unobservable in practice: chips
-// contribute " " to scan text where PM's textBetween contributed "" (keeps
-// position math exact), and doc-start queries read through that space.
+// Where detectActivePrefix is a stateless scan of the caret's surroundings,
+// this layer carries state across edits: it maps the tracked range forward
+// through each change and remembers explicit dismissals.
 
 import {
+  type ActiveTokenState,
   CLOSED_COMMAND_STATE,
-  type CommandListPluginState,
   detectActivePrefix,
   type RegisteredPrefix,
 } from "./prefix-detection";
@@ -28,15 +26,15 @@ export type TrackerUpdate = {
 
 // Escape / Dismiss / blur-close: close and remember the token's start so
 // re-entering it won't reopen the popup (only when something was open).
-export const closeActiveToken = (previous: CommandListPluginState): CommandListPluginState => ({
+export const closeActiveToken = (previous: ActiveTokenState): ActiveTokenState => ({
   ...CLOSED_COMMAND_STATE,
   dismissedAt: previous.isOpen ? previous.triggerStartPosition : null,
 });
 
 export const trackActiveToken = (
-  previous: CommandListPluginState,
+  previous: ActiveTokenState,
   update: TrackerUpdate,
-): CommandListPluginState => {
+): ActiveTokenState => {
   const { registered, scanText, caret, change } = update;
 
   if (registered.length === 0) return CLOSED_COMMAND_STATE;

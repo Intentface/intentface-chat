@@ -20,8 +20,9 @@ export type Segment = { type: "text"; text: string } | { type: "chip"; id: strin
 
 export type SegmentDoc = Segment[];
 
-// A document edit expressed as one contiguous logical-range replacement — the
-// flat-model equivalent of a ProseMirror transaction's step map.
+// A document edit expressed as one contiguous logical-range replacement. Every
+// mutation reduces to this shape, which is what makes position mapping below a
+// single arithmetic rule rather than a per-operation special case.
 export type TextChange = {
   rangeStart: number;
   rangeEnd: number;
@@ -240,7 +241,7 @@ export const truncateToFit = (insert: SegmentDoc, room: number): SegmentDoc => {
 };
 
 // ---------------------------------------------------------------------------
-// Position mapping — ProseMirror's mapping.map over a single flat change.
+// Position mapping — carry a position across one change.
 // The tracker's sticky token rests on the bias semantics: insertion exactly
 // at a position stays before it with bias -1 and moves after it with bias +1,
 // which is what lets the token end grow while its start holds.

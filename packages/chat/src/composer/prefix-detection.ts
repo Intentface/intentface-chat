@@ -9,8 +9,7 @@ import type { TriggerRule } from "./types";
 // Types & constants
 // ---------------------------------------------------------------------------
 
-// Non-global on purpose: `.test` on a global regex advances lastIndex, which
-// would make repeated calls return alternating results.
+// Non-global: `.test` on a global regex advances lastIndex between calls.
 const WHITESPACE = /\s/;
 
 export type RegisteredPrefix = {
@@ -86,11 +85,8 @@ export const detectActivePrefix = (args: {
     // taken from both sides of the caret so it stays whole as the caret moves
     // within it. Text chars map 1:1 to positions and an atomic chip can never
     // sit inside a run, so the run length is the position delta on each side.
-    // Scanned backwards rather than matched with /\S*$/. That pattern is
-    // quadratic when the text ends in whitespace: the engine consumes the run,
-    // fails on $, backtracks over every position, advances one character and
-    // repeats. This path runs on every keystroke, so a pasted blob could hang
-    // the editor. An index scan is linear and allocates nothing.
+    // Scanned backwards, not /\S*$/ — that backtracks quadratically when the
+    // text ends in whitespace, on a path that runs per keystroke.
     let runStart = textBeforeCursor.length;
     while (runStart > 0 && !WHITESPACE.test(textBeforeCursor[runStart - 1] as string)) runStart--;
     const leftRun = textBeforeCursor.slice(runStart);
@@ -100,7 +96,6 @@ export const detectActivePrefix = (args: {
     if (!runText.startsWith(entry.prefix)) continue;
 
     // The prefix must sit at a word boundary: line start or after whitespace.
-    // runStart already points just past that character.
     const charBeforeRun = runStart > 0 ? textBeforeCursor[runStart - 1] : undefined;
     if (charBeforeRun !== undefined && !WHITESPACE.test(charBeforeRun)) continue;
 

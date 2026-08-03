@@ -60,13 +60,7 @@ describe("encodeChipMarkdown / parseChipSegments round trip", () => {
     expect(parseChipSegments("no chips here")).toEqual([{ type: "text", text: "no chips here" }]);
   });
 
-  // Regression: the label class used to be [^\]]+, which made an unclosed
-  // bracket run quadratic — the engine consumed to end-of-string, failed,
-  // backtracked over every position, advanced one character and repeated.
-  // Message text is untrusted, so that was a remote client-side hang. Scaling
-  // is asserted rather than absolute time: quadratic growth would show up as a
-  // ~16x jump when the input quadruples, and the old pattern took ~355ms at 32k
-  // where this budget is 100ms for a much larger input.
+  // ReDoS regression. The old pattern took ~355ms at 32k characters here.
   test("an unclosed bracket run does not blow up (ReDoS regression)", () => {
     const started = performance.now();
     const segments = parseChipSegments("[".repeat(200_000));
@@ -82,5 +76,19 @@ describe("encodeChipMarkdown / parseChipSegments round trip", () => {
     expect(segments.filter((s) => s.type === "chip")).toEqual([
       { type: "chip", label: "ada", prefix: "user", value: "ada" },
     ]);
+  });
+
+  // The second blowup: token openings with no closing paren, which backtracked
+  // through the value group from many start positions. ~264ms at 88k before.
+  test.each([
+    ["unterminated openings", "[a](chip:x:"],
+    ["unterminated queries", "[a](chip:x:y?"],
+  ])("%s do not blow up (ReDoS regression)", (_name, unit) => {
+    const started = performance.now();
+    const segments = parseChipSegments(unit.repeat(20_000));
+    const elapsed = performance.now() - started;
+
+    expect(segments.every((segment) => segment.type === "text")).toBe(true);
+    expect(elapsed).toBeLessThan(100);
   });
 });

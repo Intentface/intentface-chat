@@ -62,10 +62,7 @@ describe("detectActivePrefix", () => {
   });
 });
 
-// Regression: leftRun was computed with /\S*$/, which is quadratic when the
-// text ends in whitespace — the engine retries from every position. This path
-// runs on every keystroke, so a pasted blob could hang the editor. Replaced
-// with a backwards index scan.
+// ReDoS regression: /\S*$/ took ~16s on this input before the index scan.
 describe("detectActivePrefix performance", () => {
   const mention = [{ prefix: "@", triggerRule: "word-boundary" as const }];
 

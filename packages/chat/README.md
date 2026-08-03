@@ -56,6 +56,42 @@ import type { UIMessage } from "ai";
 const turns = groupTurns(messages); // messages: UIMessage[]
 ```
 
+## React Server Components
+
+Every component entry point is a client module. Render the components from a
+client component — a file with `"use client"` at the top:
+
+```tsx
+"use client";
+import { Composer } from "@intentface/chat/composer";
+
+export const Chat = () => (
+  <Composer>
+    <Composer.Container>
+      <Composer.Textarea />
+    </Composer.Container>
+  </Composer>
+);
+```
+
+Reaching a sub-component **from a server component** does not work:
+
+```tsx
+// ❌ Server component — Composer.Container is undefined at runtime:
+//    "Element type is invalid… but got: undefined"
+<Composer>
+  <Composer.Container />
+</Composer>
+```
+
+This is a React limitation rather than a bug here. A server component importing
+a client module receives a proxy of that module's *named exports*; it cannot
+read properties off an exported value, and the compound sub-components live on
+the `Composer` object itself.
+
+The pure modules — `/types`, `/message-utils`, `/chip-markdown` — carry no
+`"use client"` and import fine anywhere, server components included.
+
 ## Docs
 
 Full guides, live previews, and copy-paste styled source at

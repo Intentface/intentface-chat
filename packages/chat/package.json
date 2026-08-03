@@ -44,10 +44,10 @@
     "./chip-markdown": "./src/chip-markdown.ts"
   },
   "scripts": {
-    "build": "bunup",
+    "build": "NODE_ENV=production bunup",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "prepack": "bunup && node scripts/swap-exports.mjs pre",
+    "prepack": "bun run build && node scripts/swap-exports.mjs pre",
     "postpack": "node scripts/swap-exports.mjs post"
   },
   "dependencies": {

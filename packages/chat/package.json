@@ -44,7 +44,7 @@
     "./chip-markdown": "./src/chip-markdown.ts"
   },
   "scripts": {
-    "build": "NODE_ENV=production bunup",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/add-dist-extensions.mjs",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "prepack": "bun run build && node scripts/swap-exports.mjs pre",
@@ -65,55 +65,54 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "axe-core": "^4.12.1",
-    "bunup": "^0.16.32",
     "typescript": "^5"
   },
   "publishConfig": {
     "access": "public",
     "exports": {
       "./types": {
-        "types": "./dist/src/types.d.ts",
-        "default": "./dist/src/types.js"
+        "types": "./dist/types.d.ts",
+        "default": "./dist/types.js"
       },
       "./composer": {
-        "types": "./dist/src/composer/index.d.ts",
-        "default": "./dist/src/composer/index.js"
+        "types": "./dist/composer/index.d.ts",
+        "default": "./dist/composer/index.js"
       },
       "./chip": {
-        "types": "./dist/src/chip.d.ts",
-        "default": "./dist/src/chip.js"
+        "types": "./dist/chip.d.ts",
+        "default": "./dist/chip.js"
       },
       "./thread": {
-        "types": "./dist/src/thread/index.d.ts",
-        "default": "./dist/src/thread/index.js"
+        "types": "./dist/thread/index.d.ts",
+        "default": "./dist/thread/index.js"
       },
       "./reasoning": {
-        "types": "./dist/src/reasoning.d.ts",
-        "default": "./dist/src/reasoning.js"
+        "types": "./dist/reasoning.d.ts",
+        "default": "./dist/reasoning.js"
       },
       "./steps": {
-        "types": "./dist/src/steps.d.ts",
-        "default": "./dist/src/steps.js"
+        "types": "./dist/steps.d.ts",
+        "default": "./dist/steps.js"
       },
       "./attachments": {
-        "types": "./dist/src/attachments.d.ts",
-        "default": "./dist/src/attachments.js"
+        "types": "./dist/attachments.d.ts",
+        "default": "./dist/attachments.js"
       },
       "./ask-user": {
-        "types": "./dist/src/ask-user.d.ts",
-        "default": "./dist/src/ask-user.js"
+        "types": "./dist/ask-user.d.ts",
+        "default": "./dist/ask-user.js"
       },
       "./message": {
-        "types": "./dist/src/message.d.ts",
-        "default": "./dist/src/message.js"
+        "types": "./dist/message.d.ts",
+        "default": "./dist/message.js"
       },
       "./message-utils": {
-        "types": "./dist/src/message-utils.d.ts",
-        "default": "./dist/src/message-utils.js"
+        "types": "./dist/message-utils.d.ts",
+        "default": "./dist/message-utils.js"
       },
       "./chip-markdown": {
-        "types": "./dist/src/chip-markdown.d.ts",
-        "default": "./dist/src/chip-markdown.js"
+        "types": "./dist/chip-markdown.d.ts",
+        "default": "./dist/chip-markdown.js"
       }
     }
   }

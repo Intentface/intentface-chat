@@ -50,39 +50,45 @@ const turns = groupTurns(messages); // messages: UIMessage[]
 
 ## React Server Components
 
-Every component entry point is a client module. Render the components from a
-client component — a file with `"use client"` at the top:
+Each primitive is a namespace, and the root is explicit — `Message.Root`, not
+`Message`. Server components can reach every part:
+
+```tsx
+// A server component — no "use client" needed.
+import { Message } from "@intentface/chat/message";
+
+export const Transcript = ({ messages }: { messages: ChatMessage[] }) => (
+  <>
+    {messages.map((message) => (
+      <Message.Root key={message.id} role={message.role}>
+        <Message.Text>{text(message)}</Message.Text>
+      </Message.Root>
+    ))}
+  </>
+);
+```
+
+The parts are still client components — they carry their own `"use client"` — so
+interactive props behave the way React requires. Pass an event handler from a
+server component and you'll get React's usual error; move that piece into a
+client component:
 
 ```tsx
 "use client";
 import { Composer } from "@intentface/chat/composer";
 
 export const Chat = () => (
-  <Composer>
+  <Composer.Root onSubmit={(data) => send(data)}>
     <Composer.Container>
       <Composer.Textarea />
     </Composer.Container>
-  </Composer>
+  </Composer.Root>
 );
 ```
 
-Reaching a sub-component **from a server component** does not work:
-
-```tsx
-// ❌ Server component — Composer.Container is undefined at runtime:
-//    "Element type is invalid… but got: undefined"
-<Composer>
-  <Composer.Container />
-</Composer>
-```
-
-This is a React limitation rather than a bug here. A server component importing
-a client module receives a proxy of that module's *named exports*; it cannot
-read properties off an exported value, and the compound sub-components live on
-the `Composer` object itself.
-
+Hooks (`useComposer`, `useThread`, `useReasoning`, …) are client-only, as usual.
 The pure modules — `/types`, `/message-utils`, `/chip-markdown` — carry no
-`"use client"` and import fine anywhere, server components included.
+directive and import fine anywhere.
 
 ## Docs
 

@@ -7,14 +7,14 @@
 // Every part supports the Base UI render prop.
 
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
-import type { PrimitiveProps } from "./internal/primitive-props";
-import { useRenderElement } from "./internal/render/useRenderElement";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 
 type ChipPreviewProps = { children: ReactNode };
 
 // Marker component — never renders directly. ChipRoot inspects its children
 // and routes ChipPreview's content into `renderWithPreview`.
-const ChipPreview = (_props: ChipPreviewProps): ReactNode => null;
+export const ChipPreview = (_props: ChipPreviewProps): ReactNode => null;
 
 export type ChipState = {
   /** Opaque styling hook, surfaced as data-variant. */
@@ -31,7 +31,7 @@ export type ChipRootProps = PrimitiveProps<"span", ChipState> & {
   renderWithPreview?: (badge: ReactElement, preview: ReactNode) => ReactNode;
 };
 
-const ChipRoot = ({
+export const ChipRoot = ({
   variant,
   renderWithPreview,
   className,
@@ -64,7 +64,7 @@ const ChipRoot = ({
 
 export type ChipIconProps = PrimitiveProps<"span">;
 
-const ChipIcon = ({ className, render, style, ...elementProps }: ChipIconProps) =>
+export const ChipIcon = ({ className, render, style, ...elementProps }: ChipIconProps) =>
   useRenderElement(
     "span",
     { className, render, style },
@@ -73,15 +73,9 @@ const ChipIcon = ({ className, render, style, ...elementProps }: ChipIconProps) 
 
 export type ChipLabelProps = PrimitiveProps<"span">;
 
-const ChipLabel = ({ className, render, style, ...elementProps }: ChipLabelProps) =>
+export const ChipLabel = ({ className, render, style, ...elementProps }: ChipLabelProps) =>
   useRenderElement(
     "span",
     { className, render, style },
     { props: [{ "data-chip-label": "" }, elementProps] },
   );
-
-export const Chip = Object.assign(ChipRoot, {
-  Icon: ChipIcon,
-  Label: ChipLabel,
-  Preview: ChipPreview,
-});

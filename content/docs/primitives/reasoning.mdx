@@ -1,7 +1,7 @@
 ---
 title: Reasoning
 description: A collapsible "chain of thought" disclosure that tracks streaming duration and splits text into labelled sections.
-source: reasoning.tsx
+source: reasoning
 ---
 
 <ComponentPreview name="reasoning-basic" />
@@ -17,24 +17,24 @@ source: reasoning.tsx
 ## Anatomy
 
 ```tsx
-<Reasoning isStreaming={isStreaming}>
+<Reasoning.Root isStreaming={isStreaming}>
   <Reasoning.Trigger />
   <Reasoning.Content>{reasoningText}</Reasoning.Content>
-</Reasoning>
+</Reasoning.Root>
 ```
 
 Driven from a streaming message, passing the reasoning parts' text:
 
 ```tsx
-<Reasoning isStreaming={isLast && isStreaming} defaultOpen={false}>
+<Reasoning.Root isStreaming={isLast && isStreaming} defaultOpen={false}>
   <Reasoning.Trigger label={headers} />
   <Reasoning.Content>{texts}</Reasoning.Content>
-</Reasoning>
+</Reasoning.Root>
 ```
 
 ## useReasoning
 
-Read the disclosure state from anywhere inside `<Reasoning>`:
+Read the disclosure state from anywhere inside `<Reasoning.Root>`:
 
 export const hookMembers = [
   { name: "isStreaming", type: "boolean", description: "Whether reasoning is still streaming in." },

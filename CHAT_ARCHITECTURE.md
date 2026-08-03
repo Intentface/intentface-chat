@@ -36,7 +36,7 @@ useChat() aggregates parts → messages: AppUIMessage[]
    ↓
 Chat.onFinish → useChatStore.setMessages(chatId, …)  [localStorage]
    ↓
-<Thread> renders grouped <Message.Turn>s; the panel reflects derived state
+<Thread.Root> renders grouped <Message.Turn>s; the panel reflects derived state
 ```
 
 ## UIMessage parts
@@ -74,7 +74,7 @@ export const Composer = Object.assign(ComposerRoot, {
 The nesting hierarchy at a glance:
 
 ```tsx
-<Composer>
+<Composer.Root>
   <Composer.Panel>
     <Composer.PanelItem>
       <Composer.CommandList>
@@ -106,12 +106,12 @@ The nesting hierarchy at a glance:
       <Composer.Submit />
     </Composer.Actions>
   </Composer.Container>
-</Composer>
+</Composer.Root>
 ```
 
-### Root — `<Composer>`
+### Root — `<Composer.Root>`
 
-Owns the editor, attachment state, command/mention popovers, and the ask-user (questionnaire) state machine. `<Composer>` is itself the provider: each mount creates and owns a store, and parts resolve it from context via `useComposer()` — there is **no `ref`**. To drive a composer from outside its tree (toolbars, shortcut handlers), create the store yourself with `Composer.createStore()`, pass it as the `store` prop, and read it with `useComposerStore(store, selector)` or imperatively through `store.controller`.
+Owns the editor, attachment state, command/mention popovers, and the ask-user (questionnaire) state machine. `<Composer.Root>` is itself the provider: each mount creates and owns a store, and parts resolve it from context via `useComposer()` — there is **no `ref`**. To drive a composer from outside its tree (toolbars, shortcut handlers), create the store yourself with `Composer.createStore()`, pass it as the `store` prop, and read it with `useComposerStore(store, selector)` or imperatively through `store.controller`.
 
 ```tsx
 export type ComposerRootProps = Omit<ComponentProps<"form">, "onSubmit" | "ref"> & {
@@ -208,7 +208,7 @@ When in ask-user mode, swap the `Actions` row from the standard layout to `<AskU
 Pass a `commands` map to the root:
 
 ```tsx
-<Composer
+<Composer.Root
   commands={{
     "@": { kind: "insert",  trigger: "word-boundary", items: MENTION_ITEMS },
     "/": { kind: "execute", trigger: "doc-start",        items: COMMAND_ITEMS },
@@ -254,7 +254,7 @@ The composer runs on a purpose-built contenteditable engine (`packages/chat/src/
 - **DOM reconciliation** (`editor-dom.ts`) — renders the canonical child list, reusing chip spans by id so a moved chip keeps its React portal instead of remounting.
 - **Command triggers** (`prefix-detection.ts` + `trigger-tracker.ts`) — a pure scan derives the active token from the text around the caret; the tracker layers sticky range tracking and dismissal memory on top, mapping positions forward through each edit. Fuzzy scoring favours prefix matches over scattered matches, and consecutive-character runs over single matches.
 
-Chips are atomic inline `contenteditable=false` spans carrying `prefix` / `label` / `value` / `icon`; a React portal renders a `<Chip>` into each.
+Chips are atomic inline `contenteditable=false` spans carrying `prefix` / `label` / `value` / `icon`; a React portal renders a `<Chip.Root>` into each.
 
 #### Chip wire format
 
@@ -286,7 +286,7 @@ export const Thread = Object.assign(ThreadRoot, {
 ### Skeleton
 
 ```tsx
-<Thread>
+<Thread.Root>
   <Thread.Overlay direction="top" />
   <Thread.Viewport>
     <Thread.Placeholder />
@@ -294,10 +294,10 @@ export const Thread = Object.assign(ThreadRoot, {
   </Thread.Viewport>
   <Thread.Composer>
     <Thread.ScrollButton />
-    {/* <Composer> goes here */}
+    {/* <Composer.Root> goes here */}
   </Thread.Composer>
   <Thread.Overlay direction="bottom" />
-</Thread>
+</Thread.Root>
 ```
 
 | Primitive             | Role                                                                          |
@@ -330,16 +330,16 @@ export const Message = Object.assign(MessageRoot, {
 
 ```tsx
 <Message.Turn>
-  <Message role="user" isLast isError={false}>
+  <Message.Root role="user" isLast isError={false}>
     <Message.Attachments>
       <Message.Attachment />
     </Message.Attachments>
     <Message.Content>
       <Message.Text />
     </Message.Content>
-  </Message>
+  </Message.Root>
 
-  <Message role="assistant" isLast isError={false}>
+  <Message.Root role="assistant" isLast isError={false}>
     <Message.Content>
       <Message.Markdown>
         <Message.Chip />
@@ -355,7 +355,7 @@ export const Message = Object.assign(MessageRoot, {
       <Message.Copy />
     </Message.Actions>
     <Message.SelectionToolbar onAdd={…} />
-  </Message>
+  </Message.Root>
 </Message.Turn>
 ```
 
@@ -387,10 +387,10 @@ The renderer walks a message's parts: user `text` → `Message.Text`, assistant 
 Collapsible block for `reasoning` parts.
 
 ```tsx
-<Reasoning isStreaming={…} duration={…}>
+<Reasoning.Root isStreaming={…} duration={…}>
   <Reasoning.Trigger label={headers} />
   <Reasoning.Content>{texts}</Reasoning.Content>
-</Reasoning>
+</Reasoning.Root>
 ```
 
 | Piece                | Notes                                                                        |
@@ -414,7 +414,7 @@ export const Steps = Object.assign(StepsRoot, {
 ### Skeleton
 
 ```tsx
-<Steps>
+<Steps.Root>
   <Steps.Header />
   <Steps.Content>
     <Steps.Step>
@@ -427,7 +427,7 @@ export const Steps = Object.assign(StepsRoot, {
     <Steps.ToolCall />
     <Steps.AskUser />
   </Steps.Content>
-</Steps>
+</Steps.Root>
 ```
 
 `Steps` is a `Collapsible` that renders a chronological list of in-flight or completed work items. `Steps.Step` takes a `label` + `status` (`"complete" | "active" | "pending"`) and is a static row when it has no children, a nested collapsible when it does.
@@ -560,22 +560,22 @@ const ChatSurface = ({ chatId }: { chatId: string }) => {
   const [tools, setTools] = useState({ webSearch: false, thinking: false });
 
   return (
-    <Thread autoScroll="follow">
+    <Thread.Root autoScroll="follow">
       <Thread.Overlay direction="top" />
       <Thread.Viewport>
         {groupTurns(messages).map((turn) => (
           <Message.Turn key={turn.key}>
             {turn.messages.map((m, i) => (
-              <Message key={m.id} role={m.role} isLast={i === turn.messages.length - 1} isError={false}>
+              <Message.Root key={m.id} role={m.role} isLast={i === turn.messages.length - 1} isError={false}>
                 {/* render m.parts → Message.Text / Markdown / Steps / Sources / … */}
-              </Message>
+              </Message.Root>
             ))}
           </Message.Turn>
         ))}
       </Thread.Viewport>
       <Thread.Composer>
         <Thread.ScrollButton />
-        <Composer
+        <Composer.Root
           onSubmit={(data) => {
             if (data.kind === "answers") {
               if (panelState.type !== "ask-user") return;
@@ -617,10 +617,10 @@ const ChatSurface = ({ chatId }: { chatId: string }) => {
               )}
             </Composer.Actions>
           </Composer.Container>
-        </Composer>
+        </Composer.Root>
       </Thread.Composer>
       <Thread.Overlay direction="bottom" />
-    </Thread>
+    </Thread.Root>
   );
 };
 ```

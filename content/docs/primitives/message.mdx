@@ -1,7 +1,7 @@
 ---
 title: Message
 description: Renders a single chat message — role-aware bubble, markdown, chips, attachments, sources, and actions.
-source: message.tsx
+source: message
 ---
 
 <ComponentPreview name="message-basic" />
@@ -19,21 +19,21 @@ source: message.tsx
 The bare nesting — `Message` and `Message.Content` carry the structure:
 
 ```tsx
-<Message role={role} isLast={isLast} isError={isError}>
+<Message.Root role={role} isLast={isLast} isError={isError}>
   <Message.Content>
     <Message.Text>{text}</Message.Text>
   </Message.Content>
   <Message.Actions>
     <Message.Copy value={text} />
   </Message.Actions>
-</Message>
+</Message.Root>
 ```
 
 A realistic assistant turn with markdown, sources, and actions:
 
 ```tsx
 <Message.Turn sticky>
-  <Message role="assistant" isLast isError={false}>
+  <Message.Root role="assistant" isLast isError={false}>
     <Message.Content>
       <Message.Markdown>{content}</Message.Markdown>
       <Message.Sources>
@@ -48,7 +48,7 @@ A realistic assistant turn with markdown, sources, and actions:
         <RefreshIcon />
       </Message.Action>
     </Message.Actions>
-  </Message>
+  </Message.Root>
 </Message.Turn>
 ```
 
@@ -64,7 +64,7 @@ the message object and derives everything inside:
 const ChatMessageItem = memo(({ message, isLast, isStreaming }: ChatMessageItemProps) => {
   const { parts } = message;
   // segmentation, part mapping, actions — all derived in here
-  return <Message role={message.role} isLast={isLast}>{/* … */}</Message>;
+  return <Message.Root role={message.role} isLast={isLast}>{/* … */}</Message.Root>;
 });
 
 {messages.map((message) => (

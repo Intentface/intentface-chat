@@ -740,7 +740,7 @@ export type ThreadRootProps = PrimitiveProps<"div"> & {
   dockSelector?: string;
 };
 
-const ThreadRoot = ({
+export const ThreadRoot = ({
   autoScroll = "follow",
   preserveScrollOnPrepend = false,
   dockSelector = DEFAULT_DOCK_SELECTOR,
@@ -791,7 +791,7 @@ export type ThreadOverlayProps = PrimitiveProps<"div", ThreadOverlayState> & {
   direction: "top" | "bottom";
 };
 
-const ThreadOverlay = memo(
+export const ThreadOverlay = memo(
   ({ direction, className, render, style, ...elementProps }: ThreadOverlayProps) =>
     useRenderElement(
       "div",
@@ -825,7 +825,12 @@ ThreadOverlay.displayName = "ThreadOverlay";
 
 export type ThreadViewportProps = PrimitiveProps<"div">;
 
-const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadViewportProps) => {
+export const ThreadViewport = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ThreadViewportProps) => {
   const { scrollRef, releaseFollow } = useThreadContext();
   const lastTouchYRef = useRef(0);
 
@@ -892,7 +897,12 @@ const ThreadViewport = ({ className, render, style, ...elementProps }: ThreadVie
 
 export type ThreadContentProps = PrimitiveProps<"div">;
 
-const ThreadContent = ({ className, render, style, ...elementProps }: ThreadContentProps) => {
+export const ThreadContent = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ThreadContentProps) => {
   const { contentRef, topSentinelRef, bottomSentinelRef } = useThreadContext();
 
   const element = useRenderElement(
@@ -938,7 +948,12 @@ const ThreadContent = ({ className, render, style, ...elementProps }: ThreadCont
 
 export type ThreadComposerProps = PrimitiveProps<"div">;
 
-const ThreadComposer = ({ className, render, style, ...elementProps }: ThreadComposerProps) =>
+export const ThreadComposer = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ThreadComposerProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -947,21 +962,14 @@ const ThreadComposer = ({ className, render, style, ...elementProps }: ThreadCom
 
 export type ThreadPlaceholderProps = PrimitiveProps<"div">;
 
-const ThreadPlaceholder = ({ className, render, style, ...elementProps }: ThreadPlaceholderProps) =>
+export const ThreadPlaceholder = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: ThreadPlaceholderProps) =>
   useRenderElement(
     "div",
     { className, render, style },
     { props: [{ "data-thread-placeholder": "" }, elementProps] },
   );
-
-// ---------------------------------------------------------------------------
-// Compound export
-// ---------------------------------------------------------------------------
-
-export const Thread = Object.assign(ThreadRoot, {
-  Overlay: ThreadOverlay,
-  Viewport: ThreadViewport,
-  Content: ThreadContent,
-  Composer: ThreadComposer,
-  Placeholder: ThreadPlaceholder,
-});

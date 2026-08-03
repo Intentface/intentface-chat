@@ -4,7 +4,7 @@ description: One isolated store per Composer, with explicit createStore handles 
 ---
 
 The composer's state — editor content, command lists, ask-user flow, attachments
-— lives in a store. Every `<Composer>` creates its own isolated instance, so a
+— lives in a store. Every `<Composer.Root>` creates its own isolated instance, so a
 single composer works with zero setup and several composers coexist on one page
 without any wiring.
 
@@ -17,19 +17,19 @@ without any wiring.
 
 ```tsx
 // Zero config — an isolated instance. Two of these never interact.
-<Composer onSubmit={handleSubmit}>{/* … */}</Composer>
+<Composer.Root onSubmit={handleSubmit}>{/* … */}</Composer.Root>
 
 // Explicit — a handle you own, for anything that must reach the
 // composer from outside its tree.
 const composerStore = Composer.createStore();
 
-<Composer store={composerStore} onSubmit={handleSubmit}>{/* … */}</Composer>
+<Composer.Root store={composerStore} onSubmit={handleSubmit}>{/* … */}</Composer.Root>
 ```
 
 ## Reading state inside the tree
 
 `useComposer(selector)` subscribes to a slice of the nearest composer's store.
-It throws outside a `<Composer>` — inside the tree, no store is ever named:
+It throws outside a `<Composer.Root>` — inside the tree, no store is ever named:
 
 ```ts
 const isSubmitting = useComposer((state) => state.isSubmitting);
@@ -67,6 +67,6 @@ export const useChatComposer = <T,>(selector: (state: ComposerState) => T) =>
 ```
 
 The rule is deliberate: **explicit at the boundary, implicit within it**. Inside
-`<Composer>`, hooks resolve by context and nothing is named; outside it,
+`<Composer.Root>`, hooks resolve by context and nothing is named; outside it,
 someone must say which composer they mean. There is no global fallback — a
 composer's state can never be read or driven by accident.

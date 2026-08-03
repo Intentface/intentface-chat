@@ -1,56 +1,6 @@
-"use client";
-
-// Public surface of @intentface/chat/composer: the compound component plus
-// the store/controller/hook building blocks.
-
-import { ComposerActions, ComposerContextWindow, ComposerSubmit } from "./actions";
-import { ComposerAttachments, ComposerAttachmentTrigger } from "./attachments";
-import {
-  ComposerCommand,
-  ComposerCommandDismiss,
-  ComposerCommandEmpty,
-  ComposerCommandGroup,
-  ComposerCommandGroupLabel,
-  ComposerCommandItem,
-  ComposerCommandItemDescription,
-  ComposerCommandItemIcon,
-  ComposerCommandItemLabel,
-  ComposerCommandList,
-  ComposerCommandLoading,
-} from "./command-list";
-import { ComposerContainer } from "./container";
-import { ComposerPanel } from "./panel";
-import { ComposerPlaceholder } from "./placeholder";
-import { ComposerPopover } from "./popover";
-import { ComposerRoot } from "./root";
-import { createComposerStore } from "./store";
-import { ComposerTextarea } from "./textarea";
-
-export const Composer = Object.assign(ComposerRoot, {
-  /** Create a standalone store handle: <Composer store={…}> + useComposerStore(store, selector) + store.controller for imperative access. */
-  createStore: createComposerStore,
-  Container: ComposerContainer,
-  Attachments: ComposerAttachments,
-  AttachmentTrigger: ComposerAttachmentTrigger,
-  ContextWindow: ComposerContextWindow,
-  Actions: ComposerActions,
-  Placeholder: ComposerPlaceholder,
-  Submit: ComposerSubmit,
-  Panel: ComposerPanel,
-  Popover: ComposerPopover,
-  Textarea: ComposerTextarea,
-  Command: ComposerCommand,
-  CommandList: ComposerCommandList,
-  CommandLoading: ComposerCommandLoading,
-  CommandEmpty: ComposerCommandEmpty,
-  CommandDismiss: ComposerCommandDismiss,
-  CommandItem: ComposerCommandItem,
-  CommandItemIcon: ComposerCommandItemIcon,
-  CommandItemLabel: ComposerCommandItemLabel,
-  CommandItemDescription: ComposerCommandItemDescription,
-  CommandGroup: ComposerCommandGroup,
-  CommandGroupLabel: ComposerCommandGroupLabel,
-});
+// Public surface of @intentface/chat/composer: the `Composer` namespace plus
+// the store/controller/hook building blocks. No "use client" directive here —
+// see index.parts.ts.
 
 export type { ComposerSubmitState, UseComposerSubmitOptions } from "./actions";
 export { useComposerSubmit } from "./actions";
@@ -60,6 +10,7 @@ export { useCommandListItems } from "./command-list";
 export type { ComposerContainerProps } from "./container";
 export { useComposerController } from "./controller";
 export { filterArrayItems, fuzzyScore, suggestionRemainder } from "./fuzzy";
+export * as Composer from "./index.parts";
 export type { ComposerSubmitOn, EditorKeyAction, EditorKeyContext } from "./keyboard";
 export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
 export type { ComposerPanelProps } from "./panel";

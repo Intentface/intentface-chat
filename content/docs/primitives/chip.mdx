@@ -1,7 +1,7 @@
 ---
 title: Chip
 description: An inline, text-flowing token — used for mentions in the composer and reconstructed chips in messages.
-source: chip.tsx
+source: chip
 ---
 
 <ComponentPreview name="chip-basic" />
@@ -17,22 +17,22 @@ source: chip.tsx
 ## Anatomy
 
 ```tsx
-<Chip variant="accent">
+<Chip.Root variant="accent">
   <Chip.Icon>{icon}</Chip.Icon>
   <Chip.Label>{label}</Chip.Label>
-</Chip>
+</Chip.Root>
 ```
 
 With a hover preview — the `Chip.Preview` child is lifted into a hover card and
 never rendered inline:
 
 ```tsx
-<Chip>
+<Chip.Root>
   <Chip.Label>{label}</Chip.Label>
   <Chip.Preview>
     <SourceCard source={source} />
   </Chip.Preview>
-</Chip>
+</Chip.Root>
 ```
 
 ## Accessibility

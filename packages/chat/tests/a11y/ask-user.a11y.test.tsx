@@ -35,7 +35,7 @@ const AskUserHarness = () => {
   const selected = entry?.selected ?? new Set<string>();
 
   return (
-    <AskUser>
+    <AskUser.Root>
       <AskUser.Header>
         <AskUser.Label>{question.question}</AskUser.Label>
       </AskUser.Header>
@@ -51,7 +51,7 @@ const AskUserHarness = () => {
           </AskUser.Option>
         ))}
       </AskUser.Options>
-    </AskUser>
+    </AskUser.Root>
   );
 };
 
@@ -69,14 +69,14 @@ describe("ask-user a11y", () => {
   test("focus lands in a labelled radiogroup, arrows rove, and the question is answerable by keyboard alone", async () => {
     const submitted: ComposerSubmitData[] = [];
     const { container, unmount } = render(
-      <Composer
+      <Composer.Root
         questions={SINGLE}
         onSubmit={(data) => {
           submitted.push(data);
         }}
       >
         <AskUserHarness />
-      </Composer>,
+      </Composer.Root>,
     );
     await flushFrames();
 
@@ -114,9 +114,9 @@ describe("ask-user a11y", () => {
 
   test("multi-select checkboxes toggle aria-checked in place with Enter and Space", async () => {
     const { container, unmount } = render(
-      <Composer questions={MULTI} onSubmit={() => {}}>
+      <Composer.Root questions={MULTI} onSubmit={() => {}}>
         <AskUserHarness />
-      </Composer>,
+      </Composer.Root>,
     );
     await flushFrames();
 
@@ -144,9 +144,9 @@ describe("ask-user a11y", () => {
 
   test("arrows still navigate after a chrome click drops focus to body", async () => {
     const { unmount } = render(
-      <Composer questions={SINGLE} onSubmit={() => {}}>
+      <Composer.Root questions={SINGLE} onSubmit={() => {}}>
         <AskUserHarness />
-      </Composer>,
+      </Composer.Root>,
     );
     await flushFrames();
 
@@ -168,9 +168,9 @@ describe("ask-user a11y", () => {
 
   test("navigating past the list boundary keeps focus instead of dropping to body", async () => {
     const { unmount } = render(
-      <Composer questions={SINGLE} onSubmit={() => {}}>
+      <Composer.Root questions={SINGLE} onSubmit={() => {}}>
         <AskUserHarness />
-      </Composer>,
+      </Composer.Root>,
     );
     await flushFrames();
 

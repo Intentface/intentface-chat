@@ -1,7 +1,7 @@
 ---
 title: Thread
 description: The scrolling message viewport with auto-follow, a docked composer, overlays, and a scroll-to-bottom button.
-source: thread.tsx
+source: thread
 ---
 
 <ComponentPreview name="thread-basic" />
@@ -19,17 +19,17 @@ source: thread.tsx
 The bare nesting — `Thread` provides the scroll context its parts read:
 
 ```tsx
-<Thread>
+<Thread.Root>
   <Thread.Viewport>{/* messages */}</Thread.Viewport>
   <Thread.Composer>{/* composer */}</Thread.Composer>
   <Thread.ScrollButton />
-</Thread>
+</Thread.Root>
 ```
 
 A realistic surface with overlays and a message list:
 
 ```tsx
-<Thread autoScroll="follow">
+<Thread.Root autoScroll="follow">
   <Thread.Overlay direction="top" />
   <Thread.Viewport>
     {turns.map((turn) => (
@@ -37,11 +37,11 @@ A realistic surface with overlays and a message list:
     ))}
   </Thread.Viewport>
   <Thread.Composer>
-    <Composer onSubmit={sendMessage}>{/* … */}</Composer>
+    <Composer.Root onSubmit={sendMessage}>{/* … */}</Composer.Root>
   </Thread.Composer>
   <Thread.ScrollButton />
   <Thread.Overlay direction="bottom" />
-</Thread>
+</Thread.Root>
 ```
 
 ## Auto-scroll
@@ -76,7 +76,7 @@ to the bottom.
 
 ## useThread
 
-Read the scroll state and issue commands from anywhere inside `<Thread>`:
+Read the scroll state and issue commands from anywhere inside `<Thread.Root>`:
 
 export const useThreadMembers = [
   { name: "isAtTop", type: "boolean", description: "Whether the top sentinel is in view (start of the transcript) — pairs with load-older-history. Subscribes the caller; independent of isAtBottom." },

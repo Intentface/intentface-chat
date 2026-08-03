@@ -19,10 +19,10 @@ import { cn } from "@/lib/utils";
 export type { AskUserOptionsHandle };
 
 /** AskUser root container. Stateless — consumers manage all state externally. */
-type AskUserRootProps = ComponentProps<typeof AskUserPrimitive>;
+type AskUserRootProps = ComponentProps<typeof AskUserPrimitive.Root>;
 
 const AskUserRoot = ({ className, ...props }: AskUserRootProps) => (
-  <AskUserPrimitive className={cn("flex flex-col gap-2 p-2", className)} {...props} />
+  <AskUserPrimitive.Root className={cn("flex flex-col gap-2 p-2", className)} {...props} />
 );
 
 /** Question heading text. */

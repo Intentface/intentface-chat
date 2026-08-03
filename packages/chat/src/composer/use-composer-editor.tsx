@@ -23,7 +23,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
-import { Chip } from "../chip";
+import { Chip } from "../chip/index";
 import { type ChipData, parseChipSegments } from "../chip-markdown";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
 import {
@@ -795,9 +795,9 @@ export const useComposerEditor = (options: UseComposerEditorOptions): UseCompose
     return [
       createPortal(
         options.renderChip?.(segment.chip) ?? (
-          <Chip>
+          <Chip.Root>
             <Chip.Label>{segment.chip.label}</Chip.Label>
-          </Chip>
+          </Chip.Root>
         ),
         element,
         segment.id,

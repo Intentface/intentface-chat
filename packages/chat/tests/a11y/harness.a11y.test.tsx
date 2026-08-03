@@ -11,9 +11,9 @@ import { expectNoAxeViolations } from "./axe";
 describe("a11y harness", () => {
   test("renders a primitive and passes structural axe", async () => {
     const { container } = render(
-      <Chip>
+      <Chip.Root>
         <Chip.Label>PRD.md</Chip.Label>
-      </Chip>,
+      </Chip.Root>,
     );
     await expectNoAxeViolations(container);
     cleanup();

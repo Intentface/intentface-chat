@@ -11,7 +11,7 @@ import { expectNoAxeViolations } from "./axe";
 describe("display primitives a11y", () => {
   test("steps: active item is aria-current and Status announces", async () => {
     const { container } = render(
-      <Steps>
+      <Steps.Root>
         <Steps.Item status="complete">
           <Steps.Trigger>
             <Steps.Icon />
@@ -28,7 +28,7 @@ describe("display primitives a11y", () => {
           </Steps.Trigger>
           <Steps.Panel>Details</Steps.Panel>
         </Steps.Item>
-      </Steps>,
+      </Steps.Root>,
     );
 
     const items = container.querySelectorAll("[data-steps-item]");
@@ -54,20 +54,20 @@ describe("display primitives a11y", () => {
 
   test("reasoning: root is aria-busy while streaming", async () => {
     const { container, rerender } = render(
-      <Reasoning isStreaming>
+      <Reasoning.Root isStreaming>
         <Reasoning.Trigger>Reasoning</Reasoning.Trigger>
         <Reasoning.Content>Thinking about it…</Reasoning.Content>
-      </Reasoning>,
+      </Reasoning.Root>,
     );
 
     const root = container.querySelector("[data-reasoning]");
     expect(root?.getAttribute("aria-busy")).toBe("true");
 
     rerender(
-      <Reasoning isStreaming={false}>
+      <Reasoning.Root isStreaming={false}>
         <Reasoning.Trigger>Reasoning</Reasoning.Trigger>
         <Reasoning.Content>Thinking about it…</Reasoning.Content>
-      </Reasoning>,
+      </Reasoning.Root>,
     );
     expect(root?.getAttribute("aria-busy")).toBeNull();
 

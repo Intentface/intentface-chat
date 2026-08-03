@@ -27,12 +27,12 @@ import { CopyIcon } from "../icons/copy";
 import { FileBendIcon } from "../icons/file-bend";
 import { StopIcon } from "../icons/stop";
 
-type MessageRootProps = ComponentProps<typeof MessagePrimitive>;
+type MessageRootProps = ComponentProps<typeof MessagePrimitive.Root>;
 
 // Message wrapper with entrance animation: the primitive owns the state/data
 // attributes and merges them onto the motion element via the render prop.
 const MessageRoot = ({ className, ...props }: MessageRootProps) => (
-  <MessagePrimitive
+  <MessagePrimitive.Root
     render={
       <motion.div
         initial={{ opacity: 0 }}

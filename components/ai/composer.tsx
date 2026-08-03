@@ -66,10 +66,10 @@ export type {
 // Root
 // ---------------------------------------------------------------------------
 
-export type ComposerRootProps = ComponentProps<typeof ComposerPrimitive>;
+export type ComposerRootProps = ComponentProps<typeof ComposerPrimitive.Root>;
 
 const ComposerRoot = ({ className, ...props }: ComposerRootProps) => (
-  <ComposerPrimitive className={cn("relative w-full flex flex-col", className)} {...props} />
+  <ComposerPrimitive.Root className={cn("relative w-full flex flex-col", className)} {...props} />
 );
 
 // ---------------------------------------------------------------------------

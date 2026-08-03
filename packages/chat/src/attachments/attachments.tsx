@@ -10,8 +10,8 @@
 import { nanoid } from "nanoid";
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { PrimitiveProps } from "./internal/primitive-props";
-import { useRenderElement } from "./internal/render/useRenderElement";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,7 +86,12 @@ export const matchesAccept = (file: File, accept: string): boolean => {
 
 export type AttachmentsRootProps = PrimitiveProps<"div">;
 
-const AttachmentsRoot = ({ className, render, style, ...elementProps }: AttachmentsRootProps) =>
+export const AttachmentsRoot = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AttachmentsRootProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -98,7 +103,12 @@ export type AttachmentsItemProps = PrimitiveProps<"div">;
 // Generic structural slot for one attachment. It carries no media taxonomy —
 // categorization (image/pdf/file, icons, thumbnails) belongs to the styled
 // layer, which reads the item's raw mediaType however it wants.
-const AttachmentsItem = ({ className, render, style, ...elementProps }: AttachmentsItemProps) =>
+export const AttachmentsItem = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AttachmentsItemProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -111,7 +121,7 @@ export type AttachmentsRemoveProps = PrimitiveProps<"button"> & {
   filename?: string;
 };
 
-const AttachmentsRemove = ({
+export const AttachmentsRemove = ({
   onRemove,
   filename,
   className,
@@ -148,7 +158,7 @@ export type AttachmentsDropzoneProps = PrimitiveProps<"div", AttachmentsDropzone
   children?: ReactNode;
 };
 
-const AttachmentsDropzone = ({
+export const AttachmentsDropzone = ({
   visible = false,
   keepMounted = false,
   portalSelector,
@@ -184,7 +194,12 @@ export type AttachmentsErrorProps = PrimitiveProps<"span">;
 
 // role="alert" (assertive): a rejected pick/drop is a user-action failure that
 // should announce immediately. The copy inside stays the consumer's.
-const AttachmentsError = ({ className, render, style, ...elementProps }: AttachmentsErrorProps) =>
+export const AttachmentsError = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AttachmentsErrorProps) =>
   useRenderElement(
     "span",
     { className, render, style },
@@ -193,7 +208,7 @@ const AttachmentsError = ({ className, render, style, ...elementProps }: Attachm
 
 export type AttachmentsTriggerProps = PrimitiveProps<"button">;
 
-const AttachmentsTrigger = ({
+export const AttachmentsTrigger = ({
   className,
   render,
   style,
@@ -207,11 +222,3 @@ const AttachmentsTrigger = ({
       props: [{ "aria-label": "Add attachment", "data-attachments-trigger": "" }, elementProps],
     },
   );
-
-export const Attachments = Object.assign(AttachmentsRoot, {
-  Dropzone: AttachmentsDropzone,
-  Item: AttachmentsItem,
-  Remove: AttachmentsRemove,
-  Error: AttachmentsError,
-  Trigger: AttachmentsTrigger,
-});

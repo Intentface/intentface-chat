@@ -1,0 +1,23 @@
+{
+  // Publish build. tsc rather than a bundler, deliberately: the output must
+  // preserve the module graph 1:1 so each part module keeps its own "use client"
+  // directive. Bundling collapses the entries into one file, and one file gets
+  // one top-level directive — which makes every compound sub-component
+  // unreachable from a React Server Component.
+  //
+  // Emitting per-module also means tsc infers declarations natively (no
+  // isolated-declarations erasure of Object.assign compounds) and always emits
+  // the production react/jsx-runtime, so neither of those needs a workaround.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    // No source maps: they would reference ../src, which `files` doesn't ship.
+    // Unbundled tsc output is a near 1:1 readable transform of the source, so
+    // the maps buy little — and a map pointing at a missing file is worse than
+    // no map.
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

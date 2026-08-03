@@ -1,11 +1,9 @@
 name: CI
 
 on:
-  # Paused during initial development — run manually from the Actions tab.
-  # Re-enable automatic checks by restoring these triggers:
-  #   push:
-  #     branches: [main]
-  #   pull_request:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -18,9 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned to the packageManager version, not "latest". bun.lock was
+      # resolved by this version, and a newer bun can dedupe transitive
+      # dependencies differently — which is exactly how a duplicate
+      # prosemirror-model slipped past local checks and broke the Vercel build.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.8
 
       # Generates .source (postinstall: fumadocs-mdx) so the docs build compiles.
       - run: bun install --frozen-lockfile

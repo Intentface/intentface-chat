@@ -4,13 +4,14 @@
 
 Initial release: headless chat UI primitives for React, unstyled and animation-free.
 
-Eleven entry points, each a compound component (or a pure utility module) that renders
-semantic DOM with `data-*` state attributes and takes a `render` prop for swapping the
-underlying element:
+Eleven entry points. Each component entry exports a namespace whose parts you compose
+yourself — `Composer.Root`, `Composer.Container`, `Message.Root`, `Message.Text` — rendering
+semantic DOM with `data-*` state attributes, and every part takes a `render` prop for
+swapping the underlying element:
 
 - `/composer` — rich-text input over a purpose-built contenteditable engine: inline chips,
   `/` and `@` prefix-triggered command lists with fuzzy scoring, attachments, and the
-  ask-user questionnaire flow. One store per `<Composer>`, or bring your own with
+  ask-user questionnaire flow. One store per `<Composer.Root>`, or bring your own with
   `Composer.createStore()` to drive it from outside the tree.
 - `/thread` — scroll container with at-bottom detection, auto-follow, prepend-aware
   restoration, and dock/overlay inset measurement.
@@ -20,6 +21,12 @@ underlying element:
 - `/types` — the structural message contract plus part type guards.
 - `/message-utils` — part segmentation, turn grouping, and reasoning/source derivation.
 - `/chip-markdown` — the self-describing chip wire format.
+
+Works with React Server Components. The package ships one module per part, so a server
+component can render a static transcript directly — `Message.Root`, `Message.Text`,
+`Chip.Root` and friends resolve across the client boundary rather than coming back
+`undefined`. The parts remain client components, so hooks and event handlers behave as
+usual; reach for `"use client"` where you need them.
 
 The types are framework-agnostic: an AI SDK `UIMessage` satisfies `ChatMessage`
 structurally, so SDK messages pass straight into the utilities and components with no

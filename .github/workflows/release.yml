@@ -18,6 +18,15 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Proof-of-presence for publishing. A push to main can reach npm without any
+    # stored credential (OIDC), so "who can push to main" would otherwise mean
+    # "who can publish". This environment requires a human to approve the run in
+    # the Actions UI before the job starts, and is restricted to main.
+    #
+    # It gates the whole job, including the version step. When only a Version
+    # Packages PR is being opened, approve it the same way — the job does not
+    # distinguish, and approving costs one click.
+    environment: npm-publish
     steps:
       - uses: actions/checkout@v4
 

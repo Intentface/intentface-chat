@@ -22,10 +22,10 @@ export type { ThreadAutoScrollMode, ThreadVisibilityState };
 // Root
 // ---------------------------------------------------------------------------
 
-export type ThreadRootProps = ComponentProps<typeof ThreadPrimitive>;
+export type ThreadRootProps = ComponentProps<typeof ThreadPrimitive.Root>;
 
 const ThreadRoot = ({ className, ...props }: ThreadRootProps) => (
-  <ThreadPrimitive
+  <ThreadPrimitive.Root
     className={cn(
       "relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
       className,

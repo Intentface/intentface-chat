@@ -40,10 +40,10 @@ describe("composer combobox a11y", () => {
   test("editor wires expanded/controls/activedescendant to a listbox of options", async () => {
     const store = Composer.createStore();
     const { container } = render(
-      <Composer store={store} onSubmit={() => {}} commands={COMMANDS}>
+      <Composer.Root store={store} onSubmit={() => {}} commands={COMMANDS}>
         <Composer.Textarea aria-label="Message" />
         <CommandsHarness prefix="@" />
-      </Composer>,
+      </Composer.Root>,
     );
 
     const textbox = screen.getByRole("textbox", { name: "Message" });
@@ -100,14 +100,14 @@ describe("composer combobox a11y", () => {
       { value: "ville", label: "Ville" },
     ];
     const { container } = render(
-      <Composer
+      <Composer.Root
         store={store}
         onSubmit={() => {}}
         commands={{ "@": { kind: "insert", trigger: "word-boundary", items: mixed } }}
       >
         <Composer.Textarea aria-label="Message" />
         <CommandsHarness prefix="@" />
-      </Composer>,
+      </Composer.Root>,
     );
 
     act(() => {
@@ -154,11 +154,11 @@ describe("composer combobox a11y", () => {
   test("two mounted commands do not fight over aria-activedescendant", () => {
     const store = Composer.createStore();
     render(
-      <Composer store={store} onSubmit={() => {}} commands={COMMANDS}>
+      <Composer.Root store={store} onSubmit={() => {}} commands={COMMANDS}>
         <Composer.Textarea aria-label="Message" />
         <CommandsHarness prefix="@" />
         <CommandsHarness prefix="#" />
-      </Composer>,
+      </Composer.Root>,
     );
 
     act(() => {

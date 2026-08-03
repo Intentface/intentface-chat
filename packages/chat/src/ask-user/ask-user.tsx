@@ -18,9 +18,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { useComposer } from "./composer/store";
-import type { PrimitiveProps } from "./internal/primitive-props";
-import { useRenderElement } from "./internal/render/useRenderElement";
+import { useComposer } from "../composer/store";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 
 // Shared ids so Options can label itself from the question text and describe
 // itself from the step indicator without any consumer wiring: Root mints both,
@@ -32,7 +32,7 @@ const AskUserIdsContext = createContext<AskUserIdsContextValue>({ labelId: "", s
 /** AskUser root container. Stateless — consumers manage all state externally. */
 export type AskUserRootProps = PrimitiveProps<"div">;
 
-const AskUserRoot = ({ className, render, style, ...elementProps }: AskUserRootProps) => {
+export const AskUserRoot = ({ className, render, style, ...elementProps }: AskUserRootProps) => {
   const labelId = useId();
   const stepLabelId = useId();
   const element = useRenderElement(
@@ -46,7 +46,7 @@ const AskUserRoot = ({ className, render, style, ...elementProps }: AskUserRootP
 /** Question heading text. Carries the id `Options` uses as its accessible name. */
 export type AskUserLabelProps = PrimitiveProps<"p">;
 
-const AskUserLabel = ({ className, render, style, ...elementProps }: AskUserLabelProps) => {
+export const AskUserLabel = ({ className, render, style, ...elementProps }: AskUserLabelProps) => {
   const { labelId } = use(AskUserIdsContext);
   return useRenderElement(
     "p",
@@ -58,7 +58,7 @@ const AskUserLabel = ({ className, render, style, ...elementProps }: AskUserLabe
 /** Row container for `Label` and optional `Navigation`. */
 export type AskUserHeaderProps = PrimitiveProps<"div">;
 
-const AskUserHeader = ({ className, render, style, ...elementProps }: AskUserHeaderProps) =>
+export const AskUserHeader = ({ className, render, style, ...elementProps }: AskUserHeaderProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -68,7 +68,12 @@ const AskUserHeader = ({ className, render, style, ...elementProps }: AskUserHea
 /** Row container for `Previous`, `StepLabel`, and `Next`. */
 export type AskUserNavigationProps = PrimitiveProps<"div">;
 
-const AskUserNavigation = ({ className, render, style, ...elementProps }: AskUserNavigationProps) =>
+export const AskUserNavigation = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserNavigationProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -78,7 +83,12 @@ const AskUserNavigation = ({ className, render, style, ...elementProps }: AskUse
 /** Navigate to the previous step. Default accessible name; override via aria-label. */
 export type AskUserPreviousProps = PrimitiveProps<"button">;
 
-const AskUserPrevious = ({ className, render, style, ...elementProps }: AskUserPreviousProps) =>
+export const AskUserPrevious = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserPreviousProps) =>
   useRenderElement(
     "button",
     { className, render, style },
@@ -88,7 +98,7 @@ const AskUserPrevious = ({ className, render, style, ...elementProps }: AskUserP
 /** Navigate to the next step. Default accessible name; override via aria-label. */
 export type AskUserNextProps = PrimitiveProps<"button">;
 
-const AskUserNext = ({ className, render, style, ...elementProps }: AskUserNextProps) =>
+export const AskUserNext = ({ className, render, style, ...elementProps }: AskUserNextProps) =>
   useRenderElement(
     "button",
     { className, render, style },
@@ -104,7 +114,7 @@ export type AskUserStepLabelProps = Omit<PrimitiveProps<"span">, "children"> & {
   children?: ReactNode | ((state: AskUserStepLabelState) => ReactNode);
 };
 
-const AskUserStepLabel = ({
+export const AskUserStepLabel = ({
   children,
   className,
   render,
@@ -172,7 +182,7 @@ export type AskUserOptionsProps = Omit<PrimitiveProps<"fieldset">, "value" | "re
   ref?: RefObject<AskUserOptionsHandle | null>;
 };
 
-const AskUserOptions = ({
+export const AskUserOptions = ({
   multiSelect = false,
   groupName = "",
   ref,
@@ -343,7 +353,7 @@ export type AskUserOptionProps = PrimitiveProps<"label", AskUserOptionState> & {
   onSelect?: () => void;
 };
 
-const AskUserOption = ({
+export const AskUserOption = ({
   value = "",
   selected = false,
   onSelect,
@@ -420,7 +430,7 @@ const useItemRegistration = (
 /** Flex column wrapper for `OptionLabel` and `OptionDescription`. */
 export type AskUserOptionContentProps = PrimitiveProps<"span">;
 
-const AskUserOptionContent = ({
+export const AskUserOptionContent = ({
   className,
   render,
   style,
@@ -435,7 +445,7 @@ const AskUserOptionContent = ({
 /** Option title text. */
 export type AskUserOptionLabelProps = PrimitiveProps<"span">;
 
-const AskUserOptionLabel = ({
+export const AskUserOptionLabel = ({
   className,
   render,
   style,
@@ -450,7 +460,7 @@ const AskUserOptionLabel = ({
 /** Option subtitle/description text. */
 export type AskUserOptionDescriptionProps = PrimitiveProps<"span">;
 
-const AskUserOptionDescription = ({
+export const AskUserOptionDescription = ({
   className,
   render,
   style,
@@ -465,7 +475,7 @@ const AskUserOptionDescription = ({
 /** Keyboard shortcut hints displayed below the ask-user options. */
 export type AskUserHintsProps = PrimitiveProps<"div">;
 
-const AskUserHints = ({ className, render, style, ...elementProps }: AskUserHintsProps) =>
+export const AskUserHints = ({ className, render, style, ...elementProps }: AskUserHintsProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -475,7 +485,12 @@ const AskUserHints = ({ className, render, style, ...elementProps }: AskUserHint
 /** Dismiss/skip button. Stateless — wire `onClick` to your dismiss handler. */
 export type AskUserDismissProps = PrimitiveProps<"button">;
 
-const AskUserDismiss = ({ className, render, style, ...elementProps }: AskUserDismissProps) =>
+export const AskUserDismiss = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserDismissProps) =>
   useRenderElement(
     "button",
     { className, render, style },
@@ -485,26 +500,14 @@ const AskUserDismiss = ({ className, render, style, ...elementProps }: AskUserDi
 /** Continue/submit button — `type=submit` so the enclosing form drives it. */
 export type AskUserContinueProps = PrimitiveProps<"button">;
 
-const AskUserContinue = ({ className, render, style, ...elementProps }: AskUserContinueProps) =>
+export const AskUserContinue = ({
+  className,
+  render,
+  style,
+  ...elementProps
+}: AskUserContinueProps) =>
   useRenderElement(
     "button",
     { className, render, style },
     { props: [{ type: "submit" as const, "data-ask-user-continue": "" }, elementProps] },
   );
-
-export const AskUser = Object.assign(AskUserRoot, {
-  Header: AskUserHeader,
-  Label: AskUserLabel,
-  Navigation: AskUserNavigation,
-  Previous: AskUserPrevious,
-  Next: AskUserNext,
-  StepLabel: AskUserStepLabel,
-  Options: AskUserOptions,
-  Option: AskUserOption,
-  OptionContent: AskUserOptionContent,
-  OptionLabel: AskUserOptionLabel,
-  OptionDescription: AskUserOptionDescription,
-  Hints: AskUserHints,
-  Dismiss: AskUserDismiss,
-  Continue: AskUserContinue,
-});

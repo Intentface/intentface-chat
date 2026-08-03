@@ -15,7 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Collapsible } from "./internal/collapsible";
+import { Collapsible } from "../internal/collapsible";
 
 const MS_IN_S = 1000;
 
@@ -42,7 +42,7 @@ export type ReasoningRootProps = Omit<ComponentProps<typeof Collapsible>, "onOpe
   onOpenChange?: (open: boolean) => void;
 };
 
-const ReasoningRoot = memo(
+export const ReasoningRoot = memo(
   ({
     isStreaming = false,
     open: controlledOpen,
@@ -111,17 +111,12 @@ ReasoningRoot.displayName = "Reasoning";
 
 export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger>;
 
-const ReasoningTrigger = (props: ReasoningTriggerProps) => (
+export const ReasoningTrigger = (props: ReasoningTriggerProps) => (
   <Collapsible.Trigger data-reasoning-trigger="" {...props} />
 );
 
 export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel>;
 
-const ReasoningContent = (props: ReasoningContentProps) => (
+export const ReasoningContent = (props: ReasoningContentProps) => (
   <Collapsible.Panel data-reasoning-content="" {...props} />
 );
-
-export const Reasoning = Object.assign(ReasoningRoot, {
-  Trigger: ReasoningTrigger,
-  Content: ReasoningContent,
-});

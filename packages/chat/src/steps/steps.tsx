@@ -10,9 +10,9 @@
 // belong to the styled layer; tool derivation belongs to the app layer.
 
 import { type ComponentProps, type CSSProperties, createContext, use } from "react";
-import { Collapsible } from "./internal/collapsible";
-import type { PrimitiveProps } from "./internal/primitive-props";
-import { useRenderElement } from "./internal/render/useRenderElement";
+import { Collapsible } from "../internal/collapsible";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 
 // Visually-hidden-but-announced (screen-reader-only) default for Steps.Status.
 const visuallyHiddenStyle: CSSProperties = {
@@ -34,7 +34,7 @@ const visuallyHiddenStyle: CSSProperties = {
 
 export type StepsRootProps = PrimitiveProps<"div">;
 
-const StepsRoot = ({ className, render, style, ...elementProps }: StepsRootProps) =>
+export const StepsRoot = ({ className, render, style, ...elementProps }: StepsRootProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -67,7 +67,7 @@ export type StepsItemProps = ComponentProps<typeof Collapsible> & {
   status?: StepStatus;
 };
 
-const StepsItem = ({ status = "complete", defaultOpen, ...props }: StepsItemProps) => {
+export const StepsItem = ({ status = "complete", defaultOpen, ...props }: StepsItemProps) => {
   const isNested = use(NestedContext);
 
   return (
@@ -92,7 +92,7 @@ StepsItem.displayName = "StepsItem";
 
 export type StepsTriggerProps = ComponentProps<typeof Collapsible.Trigger>;
 
-const StepsTrigger = (props: StepsTriggerProps) => (
+export const StepsTrigger = (props: StepsTriggerProps) => (
   <Collapsible.Trigger data-steps-trigger="" {...props} />
 );
 
@@ -100,7 +100,9 @@ StepsTrigger.displayName = "StepsTrigger";
 
 export type StepsPanelProps = ComponentProps<typeof Collapsible.Panel>;
 
-const StepsPanel = (props: StepsPanelProps) => <Collapsible.Panel data-steps-panel="" {...props} />;
+export const StepsPanel = (props: StepsPanelProps) => (
+  <Collapsible.Panel data-steps-panel="" {...props} />
+);
 
 StepsPanel.displayName = "StepsPanel";
 
@@ -113,7 +115,13 @@ export type StepsIconProps = PrimitiveProps<"span", { status: StepStatus }> & {
   status?: StepStatus;
 };
 
-const StepsIcon = ({ status, className, render, style, ...elementProps }: StepsIconProps) => {
+export const StepsIcon = ({
+  status,
+  className,
+  render,
+  style,
+  ...elementProps
+}: StepsIconProps) => {
   const resolvedStatus = useStepStatus(status);
 
   return useRenderElement(
@@ -132,7 +140,13 @@ export type StepsLabelProps = PrimitiveProps<"span", { status: StepStatus }> & {
   status?: StepStatus;
 };
 
-const StepsLabel = ({ status, className, render, style, ...elementProps }: StepsLabelProps) => {
+export const StepsLabel = ({
+  status,
+  className,
+  render,
+  style,
+  ...elementProps
+}: StepsLabelProps) => {
   const resolvedStatus = useStepStatus(status);
 
   return useRenderElement(
@@ -157,7 +171,7 @@ export type StepsStatusProps = PrimitiveProps<"span", { status: StepStatus }> & 
   status?: StepStatus;
 };
 
-const StepsStatus = ({
+export const StepsStatus = ({
   status,
   children,
   className,
@@ -189,12 +203,3 @@ StepsStatus.displayName = "StepsStatus";
 // ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
-
-export const Steps = Object.assign(StepsRoot, {
-  Item: StepsItem,
-  Trigger: StepsTrigger,
-  Panel: StepsPanel,
-  Icon: StepsIcon,
-  Label: StepsLabel,
-  Status: StepsStatus,
-});

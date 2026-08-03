@@ -12,9 +12,9 @@
 // CSS consumers see the same state.
 
 import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { type ChipSegment, parseChipSegments } from "./chip-markdown";
-import type { PrimitiveProps } from "./internal/primitive-props";
-import { useRenderElement } from "./internal/render/useRenderElement";
+import { type ChipSegment, parseChipSegments } from "../chip-markdown";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
 
 // ---------------------------------------------------------------------------
 // Root — data-attribute contract: data-message="", data-role, data-error,
@@ -37,7 +37,7 @@ export type MessageRootProps = Omit<PrimitiveProps<"div", MessageState>, "role">
   isError?: boolean;
 };
 
-const MessageRoot = ({
+export const MessageRoot = ({
   role,
   isLast = false,
   isError = false,
@@ -64,7 +64,7 @@ const MessageRoot = ({
 
 export type MessageTurnProps = PrimitiveProps<"div">;
 
-const MessageTurn = ({ className, render, style, ...elementProps }: MessageTurnProps) =>
+export const MessageTurn = ({ className, render, style, ...elementProps }: MessageTurnProps) =>
   useRenderElement(
     "div",
     { className, render, style },
@@ -90,7 +90,7 @@ export type MessageTextProps = Omit<PrimitiveProps<"span">, "children"> & {
   renderChip?: (chip: MessageChipSegment, index: number) => ReactNode;
 };
 
-const MessageText = ({
+export const MessageText = ({
   children,
   className,
   render,
@@ -196,8 +196,3 @@ export const useMessageSelectionScope = () => {
 // ---------------------------------------------------------------------------
 // Compound export
 // ---------------------------------------------------------------------------
-
-export const Message = Object.assign(MessageRoot, {
-  Turn: MessageTurn,
-  Text: MessageText,
-});

@@ -32,14 +32,14 @@
   ],
   "exports": {
     "./types": "./src/types.ts",
-    "./composer": "./src/composer/index.tsx",
+    "./composer": "./src/composer/index.ts",
     "./chip": "./src/chip/index.ts",
-    "./thread": "./src/thread/index.tsx",
-    "./reasoning": "./src/reasoning.tsx",
-    "./steps": "./src/steps.tsx",
-    "./attachments": "./src/attachments.tsx",
-    "./ask-user": "./src/ask-user.tsx",
-    "./message": "./src/message.tsx",
+    "./thread": "./src/thread/index.ts",
+    "./reasoning": "./src/reasoning/index.ts",
+    "./steps": "./src/steps/index.ts",
+    "./attachments": "./src/attachments/index.ts",
+    "./ask-user": "./src/ask-user/index.ts",
+    "./message": "./src/message/index.ts",
     "./message-utils": "./src/message-utils.ts",
     "./chip-markdown": "./src/chip-markdown.ts"
   },
@@ -87,24 +87,24 @@
         "default": "./dist/thread/index.js"
       },
       "./reasoning": {
-        "types": "./dist/reasoning.d.ts",
-        "default": "./dist/reasoning.js"
+        "types": "./dist/reasoning/index.d.ts",
+        "default": "./dist/reasoning/index.js"
       },
       "./steps": {
-        "types": "./dist/steps.d.ts",
-        "default": "./dist/steps.js"
+        "types": "./dist/steps/index.d.ts",
+        "default": "./dist/steps/index.js"
       },
       "./attachments": {
-        "types": "./dist/attachments.d.ts",
-        "default": "./dist/attachments.js"
+        "types": "./dist/attachments/index.d.ts",
+        "default": "./dist/attachments/index.js"
       },
       "./ask-user": {
-        "types": "./dist/ask-user.d.ts",
-        "default": "./dist/ask-user.js"
+        "types": "./dist/ask-user/index.d.ts",
+        "default": "./dist/ask-user/index.js"
       },
       "./message": {
-        "types": "./dist/message.d.ts",
-        "default": "./dist/message.js"
+        "types": "./dist/message/index.d.ts",
+        "default": "./dist/message/index.js"
       },
       "./message-utils": {
         "types": "./dist/message-utils.d.ts",

@@ -12,10 +12,10 @@ import { TextShimmer } from "../ui/text-shimmer";
 
 export { useReasoning };
 
-export type ReasoningRootProps = ComponentProps<typeof ReasoningPrimitive>;
+export type ReasoningRootProps = ComponentProps<typeof ReasoningPrimitive.Root>;
 
 const ReasoningRoot = memo(({ className, ...props }: ReasoningRootProps) => (
-  <ReasoningPrimitive className={cn("not-prose w-full", className)} {...props} />
+  <ReasoningPrimitive.Root className={cn("not-prose w-full", className)} {...props} />
 ));
 
 ReasoningRoot.displayName = "Reasoning";

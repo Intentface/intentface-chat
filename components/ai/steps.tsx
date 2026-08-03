@@ -13,10 +13,10 @@ import { cn } from "@/lib/utils";
 // Root
 // ---------------------------------------------------------------------------
 
-type StepsRootProps = ComponentProps<typeof StepsPrimitive>;
+type StepsRootProps = ComponentProps<typeof StepsPrimitive.Root>;
 
 const StepsRoot = ({ className, ...props }: StepsRootProps) => (
-  <StepsPrimitive className={cn("not-prose w-full", className)} {...props} />
+  <StepsPrimitive.Root className={cn("not-prose w-full", className)} {...props} />
 );
 
 StepsRoot.displayName = "Steps";

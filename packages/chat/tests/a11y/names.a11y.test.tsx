@@ -10,7 +10,7 @@ import { expectNoAxeViolations } from "./axe";
 describe("composer names a11y", () => {
   test("controls carry default names; the container is not a control", async () => {
     const { container } = render(
-      <Composer onSubmit={() => {}}>
+      <Composer.Root onSubmit={() => {}}>
         <Composer.Container>
           <Composer.Textarea aria-label="Message" />
           <Composer.Attachments>
@@ -20,7 +20,7 @@ describe("composer names a11y", () => {
             <Composer.Submit />
           </Composer.Actions>
         </Composer.Container>
-      </Composer>,
+      </Composer.Root>,
     );
 
     expect(screen.getByRole("button", { name: "Send message" })).toBeTruthy();
@@ -37,9 +37,9 @@ describe("composer names a11y", () => {
 
   test("generating submit announces as stop", () => {
     render(
-      <Composer onSubmit={() => {}}>
+      <Composer.Root onSubmit={() => {}}>
         <Composer.Submit isGenerating onStop={() => {}} />
-      </Composer>,
+      </Composer.Root>,
     );
     expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
     cleanup();
@@ -47,13 +47,13 @@ describe("composer names a11y", () => {
 
   test("remove buttons announce per item and errors announce immediately", async () => {
     const { container } = render(
-      <Attachments>
+      <Attachments.Root>
         <Attachments.Item>
           <Attachments.Remove filename="report.pdf" onRemove={() => {}} />
         </Attachments.Item>
         <Attachments.Trigger />
         <Attachments.Error>Too many files.</Attachments.Error>
-      </Attachments>,
+      </Attachments.Root>,
     );
 
     expect(screen.getByRole("button", { name: "Remove report.pdf" })).toBeTruthy();

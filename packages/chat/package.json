@@ -5,11 +5,15 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
+  "author": "Intentface",
   "homepage": "https://intentface.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Intentface/intentface-chat.git",
     "directory": "packages/chat"
+  },
+  "bugs": {
+    "url": "https://github.com/Intentface/intentface-chat/issues"
   },
   "keywords": [
     "react",

@@ -24,6 +24,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { CHIP_SURFACE_CLASS } from "@/components/ai/chip";
 import {
   type CommandItemData,
   Composer,
@@ -31,7 +32,6 @@ import {
   type ComposerSubmitData,
 } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
-import { CHIP_SURFACE_CLASS } from "@/components/ai/chip";
 import { Reasoning } from "@/components/ai/reasoning";
 import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
@@ -62,10 +62,7 @@ import { getAskUserInfo, getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/st
 import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
 import type { AppUIMessage, AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
 import { applyStopToMessages } from "@/lib/chat-instance";
-import {
-  fetchPlaygroundIssues,
-  GroupedIssueCommands,
-} from "@/lib/playground-demo";
+import { fetchPlaygroundIssues, GroupedIssueCommands } from "@/lib/playground-demo";
 import { useChatStore } from "@/lib/store/chat";
 import { useModelStore } from "@/lib/store/model";
 import { usePlaygroundStore } from "@/lib/store/playground";

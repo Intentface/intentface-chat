@@ -22,6 +22,7 @@ describe("a11y harness", () => {
   test("axe detects a violation in this environment (negative control)", async () => {
     const { container } = render(
       // biome-ignore lint/a11y/useButtonType: deliberate violation fixture
+      // biome-ignore lint/a11y/useValidAriaValues: the empty label IS the violation under test
       <button aria-label="" />,
     );
     const results = await axe.run(container, {

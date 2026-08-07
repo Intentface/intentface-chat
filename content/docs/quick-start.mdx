@@ -1,17 +1,16 @@
 ---
 title: Quick start
-description: Install the package, set it up, and assemble your first composer.
+description: Install the package, set it up, and assemble your first chat.
 ---
 
+import { Hero } from './quick-start/demos/hero';
+
 **@intentface/chat** ships the behavior of a chat interface and none of its
-appearance. This page takes you from an empty React 19 app to a working composer.
+appearance. This page takes you from an empty React 19 app to a working chat.
 
 ## Install the library
 
-```bash
-bun add @intentface/chat
-# or: npm install @intentface/chat / pnpm add @intentface/chat
-```
+<InstallationBlock packageName="@intentface/chat" />
 
 `react` and `react-dom` (v19+) are the only peer dependencies. Nothing else
 ships with it beyond two small runtime deps — `@floating-ui/dom` for anchored
@@ -57,49 +56,19 @@ popover.
 
 ## Assemble a component
 
+Three primitives make a chat: `Thread` owns the scroll area and reserves space
+for its docked composer, `Message` renders each turn, and `Composer` takes input.
 Every part renders semantic DOM with `data-*` state attributes and no classes of
-its own. You pass `className` to each one, so the look is yours from the first
+its own — you pass `className` to each one, so the look is yours from the first
 render.
 
-```tsx
-"use client";
+<Demo component={<Hero />} file="quick-start/demos/hero.tsx" />
 
-import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
-
-export function Chat() {
-  const handleSubmit = (data: ComposerSubmitData) => {
-    if (data.kind === "message") {
-      console.log(data.text, data.files);
-    }
-  };
-
-  return (
-    <Composer.Root onSubmit={handleSubmit} className="flex w-full flex-col">
-      <Composer.Container className="cursor-text rounded-3xl border border-neutral-200 bg-white transition-colors dark:border-neutral-800 dark:bg-neutral-900">
-        <Composer.Textarea
-          // The editor element is engine-owned and out of JSX reach, so it is
-          // styled through these variants rather than a className of its own.
-          className="max-h-32 min-h-8 overflow-y-auto px-3 py-2 text-sm **:data-composer-editor:w-full **:data-composer-editor:max-w-none [&_[data-composer-editor]:focus]:outline-none"
-        >
-          <Composer.Placeholder
-            placeholder="Send a message…"
-            className="text-neutral-500 dark:text-neutral-400"
-          />
-        </Composer.Textarea>
-        <Composer.Actions className="flex justify-end p-2">
-          <Composer.Submit className="rounded-full bg-neutral-900 px-3 py-1.5 text-sm text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900">
-            Send
-          </Composer.Submit>
-        </Composer.Actions>
-      </Composer.Container>
-    </Composer.Root>
-  );
-}
-```
-
-`Composer.Submit` disables itself while the field is empty and exposes the
-submitting state through data attributes — see the
-[Composer](/docs/primitives/composer) page for the full part list.
+`Composer.Submit` disables itself while the field is empty, and `Thread`
+publishes its docked-composer reserve as `--thread-overlay-bottom-height` so the
+scroll area never hides behind it. See [Composer](/docs/primitives/composer),
+[Thread](/docs/primitives/thread), and [Message](/docs/primitives/message) for
+the full part lists.
 
 ## Pre-styled components
 

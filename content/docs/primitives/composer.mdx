@@ -4,7 +4,15 @@ description: Rich-text chat input with chips, slash/mention commands, attachment
 source: composer
 ---
 
-<ComponentPreview name="composer-basic" />
+import { Basic } from './composer/demos/basic';
+import { Commands } from './composer/demos/commands';
+import { Popover } from './composer/demos/popover';
+import { AskUserFlow } from './composer/demos/ask-user-flow';
+import { AttachmentsDemo } from './composer/demos/attachments';
+import { Controlled } from './composer/demos/controlled';
+import { Store } from './composer/demos/store';
+
+<Demo component={<Basic />} file="primitives/composer/demos/basic.tsx" />
 
 ## Usage guidelines
 
@@ -60,7 +68,7 @@ opens and closes to match — priority is just the order of your branches.
 Type `@` to open the command list — the panel routes to it automatically while
 a prefix is active. `commands` maps each prefix to its config and items.
 
-<ComponentPreview name="composer-commands" />
+<Demo component={<Commands />} file="primitives/composer/demos/commands.tsx" />
 
 ### Floating command popover
 
@@ -71,26 +79,29 @@ growing the composer and needs no reserved height. It's collision-aware — near
 viewport edge it flips, shifts, and caps its height to stay on screen. Mount one
 or the other; the content is identical.
 
-<ComponentPreview name="composer-popover" />
+<Demo component={<Popover />} file="primitives/composer/demos/popover.tsx" />
 
 ### Ask-user flow
 
 Setting the `questions` prop — typically from an assistant's clarifying
-question — arms the ask-user flow and flips `askUser.active`; render
-`<Composer.AskUser />` inside a `Panel` (or `Popover`) gated on that flag. The
+question — arms the ask-user flow and flips `askUser.active`; compose the
+`AskUser` parts from `@intentface/chat/ask-user` inside a `Panel` (or
+`Popover`), reading the current step from `useComposer(c => c.askUser)`. The
 flow steps through each question (single- or multi-select), and answering or
 skipping the last one fires `onSubmit` with `{ kind: "answers" }`. Passing a
 fresh `questions` array re-arms it from the first step.
 
-<ComponentPreview name="composer-ask-user-flow" />
+<Demo component={<AskUserFlow />} file="primitives/composer/demos/ask-user-flow.tsx" />
 
 ### Attachments
 
-`Composer.Attachments` renders the file strip and drop zone above the input;
-`Composer.AttachmentTrigger` opens the file dialog. Files can also be dropped
-onto the composer.
+`Composer.Attachments` carries the accept/limit policy and the hidden file
+input — it renders no strip of its own. The visible list is yours: read
+`useComposer(c => c.attachments)` and lay the items out with the
+`@intentface/chat/attachments` parts. `Composer.AttachmentTrigger` opens the
+file dialog, and files can also be dropped onto the composer.
 
-<ComponentPreview name="composer-attachments" />
+<Demo component={<AttachmentsDemo />} file="primitives/composer/demos/attachments.tsx" />
 
 ### Controlled value
 
@@ -98,7 +109,7 @@ onto the composer.
 `onValueChange`. Here the parent's buttons drive the field and typing reports
 back.
 
-<ComponentPreview name="composer-controlled" />
+<Demo component={<Controlled />} file="primitives/composer/demos/controlled.tsx" />
 
 ### External store
 
@@ -106,7 +117,7 @@ back.
 drive the composer from anywhere — a toolbar, a shortcut — through
 `store.controller`, with no context or ref threading.
 
-<ComponentPreview name="composer-store" />
+<Demo component={<Store />} file="primitives/composer/demos/store.tsx" />
 
 ## Multiple instances
 

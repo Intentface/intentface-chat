@@ -27,9 +27,7 @@ export const Basic = () => (
       <Reasoning.Content className="flex flex-col gap-3 pl-6 text-sm">
         {SECTIONS.map((section) => (
           <div key={section.header} className="flex flex-col gap-0.5">
-            <span className="font-medium text-[#1a1a1a] dark:text-[#fcfcfc]">
-              {section.header}
-            </span>
+            <span className="font-medium text-[#1a1a1a] dark:text-[#fcfcfc]">{section.header}</span>
             <p className="leading-[1.7] text-[#686868] dark:text-[#9b9b9b]">{section.body}</p>
           </div>
         ))}

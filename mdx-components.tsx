@@ -5,7 +5,6 @@ import { AttributesTable } from "@/components/docs/attributes-table";
 import { CodeBlock } from "@/components/docs/code-block";
 import { ComponentPreview } from "@/components/docs/component-preview";
 import { PropsTable } from "@/components/docs/props-table";
-import { ThemeSource } from "@/components/docs/theme-source";
 import { ValuesTable } from "@/components/docs/values-table";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +103,6 @@ const docsComponents: MDXComponents = {
   PropsTable,
   AttributesTable,
   ValuesTable,
-  ThemeSource,
 };
 
 export const getMDXComponents = (components?: MDXComponents): MDXComponents => ({

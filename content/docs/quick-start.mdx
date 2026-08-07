@@ -1,0 +1,124 @@
+---
+title: Quick start
+description: Install the package, set it up, and assemble your first composer.
+---
+
+**@intentface/chat** ships the behavior of a chat interface and none of its
+appearance. This page takes you from an empty React 19 app to a working composer.
+
+## Install the library
+
+```bash
+bun add @intentface/chat
+# or: npm install @intentface/chat / pnpm add @intentface/chat
+```
+
+`react` and `react-dom` (v19+) are the only peer dependencies. Nothing else
+ships with it beyond two small runtime deps — `@floating-ui/dom` for anchored
+positioning and `nanoid` for attachment ids. No styling, no editor framework, no
+animation library.
+
+Each primitive is a separate entry point:
+
+```tsx
+import { Composer } from "@intentface/chat/composer";
+import { Message } from "@intentface/chat/message";
+import { Thread } from "@intentface/chat/thread";
+import { groupTurns } from "@intentface/chat/message-utils";
+```
+
+## Set up
+
+### Portals
+
+The composer's command popover, its panel, and the attachment preview all render
+through portals into `document.body`, so they escape any overflow or transform on
+your layout. To keep them above the rest of the page regardless of your own
+stacking, give your app root its own stacking context.
+
+In your root layout:
+
+```tsx
+<body>
+  <div className="root">{children}</div>
+</body>
+```
+
+And in your global stylesheet:
+
+```css
+.root {
+  isolation: isolate;
+}
+```
+
+Without this, a `z-index` anywhere in your layout can paint over the command
+popover.
+
+## Assemble a component
+
+Every part renders semantic DOM with `data-*` state attributes and no classes of
+its own. You pass `className` to each one, so the look is yours from the first
+render.
+
+```tsx
+"use client";
+
+import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
+
+export function Chat() {
+  const handleSubmit = (data: ComposerSubmitData) => {
+    if (data.kind === "message") {
+      console.log(data.text, data.files);
+    }
+  };
+
+  return (
+    <Composer.Root onSubmit={handleSubmit} className="flex w-full flex-col">
+      <Composer.Container className="cursor-text rounded-3xl border border-neutral-200 bg-white transition-colors dark:border-neutral-800 dark:bg-neutral-900">
+        <Composer.Textarea
+          // The editor element is engine-owned and out of JSX reach, so it is
+          // styled through these variants rather than a className of its own.
+          className="max-h-32 min-h-8 overflow-y-auto px-3 py-2 text-sm **:data-composer-editor:w-full **:data-composer-editor:max-w-none [&_[data-composer-editor]:focus]:outline-none"
+        >
+          <Composer.Placeholder
+            placeholder="Send a message…"
+            className="text-neutral-500 dark:text-neutral-400"
+          />
+        </Composer.Textarea>
+        <Composer.Actions className="flex justify-end p-2">
+          <Composer.Submit className="rounded-full bg-neutral-900 px-3 py-1.5 text-sm text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900">
+            Send
+          </Composer.Submit>
+        </Composer.Actions>
+      </Composer.Container>
+    </Composer.Root>
+  );
+}
+```
+
+`Composer.Submit` disables itself while the field is empty and exposes the
+submitting state through data attributes — see the
+[Composer](/docs/primitives/composer) page for the full part list.
+
+## Pre-styled components
+
+There is no pre-styled `@intentface/chat` package, and no CSS to install. The
+demos on each component page are the styled reference: they use stock Tailwind,
+depend on nothing but this package, and are meant to be copied and edited.
+
+This site's own chat is built from components that live in the app, not the
+package. They use design tokens, Motion, and local icon files, and they are not
+published — read them as a reference implementation if you like, but they are not
+a starting point.
+
+## Working with LLMs
+
+Every docs page has a **View as Markdown** link in the header that serves the page
+as plain text, which pastes cleanly into an AI assistant.
+
+## Next steps
+
+- [Headless concepts](/docs/headless) — the state model, data attributes, and render props
+- [Composer](/docs/primitives/composer) — commands, chips, attachments, and the ask-user flow
+- [Thread](/docs/primitives/thread) — the scroll container and auto-follow behavior

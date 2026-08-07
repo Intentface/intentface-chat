@@ -3,8 +3,15 @@ import { getPage, source } from "@/lib/docs/source";
 
 const SITE = "https://intentface.dev";
 
-const SUMMARY =
-  "Headless chat UI primitives for React — the behavior, state, and wire formats for building AI chat interfaces, with no styling of their own. Each documentation page below is served as plain markdown with every demo's source inlined.";
+// The intro is read by agents, so it carries the two operating instructions
+// that save a round trip: how to fetch a page, and which Tailwind version the
+// demos assume.
+const SUMMARY = [
+  "This is the documentation for the `@intentface/chat` package.",
+  "It provides headless, unstyled React primitives for building AI chat interfaces — a rich-text composer, thread scroll ownership, message segmentation, and streaming disclosure. Styling is entirely the consumer's.",
+  "Every page below is markdown; append `.md` to any docs URL to fetch the same content. Demo source is inlined into those pages.",
+  "The demos are written for Tailwind CSS v4. If `package.json` uses Tailwind CSS v3, convert unsupported utilities to v3-compatible equivalents.",
+].join("\n");
 
 type TreeNode = {
   type: string;
@@ -24,7 +31,7 @@ const lineFor = (url: string) => {
   const page = getPage(slug === "index" ? [] : slug.split("/"));
   if (!page) return null;
   const description = page.data.description ? `: ${page.data.description}` : "";
-  return `- [${page.data.title}](${SITE}/docs-markdown/${slug})${description}`;
+  return `- [${page.data.title}](${SITE}/docs/${slug}.md)${description}`;
 };
 
 // Groups follow the page tree, so the order matches the sidebar.
@@ -60,7 +67,7 @@ export const GET = () => {
   const body = [
     "# @intentface/chat",
     "",
-    `> ${SUMMARY}`,
+    SUMMARY,
     "",
     "## Documentation",
     "",

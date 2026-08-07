@@ -1,32 +1,57 @@
 ---
 title: Introduction
-description: Headless chat UI primitives for React — behavior from npm, every class yours.
+description: An unstyled React primitive library for building AI chat interfaces.
 ---
 
-**@intentface/chat** is a set of headless, unstyled chat primitives — the
-behavior, state, and wire formats for building AI chat interfaces.
+`@intentface/chat` is an unstyled React library for building chat interfaces. It
+provides the behavior that chat UIs need and is hard to write — a rich-text
+composer, scroll ownership, message segmentation, streaming disclosure — and
+renders no styles of its own.
 
-This is the Base UI model applied to chat: **the package owns behavior, you own
-every class.**
+React and React DOM are the only peer dependencies. There is no editor framework
+underneath, no animation library, and no opinion about transport: the package
+never makes a request.
 
-## What the package owns
+## Features
 
-The parts that are hard to get right and rarely need restyling — the composer's
-rich-text editor and command palette, the thread's scroll and auto-follow,
-message part segmentation, the chip wire format. These render no styles of their
-own; they expose behavior through `data-*` attributes, context hooks, and render
-props.
+### Headless
 
-There is no pre-styled package and no theme to install. Every component page
-carries demos that show one way to style the primitive — stock Tailwind, no
-dependencies beyond this package — and they exist to be copied and changed.
+The primitives are unstyled, bundle no CSS, and prescribe no styling solution.
+They render semantic DOM with `data-*` state attributes, and every part accepts
+`className`, `style`, and a `render` prop. See [Styling](/docs/handbook/styling).
 
-## Get started
+### Composable
 
-```bash
-bun add @intentface/chat
-```
+Each primitive is a namespace of parts you assemble yourself — `Composer.Root`,
+`Composer.Container`, `Message.Root`. Parts can be reordered, omitted, or wrapped,
+and every one exposes its state through context hooks.
 
-Then follow the [Quick start](/docs/quick-start) to set up portals and assemble
-your first composer, or jump straight to a primitive — the
-[Composer](/docs/primitives/composer) is the deepest one.
+### Built for streaming
+
+The composer's editor is isolated from the message stream, so tokens arriving
+dozens of times a second don't re-render it. The thread follows new content while
+you're at the bottom and releases when you scroll away. See
+[Composer performance](/docs/primitives/composer#performance).
+
+### AI SDK compatible
+
+The package defines its own structural message types, which a Vercel AI SDK
+`UIMessage` already satisfies — so SDK messages pass straight into the components
+with no adapter.
+
+## Primitives
+
+| Entry point | What it covers |
+| --- | --- |
+| `/composer` | Contenteditable editor, inline chips, prefix command lists, attachments, ask-user flow |
+| `/thread` | Scroll container: at-bottom detection, auto-follow, dock measurement, prepend restoration |
+| `/message` | Message parts, turn grouping, chip-segmented text |
+| `/steps`, `/reasoning` | Tool-call timelines and reasoning disclosure |
+| `/chip`, `/attachments`, `/ask-user` | The remaining building blocks |
+| `/types`, `/message-utils`, `/chip-markdown` | The message contract, part utilities, and the chip wire format |
+
+## Next steps
+
+- [Quick start](/docs/quick-start) — install the package and assemble a chat
+- [Build a chat](/docs/build-a-chat) — the same result in four stages
+- [Accessibility](/docs/handbook/accessibility) — what the primitives wire up, and what you supply

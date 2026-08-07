@@ -126,7 +126,7 @@ live on one page with no wiring. To reach a composer from outside its tree —
 toolbars, keyboard shortcuts, status bars — create an explicit handle with
 `Composer.createStore()`, pass it via the `store` prop, and use
 `store.controller` (imperative) or `useComposerStore(store, selector)`
-(reactive). See [Composer state](/docs/headless/state) for the full model.
+(reactive).
 
 ## Performance
 
@@ -141,22 +141,21 @@ state in a small component, derive the panel props there, and hand them to a
 memoized inner composer:
 
 ```tsx
-const ChatInput = () => {
-  const { messages, status } = useChatMessages();
-  const panelState = useAskUserPanelState(messages, status);
-  return <ChatInputInner panelState={panelState} status={status} />;
+// Reads the stream and derives only what the composer needs.
+const ChatInput = ({ messages, status }: ChatInputProps) => {
+  const panel = derivePanelState(messages, status);
+  return <ChatInputInner panel={panel} status={status} />;
 };
 
-const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => (
-  <Composer.Root /* … the actual composer tree … */ />
+const ChatInputInner = memo(({ panel, status }: ChatInputInnerProps) => (
+  <Composer.Root /* … the composer tree … */ />
 ));
 ```
 
-The derivation (`useAskUserPanelState` here) is app code — what to surface in the
-panel (an ask-user prompt, a status line, …) is your product's policy, so you own
-it. Return a referentially stable value while nothing transitioned, so the inner
-composer bails on every chunk except real panel changes. See
-[Streaming performance](/docs/headless/performance) for the full render model.
+`derivePanelState` is yours — what belongs in the panel (an ask-user prompt, a
+status line) is your product's policy. Return a referentially stable value while
+nothing has changed, so the inner composer bails on every chunk except real panel
+transitions.
 
 ## Keyboard
 
@@ -262,7 +261,7 @@ key handling treats native inputs as foreign editables.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
+[Styling](/docs/handbook/styling)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 Only part-specific props and state-driven attributes are listed below. These
 tables are hand-authored from the package source.
 
@@ -585,20 +584,18 @@ still flows top-to-bottom — and calls the callback once per group with
 </Composer.CommandGroup>
 ```
 
-### Composer.AskUser
+### Ask-user
 
-Renders the active question. Put it inside a `Panel` or `Popover`, gated on
-`askUser.active`. No props — it reads the store's ask-user state and renders
-nothing when there's no question.
+The composer owns the ask-user *state* — `questions`, the current step, the
+answers — but renders none of the question UI. Compose that from the `AskUser`
+namespace in `@intentface/chat/ask-user`, reading the step through
+`useComposer((c) => c.askUser)` and gating the enclosing `Panel` or `Popover` on
+`askUser.active`.
 
-### Ask-user actions
-
-`Composer.AskUserHints` is the structural slot for keyboard hints.
-`Composer.AskUserDismiss` is a button wired to dismiss the current step
-(`data-composer-ask-user-dismiss`). `Composer.AskUserContinue` is a
-submit button (`data-composer-ask-user-continue`). None ship copy —
-supply the labels as children; read `useComposer((c) => c.askUser.isLastStep)`
-to switch continue/submit wording.
+`AskUser.Dismiss` is a plain button you wire to `askUser.dismissStep`;
+`AskUser.Continue` is `type="submit"`, so the enclosing `Composer.Root` form
+drives it. Neither ships copy — supply the labels as children, and read
+`askUser.isLastStep` to switch the continue wording.
 
 ### Hooks
 

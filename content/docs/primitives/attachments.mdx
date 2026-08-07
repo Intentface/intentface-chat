@@ -1,6 +1,6 @@
 ---
 title: Attachments
-description: The file-attachment tray — item chips, a remove affordance, and inline or global drop zones.
+description: The attachment tray — structural slots for items, a remove affordance, a drop zone, and a file picker.
 source: attachments
 ---
 
@@ -11,32 +11,36 @@ import { Basic } from './attachments/demos/basic';
 ## Usage guidelines
 
 - **Pending-file tray** — the strip above the composer input, showing attachment chips with a remove affordance.
-- **Model included** — accept matching, blob-URL lifecycle, and send preparation ship in the package; the styled tray animates items in and out.
-- **Media-aware** — each item exposes `data-media-type` (`image` / `pdf` / `file`) for per-type styling.
-- **Drop + pick** — a `Dropzone` overlay (inline, or `global` to project into the app shell) plus a `Trigger` file picker.
+- **Model included** — accept matching and blob-URL lifecycle ship in the package; the tray's layout and motion are yours.
+- **No media taxonomy** — `Attachments.Item` is a structural slot; read the item's `mediaType` and decide what an image, a PDF, or a file looks like.
+- **Drop + pick** — a `Dropzone` overlay (in place, or portalled elsewhere via `portalSelector`) plus a `Trigger` file picker.
 - **Get started** — see [Quick start](/docs/quick-start) to add the package.
 
 ## Anatomy
 
 ```tsx
-<Attachments.Root show={items.length > 0}>
-  {items.map((item) => (
-    <Attachments.Item key={item.id} item={item}>
-      <Attachments.Remove onRemove={() => remove(item.id)} />
-    </Attachments.Item>
-  ))}
-</Attachments.Root>
+{items.length > 0 && (
+  <Attachments.Root>
+    {items.map((item) => (
+      <Attachments.Item key={item.id}>
+        <span>{item.filename}</span>
+        <Attachments.Remove onRemove={() => remove(item.id)} filename={item.filename} />
+      </Attachments.Item>
+    ))}
+  </Attachments.Root>
+)}
 ```
 
 With a drop zone and a picker trigger:
 
 ```tsx
 <>
-  <Attachments.Dropzone visible={isDragging} variant="global" />
-  <Attachments.Root show={items.length > 0}>
+  <Attachments.Dropzone visible={isDragging} portalSelector="#app-shell" />
+  <Attachments.Root>
     {items.map((item) => (
-      <Attachments.Item key={item.id} item={item}>
-        <Attachments.Remove onRemove={() => remove(item.id)} />
+      <Attachments.Item key={item.id}>
+        <span>{item.filename}</span>
+        <Attachments.Remove onRemove={() => remove(item.id)} filename={item.filename} />
       </Attachments.Item>
     ))}
   </Attachments.Root>
@@ -56,31 +60,21 @@ still yours).
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
+[Styling](/docs/handbook/styling)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 
 ### Attachments
 
-The tray container; animates open/closed. Renders `data-attachments`.
-
-export const rootProps = [
-  { name: "show", type: "boolean", default: "true", description: "Animates the tray open or closed." },
-];
-
-<PropsTable rows={rootProps} />
+The tray container. Renders `data-attachments` and takes no props of its own —
+mount it conditionally when there are items to show.
 
 ### Attachments.Item
 
-One attachment chip. Renders `data-attachments-item`.
-
-export const itemProps = [
-  { name: "item", type: "AttachmentItem", default: "(required)", description: "The attachment to render." },
-];
-
-<PropsTable rows={itemProps} />
+One attachment chip — a structural slot with no props of its own. Render the
+filename, size, thumbnail or icon inside it however you like. Renders
+`data-attachments-item`.
 
 export const itemAttrs = [
   { attribute: "data-attachments-item", description: "The chip." },
-  { attribute: "data-media-type", values: '"image" | "pdf" | "file"', description: "The item's media category, for per-type styling." },
 ];
 
 <AttributesTable rows={itemAttrs} />
@@ -99,12 +93,12 @@ export const removeProps = [
 
 ### Attachments.Dropzone
 
-Drop overlay. Renders `data-attachments-dropzone`. `variant="global"`
-portals it into the app shell so files can be dropped anywhere.
+Drop overlay. Renders `data-attachments-dropzone`. Pass `portalSelector` to
+portal it elsewhere — into the app shell, for instance, so files can be dropped
+anywhere.
 
 export const dropzoneProps = [
   { name: "visible", type: "boolean", default: "false", description: "Show the overlay (while files are dragged over the scope)." },
-  { name: "variant", type: '"inline" | "global"', description: "Inline sits in place; global portals into the app shell." },
   { name: "keepMounted", type: "boolean", default: "false", description: "Keep it mounted (hidden) when not visible." },
   { name: "portalSelector", type: "string", description: "CSS selector to portal into (the mechanism behind global)." },
 ];
@@ -133,10 +127,11 @@ The file-picker button. Renders `<button data-attachments-trigger>` named
 
 ## Utilities
 
-The wrapper re-exports the attachment surface so you import everything from one
-place. From the package (generic mechanics): `toAttachmentItem` (the default
-blob ingestion), `matchesAccept`, and `revokeAttachmentUrl`. From the app
-(policy, taxonomy, send strategy): the `ATTACHMENT_*` accept/limit policy,
-`isImageAttachment` / `isPdfAttachment`, `formatFileSize`, and
-`prepareAttachmentsForSend` — the adapter that turns submitted items into AI
-SDK file parts. The package imposes none of these; they're yours to change.
+`@intentface/chat/attachments` exports the generic mechanics:
+`toAttachmentItem` (the default blob ingestion), `matchesAccept`, and
+`revokeAttachmentUrl`.
+
+Everything above that is yours: the accept and size policy, the media taxonomy
+that decides what an image or a PDF looks like, and the adapter that turns
+submitted items into whatever your transport expects — AI SDK file parts, signed
+uploads, or anything else. The package imposes none of it.

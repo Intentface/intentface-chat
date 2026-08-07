@@ -1,0 +1,59 @@
+---
+title: Accessibility
+description: The accessibility features the primitives provide, and what your application still has to supply.
+---
+
+The primitives handle ARIA attributes, roles, keyboard navigation, and focus
+management. Because the package renders no styles, anything visual — contrast,
+focus indication — is your application's responsibility.
+
+## Keyboard navigation
+
+The primitives follow the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/).
+The composer's editor interprets keys by mode: an open command list, or an active
+ask-user flow, takes priority over normal typing. Each primitive page documents
+its own key table.
+
+Command lists and ask-user options move a highlight rather than DOM focus, so the
+caret stays in the editor while you navigate. Arrowing past the end of a list
+keeps focus in place; arrowing up past the first ask-user option returns to the
+editor.
+
+## Focus management
+
+Focus is managed automatically after interaction — the composer restores the
+caret after selecting a command item, and ask-user recovers arrow navigation if a
+click elsewhere drops focus to the body.
+
+In command lists and ask-user options the highlight *is* the focus indication —
+focus follows it rather than moving separately, so styling the highlight faintly
+removes the focus indicator rather than softening a hover effect.
+
+## Roles and relationships
+
+The composer's editor is wired to its command list as a combobox: `aria-expanded`,
+`aria-controls`, and `aria-activedescendant` reference a `listbox`, and the active
+row carries `aria-selected`. Ask-user renders a labelled `radiogroup`, or
+checkboxes with `aria-checked` for multi-select questions. Disabled options are
+announced but skipped by highlight and selection.
+
+`Steps` marks the active item with `aria-current="step"`. `Reasoning.Root` carries
+`aria-busy` while streaming.
+
+## Accessible labels
+
+Interactive parts carry default accessible names; containers do not, since they
+are not controls. `Composer.Submit` announces as "Stop generating" while
+generating rather than "Send message". `Attachments.Remove` takes a `filename` so
+each remove button announces its own item.
+
+All defaults are overridable via `aria-label` or `aria-labelledby`. Anything
+announced as content rather than as a name — status text, validation messages —
+is text you render, so it is localised wherever your copy lives.
+
+## Testing
+
+The package runs an axe-based suite over the composer combobox wiring, the
+ask-user flows, the display primitives' status attributes, and accessible names
+across controls. Automated checks can't evaluate contrast or focus visibility in
+your styling, so those need your own pass.

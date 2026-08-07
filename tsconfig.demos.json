@@ -1,0 +1,29 @@
+{
+  // Portability gate for the docs demos. Demos are the styled reference people
+  // copy, so they must compile against the *published* package and nothing
+  // else. Two things make that real here:
+  //   • paths maps @intentface/chat/* to the built dist, not src — so an API
+  //     that never made it into the build fails here instead of in a consumer's
+  //     project.
+  //   • there is deliberately no "@/*" alias — any reach into the app
+  //     (components, lib, hooks) is an unresolved import, not a silent success.
+  // Run after `bun run build` in packages/chat; see .github/workflows/ci.yml.
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@intentface/chat/*": ["./packages/chat/dist/*"]
+    }
+  },
+  "include": ["content/docs/**/demos/*.tsx"]
+}

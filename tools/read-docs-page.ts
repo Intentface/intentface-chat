@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { tool } from "ai";
 import { z } from "zod";
+import { expandDemos } from "@/lib/docs/expand-demos";
 import { getPage } from "@/lib/docs/source";
 
 export const readDocsPage = tool({
@@ -17,7 +18,8 @@ export const readDocsPage = tool({
     }
 
     const filePath = page.absolutePath ?? path.join(process.cwd(), "content", "docs", page.path);
-    const markdown = await readFile(filePath, "utf8");
+    // Demos are inlined as code blocks — the tag alone carries no source.
+    const markdown = await expandDemos(await readFile(filePath, "utf8"));
 
     return {
       slug,

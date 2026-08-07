@@ -1,12 +1,6 @@
+import { PACKAGE_MANAGERS } from "@/lib/docs/package-managers";
 import { CodeBlock } from "./code-block";
 import { InstallationBlockTabs } from "./installation-block-tabs";
-
-const MANAGERS = [
-  { manager: "npm", install: "npm install" },
-  { manager: "pnpm", install: "pnpm add" },
-  { manager: "yarn", install: "yarn add" },
-  { manager: "bun", install: "bun add" },
-];
 
 type InstallationBlockProps = {
   packageName: string;
@@ -16,7 +10,7 @@ type InstallationBlockProps = {
 // hands them all to the client shell, which shows the selected one.
 export const InstallationBlock = ({ packageName }: InstallationBlockProps) => (
   <InstallationBlockTabs
-    entries={MANAGERS.map(({ manager, install }) => {
+    entries={PACKAGE_MANAGERS.map(({ manager, install }) => {
       const command = `${install} ${packageName}`;
       return { manager, command, code: <CodeBlock code={command} lang="bash" /> };
     })}

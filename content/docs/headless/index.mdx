@@ -1,10 +1,10 @@
 ---
 title: Two layers
-description: How the headless package and the styled copy-paste layer divide the work.
+description: What the package owns, what your styling owns, and the seams between them.
 ---
 
-Intentface chat is split the way Base UI and shadcn/ui are split, applied to
-chat: a headless npm package for behavior, and a copy-paste layer for looks.
+Intentface chat is split the way Base UI is split, applied to chat: a headless
+npm package owns behavior, and every class belongs to you.
 
 ## The headless package
 
@@ -24,24 +24,22 @@ expose behavior three ways: `data-*` attributes for state, context hooks
 render props / children for slotting your own elements in. Their only peer
 dependency is React.
 
-## The styled layer
+## Your styling
 
-Each styled component is a thin wrapper around a headless primitive: it adds
-Tailwind classes, icons, and motion, and re-exports the same API. You copy the
-source from the docs into your repo, and you own every class from then on.
-Because the wrapper only supplies presentation, restyling never risks the
-behavior — that stays in the package, and package updates fix behavior without
-touching your styles.
+There is no pre-styled package. Each demo in these docs is a thin wrapper around
+the primitives — Tailwind classes, inline icons, nothing else — and it exists to
+be copied and changed. Because presentation and behavior never mix, restyling
+can't break the primitive, and package updates fix behavior without touching
+your classes.
 
 ## Why this split
 
-One codebase, two audiences. Teams that want the Intentface look copy the
-styled layer and start immediately. Teams with their own design system depend on
-`@intentface/chat` directly and write their own thin wrappers — the behavior is
-identical either way.
+One codebase, two audiences. Teams that want a head start copy a demo and edit
+it. Teams with their own design system depend on `@intentface/chat` directly and
+write their own wrappers — the behavior is identical either way.
 
 The pages in this section cover the three seams that make the split work: the
 [owned types](/docs/headless/types) the components read, the
 [store model](/docs/headless/state) behind the composer, and the
-[animation contract](/docs/headless/animation) that keeps motion in the styled
-layer.
+[animation contract](/docs/headless/animation) that keeps motion out of the
+package.

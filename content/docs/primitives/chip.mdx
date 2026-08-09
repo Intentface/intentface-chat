@@ -4,7 +4,9 @@ description: An inline, text-flowing token — used for mentions in the composer
 source: chip
 ---
 
-<ComponentPreview name="chip-basic" />
+import { Basic } from './chip/demos/basic';
+
+<Demo component={<Basic />} file="primitives/chip/demos/basic.tsx" />
 
 ## Usage guidelines
 
@@ -12,7 +14,7 @@ source: chip
 - **Two homes** — backs the composer's mention decorations and the chips a message reconstructs from its wire format.
 - **Variants** — `primary` / `accent` / `warning` tint the surface.
 - **Hover preview** — a `Chip.Preview` child promotes the chip to a hover card and is never rendered inline.
-- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+- **Get started** — see [Quick start](/docs/quick-start) to add the package.
 
 ## Anatomy
 
@@ -46,7 +48,7 @@ bare words.
 The package never renders the hover preview — `renderWithPreview` is the seam.
 Whatever surface the styled layer lifts it into must honor the hover-card
 contract: open on keyboard focus as well as hover, and dismiss with Escape
-(the styled layer's Base UI Hover Card does both).
+(a Base UI Hover Card, for instance, does both).
 
 ## API reference
 

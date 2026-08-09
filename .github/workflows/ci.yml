@@ -47,6 +47,12 @@ jobs:
           bun run build
           bunx publint
 
+      # The docs demos are the styled reference people copy, so they must
+      # compile against the built package with no app aliases in scope. Runs
+      # after the build above, which produces the dist this typechecks against.
+      - name: Demo portability gate
+        run: bunx tsc -p tsconfig.demos.json
+
       # The chat API route reads OPENAI_API_KEY at request time only; a dummy
       # value keeps the production build self-contained.
       - name: App build

@@ -1,12 +1,12 @@
 # @intentface/chat
 
 Headless chat UI primitives for React — the behavior, state, and wire formats
-for building AI chat interfaces, with no styling of their own. Pair them with
-the shadcn-style styled layer from the [docs](https://intentface.dev/docs), or
-bring your own.
+for building AI chat interfaces, with no styling of their own.
 
-This is the Base UI model applied to chat: **install the logic from npm, copy
-the look from the docs.**
+This is the Base UI model applied to chat: **the package owns behavior, you own
+every class.** There is no pre-styled `@intentface/chat` package. The demos on
+each [docs](https://intentface.dev/docs) page show how the parts fit together
+and are meant to be copied and restyled.
 
 ## Status
 
@@ -100,7 +100,7 @@ directive and import fine anywhere.
 
 ## Docs
 
-Full guides, live previews, and copy-paste styled source at
+Full guides, live demos, and the API reference at
 [intentface.dev/docs](https://intentface.dev/docs).
 
 ## License

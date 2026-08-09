@@ -4,7 +4,9 @@ description: The scrolling message viewport with auto-follow, a docked composer,
 source: thread
 ---
 
-<ComponentPreview name="thread-basic" />
+import { Basic } from './thread/demos/basic';
+
+<Demo component={<Basic />} file="primitives/thread/demos/basic.tsx" />
 
 ## Usage guidelines
 
@@ -12,7 +14,7 @@ source: thread
 - **Auto-scroll modes** — `off` / `bottom` / `jump` / `follow` via the `autoScroll` prop (see below).
 - **Composer inset** — measures the docked composer to reserve space; the overlays fade the top and bottom edges.
 - **Owns no data** — you map your messages in; rows are addressable by a `data-message-id` attribute.
-- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+- **Get started** — see [Quick start](/docs/quick-start) to add the package.
 
 ## Anatomy
 

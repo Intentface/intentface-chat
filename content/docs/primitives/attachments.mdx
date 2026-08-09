@@ -4,7 +4,9 @@ description: The file-attachment tray — item chips, a remove affordance, and i
 source: attachments
 ---
 
-<ComponentPreview name="attachments-basic" />
+import { Basic } from './attachments/demos/basic';
+
+<Demo component={<Basic />} file="primitives/attachments/demos/basic.tsx" />
 
 ## Usage guidelines
 
@@ -12,7 +14,7 @@ source: attachments
 - **Model included** — accept matching, blob-URL lifecycle, and send preparation ship in the package; the styled tray animates items in and out.
 - **Media-aware** — each item exposes `data-media-type` (`image` / `pdf` / `file`) for per-type styling.
 - **Drop + pick** — a `Dropzone` overlay (inline, or `global` to project into the app shell) plus a `Trigger` file picker.
-- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+- **Get started** — see [Quick start](/docs/quick-start) to add the package.
 
 ## Anatomy
 

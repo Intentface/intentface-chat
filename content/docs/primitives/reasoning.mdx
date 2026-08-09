@@ -4,7 +4,9 @@ description: A collapsible "chain of thought" disclosure that tracks streaming d
 source: reasoning
 ---
 
-<ComponentPreview name="reasoning-basic" />
+import { Basic } from './reasoning/demos/basic';
+
+<Demo component={<Basic />} file="primitives/reasoning/demos/basic.tsx" />
 
 ## Usage guidelines
 
@@ -12,7 +14,7 @@ source: reasoning
 - **Live label** — shimmers "Thinking…" while streaming and settles to "Thought for Ns" when it stops; the duration is tracked for you.
 - **Sectioned content** — bold `**Header**` lines split the text into labelled sections, rendered as markdown.
 - **State via `useReasoning`** — read streaming, open, and duration from anywhere inside.
-- **Get started** — see [Installation](/docs/installation) to add the package and copy the component.
+- **Get started** — see [Quick start](/docs/quick-start) to add the package.
 
 ## Anatomy
 

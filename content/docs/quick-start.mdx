@@ -1,0 +1,93 @@
+---
+title: Quick start
+description: Install the package, set it up, and assemble your first chat.
+---
+
+import { Hero } from './quick-start/demos/hero';
+
+**@intentface/chat** ships the behavior of a chat interface and none of its
+appearance. This page takes you from an empty React 19 app to a working chat.
+
+## Install the library
+
+<InstallationBlock packageName="@intentface/chat" />
+
+`react` and `react-dom` (v19+) are the only peer dependencies. Nothing else
+ships with it beyond two small runtime deps — `@floating-ui/dom` for anchored
+positioning and `nanoid` for attachment ids. No styling, no editor framework, no
+animation library.
+
+Each primitive is a separate entry point:
+
+```tsx
+import { Composer } from "@intentface/chat/composer";
+import { Message } from "@intentface/chat/message";
+import { Thread } from "@intentface/chat/thread";
+import { groupTurns } from "@intentface/chat/message-utils";
+```
+
+## Set up
+
+### Portals
+
+The composer's command popover, its panel, and the attachment preview all render
+through portals into `document.body`, so they escape any overflow or transform on
+your layout. To keep them above the rest of the page regardless of your own
+stacking, give your app root its own stacking context.
+
+In your root layout:
+
+```tsx
+<body>
+  <div className="root">{children}</div>
+</body>
+```
+
+And in your global stylesheet:
+
+```css
+.root {
+  isolation: isolate;
+}
+```
+
+Without this, a `z-index` anywhere in your layout can paint over the command
+popover.
+
+## Assemble a component
+
+Three primitives make a chat: `Thread` owns the scroll area and reserves space
+for its docked composer, `Message` renders each turn, and `Composer` takes input.
+Every part renders semantic DOM with `data-*` state attributes and no classes of
+its own — you pass `className` to each one, so the look is yours from the first
+render.
+
+<Demo component={<Hero />} file="quick-start/demos/hero.tsx" />
+
+`Composer.Submit` disables itself while the field is empty, and `Thread`
+publishes its docked-composer reserve as `--thread-overlay-bottom-height` so the
+scroll area never hides behind it. See [Composer](/docs/primitives/composer),
+[Thread](/docs/primitives/thread), and [Message](/docs/primitives/message) for
+the full part lists.
+
+## Pre-styled components
+
+There is no pre-styled `@intentface/chat` package, and no CSS to install. The
+demos on each component page are the styled reference: they use stock Tailwind,
+depend on nothing but this package, and are meant to be copied and edited.
+
+This site's own chat is built from components that live in the app, not the
+package. They use design tokens, Motion, and local icon files, and they are not
+published — read them as a reference implementation if you like, but they are not
+a starting point.
+
+## Working with LLMs
+
+Every docs page has a **View as Markdown** link in the header that serves the page
+as plain text, which pastes cleanly into an AI assistant.
+
+## Next steps
+
+- [Headless concepts](/docs/headless) — the state model, data attributes, and render props
+- [Composer](/docs/primitives/composer) — commands, chips, attachments, and the ask-user flow
+- [Thread](/docs/primitives/thread) — the scroll container and auto-follow behavior

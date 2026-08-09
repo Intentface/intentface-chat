@@ -3,9 +3,9 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { AttributesTable } from "@/components/docs/attributes-table";
 import { CodeBlock } from "@/components/docs/code-block";
-import { ComponentPreview } from "@/components/docs/component-preview";
+import { Demo } from "@/components/docs/demo";
+import { InstallationBlock } from "@/components/docs/installation-block";
 import { PropsTable } from "@/components/docs/props-table";
-import { ThemeSource } from "@/components/docs/theme-source";
 import { ValuesTable } from "@/components/docs/values-table";
 import { cn } from "@/lib/utils";
 
@@ -100,11 +100,11 @@ const proseComponents: MDXComponents = {
 
 // Docs components available inside every MDX page without an import.
 const docsComponents: MDXComponents = {
-  ComponentPreview,
+  Demo,
+  InstallationBlock,
   PropsTable,
   AttributesTable,
   ValuesTable,
-  ThemeSource,
 };
 
 export const getMDXComponents = (components?: MDXComponents): MDXComponents => ({

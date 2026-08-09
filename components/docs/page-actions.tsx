@@ -14,8 +14,8 @@ type PageActionsProps = {
 const actionButtonClass =
   "h-9 rounded-full px-4 text-md font-medium text-ink-secondary hover:bg-secondary-bg-hover hover:text-ink-primary";
 
-// "View as Markdown" (raw .mdx as text) + "View source" (the component on
-// GitHub), mirroring Base UI's page header.
+// "View as Markdown" (raw .mdx as text) + "Primitive source" (the headless
+// component on GitHub — not the demos), mirroring Base UI's page header.
 export const PageActions = ({ slug, source }: PageActionsProps) => (
   <div className="flex items-center gap-2">
     <Button
@@ -39,7 +39,7 @@ export const PageActions = ({ slug, source }: PageActionsProps) => (
             rel="noreferrer"
           >
             <GitHubIcon />
-            View source
+            Primitive source
           </a>
         }
       />

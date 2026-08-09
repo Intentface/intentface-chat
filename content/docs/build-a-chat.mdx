@@ -112,10 +112,10 @@ export async function POST(req: Request) {
 
 `messages` from `useChat` are `UIMessage`s, which satisfy this package's
 `ChatMessage` contract structurally — so they render through `Message` with no
-adapter. See [owned types](/docs/headless/types) for why that works.
+adapter — the package's `ChatMessage` is satisfied structurally.
 
 ## Next steps
 
-- [Streaming performance](/docs/headless/performance) — keeping the composer from re-rendering on every chunk
+- [Composer performance](/docs/primitives/composer#performance) — keeping the composer from re-rendering on every chunk
 - [Composer](/docs/primitives/composer) — commands, chips, attachments, and the ask-user flow
 - [Steps](/docs/primitives/steps) and [Reasoning](/docs/primitives/reasoning) — surfacing tool calls and thinking

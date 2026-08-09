@@ -1,6 +1,6 @@
 ---
 title: Thread
-description: The scrolling message viewport with auto-follow, a docked composer, overlays, and a scroll-to-bottom button.
+description: The scroll container — at-bottom detection, auto-follow, docked-composer measurement, and prepend-aware restoration.
 source: thread
 ---
 
@@ -134,23 +134,17 @@ don't need to optimize around it:
 The boundary: Thread does not virtualize. Cost is O(rendered rows) of DOM, which
 holds comfortably for realistic transcripts (hundreds to low thousands of
 turns). What re-renders during a stream is decided by your message components —
-see [Streaming performance](/docs/headless/performance).
+see [Composer performance](/docs/primitives/composer#performance).
 
 ## Keyboard
 
-The viewport is focusable, so keyboard users can Tab to it and scroll. Upward
-gestures also release auto-follow; downward ones never do (releasing at the
-bottom would strand the view unfollowed while pinned there).
+The viewport carries `tabIndex=0`, so keyboard users can Tab to it and scroll
+with the usual keys. Scrolling is otherwise native — the thread intercepts only
+the upward keys, `ArrowUp`, `PageUp` and `Home`, which release auto-follow.
+Scrolling down never releases it: doing so at the bottom would leave the view
+unfollowed while pinned there.
 
-export const keyboard = [
-  { attribute: "Tab", description: "Focus the viewport (a focusable region)." },
-  { attribute: "ArrowUp / PageUp / Home", description: "Scroll up — and release auto-follow." },
-  { attribute: "ArrowDown / PageDown / End / Space", description: "Scroll down. Does not release follow." },
-];
-
-<AttributesTable rows={keyboard} />
-
-An upward wheel or a downward touch-drag releases the follow the same way; a
+An upward wheel or a downward touch-drag releases follow the same way; a
 scrollbar drag away from the bottom releases it via the sentinel.
 
 ## Accessibility
@@ -171,7 +165,7 @@ scrollbar drag away from the bottom releases it via the sentinel.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
+[Styling](/docs/handbook/styling)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 Only part-specific props and state-driven attributes are listed below.
 
 ### Thread
@@ -207,8 +201,7 @@ export const overlayProps = [
 <PropsTable rows={overlayProps} />
 
 export const overlayAttrs = [
-  { attribute: "data-thread-overlay", values: '"top" | "bottom"', description: "The overlay element (the top one is also the top-inset measurement target)." },
-  { attribute: "data-thread-overlay", values: '"top" | "bottom"', description: "Which edge, for styling the fade direction." },
+  { attribute: "data-thread-overlay", values: '"top" | "bottom"', description: "Which edge this overlay marks — style the fade direction from it. The top one doubles as the top-inset measurement target." },
 ];
 
 <AttributesTable rows={overlayAttrs} />
@@ -237,14 +230,28 @@ Bottom-docked slot; its height is measured to inset the viewport. Renders
 Empty-state slot, shown when there are no messages. Renders
 `data-thread-placeholder`.
 
-### Thread.ScrollButton
+### Thread.Content
 
-Scroll-to-bottom affordance, shown only when not at the bottom (reads
-`useThread().isAtBottom`). Styled-layer part composed over the hook.
+The column inside the viewport that holds the messages. Renders
+`data-thread-content`, and carries the auto-scroll reserve as
+`--thread-turn-min-height` on its last child.
+
+There is no scroll-to-bottom part — build one from `useThread()`, which exposes
+`isAtBottom` and `scrollToBottom`:
+
+```tsx
+const { isAtBottom, scrollToBottom } = useThread();
+
+return isAtBottom ? null : (
+  <button type="button" onClick={() => scrollToBottom()} aria-label="Scroll to latest">
+    <ArrowDownIcon />
+  </button>
+);
+```
 
 ### CSS variables
 
-The styled layer exposes layout knobs you can override:
+The thread reads these, so you can override them from your own CSS:
 
 export const cssVars = [
   { attribute: "--thread-width", values: "672px", description: "Max width of the content column and overlays." },

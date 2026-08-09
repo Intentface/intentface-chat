@@ -19,7 +19,7 @@ export const AttributesTable = ({ rows }: AttributesTableProps) => {
   const hasValues = rows.some((row) => row.values);
 
   return (
-    <div className="not-prose my-6 overflow-hidden rounded-lg border border-secondary-border">
+    <div className="not-prose my-6 overflow-hidden rounded-lg border border-secondary-border bg-primary-bg">
       <table className="w-full table-fixed border-collapse text-left text-sm">
         <colgroup>
           <col className="w-[28%]" />

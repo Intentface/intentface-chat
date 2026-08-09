@@ -21,7 +21,7 @@ type PropsTableProps = {
 // full untruncated type. Columns are fixed-width so they stay consistent across
 // every table on the page.
 export const PropsTable = ({ rows }: PropsTableProps) => (
-  <div className="not-prose my-6 overflow-hidden rounded-lg border border-secondary-border">
+  <div className="not-prose my-6 overflow-hidden rounded-lg border border-secondary-border bg-primary-bg">
     <table className="w-full table-fixed border-collapse text-left text-sm">
       <colgroup>
         <col className="w-[28%]" />

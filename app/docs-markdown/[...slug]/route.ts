@@ -19,7 +19,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ slu
   try {
     const source = await expandDemos(await readFile(filePath, "utf8"));
     return new Response(source, {
-      headers: { "content-type": "text/plain; charset=utf-8" },
+      headers: { "content-type": "text/markdown; charset=utf-8" },
     });
   } catch {
     return new Response("Not found", { status: 404 });

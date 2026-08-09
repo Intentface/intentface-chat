@@ -1,0 +1,68 @@
+---
+title: Composition
+description: Composing the primitives with your own React components using the render prop.
+---
+
+Every part accepts `render`, which replaces the element the part would have
+produced. The part keeps its behavior, ARIA wiring, and event handlers; you
+decide what it renders into.
+
+## Composing your own components
+
+Pass an element to render a part as one of your components:
+
+```tsx
+<Composer.Submit render={<Button variant="accent" />}>Send</Composer.Submit>
+```
+
+The component you pass must spread the props it receives onto its underlying DOM
+node and accept a `ref`. In React 19 that means taking `ref` as a regular prop —
+no `forwardRef` needed.
+
+## Changing the rendered element
+
+Each part renders the element that fits its role — `Composer.Root` a `<form>`,
+`Message.Root` a `<div>`, `Composer.Submit` a `<button>`. Pass a plain element to
+change it:
+
+```tsx
+// A step label as a real heading, so the timeline is navigable.
+<Steps.Label render={<h4 />}>Searched the web</Steps.Label>
+```
+
+Change the element when the semantics call for it, not by default.
+
+## Nesting
+
+`render` props nest as deeply as you need, which is how a part composes with
+another library's trigger:
+
+```tsx
+<Composer.Submit
+  render={
+    <Tooltip.Trigger render={<Button variant="accent" />} />
+  }
+>
+  Send
+</Composer.Submit>
+```
+
+## Render functions
+
+Pass a function instead of an element when the output depends on the part's
+state. It receives the props to spread and the state object:
+
+```tsx
+<Composer.Submit
+  render={(props, state) => (
+    <button {...props}>{state.generating ? <StopIcon /> : <SendIcon />}</button>
+  )}
+/>
+```
+
+This is also the form to use when you need control over how props are spread —
+merging your own handlers in, or splitting them across elements.
+
+State is only available on the parts that declare it; the rest receive an empty
+object. [Styling](/docs/handbook/styling) lists which parts those are, and covers
+the `className` and `style` callbacks that take the same state.

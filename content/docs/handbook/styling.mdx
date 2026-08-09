@@ -1,0 +1,51 @@
+---
+title: Styling
+description: Data attributes, state callbacks, and the render prop.
+---
+
+The primitives render no classes of their own. They expose their state three
+ways.
+
+## Data attributes
+
+Each part stamps an attribute naming itself (`data-composer-editor`,
+`data-ask-user-option`) plus attributes for the state it tracks. This is the
+default way to style state, since CSS selects on it without anything running in
+JavaScript.
+
+```tsx
+<Composer.CommandItem
+  value={item.value}
+  className="rounded-[10px] px-3 data-highlighted:bg-neutral-100"
+/>
+```
+
+Each primitive page lists the attributes its own parts emit — see the
+Attributes tables on [Composer](/docs/primitives/composer),
+[Message](/docs/primitives/message), [Thread](/docs/primitives/thread), and the
+rest.
+
+## State callbacks
+
+`className` and `style` also accept a function receiving the part's state:
+
+```tsx
+<Message.Root
+  role={message.role}
+  className={(state) => (state.error ? "opacity-60 saturate-0" : "")}
+/>
+```
+
+Use this when the class has to be computed in JavaScript. For selecting a class
+from a boolean, a `data-*` variant does the same job in CSS.
+
+Sixteen parts declare state; the rest receive an empty object: `Composer.Root`,
+`Composer.Textarea`, `Composer.Submit`, `Composer.Panel`, `Composer.Popover`,
+`Composer.Command`, `Composer.ContextWindow`, `Message.Root`, `Chip.Root`,
+`Thread.Overlay`, `AskUser.Option`, `Attachments.Dropzone`, and the collapsible
+parts behind `Steps` and `Reasoning`.
+
+## The render prop
+
+Every part also accepts `render`, which swaps the element it produces for one of
+your components — see [Composition](/docs/handbook/composition).

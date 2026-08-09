@@ -83,11 +83,17 @@ a starting point.
 
 ## Working with LLMs
 
-Every docs page has a **View as Markdown** link in the header that serves the page
-as plain text, which pastes cleanly into an AI assistant.
+Append `.md` to any docs URL to get that page as markdown — for example
+[`/docs/primitives/composer.md`](/docs/primitives/composer.md). Every demo's
+source is inlined into it as a code block, so an agent reading the page gets the
+code rather than a component tag it can't resolve. The **View as Markdown** link
+in the page header does the same thing.
+
+[`/llms.txt`](/llms.txt) indexes every page with its description and markdown
+URL. Feed it to an assistant to let it navigate the docs without crawling HTML.
 
 ## Next steps
 
-- [Headless concepts](/docs/headless) — the state model, data attributes, and render props
+- [Styling](/docs/handbook/styling) — the state model, data attributes, and render props
 - [Composer](/docs/primitives/composer) — commands, chips, attachments, and the ask-user flow
 - [Thread](/docs/primitives/thread) — the scroll container and auto-follow behavior

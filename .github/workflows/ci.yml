@@ -53,6 +53,12 @@ jobs:
       - name: Demo portability gate
         run: bunx tsc -p tsconfig.demos.json
 
+      # Docs drift silently — a renamed part or dropped prop breaks no build, so
+      # pages go on documenting an API that no longer exists. This resolves the
+      # real parts through the type checker and fails on any contradiction.
+      - name: Docs match the package
+        run: node scripts/audit-docs.mjs
+
       # The chat API route reads OPENAI_API_KEY at request time only; a dummy
       # value keeps the production build self-contained.
       - name: App build

@@ -1,6 +1,6 @@
 ---
 title: Message
-description: Renders a single chat message — role-aware bubble, markdown, chips, attachments, sources, and actions.
+description: A role-aware container for one turn, with chip-segmented text and selection hooks.
 source: message
 ---
 
@@ -10,48 +10,36 @@ import { Basic } from './message/demos/basic';
 
 ## Usage guidelines
 
-- **One turn's content** — a role-aware bubble composed from plain message fields (role, text, attachments, sources).
-- **Rich text** — `Message.Markdown` for assistant markdown; `Message.Text` reconstructs inline chips from the wire format.
-- **Affordances** — copy, regenerate and other actions, source pills, timestamps, and error / stopped / loading markers.
-- **Selection → chat** — `Message.Selection` lifts highlighted text back into the composer.
+- **One turn's container** — `Message.Root` reports the role and position as data attributes and renders no layout of its own.
+- **Segmented text** — `Message.Text` reconstructs inline chips from the wire format and takes render callbacks for both runs and chips.
+- **Everything else is yours** — bubbles, avatars, copy buttons, source pills, attachment previews and markdown rendering are composed by you around these parts.
 - **Get started** — see [Quick start](/docs/quick-start) to add the package.
 
 ## Anatomy
 
-The bare nesting — `Message` and `Message.Content` carry the structure:
+The package provides three parts. `Message.Root` is the only required one:
 
 ```tsx
-<Message.Root role={role} isLast={isLast} isError={isError}>
-  <Message.Content>
+<Message.Turn>
+  <Message.Root role={role} isLast={isLast} isError={isError}>
     <Message.Text>{text}</Message.Text>
-  </Message.Content>
-  <Message.Actions>
-    <Message.Copy value={text} />
-  </Message.Actions>
-</Message.Root>
-```
-
-A realistic assistant turn with markdown, sources, and actions:
-
-```tsx
-<Message.Turn sticky>
-  <Message.Root role="assistant" isLast isError={false}>
-    <Message.Content>
-      <Message.Markdown>{content}</Message.Markdown>
-      <Message.Sources>
-        {sources.map((s) => (
-          <Message.Source key={s.url} url={s.url} domain={s.domain} />
-        ))}
-      </Message.Sources>
-    </Message.Content>
-    <Message.Actions>
-      <Message.Copy value={content} />
-      <Message.Action tooltip="Regenerate" onClick={regenerate}>
-        <RefreshIcon />
-      </Message.Action>
-    </Message.Actions>
   </Message.Root>
 </Message.Turn>
+```
+
+Everything a finished chat row needs beyond that — the bubble surface, actions,
+sources, attachments, markdown — is your own markup, styled off the root's data
+attributes:
+
+```tsx
+<Message.Root role="assistant" isLast className="group flex flex-col gap-2">
+  <Markdown>{content}</Markdown>
+
+  <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+    <button type="button" onClick={() => copy(content)}>Copy</button>
+    <button type="button" onClick={regenerate}>Regenerate</button>
+  </div>
+</Message.Root>
 ```
 
 ## Performance
@@ -91,38 +79,35 @@ Three rules keep the memo effective while a reply streams:
   from the map.
 
 Done right, a stream chunk re-renders exactly one row. See
-[Streaming performance](/docs/headless/performance) for the full render model.
+[Composer performance](/docs/primitives/composer#performance) for the full render model.
 
 ## Accessibility
 
 - **Role** drives `data-role`, and error/last state drive `data-error`/`data-last`
   on the root, so styling and assistive context stay in sync.
 - **Speaker identity is yours to announce.** `role` is an opaque string the
-  package only surfaces as `data-role` — alignment and color are invisible to
+  package only surfaces as `data-role` — alignment and colour are invisible to
   assistive tech. Give each message a visually-hidden `{role} said` prefix, or
   an `aria-label` on the root, so a transcript read top-to-bottom attributes
   its turns.
-- **Error / stopped / loading markers** are consumer-owned slots: give an
-  inline failure marker `role="alert"` so it announces immediately, and quieter
-  states ("stopped", "generating…") `role="status"`.
-- **Sources** render as `<a target="_blank" rel="noopener noreferrer">`.
-- **Actions** are real buttons; `Message.Action` pairs with a tooltip label.
+- **Error, stopped and loading markers** are your markup: give an inline failure
+  marker `role="alert"` so it announces immediately, and quieter states
+  ("stopped", "generating…") `role="status"`.
+- **Actions** you add should be real buttons with accessible names.
 
 ## API reference
 
-Every part accepts `className` and `style` and emits a bespoke part attribute unless
-noted. The headless-backed parts — `Message`, `Message.Turn`, `Message.Text` —
-also accept `render` (see [PrimitiveProps](/docs/headless/types)); the rest are
-consumer-owned styled parts you edit directly.
+All three parts accept `className`, `style`, and `render`
+(see [Styling](/docs/handbook/styling)).
 
-### Message
+### Message.Root
 
-The root: role-aware container. Renders `data-message`.
+The container. Renders `data-message`.
 
 export const rootProps = [
   { name: "role", type: "string", default: "(required)", description: "Opaque role string surfaced as data-role; you own the set (commonly system / user / assistant)." },
   { name: "isLast", type: "boolean", default: "false", description: "Marks the last message (data-last) — a streaming/animation hook." },
-  { name: "isError", type: "boolean", default: "false", description: "Renders the error surface (data-error)." },
+  { name: "isError", type: "boolean", default: "false", description: "Marks the message as failed (data-error)." },
 ];
 
 <PropsTable rows={rootProps} />
@@ -138,17 +123,12 @@ export const rootAttrs = [
 
 ### Message.Turn
 
-Groups a role's messages into one visual turn. Renders `data-message-turn`.
-
-export const turnProps = [
-  { name: "sticky", type: "boolean", description: "Pins the turn header while its content scrolls." },
-];
-
-<PropsTable rows={turnProps} />
+Groups consecutive messages from one role into a single visual turn. Renders
+`data-message-turn` and takes no props of its own beyond the shared ones.
 
 ### Message.Text
 
-Plain/segmented text: reconstructs inline chips from the wire format. Renders
+Plain text with inline chips reconstructed from the wire format. Renders
 `data-message-text`.
 
 export const textProps = [
@@ -159,83 +139,21 @@ export const textProps = [
 
 <PropsTable rows={textProps} />
 
-### Message.Markdown
+### Selection
 
-Renders assistant markdown (via the shared Markdown renderer).
-
-export const markdownProps = [
-  { name: "children", type: "string", default: "(required)", description: "Markdown source." },
-];
-
-<PropsTable rows={markdownProps} />
-
-### Message.Copy
-
-Copy-to-clipboard action with a copied state.
-
-export const copyProps = [
-  { name: "value", type: "string", default: "(required)", description: "Text copied to the clipboard." },
-];
-
-<PropsTable rows={copyProps} />
-
-### Message.Action
-
-An action button with a tooltip (styled `IconButton`).
-
-export const actionProps = [
-  { name: "tooltip", type: "string", description: "Tooltip label; also the accessible name." },
-];
-
-<PropsTable rows={actionProps} />
-
-### Message.Source
-
-A source pill linking out. Renders `data-message-source` as
-`<a target="_blank" rel="noopener noreferrer">`.
-
-export const sourceProps = [
-  { name: "url", type: "string", default: "(required)", description: "The source URL." },
-  { name: "domain", type: "string", description: "Display domain (with favicon)." },
-];
-
-<PropsTable rows={sourceProps} />
-
-### Message.Attachment
-
-A read-only attachment chip (image hover-card or file icon).
-
-export const attachmentProps = [
-  { name: "attachment", type: "{ url; mediaType?; filename? }", default: "(required)", description: "The attachment to render — a minimal structural shape (an AI SDK FilePart satisfies it)." },
-];
-
-<PropsTable rows={attachmentProps} />
-
-### Message.Selection
-
-A floating toolbar over a text selection within this message.
-
-export const toolbarProps = [
-  { name: "onAdd", type: "(text: string) => void", default: "(required)", description: "Called with the selected text — e.g. to add it to the composer as context." },
-];
-
-<PropsTable rows={toolbarProps} />
-
-### Structural parts
-
-`Message.Content`, `Message.Actions`, `Message.Attachments`, `Message.Sources`,
-`Message.Error`, `Message.Stopped`, and `Message.Loading` are consumer-owned
-layout/marker slots taking only `children`; they render
-`data-message-content`, `"message-actions"`, `"message-attachments"`,
-`"message-sources"`, `"message-error"`, `"message-stopped"`, and
-`"message-loading"` respectively — plain styled elements in your copy of the
-component, not package primitives.
-
-### Hooks
+Text selection scoped to a message is exposed as functions rather than a part,
+so the toolbar (or whatever you build on it) stays yours.
 
 export const hooks = [
-  { name: "useMessageSelection", type: "(scope) => MessageSelection | null", description: "Subscribe to the text selection scoped to a message element (settles on mouseup/keyup)." },
+  { name: "useMessageSelection", type: "(scope: HTMLElement | null) => MessageSelection | null", description: "Subscribe to the text selection scoped to a message element; settles on mouseup/keyup." },
   { name: "useMessageSelectionScope", type: "() => { anchorRef, contentElement }", description: "Resolve the owning message's content element from an anchor rendered inside it." },
+  { name: "readMessageSelection", type: "(scope: HTMLElement) => MessageSelection | null", description: "Read the current selection once, without subscribing." },
 ];
 
 <PropsTable rows={hooks} />
+
+### Types
+
+`MessageSelection`, `MessageState`, `MessageChipSegment`, `MessageRootProps`,
+`MessageTurnProps`, and `MessageTextProps` are exported from
+`@intentface/chat/message`.

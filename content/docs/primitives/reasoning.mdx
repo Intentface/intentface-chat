@@ -1,6 +1,6 @@
 ---
 title: Reasoning
-description: A collapsible "chain of thought" disclosure that tracks streaming duration and splits text into labelled sections.
+description: A collapsible reasoning disclosure that tracks streaming state and elapsed duration.
 source: reasoning
 ---
 
@@ -57,7 +57,7 @@ carries `aria-busy` so assistive tech knows the content is still updating.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[PrimitiveProps](/docs/headless/types)) and emits a bespoke part attribute (`data-<part>`) unless noted.
+[Styling](/docs/handbook/styling)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 
 ### Reasoning
 
@@ -84,13 +84,12 @@ export const rootAttrs = [
 
 ### Reasoning.Trigger
 
-The toggle. Renders a `<button>` with `data-reasoning-trigger`. Without
-children it shows the default thinking/thought message.
+The toggle. Renders a `<button>` with `data-reasoning-trigger`. It ships no
+copy — supply the label as children, and read `isStreaming` and `duration` from
+`useReasoning()` if you want it to change while thinking.
 
 export const triggerProps = [
-  { name: "label", type: "string[]", description: "Streaming section headers; the last one labels the live \"Thinking…\" message." },
-  { name: "getThinkingMessage", type: "(isStreaming, duration?, label?) => { key, component }", description: "Override the animated trigger label." },
-  { name: "children", type: "ReactNode", description: "Replaces the default trigger content entirely." },
+  { name: "children", type: "ReactNode", description: "The trigger content — a label, a chevron, whatever you need." },
 ];
 
 <PropsTable rows={triggerProps} />

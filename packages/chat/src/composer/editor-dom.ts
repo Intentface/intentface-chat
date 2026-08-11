@@ -5,9 +5,13 @@
 //
 // Writer/reader pact for line breaks: every "\n" renders as <br>, plus one
 // padding <br> when the document is empty or ends with "\n" (an unpadded
-// trailing line is unreachable/zero-height). The reader inverts this by
-// dropping exactly one trailing "\n" when the last rendered node was a <br>.
-// Round-trips: "" ↔ <br>, "a\n" ↔ a<br><br>, "a\n\n" ↔ a<br><br><br>.
+// trailing line is unreachable/zero-height). The padding carries
+// data-padding-break, so the reader identifies it structurally rather than
+// inferring it from position — a native edit that strands it mid-document then
+// reads as scaffolding (dropped, dirty) instead of a phantom newline. Unmarked
+// trailing <br>s are the browser's own (Chrome keeps an emptied line box
+// alive); those still fall back to dropping one trailing "\n".
+// Round-trips: "" ↔ <br·pad>, "a\n" ↔ a<br><br·pad>, "a\n\n" ↔ a<br><br><br·pad>.
 
 import type { ChipData } from "../chip-markdown";
 import { nextChipId, type SegmentDoc } from "./segments";
@@ -62,6 +66,16 @@ const isPresentationOnly = (node: ReadableNode): boolean =>
   node.getAttribute?.("contenteditable") === "false" &&
   chipIdOf(node) === null;
 
+// The writer marks its padding <br> so the reader can recognize it structurally
+// instead of inferring it from position. Zero width everywhere: it is scaffolding
+// for the last line box, never content.
+export const PADDING_BREAK_ATTRIBUTE = "data-padding-break";
+
+const isPaddingBreak = (node: ReadableNode): boolean =>
+  node.nodeType === ELEMENT_NODE &&
+  node.nodeName === "BR" &&
+  (node.getAttribute?.(PADDING_BREAK_ATTRIBUTE) ?? null) !== null;
+
 // ---------------------------------------------------------------------------
 // Reader — DOM → segments. Adjacent text concatenates (fragmentation is
 // normalized logically, never via root.normalize() — WebKit collapses the
@@ -79,7 +93,16 @@ export const readDocumentFromDom = (
   let dirty = false;
   let pendingText = "";
   let lastWasBreak = false;
+  // A marked padding <br> is legal only at the very end. Content visited after
+  // one means a native edit stranded it mid-document — drop it and repaint.
+  let sawPaddingBreak = false;
   const seenChipIds = new Set<string>();
+
+  const notePaddingStranded = () => {
+    if (!sawPaddingBreak) return;
+    dirty = true;
+    sawPaddingBreak = false;
+  };
 
   const flushText = () => {
     if (pendingText.length === 0) return;
@@ -96,6 +119,7 @@ export const readDocumentFromDom = (
     if (node.nodeType === TEXT_NODE) {
       const content = (node.data ?? "").replace(/\u00A0/g, " ");
       if (content.length > 0) {
+        notePaddingStranded();
         pendingText += content;
         lastWasBreak = false;
       }
@@ -104,6 +128,14 @@ export const readDocumentFromDom = (
     if (node.nodeType !== ELEMENT_NODE) return;
 
     if (node.nodeName === "BR") {
+      notePaddingStranded();
+      // Marked padding never contributes a "\n", and it clears the trailing
+      // inversion below — that fallback exists for browser-created <br>s only.
+      if (isPaddingBreak(node)) {
+        sawPaddingBreak = true;
+        lastWasBreak = false;
+        return;
+      }
       pendingText += "\n";
       lastWasBreak = true;
       return;
@@ -114,6 +146,7 @@ export const readDocumentFromDom = (
       // Chip span content is presentation — never read. Unknown ids are
       // leftovers from DOM the model doesn't know (mark dirty, skip);
       // duplicated ids (clone paths) get a fresh identity.
+      notePaddingStranded();
       const chip = resolveChip(chipId);
       if (!chip) {
         dirty = true;
@@ -138,8 +171,9 @@ export const readDocumentFromDom = (
 
   for (const child of Array.from(root.childNodes)) visit(child);
 
-  // Invert the writer's padding <br>: one trailing "\n" is the padding, not
-  // content — but only when a <br> was actually the last rendered node.
+  // Fallback for unmarked trailing <br>s (browser-created line-box keepers):
+  // treat one trailing "\n" as padding. Our own padding is marked and already
+  // dropped above, so this never double-fires.
   if (lastWasBreak && pendingText.endsWith("\n")) {
     pendingText = pendingText.slice(0, -1);
   }
@@ -150,7 +184,8 @@ export const readDocumentFromDom = (
 
 // ---------------------------------------------------------------------------
 // Position mapping — DOM points ↔ logical positions. Chips count 1, <br>
-// counts 1 (it renders a "\n"), badge/unknown wrappers are transparent.
+// counts 1 (it renders a "\n") unless it is the marked padding, badge/unknown
+// wrappers are transparent.
 // ---------------------------------------------------------------------------
 
 /** Logical position of (node, offset), or null when the point isn't inside root. */
@@ -185,7 +220,9 @@ export const logicalRangeFromDom = (
     if (node.nodeType !== ELEMENT_NODE) return false;
 
     if (node.nodeName === "BR") {
-      position += 1;
+      // Padding is zero-width, so the DOM's position space matches the model's
+      // flat-text length instead of running one past it.
+      if (!isPaddingBreak(node)) position += 1;
       return false;
     }
 
@@ -315,7 +352,11 @@ export const renderDocumentToDom = (
   const chipElements = new Map<string, HTMLElement>();
   const children = documentToDomSpec(doc).map((spec): Node => {
     if (spec.kind === "text") return document.createTextNode(spec.text);
-    if (spec.kind === "br") return document.createElement("br");
+    if (spec.kind === "br") {
+      const br = document.createElement("br");
+      if (spec.padding) br.setAttribute(PADDING_BREAK_ATTRIBUTE, "");
+      return br;
+    }
     const span = existingSpans.get(spec.id) ?? createChipSpan(spec.id);
     // Without an accessible boundary the chip reads as bare prose inside the
     // textbox — label + type gives AT an atomic token ("Rasmus, @ mention").
@@ -352,7 +393,9 @@ export const domPointFromLogical = (
       const element = child as HTMLElement;
       if (element.nodeName === "BR" || element.hasAttribute("data-chip-id")) {
         if (remaining === 0) return { node: parent, offset: index };
-        remaining -= 1;
+        // Mirrors logicalRangeFromDom: the padding <br> consumes no position,
+        // so the caret can never be written past the end of the model.
+        if (!isPaddingBreak(toReadable(element))) remaining -= 1;
         continue;
       }
       // Presentation-only (the badge's hint span): zero width, never a target.

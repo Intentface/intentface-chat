@@ -3,6 +3,12 @@
 // minimal structural node view, so tests need no DOM); the materializers at
 // the bottom are thin real-DOM wrappers over the pure spec builder.
 //
+// One taxonomy, three walkers: classifyNode below is the single answer to
+// "what is this node?", and leafWidth the single answer to "how many logical
+// positions does it occupy?". The reader, logicalRangeFromDom and
+// domPointFromLogical all defer to them — when they disagree the caret and the
+// model desync, so the rule lives in exactly one place.
+//
 // Writer/reader pact for line breaks: every "\n" renders as <br>, plus one
 // padding <br> when the document is empty or ends with "\n" (an unpadded
 // trailing line is unreachable/zero-height). The padding carries
@@ -10,7 +16,7 @@
 // inferring it from position — a native edit that strands it mid-document then
 // reads as scaffolding (dropped, dirty) instead of a phantom newline. Unmarked
 // trailing <br>s are the browser's own (Chrome keeps an emptied line box
-// alive); those still fall back to dropping one trailing "\n".
+// alive); the trailing trim covers those too.
 // Round-trips: "" ↔ <br·pad>, "a\n" ↔ a<br><br·pad>, "a\n\n" ↔ a<br><br><br·pad>.
 
 import type { ChipData } from "../chip-markdown";
@@ -33,6 +39,19 @@ export type ReadableNode = {
 const TEXT_NODE = 3;
 const ELEMENT_NODE = 1;
 
+export const toReadable = (node: Node): ReadableNode => node as unknown as ReadableNode;
+
+const childrenOf = (node: ReadableNode): ReadableNode[] => Array.from(node.childNodes);
+
+// ---------------------------------------------------------------------------
+// Node taxonomy — the shared vocabulary. Every walker in this file switches on
+// a NodeClass rather than re-deriving node kinds from attributes, so they
+// cannot drift apart.
+// ---------------------------------------------------------------------------
+
+/** The writer marks its padding <br>; the reader recognizes it structurally. */
+export const PADDING_BREAK_ATTRIBUTE = "data-padding-break";
+
 // Elements whose appearance inside the editable means something rewrote our
 // flat structure (paste leftovers, extensions) — content still reads, but the
 // document gets renormalized from the model afterwards.
@@ -53,56 +72,128 @@ const BLOCK_NODE_NAMES = new Set([
   "TABLE",
 ]);
 
-export const toReadable = (node: Node): ReadableNode => node as unknown as ReadableNode;
+type NodeClass =
+  /** Leaves — they carry content and occupy positions. */
+  | { kind: "text"; text: string }
+  | { kind: "break" }
+  | { kind: "padding" }
+  | { kind: "chip"; id: string }
+  /** Zero-width and opaque: the badge's hint span. Its subtree never reads. */
+  | { kind: "presentation" }
+  /** Transparent containers — read and measure through them. */
+  | { kind: "wrapper" }
+  | { kind: "block" }
+  /** Comments and the rest: not content, not a container. */
+  | { kind: "ignored" };
 
-const chipIdOf = (node: ReadableNode): string | null =>
-  node.nodeType === ELEMENT_NODE ? (node.getAttribute?.("data-chip-id") ?? null) : null;
+// Precedence is load-bearing: a chip span is also contenteditable="false", so
+// the chip test must come before the presentation test.
+const classifyNode = (node: ReadableNode): NodeClass => {
+  if (node.nodeType === TEXT_NODE) return { kind: "text", text: node.data ?? "" };
+  if (node.nodeType !== ELEMENT_NODE) return { kind: "ignored" };
 
-// Non-editable elements without a chip identity are pure presentation (the
-// badge's hint span) — invisible to the model: the reader skips them and the
-// position mappers give them zero width.
-const isPresentationOnly = (node: ReadableNode): boolean =>
-  node.nodeType === ELEMENT_NODE &&
-  node.getAttribute?.("contenteditable") === "false" &&
-  chipIdOf(node) === null;
+  if (node.nodeName === "BR") {
+    const marked = (node.getAttribute?.(PADDING_BREAK_ATTRIBUTE) ?? null) !== null;
+    return marked ? { kind: "padding" } : { kind: "break" };
+  }
 
-// The writer marks its padding <br> so the reader can recognize it structurally
-// instead of inferring it from position. Zero width everywhere: it is scaffolding
-// for the last line box, never content.
-export const PADDING_BREAK_ATTRIBUTE = "data-padding-break";
+  const chipId = node.getAttribute?.("data-chip-id") ?? null;
+  if (chipId !== null) return { kind: "chip", id: chipId };
 
-const isPaddingBreak = (node: ReadableNode): boolean =>
-  node.nodeType === ELEMENT_NODE &&
-  node.nodeName === "BR" &&
-  (node.getAttribute?.(PADDING_BREAK_ATTRIBUTE) ?? null) !== null;
+  if (node.getAttribute?.("contenteditable") === "false") return { kind: "presentation" };
+  if (BLOCK_NODE_NAMES.has(node.nodeName)) return { kind: "block" };
+  return { kind: "wrapper" };
+};
+
+/**
+ * Logical positions a leaf occupies. Containers are the sum of their children,
+ * so they are not leaves and answer 0 here — the walkers descend instead.
+ */
+const leafWidth = (classified: NodeClass): number => {
+  switch (classified.kind) {
+    case "text":
+      return classified.text.length;
+    case "break":
+    case "chip":
+      return 1;
+    default:
+      return 0;
+  }
+};
 
 // ---------------------------------------------------------------------------
-// Reader — DOM → segments. Adjacent text concatenates (fragmentation is
-// normalized logically, never via root.normalize() — WebKit collapses the
-// caret when the selection's text node gets merged), NBSP reads as a plain
-// space, badge spans and unknown inline elements are transparent wrappers,
-// chip spans resolve through the registry.
+// Reader — DOM → segments, in two passes. The walk flattens the tree into
+// tokens; the fold turns tokens into segments and applies the padding rules.
+// Splitting them keeps the line-break policy in one readable place instead of
+// smeared across the traversal as flags.
 // ---------------------------------------------------------------------------
 
-export const readDocumentFromDom = (
-  root: ReadableNode,
+type ReadToken =
+  | { kind: "text"; text: string }
+  | { kind: "break" }
+  | { kind: "padding" }
+  | { kind: "chip"; id: string };
+
+const tokenizeDom = (root: ReadableNode): { tokens: ReadToken[]; dirty: boolean } => {
+  const tokens: ReadToken[] = [];
+  let dirty = false;
+
+  const descend = (node: ReadableNode) => {
+    for (const child of childrenOf(node)) visit(child);
+  };
+
+  const visit = (node: ReadableNode) => {
+    const classified = classifyNode(node);
+    switch (classified.kind) {
+      case "text":
+        // Empty text nodes are editing residue — dropping them keeps the
+        // padding rules below looking at real neighbours.
+        if (classified.text.length > 0) tokens.push(classified);
+        return;
+      case "break":
+      case "padding":
+        tokens.push({ kind: classified.kind });
+        return;
+      case "chip":
+        tokens.push(classified);
+        return;
+      case "presentation":
+      case "ignored":
+        return;
+      case "block":
+        dirty = true;
+        descend(node);
+        return;
+      case "wrapper":
+        descend(node);
+        return;
+    }
+  };
+
+  descend(root);
+  return { tokens, dirty };
+};
+
+/**
+ * Drop the writer's trailing line-box scaffolding: our own marked padding, or
+ * an unmarked <br> the browser added to keep an emptied last line alive. Any
+ * padding token that survives this was stranded mid-document.
+ */
+const trimTrailingPadding = (tokens: ReadToken[]): ReadToken[] => {
+  const last = tokens.at(-1);
+  if (last?.kind === "padding" || last?.kind === "break") return tokens.slice(0, -1);
+  return tokens;
+};
+
+const foldTokens = (
+  tokens: ReadToken[],
   resolveChip: (id: string) => ChipData | null,
-  makeId: () => string = nextChipId,
+  makeId: () => string,
 ): { doc: SegmentDoc; dirty: boolean } => {
   const doc: SegmentDoc = [];
   let dirty = false;
   let pendingText = "";
-  let lastWasBreak = false;
-  // A marked padding <br> is legal only at the very end. Content visited after
-  // one means a native edit stranded it mid-document — drop it and repaint.
-  let sawPaddingBreak = false;
   const seenChipIds = new Set<string>();
-
-  const notePaddingStranded = () => {
-    if (!sawPaddingBreak) return;
-    dirty = true;
-    sawPaddingBreak = false;
-  };
 
   const flushText = () => {
     if (pendingText.length === 0) return;
@@ -115,77 +206,56 @@ export const readDocumentFromDom = (
     pendingText = "";
   };
 
-  const visit = (node: ReadableNode) => {
-    if (node.nodeType === TEXT_NODE) {
-      const content = (node.data ?? "").replace(/\u00A0/g, " ");
-      if (content.length > 0) {
-        notePaddingStranded();
-        pendingText += content;
-        lastWasBreak = false;
-      }
-      return;
-    }
-    if (node.nodeType !== ELEMENT_NODE) return;
-
-    if (node.nodeName === "BR") {
-      notePaddingStranded();
-      // Marked padding never contributes a "\n", and it clears the trailing
-      // inversion below — that fallback exists for browser-created <br>s only.
-      if (isPaddingBreak(node)) {
-        sawPaddingBreak = true;
-        lastWasBreak = false;
-        return;
-      }
-      pendingText += "\n";
-      lastWasBreak = true;
-      return;
-    }
-
-    const chipId = chipIdOf(node);
-    if (chipId !== null) {
-      // Chip span content is presentation — never read. Unknown ids are
-      // leftovers from DOM the model doesn't know (mark dirty, skip);
-      // duplicated ids (clone paths) get a fresh identity.
-      notePaddingStranded();
-      const chip = resolveChip(chipId);
-      if (!chip) {
+  for (const token of trimTrailingPadding(tokens)) {
+    switch (token.kind) {
+      case "text":
+        // Adjacent text concatenates logically, never via root.normalize() —
+        // WebKit collapses the caret when the selection's node gets merged.
+        pendingText += token.text.replace(/\u00A0/g, " ");
+        break;
+      case "break":
+        pendingText += "\n";
+        break;
+      case "padding":
+        // Survived the trim, so it is not the trailing scaffolding: a native
+        // edit stranded it mid-document. Not content — repaint from the model.
         dirty = true;
-        return;
+        break;
+      case "chip": {
+        // Unknown ids are leftovers from DOM the model doesn't know (mark
+        // dirty, skip); duplicated ids (clone paths) get a fresh identity.
+        const chip = resolveChip(token.id);
+        if (!chip) {
+          dirty = true;
+          break;
+        }
+        flushText();
+        const id = seenChipIds.has(token.id) ? makeId() : token.id;
+        seenChipIds.add(token.id);
+        doc.push({ type: "chip", id, chip });
+        break;
       }
-      flushText();
-      const id = seenChipIds.has(chipId) ? makeId() : chipId;
-      seenChipIds.add(chipId);
-      doc.push({ type: "chip", id, chip });
-      lastWasBreak = false;
-      return;
     }
-
-    // Presentation-only elements (the badge's hint span) never reach the model.
-    if (isPresentationOnly(node)) return;
-
-    // Badge span / unknown inline: transparent wrapper. Block elements also
-    // read through, but flag the document for renormalization.
-    if (BLOCK_NODE_NAMES.has(node.nodeName)) dirty = true;
-    for (const child of Array.from(node.childNodes)) visit(child);
-  };
-
-  for (const child of Array.from(root.childNodes)) visit(child);
-
-  // Fallback for unmarked trailing <br>s (browser-created line-box keepers):
-  // treat one trailing "\n" as padding. Our own padding is marked and already
-  // dropped above, so this never double-fires.
-  if (lastWasBreak && pendingText.endsWith("\n")) {
-    pendingText = pendingText.slice(0, -1);
   }
   flushText();
 
   return { doc, dirty };
 };
 
+export const readDocumentFromDom = (
+  root: ReadableNode,
+  resolveChip: (id: string) => ChipData | null,
+  makeId: () => string = nextChipId,
+): { doc: SegmentDoc; dirty: boolean } => {
+  const { tokens, dirty: structureDirty } = tokenizeDom(root);
+  const { doc, dirty: contentDirty } = foldTokens(tokens, resolveChip, makeId);
+  return { doc, dirty: structureDirty || contentDirty };
+};
+
 // ---------------------------------------------------------------------------
-// Position mapping — DOM points ↔ logical positions. Chips count 1, <br>
-// counts 1 (it renders a "\n") unless it is the marked padding, badge/unknown
-// wrappers are transparent.
+// Position mapping — DOM points ↔ logical positions, inverses of each other
+// over leafWidth. Chips count 1, a real <br> counts 1 (it renders a "\n"),
+// padding and presentation count 0, wrappers are transparent.
 // ---------------------------------------------------------------------------
 
 /** Logical position of (node, offset), or null when the point isn't inside root. */
@@ -197,83 +267,113 @@ export const logicalRangeFromDom = (
   let position = 0;
   let found: number | null = null;
 
-  const visit = (node: ReadableNode): boolean => {
-    if (node === targetNode && node.nodeType !== TEXT_NODE && chipIdOf(node) === null) {
-      // Element point: offset is a child index — resolve by walking children
-      // until the index, then record.
-      const children = Array.from(node.childNodes).slice(0, targetOffset);
-      for (const child of children) {
-        if (measure(child)) return true;
-      }
-      found = position;
-      return true;
-    }
+  const contains = (parent: ReadableNode, target: ReadableNode): boolean =>
+    childrenOf(parent).some((child) => child === target || contains(child, target));
 
-    if (node.nodeType === TEXT_NODE) {
-      if (node === targetNode) {
-        found = position + Math.min(targetOffset, (node.data ?? "").length);
-        return true;
-      }
-      position += (node.data ?? "").length;
-      return false;
-    }
-    if (node.nodeType !== ELEMENT_NODE) return false;
-
-    if (node.nodeName === "BR") {
-      // Padding is zero-width, so the DOM's position space matches the model's
-      // flat-text length instead of running one past it.
-      if (!isPaddingBreak(node)) position += 1;
-      return false;
-    }
-
-    if (chipIdOf(node) !== null) {
-      // A point inside a chip clamps to the chip's start.
-      if (node === targetNode || contains(node, targetNode)) {
-        found = position;
-        return true;
-      }
-      position += 1;
-      return false;
-    }
-
-    // Presentation-only elements are zero-width; a point inside one clamps to
-    // its boundary.
-    if (isPresentationOnly(node)) {
-      if (node === targetNode || contains(node, targetNode)) {
-        found = position;
-        return true;
-      }
-      return false;
-    }
-
-    for (const child of Array.from(node.childNodes)) {
+  // Element point: the offset is a child index — advance past that many
+  // children, then record where we landed.
+  const measureUpTo = (node: ReadableNode, childIndex: number): boolean => {
+    for (const child of childrenOf(node).slice(0, childIndex)) {
       if (visit(child)) return true;
     }
     return false;
   };
 
-  // Advance `position` past a whole subtree (used for element-point offsets).
-  const measure = (node: ReadableNode): boolean => visit(node);
+  const visit = (node: ReadableNode): boolean => {
+    const classified = classifyNode(node);
 
-  const contains = (parent: ReadableNode, target: ReadableNode): boolean => {
-    for (const child of Array.from(parent.childNodes)) {
-      if (child === target || contains(child, target)) return true;
+    if (node === targetNode && classified.kind !== "text" && classified.kind !== "chip") {
+      if (measureUpTo(node, targetOffset)) return true;
+      found = position;
+      return true;
     }
-    return false;
+
+    switch (classified.kind) {
+      case "text":
+        if (node === targetNode) {
+          found = position + Math.min(targetOffset, classified.text.length);
+          return true;
+        }
+        position += leafWidth(classified);
+        return false;
+      case "break":
+      case "padding":
+        position += leafWidth(classified);
+        return false;
+      // A point inside a chip or a hint span clamps to that node's start; they
+      // differ only in width.
+      case "chip":
+      case "presentation":
+        if (node === targetNode || contains(node, targetNode)) {
+          found = position;
+          return true;
+        }
+        position += leafWidth(classified);
+        return false;
+      case "wrapper":
+      case "block":
+        for (const child of childrenOf(node)) {
+          if (visit(child)) return true;
+        }
+        return false;
+      case "ignored":
+        return false;
+    }
   };
 
   if (root === targetNode) {
-    const children = Array.from(root.childNodes).slice(0, targetOffset);
-    for (const child of children) {
-      if (measure(child)) return found;
-    }
-    return position;
+    return measureUpTo(root, targetOffset) ? found : position;
   }
 
-  for (const child of Array.from(root.childNodes)) {
+  for (const child of childrenOf(root)) {
     if (visit(child)) return found;
   }
   return found;
+};
+
+/** DOM point for a logical position, preferring text-node points. */
+export const domPointFromLogical = (
+  root: HTMLElement,
+  position: number,
+): { node: Node; offset: number } => {
+  let remaining = position;
+
+  const walk = (parent: Node): { node: Node; offset: number } | null => {
+    for (let index = 0; index < parent.childNodes.length; index++) {
+      const child = parent.childNodes[index];
+      if (!child) continue;
+      const classified = classifyNode(toReadable(child));
+
+      switch (classified.kind) {
+        case "text": {
+          const width = leafWidth(classified);
+          if (remaining <= width) return { node: child, offset: remaining };
+          remaining -= width;
+          continue;
+        }
+        // Atomic children: the point is the gap before them. Padding is
+        // zero-width, so the caret can never be written past the model's end.
+        case "break":
+        case "padding":
+        case "chip":
+          if (remaining === 0) return { node: parent, offset: index };
+          remaining -= leafWidth(classified);
+          continue;
+        case "presentation":
+        case "ignored":
+          continue;
+        case "wrapper":
+        case "block": {
+          const inner = walk(child);
+          if (inner) return inner;
+          continue;
+        }
+      }
+    }
+    return remaining === 0 ? { node: parent, offset: parent.childNodes.length } : null;
+  };
+
+  return walk(root) ?? { node: root, offset: root.childNodes.length };
 };
 
 // ---------------------------------------------------------------------------
@@ -328,6 +428,12 @@ const createChipSpan = (id: string): HTMLElement => {
   return span;
 };
 
+const createBreak = (padding: boolean): HTMLElement => {
+  const br = document.createElement("br");
+  if (padding) br.setAttribute(PADDING_BREAK_ATTRIBUTE, "");
+  return br;
+};
+
 /**
  * Render the canonical child list. Existing chip spans are reused by id —
  * moving a node preserves its React portal; recreating it would remount the
@@ -352,11 +458,7 @@ export const renderDocumentToDom = (
   const chipElements = new Map<string, HTMLElement>();
   const children = documentToDomSpec(doc).map((spec): Node => {
     if (spec.kind === "text") return document.createTextNode(spec.text);
-    if (spec.kind === "br") {
-      const br = document.createElement("br");
-      if (spec.padding) br.setAttribute(PADDING_BREAK_ATTRIBUTE, "");
-      return br;
-    }
+    if (spec.kind === "br") return createBreak(spec.padding);
     const span = existingSpans.get(spec.id) ?? createChipSpan(spec.id);
     // Without an accessible boundary the chip reads as bare prose inside the
     // textbox — label + type gives AT an atomic token ("Rasmus, @ mention").
@@ -370,45 +472,10 @@ export const renderDocumentToDom = (
   return chipElements;
 };
 
-/** DOM point for a logical position, preferring text-node points. */
-export const domPointFromLogical = (
-  root: HTMLElement,
-  position: number,
-): { node: Node; offset: number } => {
-  let remaining = position;
-
-  const walk = (parent: Node): { node: Node; offset: number } | null => {
-    for (let index = 0; index < parent.childNodes.length; index++) {
-      const child = parent.childNodes[index];
-      if (!child) continue;
-
-      if (child.nodeType === TEXT_NODE) {
-        const length = (child as Text).data.length;
-        if (remaining <= length) return { node: child, offset: remaining };
-        remaining -= length;
-        continue;
-      }
-      if (child.nodeType !== ELEMENT_NODE) continue;
-
-      const element = child as HTMLElement;
-      if (element.nodeName === "BR" || element.hasAttribute("data-chip-id")) {
-        if (remaining === 0) return { node: parent, offset: index };
-        // Mirrors logicalRangeFromDom: the padding <br> consumes no position,
-        // so the caret can never be written past the end of the model.
-        if (!isPaddingBreak(toReadable(element))) remaining -= 1;
-        continue;
-      }
-      // Presentation-only (the badge's hint span): zero width, never a target.
-      if (isPresentationOnly(toReadable(element))) continue;
-      // Transparent wrapper (badge span): descend.
-      const inner = walk(element);
-      if (inner) return inner;
-    }
-    return remaining === 0 ? { node: parent, offset: parent.childNodes.length } : null;
-  };
-
-  return walk(root) ?? { node: root, offset: root.childNodes.length };
-};
+// ---------------------------------------------------------------------------
+// Selection — reading the caret out of the document and writing it back, plus
+// keeping it visible after a programmatic write.
+// ---------------------------------------------------------------------------
 
 export const readSelectionRange = (root: HTMLElement): { start: number; end: number } | null => {
   const selection = root.ownerDocument.getSelection();
@@ -437,6 +504,31 @@ export const writeCaretToDom = (root: HTMLElement, start: number, end: number = 
   selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
 };
 
+// Native typing auto-scrolls; programmatic writes don't. Nudge only the nearest
+// scrollable ancestor (never scrollIntoView — it yanks the whole page).
+export const scrollCaretIntoView = (root: HTMLElement): void => {
+  const selection = root.ownerDocument.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const rect = selection.getRangeAt(0).getBoundingClientRect();
+
+  let scroller: HTMLElement | null = root;
+  while (scroller && scroller !== root.ownerDocument.body) {
+    const { overflowY } = getComputedStyle(scroller);
+    if (
+      (overflowY === "auto" || overflowY === "scroll") &&
+      scroller.scrollHeight > scroller.clientHeight
+    ) {
+      break;
+    }
+    scroller = scroller.parentElement;
+  }
+  if (!scroller || scroller === root.ownerDocument.body) return;
+
+  const view = scroller.getBoundingClientRect();
+  if (rect.top < view.top) scroller.scrollTop -= view.top - rect.top;
+  else if (rect.bottom > view.bottom) scroller.scrollTop += rect.bottom - view.bottom;
+};
+
 // ---------------------------------------------------------------------------
 // Badge maintenance — wrap the active trigger token in a real inline span so
 // the styled layer and the popover anchor keep working. Idempotent: the fast
@@ -456,7 +548,7 @@ const unwrapBadgeSpan = (span: HTMLElement): void => {
   // Presentation children (the hint span) are the badge's own chrome — they
   // die with it rather than spilling into content.
   for (const child of [...span.children]) {
-    if (isPresentationOnly(toReadable(child))) child.remove();
+    if (classifyNode(toReadable(child)).kind === "presentation") child.remove();
   }
   while (span.firstChild) parent.insertBefore(span.firstChild, span);
   parent.removeChild(span);
@@ -526,33 +618,4 @@ export const syncBadge = (root: HTMLElement, token: BadgeToken | null): boolean 
   range.insertNode(span);
 
   return true;
-};
-
-// ---------------------------------------------------------------------------
-// Caret visibility — native typing auto-scrolls; programmatic writes don't.
-// Nudge only the nearest scrollable ancestor (never scrollIntoView — it
-// yanks the whole page).
-// ---------------------------------------------------------------------------
-
-export const scrollCaretIntoView = (root: HTMLElement): void => {
-  const selection = root.ownerDocument.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-  const rect = selection.getRangeAt(0).getBoundingClientRect();
-
-  let scroller: HTMLElement | null = root;
-  while (scroller && scroller !== root.ownerDocument.body) {
-    const { overflowY } = getComputedStyle(scroller);
-    if (
-      (overflowY === "auto" || overflowY === "scroll") &&
-      scroller.scrollHeight > scroller.clientHeight
-    ) {
-      break;
-    }
-    scroller = scroller.parentElement;
-  }
-  if (!scroller || scroller === root.ownerDocument.body) return;
-
-  const view = scroller.getBoundingClientRect();
-  if (rect.top < view.top) scroller.scrollTop -= view.top - rect.top;
-  else if (rect.bottom > view.bottom) scroller.scrollTop += rect.bottom - view.bottom;
 };

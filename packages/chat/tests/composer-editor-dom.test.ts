@@ -163,6 +163,24 @@ describe("readDocumentFromDom", () => {
     ]);
   });
 
+  // createChipSpan sets contenteditable="false" as well as data-chip-id, so the
+  // node taxonomy must resolve chip before presentation or real chips vanish.
+  test("a chip span wins over the presentation rule it also matches", () => {
+    const realShape = element("SPAN", {
+      "data-chip-id": "c1",
+      "data-mention-chip": "",
+      contenteditable: "false",
+    });
+    const { doc, dirty } = readDocumentFromDom(editorRoot(textNode("a"), realShape), resolveChip);
+    expect(doc).toEqual([
+      { type: "text", text: "a" },
+      { type: "chip", id: "c1", chip: CHIPS.c1 },
+    ]);
+    expect(dirty).toBe(false);
+    // …and it counts one position, not zero.
+    expect(logicalRangeFromDom(editorRoot(textNode("a"), realShape), realShape, 0)).toBe(1);
+  });
+
   test("block elements read through but flag dirty", () => {
     const { doc, dirty } = readDocumentFromDom(
       editorRoot(textNode("a"), element("DIV", {}, textNode("b"))),

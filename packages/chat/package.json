@@ -48,7 +48,8 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "prepack": "bun run build && node scripts/swap-exports.mjs pre",
-    "postpack": "node scripts/swap-exports.mjs post"
+    "postpack": "node scripts/swap-exports.mjs post-pack",
+    "postpublish": "node scripts/swap-exports.mjs post"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",

@@ -44,7 +44,7 @@
     "./chip-markdown": "./src/chip-markdown.ts"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/add-dist-extensions.mjs",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/add-dist-extensions.mjs && node scripts/smoke-dist.mjs",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "prepack": "bun run build && node scripts/swap-exports.mjs pre",

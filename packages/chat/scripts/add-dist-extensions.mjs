@@ -37,8 +37,12 @@ const withExtension = (fromFile, specifier) => {
   return null;
 };
 
-// `from "x"`, bare `import "x"`, and dynamic `import("x")`.
-const SPECIFIER = /(\bfrom\s*"|\bimport\s*"|\bimport\s*\(\s*")(\.\.?\/[^"]*)(")/g;
+// `from "x"`, bare `import "x"`, and dynamic `import("x")` — in either quote
+// style. Matching only double quotes silently skipped the vendored files under
+// src/internal/render, which came from Base UI's source and use single quotes:
+// their specifiers shipped extensionless, which bundlers resolve but Node's ESM
+// resolver rejects, so the package failed to load under SSR.
+const SPECIFIER = /(\bfrom\s*|\bimport\s*|\bimport\s*\(\s*)(["'])(\.\.?\/[^"']*)\2/g;
 
 let rewritten = 0;
 const unresolved = [];
@@ -46,7 +50,7 @@ const unresolved = [];
 for (const file of walk(distDir)) {
   if (!/\.(js|d\.ts)$/.test(file)) continue;
   const original = readFileSync(file, "utf8");
-  const updated = original.replace(SPECIFIER, (match, prefix, specifier, suffix) => {
+  const updated = original.replace(SPECIFIER, (match, prefix, quote, specifier) => {
     if (/\.(js|json|css)$/.test(specifier)) return match;
     const next = withExtension(file, specifier);
     if (!next) {
@@ -54,7 +58,7 @@ for (const file of walk(distDir)) {
       return match;
     }
     rewritten++;
-    return prefix + next + suffix;
+    return prefix + quote + next + quote;
   });
   if (updated !== original) writeFileSync(file, updated);
 }

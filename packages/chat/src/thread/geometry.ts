@@ -34,35 +34,25 @@ export const DEFAULT_BOTTOM_OFFSET = 128;
 // Breathing room between the last line of content and the composer dock. The
 // bottom overlay spans it in the styled layer.
 const COMPOSER_GAP = 32;
-export const DEFAULT_DOCK_SELECTOR = "[data-composer-context-window], [data-composer-container]";
+// The dock is the Thread.Composer slot — the one element the thread reserves
+// space for. Null until it mounts.
+export const DOCK_SELECTOR = "[data-thread-composer]";
 
-// `dockSelector` is public API, so it may be an invalid selector string.
-// Degrade to "no dock parts" rather than letting querySelectorAll throw a
-// SyntaxError inside the layout effect (which would crash the render).
-export const queryDockParts = (root: HTMLElement, dockSelector: string): Element[] => {
-  try {
-    return [...root.querySelectorAll(dockSelector)];
-  } catch {
-    return [];
-  }
-};
+export const queryDock = (root: HTMLElement): HTMLElement | null =>
+  root.querySelector(DOCK_SELECTOR);
 
 /**
- * Height (px) to reserve at the bottom for the dock parts matching
- * `dockSelector` — but NOT the command-list / ask-user panel. The dock is
- * bottom-anchored, so it sits in a fixed region while the panel grows upward
- * above it. The inset is measured from a single reference — the bottom-most
- * match's top to the root's bottom — not a sum of matches, so a taller part
- * stacked above must fit within COMPOSER_GAP. Returns null when no dock is
- * mounted yet.
+ * Height (px) to reserve at the bottom for the dock: its top edge down to the
+ * root's bottom, plus the content gap. Measured against the root's bottom
+ * rather than the slot's own height, so a dock that floats above the bottom
+ * edge still reserves the space beneath it. Parts that must NOT reserve space
+ * — the command-list / ask-user panel, the scroll button — are positioned out
+ * of the slot's flow. Returns null when the slot isn't mounted yet.
  */
-export const measureDockInset = (root: HTMLElement, dockSelector: string): number | null => {
-  let dockTop: number | null = null;
-  for (const part of queryDockParts(root, dockSelector)) {
-    const top = part.getBoundingClientRect().top;
-    if (dockTop === null || top > dockTop) dockTop = top;
-  }
-  if (dockTop === null) return null;
+export const measureDockInset = (root: HTMLElement): number | null => {
+  const dock = queryDock(root);
+  if (!dock) return null;
+  const dockTop = dock.getBoundingClientRect().top;
   return Math.round(root.getBoundingClientRect().bottom - dockTop + COMPOSER_GAP);
 };
 

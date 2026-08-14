@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_BOTTOM_OFFSET,
-  DEFAULT_DOCK_SELECTOR,
+  DOCK_SELECTOR,
   measureDockInset,
   measureTopInset,
-  queryDockParts,
+  queryDock,
   scrollContainerTo,
   wasPrepended,
 } from "../src/thread/geometry";
@@ -55,20 +55,23 @@ describe("wasPrepended", () => {
   });
 });
 
-describe("queryDockParts", () => {
-  test("returns the matches for a valid selector", () => {
-    const parts = [{ id: 1 }, { id: 2 }];
-    const root = { querySelectorAll: () => parts } as unknown as HTMLElement;
-    expect(queryDockParts(root, ".dock")).toEqual(parts as unknown as Element[]);
-  });
-
-  test("degrades to [] on an invalid selector instead of throwing", () => {
+describe("queryDock", () => {
+  test("returns the Thread.Composer slot", () => {
+    const dock = { id: "dock" };
+    let queried: string | undefined;
     const root = {
-      querySelectorAll: () => {
-        throw new SyntaxError("bad selector");
+      querySelector: (selector: string) => {
+        queried = selector;
+        return dock;
       },
     } as unknown as HTMLElement;
-    expect(queryDockParts(root, "!!!")).toEqual([]);
+    expect(queryDock(root)).toBe(dock as unknown as HTMLElement);
+    expect(queried).toBe(DOCK_SELECTOR);
+  });
+
+  test("null when the slot isn't mounted", () => {
+    const root = { querySelector: () => null } as unknown as HTMLElement;
+    expect(queryDock(root)).toBeNull();
   });
 });
 
@@ -87,31 +90,30 @@ describe("measureTopInset", () => {
 });
 
 describe("measureDockInset", () => {
-  test("measures from the bottom-most dock part's top to the root bottom + gap", () => {
-    const parts = [
-      { getBoundingClientRect: () => ({ top: 500 }) },
-      { getBoundingClientRect: () => ({ top: 540 }) }, // bottom-most (largest top)
-    ];
-    const root = {
-      querySelectorAll: () => parts,
+  const rootWith = (dock: unknown) =>
+    ({
+      querySelector: () => dock,
       getBoundingClientRect: () => ({ bottom: 600 }),
-    } as unknown as HTMLElement;
+    }) as unknown as HTMLElement;
+
+  test("measures from the dock's top to the root bottom + gap", () => {
     // 600 - 540 + COMPOSER_GAP(32) = 92
-    expect(measureDockInset(root, ".dock")).toBe(92);
+    expect(measureDockInset(rootWith({ getBoundingClientRect: () => ({ top: 540 }) }))).toBe(92);
   });
 
-  test("null when no dock parts are mounted yet", () => {
-    const root = {
-      querySelectorAll: () => [],
-      getBoundingClientRect: () => ({ bottom: 600 }),
-    } as unknown as HTMLElement;
-    expect(measureDockInset(root, ".dock")).toBeNull();
+  test("reserves the space beneath a dock that floats above the bottom edge", () => {
+    // The slot's own height would under-reserve; measuring to the root bottom doesn't.
+    expect(measureDockInset(rootWith({ getBoundingClientRect: () => ({ top: 400 }) }))).toBe(232);
+  });
+
+  test("null when the dock isn't mounted yet", () => {
+    expect(measureDockInset(rootWith(null))).toBeNull();
   });
 });
 
 describe("constants", () => {
   test("expose the documented defaults", () => {
     expect(DEFAULT_BOTTOM_OFFSET).toBe(128);
-    expect(DEFAULT_DOCK_SELECTOR).toContain("composer-container");
+    expect(DOCK_SELECTOR).toBe("[data-thread-composer]");
   });
 });

@@ -33,10 +33,9 @@ import { useRefWithInit } from "../internal/render/useRefWithInit";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import {
   DEFAULT_BOTTOM_OFFSET,
-  DEFAULT_DOCK_SELECTOR,
   measureDockInset,
   measureTopInset,
-  queryDockParts,
+  queryDock,
   resolveScrollBehavior,
   scrollContainerTo,
   wasPrepended,
@@ -688,13 +687,13 @@ const useThreadScroll = (
  *   (--thread-turn-min-height) to it; otherwise the reserve falls back to 0.
  * Recomputes only on root (window) / composer-dock resize — never per token.
  */
-const useThreadInsets = (rootRef: RefObject<HTMLDivElement | null>, dockSelector: string) => {
+const useThreadInsets = (rootRef: RefObject<HTMLDivElement | null>) => {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
 
     const apply = () => {
-      const bottomInset = measureDockInset(root, dockSelector);
+      const bottomInset = measureDockInset(root);
       if (bottomInset !== null) {
         root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
       }
@@ -709,11 +708,10 @@ const useThreadInsets = (rootRef: RefObject<HTMLDivElement | null>, dockSelector
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(root);
-    for (const part of queryDockParts(root, dockSelector)) {
-      observer.observe(part);
-    }
+    const dock = queryDock(root);
+    if (dock) observer.observe(dock);
     return () => observer.disconnect();
-  }, [dockSelector, rootRef]);
+  }, [rootRef]);
 };
 
 // ---------------------------------------------------------------------------
@@ -729,28 +727,18 @@ export type ThreadRootProps = PrimitiveProps<"div"> & {
    * current, so leave it off unless older content actually loads in above.
    */
   preserveScrollOnPrepend?: boolean;
-  /**
-   * CSS selector for the bottom-docked parts the thread reserves space for.
-   * Every match is observed for resize, but the reserved inset is measured
-   * from a single reference — the bottom-most match's top edge, not a sum of
-   * matches — so a taller part stacked above it must fit within the content
-   * gap. Must be a valid CSS selector. Defaults to the styled composer's dock
-   * slots.
-   */
-  dockSelector?: string;
 };
 
 export const ThreadRoot = ({
   autoScroll = "follow",
   preserveScrollOnPrepend = false,
-  dockSelector = DEFAULT_DOCK_SELECTOR,
   className,
   render,
   style,
   ...elementProps
 }: ThreadRootProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
-  useThreadInsets(rootRef, dockSelector);
+  useThreadInsets(rootRef);
   const scroll = useThreadScroll(rootRef, autoScroll, preserveScrollOnPrepend);
 
   const element = useRenderElement(

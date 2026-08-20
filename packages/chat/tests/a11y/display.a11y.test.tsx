@@ -8,6 +8,14 @@ import { expectNoAxeViolations } from "./axe";
 // speaks the otherwise icon-only status, disclosures toggle by keyboard, and
 // a streaming reasoning block is aria-busy.
 
+// An open panel settles over a frame (starting → idle), and settling releases the
+// measured height. Both are state updates, so drain the pending frames inside act
+// rather than letting them land after the test body.
+const settle = () =>
+  act(async () => {
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  });
+
 describe("display primitives a11y", () => {
   test("steps: active item is aria-current and Status announces", async () => {
     const { container } = render(
@@ -30,6 +38,7 @@ describe("display primitives a11y", () => {
         </Steps.Item>
       </Steps.Root>,
     );
+    await settle();
 
     const items = container.querySelectorAll("[data-steps-item]");
     expect(items[0]?.getAttribute("aria-current")).toBeNull();
@@ -47,6 +56,7 @@ describe("display primitives a11y", () => {
       trigger.click();
     });
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    await settle();
 
     await expectNoAxeViolations(container);
     cleanup();
@@ -59,6 +69,8 @@ describe("display primitives a11y", () => {
         <Reasoning.Content>Thinking about it…</Reasoning.Content>
       </Reasoning.Root>,
     );
+
+    await settle();
 
     const root = container.querySelector("[data-reasoning]");
     expect(root?.getAttribute("aria-busy")).toBe("true");

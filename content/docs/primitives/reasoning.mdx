@@ -120,6 +120,7 @@ export const contentAttrs = [
   { attribute: "data-closed", description: "Present while closed." },
   { attribute: "data-starting-style", description: "Present on the first open frame (enter transition)." },
   { attribute: "data-ending-style", description: "Present while the exit animation runs." },
+  { attribute: "--panel-height", values: "measured px", description: "The content's natural height, published only while the open or close transition runs so a height transition has a number to animate from. Deliberately released once it settles open, which makes `height: var(--panel-height)` fall back to `auto` so the open panel tracks reasoning text as it streams in." },
 ];
 
 <AttributesTable rows={contentAttrs} />

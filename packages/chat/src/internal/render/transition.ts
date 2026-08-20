@@ -264,28 +264,75 @@ export type UseOpenTransitionOptions = {
  * starting-style/ending-style), optionally measures its natural `height`, and unmounts once
  * `element.getAnimations()` resolve. Composes useTransitionStatus + useOpenChangeComplete.
  */
+// Inline alignment can distort a scroll-based measurement, so it is neutralized for the read
+// and restored immediately after (Base UI does the same before measuring a collapsible).
+const ALIGNMENT_PROPERTIES = ["justify-content", "align-items", "align-content", "justify-items"];
+
+const measureNaturalHeight = (element: HTMLElement) => {
+  const saved = ALIGNMENT_PROPERTIES.map(
+    (property) =>
+      [
+        property,
+        element.style.getPropertyValue(property),
+        element.style.getPropertyPriority(property),
+      ] as const,
+  );
+  for (const [property] of saved) {
+    element.style.setProperty(property, "initial", "important");
+  }
+  const naturalHeight = element.scrollHeight;
+  for (const [property, value, priority] of saved) {
+    if (value) element.style.setProperty(property, value, priority);
+    else element.style.removeProperty(property);
+  }
+  return naturalHeight;
+};
+
 export const useOpenTransition = (
   open: boolean,
   ref: RefObject<HTMLElement | null>,
   { measureHeight = false, onClosed }: UseOpenTransitionOptions = {},
 ) => {
-  const { mounted, setMounted, transitionStatus } = useTransitionStatus(open);
+  // Both flags on: `idle` is the settled-open status the height release gates on, and
+  // deferring `ending` by a frame leaves one frame where a closing panel is still at its
+  // open size — which is where the close has to be measured.
+  const { mounted, setMounted, transitionStatus } = useTransitionStatus(open, true, true);
   const [height, setHeight] = useState<number | null>(null);
 
-  // Measure on the transitional frames (before the CSS transition runs). scrollHeight is the
-  // natural content height regardless of any clamp the data-starting/ending-style sets.
   useIsoLayoutEffect(() => {
     if (!measureHeight) return;
-    if (transitionStatus === "starting" || transitionStatus === "ending") {
-      const element = ref.current;
-      if (element) setHeight(element.scrollHeight);
+    const element = ref.current;
+    if (!element) return;
+    // Closing: measure on the deferred frame. By the `ending` frame the consumer's closed
+    // styles have landed, so we would measure the clamped box instead of the natural one.
+    if (!open && mounted && (transitionStatus === "idle" || transitionStatus === "starting")) {
+      setHeight(measureNaturalHeight(element));
+      return;
     }
-  }, [measureHeight, transitionStatus, ref]);
+    // Opening: measure on the first frame, before the transition runs.
+    if (open && transitionStatus === "starting") {
+      setHeight(measureNaturalHeight(element));
+    }
+  }, [measureHeight, open, mounted, transitionStatus, ref]);
+
+  // Release the measurement once the open transition settles, so the panel tracks content
+  // that grows while it is open. With `height` null the custom property is never written, so
+  // a consumer's `height: var(--…)` is invalid at computed-value time and falls back to
+  // `auto`. The close re-measures a pixel value first, so it still animates from a number.
+  useOpenChangeComplete({
+    open: true,
+    ref,
+    enabled: measureHeight && open && mounted && transitionStatus === "idle",
+    onComplete: () => setHeight(null),
+  });
 
   useOpenChangeComplete({
     open,
     ref,
-    enabled: !open && mounted,
+    // Gated on `ending`, not merely `!open`: with the ending state deferred by a frame, an
+    // earlier check would call getAnimations() before the closed styles applied, find
+    // nothing running, and cut the exit off.
+    enabled: !open && mounted && transitionStatus === "ending",
     onComplete: () => {
       setMounted(false);
       onClosed?.();

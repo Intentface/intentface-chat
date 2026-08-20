@@ -147,6 +147,7 @@ export const panelAttrs = [
   { attribute: "data-closed", description: "Present while closed." },
   { attribute: "data-starting-style", description: "Present on the first open frame (enter transition)." },
   { attribute: "data-ending-style", description: "Present while the exit animation runs." },
+  { attribute: "--panel-height", values: "measured px", description: "The panel's natural height, published only while the open or close transition runs so a height transition has a number to animate from. Deliberately released once the panel settles open, which makes `height: var(--panel-height)` fall back to `auto` so the open panel tracks content that grows inside it." },
 ];
 
 <AttributesTable rows={panelAttrs} />

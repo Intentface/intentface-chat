@@ -4,6 +4,7 @@ import {
   type DomNodeSpec,
   documentToDomSpec,
   logicalRangeFromDom,
+  PADDING_BREAK_ATTRIBUTE,
   type ReadableNode,
   readDocumentFromDom,
 } from "../src/composer/editor-dom";
@@ -32,6 +33,7 @@ const element = (
 });
 
 const br = () => element("BR", {});
+const paddingBr = () => element("BR", { [PADDING_BREAK_ATTRIBUTE]: "" });
 const chipSpan = (id: string) => element("SPAN", { "data-chip-id": id, "data-mention-chip": "" });
 const badgeSpan = (...children: ReadableNode[]) =>
   element("SPAN", { "data-command-badge": "" }, ...children);
@@ -68,6 +70,57 @@ describe("readDocumentFromDom", () => {
     expect(readDocumentFromDom(editorRoot(textNode("a"), br()), resolveChip).doc).toEqual([
       { type: "text", text: "a" },
     ]);
+  });
+
+  // A native edit can land content *after* the padding <br> instead of before
+  // it. The break is then scaffolding sitting mid-document: it must not read as
+  // a newline, or every stranding leaks a line into the model permanently.
+  describe("a stranded padding <br>", () => {
+    test("contributes no newline and flags dirty", () => {
+      const { doc, dirty } = readDocumentFromDom(
+        editorRoot(paddingBr(), textNode("x")),
+        resolveChip,
+      );
+      expect(doc).toEqual([{ type: "text", text: "x" }]);
+      expect(dirty).toBe(true);
+    });
+
+    test("is distinguished from the real newline before it", () => {
+      const { doc, dirty } = readDocumentFromDom(
+        editorRoot(textNode("a"), br(), paddingBr(), textNode("x")),
+        resolveChip,
+      );
+      expect(doc).toEqual([{ type: "text", text: "a\nx" }]);
+      expect(dirty).toBe(true);
+    });
+
+    test("is caught when a chip is what follows it", () => {
+      const { doc, dirty } = readDocumentFromDom(
+        editorRoot(paddingBr(), chipSpan("c1")),
+        resolveChip,
+      );
+      expect(doc).toEqual([{ type: "chip", id: "c1", chip: CHIPS.c1 }]);
+      expect(dirty).toBe(true);
+    });
+
+    test("trailing padding stays clean", () => {
+      const { doc, dirty } = readDocumentFromDom(
+        editorRoot(textNode("a"), br(), paddingBr()),
+        resolveChip,
+      );
+      expect(doc).toEqual([{ type: "text", text: "a\n" }]);
+      expect(dirty).toBe(false);
+    });
+
+    test("browser-created trailing <br>s still fall back to the inversion", () => {
+      // Chrome adds an unmarked <br> to keep an emptied line box alive.
+      const { doc, dirty } = readDocumentFromDom(
+        editorRoot(textNode("ab"), br(), br()),
+        resolveChip,
+      );
+      expect(doc).toEqual([{ type: "text", text: "ab\n" }]);
+      expect(dirty).toBe(false);
+    });
   });
 
   test("badge spans are transparent wrappers", () => {
@@ -108,6 +161,24 @@ describe("readDocumentFromDom", () => {
       { type: "chip", id: "c1", chip: CHIPS.c1 },
       { type: "chip", id: "fresh-1", chip: CHIPS.c1 },
     ]);
+  });
+
+  // createChipSpan sets contenteditable="false" as well as data-chip-id, so the
+  // node taxonomy must resolve chip before presentation or real chips vanish.
+  test("a chip span wins over the presentation rule it also matches", () => {
+    const realShape = element("SPAN", {
+      "data-chip-id": "c1",
+      "data-mention-chip": "",
+      contenteditable: "false",
+    });
+    const { doc, dirty } = readDocumentFromDom(editorRoot(textNode("a"), realShape), resolveChip);
+    expect(doc).toEqual([
+      { type: "text", text: "a" },
+      { type: "chip", id: "c1", chip: CHIPS.c1 },
+    ]);
+    expect(dirty).toBe(false);
+    // …and it counts one position, not zero.
+    expect(logicalRangeFromDom(editorRoot(textNode("a"), realShape), realShape, 0)).toBe(1);
   });
 
   test("block elements read through but flag dirty", () => {
@@ -152,7 +223,7 @@ describe("documentToDomSpec", () => {
         case "text":
           return textNode(spec.text);
         case "br":
-          return br();
+          return spec.padding ? paddingBr() : br();
         case "chip":
           return chipSpan(spec.id);
       }
@@ -213,6 +284,17 @@ describe("logicalRangeFromDom", () => {
     const after = textNode("b");
     const withBreak = editorRoot(textNode("a"), br(), after);
     expect(logicalRangeFromDom(withBreak, after, 0)).toBe(2);
+  });
+
+  test("the padding <br> is zero-width, so positions stop at the model length", () => {
+    // "a\n" ↔ a<br><br·pad>: flat length 2, so the last position must be 2 —
+    // counting the padding would let the caret be written to 3.
+    const padded = editorRoot(textNode("a"), br(), paddingBr());
+    expect(logicalRangeFromDom(padded, padded, 2)).toBe(2);
+    expect(logicalRangeFromDom(padded, padded, 3)).toBe(2);
+    // "" ↔ <br·pad>: the only position is 0.
+    const empty = editorRoot(paddingBr());
+    expect(logicalRangeFromDom(empty, empty, 1)).toBe(0);
   });
 
   test("a node outside the root returns null", () => {

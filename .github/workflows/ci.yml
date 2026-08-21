@@ -17,9 +17,12 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
+          # Changesets compares package changes with the pull request base.
+          fetch-depth: 0
           persist-credentials: false
 
       # Pinned to the packageManager version, not "latest". bun.lock was
@@ -30,8 +33,21 @@ jobs:
         with:
           bun-version: 1.3.8
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+
       # Generates .source (postinstall: fumadocs-mdx) so the docs build compiles.
       - run: bun install --frozen-lockfile
+
+      - name: Changeset status
+        # A Changesets-generated version PR has consumed its changesets already.
+        if: >-
+          github.event_name == 'pull_request' &&
+          !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+          startsWith(github.head_ref, 'changeset-release/'))
+        run: bunx changeset status --since=${{ github.event.pull_request.base.sha }}
 
       - name: Lint
         run: bunx biome check
@@ -47,7 +63,7 @@ jobs:
         working-directory: packages/chat
         run: |
           bun run build
-          bunx publint
+          bunx --no-install publint
 
       # The docs demos are the styled reference people copy, so they must
       # compile against the built package with no app aliases in scope. Runs

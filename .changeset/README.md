@@ -11,5 +11,11 @@ Pick the bump (major / minor / patch) and write a summary — it becomes the cha
 entry. On merge to `main`, the release workflow opens (or updates) a "Version Packages" PR;
 merging that PR publishes to npm.
 
+If a package change intentionally needs no release, add an empty changeset instead:
+
+```bash
+bunx changeset --empty
+```
+
 The app (`intentface-chat`) is private, so changesets skips it — `@intentface/chat` is the
 only published package.

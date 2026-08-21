@@ -43,11 +43,11 @@ type ComposerSubmitData =
       chips: ChipData[];               // inline mention chips
     }
   | {
-      kind: "answers";
-      answers: ComposerAnswerEntry[]; // produced by the questionnaire flow
+      kind: "requests";
+      answers: ComposerRequestEntry[]; // produced by the questionnaire flow
     };
 
-type ComposerAnswerEntry =
+type ComposerRequestEntry =
   | { question: string; option: string }                      // single-select, picked an option
   | { question: string; text: string }                        // single-select, typed free text
   | { question: string; options: string[]; text: string }     // multi-select (either field may be empty)
@@ -67,7 +67,7 @@ If the editor is empty but attachments exist, `text` is set to `"Sent with attac
 | `onSubmit` | `(data: ComposerSubmitData) => void \| Promise<void>` | Submit handler. |
 | `isSubmitting` | `boolean` | Disables `Composer.Submit` while truthy. Default `false`. |
 | `commands` | `ComposerCommandsMap` | Prefix → command-list config. See [Commands & chips](#commands--chips). |
-| `questions` | `AskUserQuestion[]` | When present, the composer enters questionnaire mode. See [Questionnaire](#questionnaire). |
+| `questions` | `ComposerRequest[]` | When present, the composer enters questionnaire mode. See [Questionnaire](#questionnaire). |
 | `defaultValue` | `ComposerSnapshot` | Initial uncontrolled editor content. |
 | `value` | `ComposerSnapshot` | Controlled editor content. |
 | `onValueChange` | `(snapshot) => void` | Fires on editor change. |
@@ -155,7 +155,7 @@ The panel is the area above the editor that shows command lists, active tool pro
     <ActiveSteps />
   </Composer.PanelItem>
   <Composer.PanelItem value="ask-user">
-    <Composer.AskUser />
+    <Composer.Ask />
   </Composer.PanelItem>
 </Composer.Panel>
 ```
@@ -266,10 +266,10 @@ The default `<Composer.Commands />` renderer already wires this up.
 Pass `questions` to switch the composer into structured-question mode. The default renderer covers the flow:
 
 ```tsx
-<Composer onSubmit={handleSubmit} questions={askUserQuestions}>
+<Composer onSubmit={handleSubmit} requests={composerRequests}>
   <Composer.Panel value="ask-user">
     <Composer.PanelItem value="ask-user">
-      <Composer.AskUser />
+      <Composer.Ask />
     </Composer.PanelItem>
   </Composer.Panel>
   <Composer.Container>
@@ -277,23 +277,23 @@ Pass `questions` to switch the composer into structured-question mode. The defau
       <Composer.Placeholder placeholder="Type an answer..." />
     </Composer.Textarea>
     <Composer.Actions className="flex justify-end gap-2">
-      <Composer.AskUserHints />
-      <Composer.AskUserDismiss />
-      <Composer.AskUserContinue />
+      <Composer.AskHints />
+      <Composer.AskDismiss />
+      <Composer.AskContinue />
     </Composer.Actions>
   </Composer.Container>
 </Composer>
 ```
 
 Parts:
-- `Composer.AskUser` — full default UI (question text, options, step counter, nav arrows).
-- `Composer.AskUserHints` — keyboard-hint footer (↑↓ ↵ ← → Esc).
-- `Composer.AskUserDismiss` — skip the current question (`Esc`).
-- `Composer.AskUserContinue` — advance / submit (`Enter`). Auto-toggles label between "Continue" and "Submit".
+- `Composer.Ask` — full default UI (question text, options, step counter, nav arrows).
+- `Composer.AskHints` — keyboard-hint footer (↑↓ ↵ ← → Esc).
+- `Composer.AskDismiss` — skip the current question (`Esc`).
+- `Composer.AskContinue` — advance / submit (`Enter`). Auto-toggles label between "Continue" and "Submit".
 
 Keyboard: **↑/↓** navigate options, **Enter** select/advance, **←/→** between questions, **Esc** dismiss, printable keys type free-text.
 
-On completion, `onSubmit` fires with `{ kind: "answers", answers }` where `answers` is a `ComposerAnswerEntry[]` (one entry per question, in order). See [Submit data](#submit-data) for the entry shape.
+On completion, `onSubmit` fires with `{ kind: "requests", requests }` where `answers` is a `ComposerRequestEntry[]` (one entry per question, in order). See [Submit data](#submit-data) for the entry shape.
 
 ## Imperative API & state
 
@@ -302,7 +302,7 @@ There is no root `ref` handle. Editor content is controlled declaratively via `v
 For live state, read from the store with `useComposer(selector)`. It's a module singleton — no provider — so anything in the subtree, a toolbar, or a sibling panel can subscribe. A selector re-renders only when that slice changes identity:
 
 ```tsx
-const askUser = useComposer((composer) => composer.askUser);         // questionnaire machine + actions
+const requests = useComposer((composer) => composer.requests);       // request machine + actions
 const attachments = useComposer((composer) => composer.attachments); // add, remove, openFileDialog, items, error
 const commands = useComposer((composer) => composer.commands);       // open command-list state (isOpen, trigger, query)
 ```
@@ -325,7 +325,7 @@ const items: CommandItemData[] = [
 
 Exported from `@/components/ai/composer`:
 
-`ComposerEditorHandle`, `ComposerSnapshot`, `ComposerSubmitData`, `ComposerMessageSubmit`, `ComposerAnswersSubmit`, `ComposerAnswerEntry`, `ComposerCommandsMap`, `ComposerCommandsConfig`, `ComposerCommandsItems`, `CommandItemData`, `CommandItemKind`, `PrefixOnSelectContext`, `TriggerRule`, `ChipData`, `AttachmentsApi`.
+`ComposerEditorHandle`, `ComposerSnapshot`, `ComposerSubmitData`, `ComposerMessageSubmit`, `ComposerRequestsSubmit`, `ComposerRequestEntry`, `ComposerCommandsMap`, `ComposerCommandsConfig`, `ComposerCommandsItems`, `CommandItemData`, `CommandItemKind`, `PrefixOnSelectContext`, `TriggerRule`, `ChipData`, `AttachmentsApi`.
 
 `ChipVariant` is re-used from `@/components/ai/chip`.
 

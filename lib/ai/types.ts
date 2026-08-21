@@ -1,4 +1,3 @@
-import type { AskUserQuestion as ComposerAskUserQuestion } from "@intentface/ui/composer";
 import type { ChatMessage, ChatStatus, FilePart } from "@intentface/ui/types";
 import type * as sdk from "ai";
 import type { askUser } from "@/tools/ask-user";
@@ -65,8 +64,7 @@ export type FilePartContractCheck = Assert<sdk.FileUIPart extends FilePart ? tru
 
 export type ChatStatusContractCheck = Assert<sdk.ChatStatus extends ChatStatus ? true : false>;
 
-// The askUser tool's question must keep satisfying the composer's generic
-// question contract (its `questions` prop).
-export type AskUserQuestionContractCheck = Assert<
-  AskUserQuestion extends ComposerAskUserQuestion ? true : false
->;
+// No assignability lock for the composer's `requests` prop: ComposerRequest
+// requires a consumer-minted `id`, so tool questions are mapped explicitly at
+// the boundary (useAskUserPanelState in components/chat.tsx) rather than
+// passed through structurally.

@@ -29,7 +29,7 @@ bunx tsc --noEmit    # typecheck
 bun run build        # production build
 ```
 
-The playground chat needs `.env.local` with `OPENAI_API_KEY`. The docs site renders without it.
+No environment variables are needed. The playground chat runs on your own OpenAI key, which you paste into the Key tab of the playground settings (top right of the chat) — it is held in an HttpOnly cookie and forwarded to OpenAI per request, never stored server-side.
 
 Package tests and build:
 

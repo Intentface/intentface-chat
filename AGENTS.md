@@ -108,4 +108,4 @@ The chat API follows Vercel AI SDK conventions
 
 ## Environment Variables
 
-The project requires `.env.local` with OpenAI credentials (e.g. `OPENAI_API_KEY`) for `@ai-sdk/openai`.
+None. The playground chat runs on the visitor's own OpenAI key, supplied through the Key tab in playground settings and held in an HttpOnly cookie (`lib/api-key.ts`). `app/api/chat/route.ts` reads it per request via `createOpenAI({ apiKey })` and returns 401 when it is absent — there is deliberately no server-side fallback, so no code path goes unexercised.

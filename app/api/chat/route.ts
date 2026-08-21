@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -9,6 +9,7 @@ import {
   streamText,
 } from "ai";
 import type { AppUIMessage } from "@/lib/ai/types";
+import { readApiKey } from "@/lib/api-key";
 import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
 import { aggregateData } from "@/tools/aggregate-data";
 import { askUser } from "@/tools/ask-user";
@@ -77,8 +78,16 @@ DO NOT write questions, options, or bullet-listed choices as plain text. The use
 // Generate a sidebar title from the first user message with a small model.
 // Runs concurrently with the main response; failures degrade to the client's
 // truncated-text placeholder, never the stream.
-const generateThreadTitle = async (message: AppUIMessage): Promise<string | null> => {
-  const text = message.parts
+type OpenAIProvider = ReturnType<typeof createOpenAI>;
+
+const generateThreadTitle = async (
+  message: AppUIMessage | undefined,
+  openai: OpenAIProvider,
+): Promise<string | null> => {
+  // `messages` arrives untyped from the request body, so the last entry can be
+  // absent — reading .parts off undefined would throw inside the stream and
+  // surface as an opaque server error.
+  const text = (message?.parts ?? [])
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("\n")
@@ -100,6 +109,20 @@ const generateThreadTitle = async (message: AppUIMessage): Promise<string | null
 };
 
 export async function POST(req: Request) {
+  // The playground runs on the visitor's own key — there is no server key to
+  // fall back to. The client branches on this status to open the key form.
+  const apiKey = await readApiKey();
+  if (!apiKey) {
+    return Response.json(
+      {
+        error: "missing-api-key",
+        message: "Add your own OpenAI API key in playground settings to start chatting.",
+      },
+      { status: 401 },
+    );
+  }
+  const openai = createOpenAI({ apiKey });
+
   const {
     messages,
     model,
@@ -110,12 +133,22 @@ export async function POST(req: Request) {
   const modelId = isValidModelId(model) ? model : DEFAULT_MODEL;
 
   const stream = createUIMessageStream<AppUIMessage>({
+    // Without this the SDK replaces every failure with a generic string, which
+    // makes a bad key, a rate limit and a model the key can't reach all look
+    // identical. Log the reason server-side and hand the client something it can
+    // act on. Only the message is logged — never the error object, which can
+    // carry request headers, and therefore the key.
+    onError: (error) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error("[api/chat]", reason);
+      return reason;
+    },
     execute: async ({ writer }) => {
       // First turn = no assistant message yet (tool-continuation rounds and
       // later turns always carry one). Kick the title off before the main
       // stream so it generates in parallel and lands mid-stream.
       const isFirstTurn = !messages.some((message: AppUIMessage) => message.role === "assistant");
-      const titlePromise = isFirstTurn ? generateThreadTitle(messages.at(-1)) : null;
+      const titlePromise = isFirstTurn ? generateThreadTitle(messages.at(-1), openai) : null;
 
       const result = streamText({
         model: openai(modelId),

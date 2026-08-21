@@ -2,18 +2,21 @@
 
 // Playground settings — a Linear-style display-options popover behind a single
 // icon trigger in the chat area's top-right corner, on every chat page. The
-// panel is split into three tabs (Theme / Thread / Composer), mirroring
+// panel is split into four tabs (Theme / Thread / Composer / Key), mirroring
 // Linear's List/Board/Timeline switcher. Configuration persists via the
 // settings store; demo triggers (ask-user questions, the context strip) are
-// ephemeral playground-store state. Desktop-only — hidden below md.
+// ephemeral playground-store state. The visitor's OpenAI key deliberately
+// persists nowhere client-side — see KeyTab. Desktop-only — hidden below md.
 
 import { Tabs } from "@base-ui/react/tabs";
-import type { ReactNode } from "react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { type ReactNode, useState } from "react";
 import type { ComposerSubmitOn } from "@/components/ai/composer";
 import type { ThreadAutoScrollMode } from "@/components/ai/thread";
 import { AppearanceIcon } from "@/components/icons/appearance";
 import { InputFormIcon } from "@/components/icons/input-form";
 import { MoonIcon } from "@/components/icons/moon";
+import { OpenAIIcon } from "@/components/icons/openai";
 import { SettingsIcon } from "@/components/icons/settings";
 import { SettingsSliderThreeIcon } from "@/components/icons/settings-slider-three";
 import { SquareLinesIcon } from "@/components/icons/square-lines";
@@ -21,6 +24,7 @@ import { SunIcon } from "@/components/icons/sun";
 import Button from "@/components/ui/button";
 import { ColorPill } from "@/components/ui/color-pill";
 import { IconButton } from "@/components/ui/icon-button";
+import Input from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
 import { Popover } from "@/components/ui/popover";
 import { PresetSwatch } from "@/components/ui/preset-swatch";
@@ -29,7 +33,9 @@ import Select from "@/components/ui/select";
 import { Settings } from "@/components/ui/settings";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup } from "@/components/ui/toggle-group";
+import { useApiKey } from "@/hooks/use-api-key";
 import { type InterfaceThemeMode, useInterfaceTheme } from "@/hooks/use-interface-theme";
+import { useMeasure } from "@/hooks/use-measure";
 import {
   CONTRAST_MAX,
   CONTRAST_MIN,
@@ -426,48 +432,194 @@ const ComposerTab = () => {
 // The trigger + tabbed popover, floating in the chat area's top-right.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Key — the visitor's own OpenAI key. There is no server key, so this is what
+// makes the chat work at all. The value goes into an HttpOnly cookie and never
+// comes back out, so this tracks presence only and can never render the key.
+// ---------------------------------------------------------------------------
+
+const KeyTab = () => {
+  const { isSet, isLoading, isSubmitting, error, save, clear } = useApiKey();
+
+  // Ephemeral and deliberately local: the draft briefly holds the key itself, so
+  // it must not reach a store that persists to localStorage.
+  const [draft, setDraft] = useState("");
+
+  const handleSave = async () => {
+    if (await save(draft)) setDraft("");
+  };
+
+  return (
+    <div>
+      <SettingsSection>
+        {isSet ? (
+          <LabeledRow label="OpenAI API key" description="Set on this device.">
+            <Button
+              variant="secondary"
+              onClick={clear}
+              disabled={isSubmitting}
+              aria-label="Clear the stored OpenAI API key"
+            >
+              Clear
+            </Button>
+          </LabeledRow>
+        ) : (
+          <div className="flex flex-col gap-2 px-3 py-2">
+            <Settings.LabelGroup>
+              <Settings.Label>OpenAI API key</Settings.Label>
+              <Settings.Description>
+                {isLoading ? "Checking…" : "The playground runs on your own key."}
+              </Settings.Description>
+            </Settings.LabelGroup>
+            <div className="flex items-center gap-2">
+              <Input
+                type="password"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder="sk-…"
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="OpenAI API key"
+                aria-invalid={error ? true : undefined}
+                className="flex-1"
+              />
+              <Button
+                size="md"
+                onClick={handleSave}
+                disabled={isSubmitting || draft.trim().length === 0}
+              >
+                Save
+              </Button>
+            </div>
+            {error && <p className="text-destructive text-xs">{error}</p>}
+          </div>
+        )}
+      </SettingsSection>
+      <p className="px-3 py-2 text-xs text-ink-tertiary">
+        Your key is sent to this site's server to forward each request to OpenAI, and is kept only
+        for the length of that request — never written to disk or logged. It is stored in your
+        browser in a cookie that scripts cannot read.{" "}
+        <a
+          href="https://github.com/Intentface/intentface-chat/blob/main/app/api/chat/route.ts"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-ink-secondary"
+        >
+          Read the code
+        </a>
+        .
+      </p>
+    </div>
+  );
+};
+
 const PLAYGROUND_TABS = [
   { value: "theme", label: "Theme", Icon: SettingsSliderThreeIcon, content: <ThemeTab /> },
   { value: "thread", label: "Thread", Icon: SquareLinesIcon, content: <ThreadTab /> },
   { value: "composer", label: "Composer", Icon: InputFormIcon, content: <ComposerTab /> },
+  { value: "key", label: "Key", Icon: OpenAIIcon, content: <KeyTab /> },
 ] as const;
 
-export const PlaygroundSettings = () => (
-  <div data-slot="playground-settings" className="absolute top-2 right-2 z-20 hidden md:block">
-    <Popover>
-      <Popover.Trigger
-        render={
-          <IconButton variant="primary" className="rounded-full" aria-label="Playground settings" />
-        }
-      >
-        <SettingsIcon className="size-4" />
-      </Popover.Trigger>
-      <Popover.Content align="end" sideOffset={4} className="w-80 p-0">
-        <Tabs.Root defaultValue="theme">
-          <Tabs.List className="flex gap-2 border-b border-primary-border p-2">
-            {PLAYGROUND_TABS.map((tab) => (
-              <Tabs.Tab
-                key={tab.value}
-                value={tab.value}
-                className={cn(
-                  "flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full text-sm font-medium text-ink-secondary outline-none transition-colors border border-transparent",
-                  "hover:bg-primary-bg-hover hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent-bg/50",
-                  "data-active:bg-primary-bg-active data-active:text-ink-primary data-active:border-primary-border-active",
-                  "[&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:text-ink-tertiary data-active:[&>svg]:text-ink-primary",
-                )}
+type PlaygroundTabValue = (typeof PLAYGROUND_TABS)[number]["value"];
+
+// One spring for the shell's height and the panels' travel, so everything settles
+// together. bounce: 0 keeps a settings panel from wobbling.
+const PANEL_SPRING = { duration: 0.5, type: "spring", bounce: 0 } as const;
+
+// Panels travel the way the tabs do: picking a tab to the right slides the old
+// panel out to the left and the new one in from the right. Percentages of the
+// panel's own width, so a panel is clear of the frame before it lands.
+const panelVariants = {
+  initial: (direction: number) => ({ x: `${110 * direction}%`, opacity: 0 }),
+  active: { x: "0%", opacity: 1 },
+  exit: (direction: number) => ({ x: `${-110 * direction}%`, opacity: 0 }),
+};
+
+export const PlaygroundSettings = () => {
+  // The four panels differ in height, so the shell animates to the measured
+  // content. Because it is a ResizeObserver, content that grows *inside* a tab
+  // (the key form revealing a validation error) animates too, not just switches.
+  const [panelRef, { height }] = useMeasure<HTMLDivElement>();
+
+  // Controlled rather than defaultValue: the slide needs to know which way the
+  // active tab moved, which means knowing the previous one.
+  const [activeTab, setActiveTab] = useState<PlaygroundTabValue>("theme");
+  const [direction, setDirection] = useState(1);
+
+  const handleTabChange = (value: unknown) => {
+    const next = value as PlaygroundTabValue;
+    const from = PLAYGROUND_TABS.findIndex((tab) => tab.value === activeTab);
+    const to = PLAYGROUND_TABS.findIndex((tab) => tab.value === next);
+    setDirection(to > from ? 1 : -1);
+    setActiveTab(next);
+  };
+
+  const activePanel = PLAYGROUND_TABS.find((tab) => tab.value === activeTab);
+
+  return (
+    <div data-slot="playground-settings" className="absolute top-2 right-2 z-20 hidden md:block">
+      <Popover>
+        <Popover.Trigger
+          render={
+            <IconButton
+              variant="primary"
+              className="rounded-full"
+              aria-label="Playground settings"
+            />
+          }
+        >
+          <SettingsIcon className="size-4" />
+        </Popover.Trigger>
+        <Popover.Content
+          align="end"
+          sideOffset={4}
+          className="w-96 border-0 p-0 shadow-none smooth-shadow-ring-sm!"
+        >
+          <Tabs.Root value={activeTab} onValueChange={handleTabChange}>
+            <Tabs.List className="flex gap-1 border-b border-primary-border p-2">
+              {PLAYGROUND_TABS.map((tab) => (
+                <Tabs.Tab
+                  key={tab.value}
+                  value={tab.value}
+                  className={cn(
+                    "flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-ink-secondary outline-none transition-colors border border-transparent",
+                    "hover:bg-primary-bg-hover hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent-bg/50",
+                    "data-active:bg-primary-bg data-active:text-ink-primary data-active:border-primary-border-active",
+                    "[&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:text-ink-tertiary data-active:[&>svg]:text-ink-primary",
+                  )}
+                >
+                  <tab.Icon />
+                  {tab.label}
+                </Tabs.Tab>
+              ))}
+            </Tabs.List>
+            <MotionConfig transition={PANEL_SPRING}>
+              <motion.div
+                initial={false}
+                animate={{ height: height || "auto" }}
+                className="overflow-hidden"
               >
-                <tab.Icon />
-                {tab.label}
-              </Tabs.Tab>
-            ))}
-          </Tabs.List>
-          {PLAYGROUND_TABS.map((tab) => (
-            <Tabs.Panel key={tab.value} value={tab.value}>
-              {tab.content}
-            </Tabs.Panel>
-          ))}
-        </Tabs.Root>
-      </Popover.Content>
-    </Popover>
-  </div>
-);
+                <div ref={panelRef} className="relative">
+                  <Tabs.Panel value={activeTab}>
+                    <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                      <motion.div
+                        key={activeTab}
+                        variants={panelVariants}
+                        initial="initial"
+                        animate="active"
+                        exit="exit"
+                        custom={direction}
+                      >
+                        {activePanel?.content}
+                      </motion.div>
+                    </AnimatePresence>
+                  </Tabs.Panel>
+                </div>
+              </motion.div>
+            </MotionConfig>
+          </Tabs.Root>
+        </Popover.Content>
+      </Popover>
+    </div>
+  );
+};

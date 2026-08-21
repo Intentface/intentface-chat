@@ -195,7 +195,9 @@ const MessageError = ({ children, className, ...props }: ComponentProps<"div">) 
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 20 20"
       fill="currentColor"
-      className="size-5 shrink-0"
+      // Muted rather than inheriting the row's colour: the sentence carries the
+      // message, so a full-strength glyph just shouts over it.
+      className="size-5 shrink-0 text-ink-tertiary"
       aria-hidden="true"
     >
       <path

@@ -20,6 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          # Changesets compares package changes with the pull request base.
+          fetch-depth: 0
           persist-credentials: false
 
       # Pinned to the packageManager version, not "latest". bun.lock was
@@ -32,6 +34,14 @@ jobs:
 
       # Generates .source (postinstall: fumadocs-mdx) so the docs build compiles.
       - run: bun install --frozen-lockfile
+
+      - name: Changeset status
+        # A Changesets-generated version PR has consumed its changesets already.
+        if: >-
+          github.event_name == 'pull_request' &&
+          !(github.event.pull_request.user.login == 'github-actions[bot]' &&
+          startsWith(github.head_ref, 'changeset-release/'))
+        run: bunx changeset status --since=${{ github.event.pull_request.base.sha }}
 
       - name: Lint
         run: bunx biome check

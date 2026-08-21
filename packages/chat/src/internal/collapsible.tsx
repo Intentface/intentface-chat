@@ -6,7 +6,9 @@
 // presence attributes (data-open / data-closed) generated from state, plus
 // the animation contract: data-starting-style on the panel's first open
 // frame, data-ending-style while its exit animations run (hide/unmount waits
-// for them), and the panel's natural height as --collapsible-panel-height.
+// for them), and the panel's natural height as --panel-height. That value is
+// released once the open transition settles, so an open panel falls back to
+// `auto` and tracks content that grows underneath it.
 // Every part supports the Base UI render prop.
 
 import {
@@ -154,10 +156,11 @@ const CollapsiblePanel = ({
         {
           id: panelId,
           hidden,
+          // Once the open transition settles the height is released back to null, so the
+          // property stops being written and a `height: var(…)` consumer falls back to auto
+          // — that is what lets an open panel track content that grows.
           style:
-            height !== null
-              ? ({ "--collapsible-panel-height": `${height}px` } as CSSProperties)
-              : undefined,
+            height !== null ? ({ "--panel-height": `${height}px` } as CSSProperties) : undefined,
         },
         elementProps,
       ],

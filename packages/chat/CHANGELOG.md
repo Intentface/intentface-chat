@@ -1,5 +1,62 @@
 # @intentface/chat
 
+## 0.2.0
+
+### Minor Changes
+
+- [#69](https://github.com/Intentface/intentface-chat/pull/69) [`0fb9b14`](https://github.com/Intentface/intentface-chat/commit/0fb9b1441158bc7a2270ac1e20565812aa4c972c) Thanks [@rpvilo](https://github.com/rpvilo)! - Disclosure panels (`Steps.Panel`, `Reasoning.Content`) no longer stay pinned to the height they had when they opened. The panel measures its natural height for the transition and then **releases** that measurement once the transition settles, so an open panel tracks content that appears underneath it — a nested disclosure expanding, rows streaming in. Previously the measurement was written on open and never cleared, so any consumer following the documented `height: var(…)` pattern had its content clipped at the open-time height.
+
+  **Breaking:** the measured height is published as `--panel-height` instead of `--collapsible-panel-height`. The old name leaked an internal: `Collapsible` is not a public part, cannot be imported, and appears nowhere in the docs, so a consumer styling `Steps.Panel` had to reach for a variable named after a component they could not see. The variable is now documented on both parts.
+
+  ```diff
+   [data-steps-panel] {
+     overflow: hidden;
+  -  height: var(--collapsible-panel-height);
+  +  height: var(--panel-height);
+     transition: height 150ms ease-out;
+   }
+  ```
+
+  Note the value is present only while the open or close transition runs, which is what makes the fallback to `auto` work while open. That is the intended contract, not a gap.
+
+  Two supporting changes, both internal:
+
+  - `useTransitionStatus` is now called with `enableIdleState` and `deferEndingState` enabled. `idle` is the settled-open status the release gates on, and deferring `ending` by a frame leaves one frame where a closing panel is still at its open size — which is where the close has to be measured. Previously the close was measured on the `ending` frame, with the closed styles already applied, so it measured the clamped box.
+  - The unmount is now gated on `transitionStatus === "ending"` rather than merely `!open`. With the ending state deferred, the earlier check could call `getAnimations()` before the closed styles landed, find nothing running, and cut the exit animation off. This also affects `Composer.Panel`, the other consumer of the shared transition hook.
+
+  Measurement also neutralizes inline alignment properties for the read and restores them immediately, matching Base UI — inline alignment can distort a scroll-based measurement.
+
+- [#67](https://github.com/Intentface/intentface-chat/pull/67) [`414d132`](https://github.com/Intentface/intentface-chat/commit/414d132c335fd9678a2ef626d45d074ed9464660) Thanks [@rpvilo](https://github.com/rpvilo)! - **Breaking:** `Thread.Root` no longer takes `dockSelector`. The thread now measures the `Thread.Composer` slot (`[data-thread-composer]`) it already renders, instead of querying the composer's internals for a set of dock parts. Dock your composer in the slot and the measurement is automatic:
+
+  ```diff
+  -<Thread dockSelector="[data-my-dock]">
+  +<Thread>
+     <Thread.Viewport>{turns}</Thread.Viewport>
+  -  <div data-my-dock>{composer}</div>
+  +  <Thread.Composer>{composer}</Thread.Composer>
+   </Thread>
+  ```
+
+  This is what the documentation already described — `THREAD.md` and the build-a-chat guide both said the thread measured `Thread.Composer`, while the code measured `[data-composer-context-window], [data-composer-container]` and only ever used the bottom-most match as the reference edge. The old default also meant `Composer.ContextWindow` was never reserved for: it sits above `Composer.Container`, so the container won the measurement and the context strip had to fit inside the 32px content gap or content slid underneath it. Docking the whole slot fixes that, because the slot's box covers every in-flow part.
+
+  The rule is now positional rather than configured: anything inside `Thread.Composer` that should not push content up must be out of the slot's flow. `Thread.ScrollButton` and the default portaled `Composer.Panel` already are, so the standard composition is unaffected. An in-flow panel (`Composer.Panel anchor={false}`) now counts as part of the dock and the viewport insets around it, where previously it overlapped the last turn.
+
+### Patch Changes
+
+- [#68](https://github.com/Intentface/intentface-chat/pull/68) [`7be61d3`](https://github.com/Intentface/intentface-chat/commit/7be61d314defd876b06b5be66ab53e44a053dbcd) Thanks [@rpvilo](https://github.com/rpvilo)! - `exports` now points at `./dist` permanently, so the registry metadata matches the tarball. Previously `exports` pointed at `./src/*.ts` in the repo — so the docs app could consume package source with no build step — and a `prepack`/`postpack` pair swapped it to `./dist` for packing. npm builds the packument from `package.json` as it stands _after_ `postpack`, which restored the source paths, so every published version advertised `./src/*.ts` for all 11 subpaths: files the tarball does not ship.
+
+  Consumers were never affected, because Node resolves against the `package.json` inside the tarball, which always carried the correct `./dist` paths. But `npm view @intentface/chat exports` reported paths that do not exist, which reads exactly like a broken publish — and npm was warning that `publishConfig.exports` "will stop working in the next major version of npm", so the mechanism had an expiry date regardless.
+
+  The swap is gone: `scripts/swap-exports.mjs`, the `postpack` hook, and `publishConfig.exports` are all deleted, and `prepack` now just runs the build. The app gets source resolution from the repo instead of from the published exports map — a `paths` entry in `tsconfig.json` and a matching Turbopack `resolveAlias` in `next.config.ts`, both mapping the 11 subpaths to `packages/chat/src`. Verified by building the docs app with `packages/chat/dist` deleted entirely.
+
+  No API change; nothing to migrate.
+
+- [#71](https://github.com/Intentface/intentface-chat/pull/71) [`9a378b5`](https://github.com/Intentface/intentface-chat/commit/9a378b579f5e11ad26f30441e1893dc8f8cec8eb) Thanks [@rpvilo](https://github.com/rpvilo)! - Point `homepage` and the README at `https://ui.intentface.com`. The previous address, `intentface.dev`, does not resolve — so the link on the npm page and the two documentation links inside the shipped README were dead. The documentation now also lives at the root of that host rather than under `/docs`, so the paths lose that prefix.
+
+  No code change; published metadata only.
+
+- [#63](https://github.com/Intentface/intentface-chat/pull/63) [`d73bb3f`](https://github.com/Intentface/intentface-chat/commit/d73bb3f2b587616412a3a5ef09cc888a0eb8c2c1) Thanks [@rpvilo](https://github.com/rpvilo)! - Fix `Composer.Textarea` accumulating phantom newlines during rapid editing. The editor's padding `<br>` is now marked with `data-padding-break` and recognized structurally instead of being inferred from position, so a native edit that strands it mid-document no longer reads it back as real content. The padding also stops consuming a caret position, keeping the DOM's position space aligned with the model's length.
+
 ## 0.1.2
 
 ### Patch Changes

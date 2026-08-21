@@ -1,6 +1,6 @@
 {
   "name": "@intentface/chat",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Headless chat UI primitives — unstyled compound components, hooks, and wire formats for building AI chat interfaces.",
   "license": "MIT",
   "type": "module",

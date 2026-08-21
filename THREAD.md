@@ -96,7 +96,7 @@ The layout container and scroll-state provider. Standard `div` props; renders wi
 The scroll area — holds the content column (your turns) and the bottom sentinel. Standard `div` props + `children`. The newest-turn reserve is applied here, so the last child can be lifted to the top.
 
 ### `Thread.Composer`
-Bottom-anchored dock for your composer + the scroll button. Standard `div` props + `children`. Thread measures this dock to reserve bottom space, so content never hides behind it.
+Bottom-anchored dock for your composer + the scroll button. Standard `div` props + `children`. Thread measures this dock to reserve bottom space, so content never hides behind it. Parts that shouldn't push content up — the scroll button, an overlay panel — must sit out of the slot's flow (absolute or portaled).
 
 ### `Thread.Overlay`
 A progressive-blur band fading content into the top or bottom edge. `pointer-events-none`, so clicks pass through to the content.
@@ -119,7 +119,7 @@ Thread writes a few CSS variables via a `ResizeObserver` (not React state — co
 | Variable | Meaning |
 |---|---|
 | `--thread-overlay-top-height` | Top overlay height + viewport top padding. Default `4rem`. |
-| `--thread-overlay-bottom-height` | Bottom overlay height + viewport bottom padding. Measured from the composer dock (`[data-composer-context-window]` / `composer-container`); default `8rem`. |
+| `--thread-overlay-bottom-height` | Bottom overlay height + viewport bottom padding. Measured from the `Thread.Composer` slot (`[data-thread-composer]`); default `8rem`. |
 | `--thread-turn-area` | The visible thread area (root − top − bottom). The top-landing `autoScroll` modes map the last turn's reserve to this. |
 
 You normally don't touch these — they keep the composer-dock spacing and the top-landing reserve self-adjusting.

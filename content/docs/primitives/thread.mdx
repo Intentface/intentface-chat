@@ -176,7 +176,6 @@ subsystem and measures the composer dock. Renders `data-thread-root`.
 export const rootProps = [
   { name: "autoScroll", type: '"off" | "bottom" | "jump" | "follow"', default: '"follow"', description: "Landing + follow behavior (see Auto-scroll)." },
   { name: "preserveScrollOnPrepend", type: "boolean", default: "false", description: "Hold the reading position when older rows load in above (history pagination). Opt-in — it attaches a passive scroll listener." },
-  { name: "dockSelector", type: "string", default: 'composer dock slots', description: "CSS selector for the bottom-docked parts the thread reserves space for. Every match is observed for resize; the inset is measured from the bottom-most match." },
 ];
 
 <PropsTable rows={rootProps} />
@@ -225,6 +224,11 @@ export const viewportAttrs = [
 Bottom-docked slot; its height is measured to inset the viewport. Renders
 `data-thread-composer`.
 
+Anything inside it that should _not_ push content up — a floating scroll
+button, an overlay panel — has to be out of the slot's flow (absolute, or
+portaled like `Composer.Panel`'s default). An in-flow `Composer.Panel`
+(`anchor={false}`) is part of the dock, so the viewport insets around it.
+
 ### Thread.Placeholder
 
 Empty-state slot, shown when there are no messages. Renders
@@ -256,7 +260,7 @@ The thread reads these, so you can override them from your own CSS:
 export const cssVars = [
   { attribute: "--thread-width", values: "672px", description: "Max width of the content column and overlays." },
   { attribute: "--thread-overlay-top-height", values: "4rem", description: "Top overlay height and top inset." },
-  { attribute: "--thread-overlay-bottom-height", values: "8rem", description: "Bottom overlay height and bottom inset (also measured from the composer dock at runtime)." },
+  { attribute: "--thread-overlay-bottom-height", values: "8rem", description: "Bottom overlay height and bottom inset (measured from the Thread.Composer slot at runtime)." },
 ];
 
 <AttributesTable rows={cssVars} />

@@ -12,21 +12,11 @@ import { z } from "zod";
 import type { AppUIMessage } from "@/lib/ai/types";
 import { readApiKey } from "@/lib/api-key";
 import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
-import { aggregateData } from "@/tools/aggregate-data";
 import { askUser } from "@/tools/ask-user";
-import { computeStats } from "@/tools/compute-stats";
-import { connectDataSource } from "@/tools/connect-data-source";
-import { createVisualization } from "@/tools/create-visualization";
-import { detectAnomalies } from "@/tools/detect-anomalies";
-import { exportReport } from "@/tools/export-report";
-import { filterData } from "@/tools/filter-data";
-import { listDataSources } from "@/tools/list-data-sources";
 import { listDocsPages } from "@/tools/list-docs-pages";
-import { queryData } from "@/tools/query-data";
 import { readDocsPage } from "@/tools/read-docs-page";
 import { readSourceFile } from "@/tools/read-source-file";
-import { sortData } from "@/tools/sort-data";
-import { webSearch } from "@/tools/web-search";
+import { createWebSearch } from "@/tools/web-search";
 
 const SYSTEM_PROMPT = `You are the assistant in the Intentface Chat playground — a demo built with @intentface/chat, headless React chat primitives. You are knowledgeable, concise, and friendly.
 
@@ -46,15 +36,6 @@ When the user asks about @intentface/chat — its primitives (composer, thread, 
 - Answer strictly from the documentation and source — never invent props, exports, or APIs
 - Link to pages inline using their url from the tool output, e.g. [Composer](/docs/primitives/composer)
 - If the documentation doesn't cover something, say so instead of guessing
-
-## Analytics Tools
-You have access to analytics tools for exploring data sources. When asked to analyze data:
-1. Start by calling listDataSources to discover what's available
-2. Connect to a relevant source with connectDataSource
-3. Query the data with queryData
-4. Chain subsequent tools using IDs from previous outputs (e.g. queryId, aggregationId)
-5. Think through each step — explain what you found and what to do next before calling the next tool
-6. Build toward a visualization or report as the final deliverable
 
 ## Web Search & Citations
 The webSearch tool returns structured "findings" — each finding has a "claim" and "sources" (with url and title).
@@ -167,17 +148,7 @@ export async function POST(req: Request) {
           listDocsPages,
           readDocsPage,
           readSourceFile,
-          listDataSources,
-          connectDataSource,
-          queryData,
-          filterData,
-          aggregateData,
-          sortData,
-          computeStats,
-          detectAnomalies,
-          createVisualization,
-          exportReport,
-          ...(webSearchEnabled && { webSearch }),
+          ...(webSearchEnabled && { webSearch: createWebSearch(openai) }),
         },
         stopWhen: stepCountIs(15),
         ...(thinkingEnabled && {

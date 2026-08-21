@@ -29,6 +29,8 @@ jobs:
     environment: npm-publish
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Pinned to the packageManager version — see the note in ci.yml.
       - uses: oven-sh/setup-bun@v2

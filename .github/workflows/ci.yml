@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Pinned to the packageManager version, not "latest". bun.lock was
       # resolved by this version, and a newer bun can dedupe transitive

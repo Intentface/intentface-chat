@@ -25,7 +25,7 @@ export const AppSidebar = () => {
     deleteChat(chatId);
     deleteChatInstance(chatId);
     if (isActive) {
-      router.push("/");
+      router.push("/playground");
     }
   };
 
@@ -40,9 +40,9 @@ export const AppSidebar = () => {
           <Sidebar.Menu>
             <Sidebar.MenuItem>
               <Sidebar.MenuButton
-                isActive={pathname === "/"}
+                isActive={pathname === "/playground"}
                 render={
-                  <Link href="/">
+                  <Link href="/playground">
                     <PlusMediumIcon />
                     <span>New Chat</span>
                   </Link>
@@ -96,7 +96,7 @@ export const AppSidebar = () => {
           <Sidebar.MenuItem>
             <Sidebar.MenuButton
               render={
-                <Link href="/docs">
+                <Link href="/">
                   <BookIcon />
                   <span>Docs</span>
                 </Link>

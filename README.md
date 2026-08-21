@@ -2,7 +2,7 @@
 
 Monorepo for **[@intentface/chat](https://www.npmjs.com/package/@intentface/chat)** — headless chat UI
 primitives for React — and the documentation site and playground at
-[intentface.dev](https://intentface.dev).
+[ui.intentface.com](https://ui.intentface.com).
 
 The package ships behavior, state, and wire formats with no styling of its own: a contenteditable
 composer with commands and chips, a thread with scroll auto-follow, message part segmentation, tool-call
@@ -17,7 +17,7 @@ timelines. This is the Base UI model applied to chat — the package owns behavi
 | `components/docs` | Docs-site chrome: previews, code blocks, tables. |
 | `components/ai`, `components/ui` | The playground's own styled layer. **App-private** — it uses design tokens, Motion, and local icons, and is not published or supported for copying. |
 | `app/(chat)` | The playground chat. |
-| `app/docs` | The documentation site. |
+| `app/(docs)` | The documentation site, served at the root. |
 
 ## Development
 

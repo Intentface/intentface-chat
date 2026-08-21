@@ -128,7 +128,7 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
 export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
   <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-3 md:flex">
     <Link
-      href="/docs"
+      href="/"
       className="flex h-8 items-center px-3 text-ink-primary"
       aria-label="@intentface/chat"
     >
@@ -144,7 +144,7 @@ export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
       {/* Internal route — next/link, not the external-anchor ExternalLink.
           The chat root IS the playground (corner config cards). */}
       <Link
-        href="/"
+        href="/playground"
         className="flex h-8 items-center gap-2 rounded-md px-3 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-primary"
       >
         <span className="[&>svg]:size-4">

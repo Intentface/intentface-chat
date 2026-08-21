@@ -17,6 +17,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
         with:
@@ -31,6 +32,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.8
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
 
       # Generates .source (postinstall: fumadocs-mdx) so the docs build compiles.
       - run: bun install --frozen-lockfile
@@ -57,7 +63,7 @@ jobs:
         working-directory: packages/chat
         run: |
           bun run build
-          bunx publint
+          bunx --no-install publint
 
       # The docs demos are the styled reference people copy, so they must
       # compile against the built package with no app aliases in scope. Runs

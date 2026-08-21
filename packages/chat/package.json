@@ -80,6 +80,7 @@
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/add-dist-extensions.mjs && node scripts/smoke-dist.mjs",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
+    "verify:release": "bun run typecheck && bun test && bun run build && publint",
     "prepack": "bun run build"
   },
   "dependencies": {
@@ -97,6 +98,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "axe-core": "^4.12.1",
+    "publint": "0.3.23",
     "typescript": "^5"
   },
   "publishConfig": {

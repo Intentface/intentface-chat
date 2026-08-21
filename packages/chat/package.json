@@ -6,7 +6,7 @@
   "type": "module",
   "sideEffects": false,
   "author": "Intentface",
-  "homepage": "https://intentface.dev",
+  "homepage": "https://ui.intentface.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Intentface/intentface-chat.git",

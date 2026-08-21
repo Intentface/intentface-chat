@@ -20,8 +20,12 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Intentface",
-  description: "Intentface is a platform for creating and sharing AI prompts",
+  // Absolute base for Open Graph and canonical URLs. Without it Next cannot
+  // resolve them, so link previews fall back to relative paths.
+  metadataBase: new URL("https://ui.intentface.com"),
+  title: "@intentface/chat",
+  description:
+    "Headless chat UI primitives for React — unstyled compound components, hooks, and wire formats for building AI chat interfaces.",
 };
 
 export default function RootLayout({

@@ -14,7 +14,7 @@ import { Basic } from './thread/demos/basic';
 - **Auto-scroll modes** — `off` / `bottom` / `jump` / `follow` via the `autoScroll` prop (see below).
 - **Composer inset** — measures the docked composer to reserve space; the overlays fade the top and bottom edges.
 - **Owns no data** — you map your messages in; rows are addressable by a `data-message-id` attribute.
-- **Get started** — see [Quick start](/docs/quick-start) to add the package.
+- **Get started** — see [Quick start](/quick-start) to add the package.
 
 ## Anatomy
 
@@ -134,7 +134,7 @@ don't need to optimize around it:
 The boundary: Thread does not virtualize. Cost is O(rendered rows) of DOM, which
 holds comfortably for realistic transcripts (hundreds to low thousands of
 turns). What re-renders during a stream is decided by your message components —
-see [Composer performance](/docs/primitives/composer#performance).
+see [Composer performance](/primitives/composer#performance).
 
 ## Keyboard
 
@@ -165,7 +165,7 @@ scrollbar drag away from the bottom releases it via the sentinel.
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
-[Styling](/docs/handbook/styling)) and emits a bespoke part attribute (`data-<part>`) unless noted.
+[Styling](/handbook/styling)) and emits a bespoke part attribute (`data-<part>`) unless noted.
 Only part-specific props and state-driven attributes are listed below.
 
 ### Thread

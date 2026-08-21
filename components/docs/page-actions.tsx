@@ -22,7 +22,7 @@ export const PageActions = ({ slug, source }: PageActionsProps) => (
       variant="ghost"
       className={actionButtonClass}
       render={
-        <a href={`/docs/${slug.join("/")}.md`} target="_blank" rel="noreferrer">
+        <a href={`/${slug.join("/")}.md`} target="_blank" rel="noreferrer">
           <MarkdownIcon />
           View as Markdown
         </a>

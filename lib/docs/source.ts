@@ -5,7 +5,7 @@ import type { MDXContent } from "mdx/types";
 import { docs } from "@/.source/server";
 
 export const source = loader(docs.toFumadocsSource(), {
-  baseUrl: "/docs",
+  baseUrl: "/",
 });
 
 // The runtime doc-data shape: frontmatter + the compiled MDX outputs. We retype

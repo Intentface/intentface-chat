@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   // Any docs page is readable as markdown by appending `.md` — the convention
   // agents expect, and guessable from a page URL. It maps onto the same handler
   // that "View as Markdown" uses.
-  rewrites: async () => [{ source: "/docs/:slug*.md", destination: "/docs-markdown/:slug*" }],
+  rewrites: async () => [{ source: "/:slug*.md", destination: "/docs-markdown/:slug*" }],
   // These routes readFile at request time; the bundler can't trace runtime
   // paths, so the files must be included in the serverless output explicitly.
   outputFileTracingIncludes: {

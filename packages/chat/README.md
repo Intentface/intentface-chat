@@ -5,7 +5,7 @@ for building AI chat interfaces, with no styling of their own.
 
 This is the Base UI model applied to chat: **the package owns behavior, you own
 every class.** There is no pre-styled `@intentface/chat` package. The demos on
-each [docs](https://intentface.dev/docs) page show how the parts fit together
+each [docs](https://ui.intentface.com) page show how the parts fit together
 and are meant to be copied and restyled.
 
 ## Status
@@ -101,7 +101,7 @@ directive and import fine anywhere.
 ## Docs
 
 Full guides, live demos, and the API reference at
-[intentface.dev/docs](https://intentface.dev/docs).
+[ui.intentface.com](https://ui.intentface.com).
 
 ## License
 

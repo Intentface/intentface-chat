@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { getPage, source } from "@/lib/docs/source";
 
-const SITE = "https://intentface.dev";
+const SITE = "https://ui.intentface.com";
 
 // The intro is read by agents, so it carries the two operating instructions
 // that save a round trip: how to fetch a page, and which Tailwind version the
@@ -23,15 +23,15 @@ type TreeNode = {
 // Page tree names are ReactNode; ours come from frontmatter, so they're strings.
 const asText = (value: ReactNode): string => (typeof value === "string" ? value : "");
 
-// "/docs/primitives/composer" -> "primitives/composer"; "/docs" -> "index"
-const slugOf = (url: string) => url.replace(/^\/docs\/?/, "") || "index";
+// "/primitives/composer" -> "primitives/composer"; "/" -> "index"
+const slugOf = (url: string) => url.replace(/^\//, "") || "index";
 
 const lineFor = (url: string) => {
   const slug = slugOf(url);
   const page = getPage(slug === "index" ? [] : slug.split("/"));
   if (!page) return null;
   const description = page.data.description ? `: ${page.data.description}` : "";
-  return `- [${page.data.title}](${SITE}/docs/${slug}.md)${description}`;
+  return `- [${page.data.title}](${SITE}/${slug}.md)${description}`;
 };
 
 // Groups follow the page tree, so the order matches the sidebar.

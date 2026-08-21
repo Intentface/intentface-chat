@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -8,23 +8,15 @@ import {
   stepCountIs,
   streamText,
 } from "ai";
+import { z } from "zod";
 import type { AppUIMessage } from "@/lib/ai/types";
+import { readApiKey } from "@/lib/api-key";
 import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
-import { aggregateData } from "@/tools/aggregate-data";
 import { askUser } from "@/tools/ask-user";
-import { computeStats } from "@/tools/compute-stats";
-import { connectDataSource } from "@/tools/connect-data-source";
-import { createVisualization } from "@/tools/create-visualization";
-import { detectAnomalies } from "@/tools/detect-anomalies";
-import { exportReport } from "@/tools/export-report";
-import { filterData } from "@/tools/filter-data";
-import { listDataSources } from "@/tools/list-data-sources";
 import { listDocsPages } from "@/tools/list-docs-pages";
-import { queryData } from "@/tools/query-data";
 import { readDocsPage } from "@/tools/read-docs-page";
 import { readSourceFile } from "@/tools/read-source-file";
-import { sortData } from "@/tools/sort-data";
-import { webSearch } from "@/tools/web-search";
+import { createWebSearch } from "@/tools/web-search";
 
 const SYSTEM_PROMPT = `You are the assistant in the Intentface Chat playground — a demo built with @intentface/chat, headless React chat primitives. You are knowledgeable, concise, and friendly.
 
@@ -44,15 +36,6 @@ When the user asks about @intentface/chat — its primitives (composer, thread, 
 - Answer strictly from the documentation and source — never invent props, exports, or APIs
 - Link to pages inline using their url from the tool output, e.g. [Composer](/docs/primitives/composer)
 - If the documentation doesn't cover something, say so instead of guessing
-
-## Analytics Tools
-You have access to analytics tools for exploring data sources. When asked to analyze data:
-1. Start by calling listDataSources to discover what's available
-2. Connect to a relevant source with connectDataSource
-3. Query the data with queryData
-4. Chain subsequent tools using IDs from previous outputs (e.g. queryId, aggregationId)
-5. Think through each step — explain what you found and what to do next before calling the next tool
-6. Build toward a visualization or report as the final deliverable
 
 ## Web Search & Citations
 The webSearch tool returns structured "findings" — each finding has a "claim" and "sources" (with url and title).
@@ -77,8 +60,15 @@ DO NOT write questions, options, or bullet-listed choices as plain text. The use
 // Generate a sidebar title from the first user message with a small model.
 // Runs concurrently with the main response; failures degrade to the client's
 // truncated-text placeholder, never the stream.
-const generateThreadTitle = async (message: AppUIMessage): Promise<string | null> => {
-  const text = message.parts
+type OpenAIProvider = ReturnType<typeof createOpenAI>;
+
+const generateThreadTitle = async (
+  message: AppUIMessage | undefined,
+  openai: OpenAIProvider,
+): Promise<string | null> => {
+  // The schema guarantees a non-empty array but not the shape of its items, so
+  // `parts` can still be missing — reading it unguarded throws inside the stream.
+  const text = (message?.parts ?? [])
     .filter((part) => part.type === "text")
     .map((part) => part.text)
     .join("\n")
@@ -99,23 +89,55 @@ const generateThreadTitle = async (message: AppUIMessage): Promise<string | null
   }
 };
 
+// Untyped body: a bad shape should fail here as a 400, not inside the stream as a 500.
+const chatRequestSchema = z.object({
+  messages: z.array(z.any()).min(1),
+  model: z.string().optional(),
+  webSearch: z.boolean().optional(),
+  thinking: z.boolean().optional(),
+});
+
 export async function POST(req: Request) {
-  const {
-    messages,
-    model,
-    webSearch: webSearchEnabled,
-    thinking: thinkingEnabled,
-  } = await req.json();
+  // The playground runs on the visitor's own key — there is no server key to
+  // fall back to. The client branches on this status to open the key form.
+  const apiKey = await readApiKey();
+  if (!apiKey) {
+    return Response.json(
+      {
+        error: "missing-api-key",
+        message: "Add your own OpenAI API key in playground settings to start chatting.",
+      },
+      { status: 401 },
+    );
+  }
+  const openai = createOpenAI({ apiKey });
+
+  const parsed = chatRequestSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return Response.json({ error: "invalid-request" }, { status: 400 });
+  }
+
+  const { messages, model, webSearch: webSearchEnabled, thinking: thinkingEnabled } = parsed.data;
 
   const modelId = isValidModelId(model) ? model : DEFAULT_MODEL;
 
   const stream = createUIMessageStream<AppUIMessage>({
+    // Without this the SDK replaces every failure with a generic string, which
+    // makes a bad key, a rate limit and a model the key can't reach all look
+    // identical. Log the reason server-side and hand the client something it can
+    // act on. Only the message is logged — never the error object, which can
+    // carry request headers, and therefore the key.
+    onError: (error) => {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error("[api/chat]", reason);
+      return reason;
+    },
     execute: async ({ writer }) => {
       // First turn = no assistant message yet (tool-continuation rounds and
       // later turns always carry one). Kick the title off before the main
       // stream so it generates in parallel and lands mid-stream.
       const isFirstTurn = !messages.some((message: AppUIMessage) => message.role === "assistant");
-      const titlePromise = isFirstTurn ? generateThreadTitle(messages.at(-1)) : null;
+      const titlePromise = isFirstTurn ? generateThreadTitle(messages.at(-1), openai) : null;
 
       const result = streamText({
         model: openai(modelId),
@@ -126,17 +148,7 @@ export async function POST(req: Request) {
           listDocsPages,
           readDocsPage,
           readSourceFile,
-          listDataSources,
-          connectDataSource,
-          queryData,
-          filterData,
-          aggregateData,
-          sortData,
-          computeStats,
-          detectAnomalies,
-          createVisualization,
-          exportReport,
-          ...(webSearchEnabled && { webSearch }),
+          ...(webSearchEnabled && { webSearch: createWebSearch(openai) }),
         },
         stopWhen: stepCountIs(15),
         ...(thinkingEnabled && {

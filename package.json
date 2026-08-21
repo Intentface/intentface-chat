@@ -33,7 +33,9 @@
     "react": "19.2.3",
     "react-colorful": "^5.7.0",
     "react-dom": "19.2.3",
+    "shadow-plugin": "^2.1.0",
     "streamdown": "^2.5.0",
+    "swr": "^2.5.1",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"

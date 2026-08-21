@@ -90,6 +90,8 @@ type ChatSessionValue = {
   stop: UseChatHelpers<AppUIMessage>["stop"];
   setMessages: UseChatHelpers<AppUIMessage>["setMessages"];
   addToolOutput: UseChatHelpers<AppUIMessage>["addToolOutput"];
+  /** Last request failure, if any — the composer surfaces the missing-key case. */
+  error: UseChatHelpers<AppUIMessage>["error"];
   selections: ChatSelection[];
   addSelection: (text: string) => void;
   clearSelections: () => void;
@@ -534,8 +536,28 @@ const ChatMessageItem = memo(
 
 ChatMessageItem.displayName = "ChatMessageItem";
 
+// The transport surfaces the failed response's body as the error message, so a
+// JSON error payload arrives here as a string. Prefer its `message` field so the
+// reader gets the sentence the route wrote, not the envelope around it.
+const readableError = (error: Error | undefined) => {
+  if (!error) return "Something went wrong.";
+  // The one failure with a known cause and a known fix, matched on the sentinel
+  // so the copy holds however the transport wraps the body.
+  if (error.message.includes("missing-api-key")) {
+    return "Add your OpenAI API key in playground settings, top right, to start chatting.";
+  }
+  try {
+    const parsed = JSON.parse(error.message);
+    if (typeof parsed?.message === "string") return parsed.message;
+  } catch {
+    // Not JSON — the raw message is the best we have.
+  }
+  return error.message || "Something went wrong.";
+};
+
 const ChatMessages = () => {
   const { messages, status } = useChatMessages();
+  const { error, regenerate } = useChatSession();
   const stickyMessages = useSettingsStore((s) => s.stickyMessages);
   const isError = status === "error";
   const isStreaming = status === "streaming";
@@ -560,7 +582,18 @@ const ChatMessages = () => {
               skipAnimation={initialMessageIds.current.has(message.id)}
             />
           ))}
-          {turnIndex === turns.length - 1 && isError && <Message.Error />}
+          {turnIndex === turns.length - 1 && isError && (
+            <Message.Error>
+              {readableError(error)}{" "}
+              <button
+                type="button"
+                onClick={() => regenerate()}
+                className="underline underline-offset-2 hover:no-underline"
+              >
+                Try again
+              </button>
+            </Message.Error>
+          )}
         </Message.Turn>
       ))}
       {/* Loading indicator — suppress when panel handles it */}
@@ -1087,7 +1120,7 @@ type ChatProps = {
 };
 
 const ChatRoot = ({ chatId, children }: ChatProps) => {
-  const { messages, status, sendMessage, regenerate, stop, setMessages, addToolOutput } =
+  const { messages, status, sendMessage, regenerate, stop, setMessages, addToolOutput, error } =
     useChatInstance(chatId);
 
   // Thread selections (Message.Selection) — chat-level state: written
@@ -1113,6 +1146,7 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
       stop,
       setMessages,
       addToolOutput,
+      error,
       selections,
       addSelection,
       clearSelections,
@@ -1125,6 +1159,7 @@ const ChatRoot = ({ chatId, children }: ChatProps) => {
       stop,
       setMessages,
       addToolOutput,
+      error,
       selections,
       addSelection,
       clearSelections,

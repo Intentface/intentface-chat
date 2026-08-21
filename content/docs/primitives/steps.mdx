@@ -62,6 +62,26 @@ takes a `status` and publishes it through context; `Steps.Icon` and
 *own prop → inherited → `"complete"`*. Every status-aware part reflects it as
 `data-status` for styling.
 
+## Height transitions
+
+The panel publishes its measured height as `--panel-height` while an open or
+close transition runs, and **releases it once the panel settles open**. So
+`height: var(--panel-height)` animates from a real number, and then — with the
+variable no longer written — becomes invalid at computed-value time and falls
+back to `auto`. That is what lets an open panel track content appearing inside
+it, rather than staying pinned to the height it had when it opened.
+
+The demo at the top of this page uses it. Collapse and expand the timeline to
+see the transition, then expand **Searched the web** while the timeline is
+already open — the outer panel grows to fit the detail instead of clipping it.
+
+Two details in that demo are load-bearing. `data-starting-style` and
+`data-ending-style` clamp the height to `0` on the transitional frames, and they
+outrank the base `height` because a data-attribute variant is more specific.
+And `[&>*]:shrink-0` guards the measurement: a flex column clamped to `height: 0`
+puts every child under shrink pressure, and a child that collapses to nothing
+makes the panel measure itself as `0px`.
+
 ## Keyboard
 
 Each item is a standard disclosure: `Steps.Trigger` is a real button, so

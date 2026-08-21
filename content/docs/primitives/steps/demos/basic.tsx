@@ -5,6 +5,10 @@ import type { ComponentProps } from "react";
 
 // Steps is recursive: an item's panel can hold rows and further items. A nested
 // panel picks up data-nested, which is how the rail indent is drawn.
+//
+// The panels animate their height from --panel-height (see PANEL_CLASS). Collapse
+// and expand the timeline to see it; expand "Searched the web" while the timeline
+// is already open to see the outer panel grow to fit, rather than clipping.
 export const Basic = () => (
   <div className="w-full max-w-xl">
     <Steps.Root className="w-full">
@@ -13,7 +17,7 @@ export const Basic = () => (
           <span>Worked for 3 seconds</span>
           <ChevronIcon className="size-4 shrink-0 -rotate-90 transition-transform group-data-open/trigger:rotate-0" />
         </Steps.Trigger>
-        <Steps.Panel className="mt-2 flex flex-col in-data-nested:ml-2 in-data-nested:border-l in-data-nested:border-[#f0f0f0] in-data-nested:pl-4 dark:in-data-nested:border-[#262626]">
+        <Steps.Panel className={`mt-2 ${PANEL_CLASS}`}>
           <div className="flex items-center gap-2 py-0.5">
             <Steps.Icon className={ICON_CLASS}>
               <CheckIcon />
@@ -21,14 +25,16 @@ export const Basic = () => (
             <Steps.Label className={LABEL_CLASS}>Read the request</Steps.Label>
           </div>
 
-          <Steps.Item defaultOpen>
+          {/* Closed by default, so opening it grows the settled outer panel. */}
+          <Steps.Item>
             <Steps.Trigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-0.5">
               <Steps.Icon className={ICON_CLASS}>
                 <CheckIcon />
               </Steps.Icon>
               <Steps.Label className={LABEL_CLASS}>Searched the web</Steps.Label>
+              <ChevronIcon className="size-3.5 shrink-0 -rotate-90 text-[#949494] transition-transform group-data-open/trigger:rotate-0" />
             </Steps.Trigger>
-            <Steps.Panel className="flex flex-col in-data-nested:ml-2 in-data-nested:border-l in-data-nested:border-[#f0f0f0] in-data-nested:pl-4 dark:in-data-nested:border-[#262626]">
+            <Steps.Panel className={PANEL_CLASS}>
               <span className="py-0.5 text-sm text-[#686868] dark:text-[#9b9b9b]">
                 Found three relevant sources and skimmed each.
               </span>
@@ -48,6 +54,18 @@ export const Basic = () => (
     </Steps.Root>
   </div>
 );
+
+// Height animates from --panel-height, which the panel publishes while a
+// transition runs and releases once open — so this both animates the open/close
+// and lets an open panel grow with its content. The data-starting/ending-style
+// variants clamp it to 0 on the transitional frames and outrank the base height,
+// since a data-attribute variant is more specific.
+//
+// [&>*]:shrink-0 guards the measurement: a flex column clamped to height 0 puts
+// every child under shrink pressure, and a child collapsing to nothing would make
+// the panel measure itself as 0px.
+const PANEL_CLASS =
+  "flex flex-col overflow-hidden h-(--panel-height) transition-[height] duration-200 ease-out data-starting-style:h-0 data-ending-style:h-0 [&>*]:shrink-0 in-data-nested:ml-2 in-data-nested:border-l in-data-nested:border-[#f0f0f0] in-data-nested:pl-4 dark:in-data-nested:border-[#262626]";
 
 // Status is inherited from the enclosing item and surfaced as data-status, so
 // one class string covers every state.

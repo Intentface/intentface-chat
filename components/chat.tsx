@@ -29,6 +29,7 @@ import {
   type CommandItemData,
   Composer,
   type ComposerCommandsMap,
+  type ComposerRequest,
   type ComposerSubmitData,
 } from "@/components/ai/composer";
 import { Message } from "@/components/ai/message";
@@ -827,27 +828,43 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
   const isAskUser = panelState.type === "ask-user" || demoQuestions != null;
   const askUserQuestions = panelState.type === "ask-user" ? panelState.questions : null;
 
+  // Boundary map: tool questions carry no identity, so positional ids are
+  // minted here. Memoized on the merged feed — setRequests resets the machine
+  // on any array identity change, so a fresh .map() per render would wipe
+  // in-progress drafts.
+  const activeQuestions = demoQuestions ?? askUserQuestions;
+  const composerRequests = useMemo(
+    () =>
+      activeQuestions?.map(
+        (question, index): ComposerRequest => ({
+          id: `q-${index}`,
+          label: question.question,
+          options: question.options,
+          multiSelect: question.multiSelect,
+        }),
+      ),
+    [activeQuestions],
+  );
+
   const handleSubmit = useCallback(
     async (data: ComposerSubmitData) => {
-      if (data.kind === "answers") {
+      if (data.kind === "requests") {
         // Demo questions from the playground card: the flow completing IS the
-        // demo — discard the answers and clear the injection.
+        // demo — discard the entries and clear the injection.
         if (demoQuestions) {
           setDemoQuestions(null);
           return;
         }
         if (panelState.type !== "ask-user") return;
-        // Project the composer's per-question entries into a question→answer map — the
-        // shape the tool output is read back as (getAskUserInfo / getAskUserStepInfo).
+        // Project the flat entries back into the question→answer map the tool
+        // output is read as (getAskUserInfo / getAskUserStepInfo). Ids resolve
+        // through the minted requests; skipped entries stay absent.
         const answers: Record<string, string> = {};
-        for (const entry of data.answers) {
-          if ("options" in entry) {
-            answers[entry.question] = [...entry.options, entry.text].filter(Boolean).join(", ");
-          } else if ("option" in entry) {
-            answers[entry.question] = entry.option;
-          } else if ("text" in entry) {
-            answers[entry.question] = entry.text;
-          }
+        for (const entry of data.requests) {
+          if (entry.selected.length === 0 && entry.text === undefined) continue;
+          const label = composerRequests?.find((request) => request.id === entry.id)?.label;
+          if (!label) continue;
+          answers[label] = [...entry.selected, entry.text].filter(Boolean).join(", ");
         }
         addToolOutput({
           tool: "askUser",
@@ -908,6 +925,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
       sendMessage,
       addToolOutput,
       panelState,
+      composerRequests,
       toolValues,
       selections,
       clearSelections,
@@ -921,12 +939,12 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
       onSubmit={handleSubmit}
       isSubmitting={isSending}
       commands={composerCommands}
-      questions={demoQuestions ?? askUserQuestions ?? undefined}
+      requests={composerRequests}
     >
       <Composer.Panel>
         {(composer) => {
           // One at a time, by priority: an active command list wins, else the
-          // composer's own ask-user flow. (Tool/step status now lives in the
+          // composer's own request flow. (Tool/step status now lives in the
           // assistant message, not the composer.) With the popover surface
           // selected, the command list lifts out of the panel — ask-user
           // always stays in-flow.
@@ -939,7 +957,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
               </>
             );
           }
-          if (composer.askUser.active) return <Composer.AskUser />;
+          if (composer.requests.active) return <Composer.Ask />;
           return null;
         }}
       </Composer.Panel>
@@ -1017,8 +1035,8 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
         </Composer.Textarea>
         {isAskUser ? (
           <Composer.Actions className="flex items-center justify-end gap-2">
-            <Composer.AskUserDismiss />
-            <Composer.AskUserContinue />
+            <Composer.AskDismiss />
+            <Composer.AskContinue />
           </Composer.Actions>
         ) : (
           <Composer.Actions className="flex items-center justify-between">

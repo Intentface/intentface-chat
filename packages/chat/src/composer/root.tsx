@@ -19,8 +19,8 @@ import {
 } from "./internals";
 import { type ComposerStore, ComposerStoreContext, createComposerStore } from "./store";
 import type {
-  AskUserQuestion,
   ComposerCommandsMap,
+  ComposerRequest,
   ComposerSnapshot,
   ComposerSubmitData,
 } from "./types";
@@ -38,7 +38,7 @@ export type ComposerRootProps = Omit<PrimitiveProps<"form", ComposerRootState>, 
   onSubmit?: (data: ComposerSubmitData) => void | Promise<void>;
   isSubmitting?: boolean;
   commands?: ComposerCommandsMap;
-  questions?: AskUserQuestion[];
+  requests?: ComposerRequest[];
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
@@ -50,7 +50,7 @@ export const ComposerRoot = ({
   onSubmit,
   isSubmitting = false,
   commands = EMPTY_COMMANDS,
-  questions,
+  requests,
   defaultValue,
   value,
   onValueChange,
@@ -78,14 +78,14 @@ export const ComposerRoot = ({
 
   const onSubmitRef = useAsRef(onSubmit);
 
-  // Register this mount on the store: answers submit through this mount's
+  // Register this mount on the store: request entries submit through this mount's
   // onSubmit. Only a store this mount created gets reset on unmount — an
   // explicit handle's state belongs to its owner and survives remounts.
   useEffect(() => {
-    store.submitAnswersRef.current = (answers) =>
-      onSubmitRef.current?.({ kind: "answers", answers });
+    store.submitRequestsRef.current = (requests) =>
+      onSubmitRef.current?.({ kind: "requests", requests });
     return () => {
-      store.submitAnswersRef.current = null;
+      store.submitRequestsRef.current = null;
       if (ownsStore) store.reset();
     };
   }, [store, ownsStore]);
@@ -103,13 +103,13 @@ export const ComposerRoot = ({
     store.setIsSubmitting(isSubmitting);
   }, [store, isSubmitting]);
 
-  // Sync the questions prop into the store and arm ask-user mode (editor blur
-  // + document-level keyboard handling) while questions are active.
+  // Sync the requests prop into the store and arm request mode (editor blur
+  // + document-level keyboard handling) while requests are active.
   useEffect(() => {
-    store.setQuestions(questions ?? null);
-    if (!questions?.length) return;
-    return store.activateAskUser();
-  }, [store, questions]);
+    store.setRequests(requests ?? null);
+    if (!requests?.length) return;
+    return store.activateRequests();
+  }, [store, requests]);
 
   const { getRegisteredPrefixes } = useCommandRegistry(commands);
 
@@ -129,10 +129,10 @@ export const ComposerRoot = ({
 
   const handleFormSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const { askUser, attachments } = store.getSnapshot();
+    const { requests, attachments } = store.getSnapshot();
 
-    if (askUser.questions?.length) {
-      askUser.continueStep(store.controller.getText());
+    if (requests.items?.length) {
+      requests.continueStep(store.controller.getText());
       return;
     }
 

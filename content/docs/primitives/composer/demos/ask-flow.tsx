@@ -1,62 +1,66 @@
 "use client";
 
-import { AskUser } from "@intentface/chat/ask-user";
+import { Ask } from "@intentface/chat/ask";
 import {
-  type AskUserQuestion,
   Composer,
+  type ComposerRequest,
   type ComposerSubmitData,
   useComposer,
 } from "@intentface/chat/composer";
 import { type ComponentProps, useState } from "react";
 
-// Setting `questions` arms the flow and flips askUser.active. Answering or
-// skipping the last one fires onSubmit with { kind: "answers" }.
-const QUESTIONS: AskUserQuestion[] = [
+// Setting `requests` arms the flow and flips requests.active. Answering or
+// skipping the last one fires onSubmit with { kind: "requests" } — entries
+// keyed by the ids minted here, carrying option values (label fallback).
+const REQUESTS: ComposerRequest[] = [
   {
-    question: "Which framework are you deploying to?",
+    id: "framework",
+    label: "Which framework are you deploying to?",
     options: [
-      { label: "Next.js", description: "App Router on Vercel." },
-      { label: "Vite", description: "SPA on any static host." },
-      { label: "Remix", description: "Full-stack on a Node server." },
+      { value: "next", label: "Next.js", description: "App Router on Vercel." },
+      { value: "vite", label: "Vite", description: "SPA on any static host." },
+      { value: "remix", label: "Remix", description: "Full-stack on a Node server." },
     ],
   },
   {
-    question: "Which features do you need?",
+    id: "features",
+    label: "Which features do you need?",
     multiSelect: true,
     options: [
-      { label: "Auth", description: "Sessions and sign-in." },
-      { label: "Database", description: "Persistent storage." },
-      { label: "File uploads", description: "Attachments and media." },
+      { value: "auth", label: "Auth", description: "Sessions and sign-in." },
+      { value: "database", label: "Database", description: "Persistent storage." },
+      { value: "uploads", label: "File uploads", description: "Attachments and media." },
     ],
   },
   {
-    question: "What matters most for this project?",
+    id: "priority",
+    label: "What matters most for this project?",
     options: [
-      { label: "Speed", description: "Ship as fast as possible." },
-      { label: "Scale", description: "Handle heavy traffic." },
-      { label: "Cost", description: "Keep the bill low." },
+      { value: "speed", label: "Speed", description: "Ship as fast as possible." },
+      { value: "scale", label: "Scale", description: "Handle heavy traffic." },
+      { value: "cost", label: "Cost", description: "Keep the bill low." },
     ],
   },
 ];
 
-export const AskUserFlow = () => {
-  const [questions, setQuestions] = useState<AskUserQuestion[]>(QUESTIONS);
+export const AskFlow = () => {
+  const [requests, setRequests] = useState<ComposerRequest[]>(REQUESTS);
   const [done, setDone] = useState(false);
 
   const handleSubmit = (data: ComposerSubmitData) => {
-    if (data.kind === "answers") setDone(true);
+    if (data.kind === "requests") setDone(true);
   };
 
   const reset = () => {
     setDone(false);
-    setQuestions([...QUESTIONS]);
+    setRequests([...REQUESTS]);
   };
 
   return (
     // Reserve height and bottom-anchor so the panel opening never shifts the page.
     <div className="flex min-h-[440px] w-full max-w-xl flex-col items-center justify-end gap-3">
       <Composer.Root
-        questions={done ? undefined : questions}
+        requests={done ? undefined : requests}
         onSubmit={handleSubmit}
         className="flex w-full flex-col"
       >
@@ -99,60 +103,60 @@ export const AskUserFlow = () => {
   );
 };
 
-// The parts are structural; the current question and selections come from the
-// composer's askUser slice.
+// The parts are structural; the current request and selections come from the
+// composer's requests slice.
 const Prompt = () => {
-  const askUser = useComposer((composer) => composer.askUser);
-  const question = askUser.questions?.[askUser.step];
+  const requests = useComposer((composer) => composer.requests);
+  const request = requests.items?.[requests.step];
 
-  if (!question) return null;
+  if (!request) return null;
 
-  const entry = askUser.answers.get(askUser.step);
-  const total = askUser.questions?.length ?? 0;
+  const draft = requests.drafts.get(requests.step);
+  const total = requests.items?.length ?? 0;
 
   return (
-    <AskUser.Root className="flex flex-col gap-1 p-2">
-      <AskUser.Header className="flex h-7 items-center gap-2 px-2">
-        <AskUser.Label className="text-sm font-medium">{question.question}</AskUser.Label>
-        {!askUser.isSingle && total > 1 && (
-          <AskUser.Navigation className="ml-auto flex items-center gap-1 text-[#949494] dark:text-[#6f6f6f]">
-            <AskUser.Previous
-              onClick={askUser.goBack}
-              disabled={askUser.step === 0}
+    <Ask.Root className="flex flex-col gap-1 p-2">
+      <Ask.Header className="flex h-7 items-center gap-2 px-2">
+        <Ask.Label className="text-sm font-medium">{request.label}</Ask.Label>
+        {!requests.isSingle && total > 1 && (
+          <Ask.Navigation className="ml-auto flex items-center gap-1 text-[#949494] dark:text-[#6f6f6f]">
+            <Ask.Previous
+              onClick={requests.goBack}
+              disabled={requests.step === 0}
               aria-label="Previous question"
               className="cursor-pointer rounded-md px-1.5 disabled:opacity-30"
             >
               ‹
-            </AskUser.Previous>
-            <AskUser.StepLabel className="text-xs tabular-nums">
+            </Ask.Previous>
+            <Ask.StepLabel className="text-xs tabular-nums">
               {({ current, total: count }) => `${current} of ${count}`}
-            </AskUser.StepLabel>
-            <AskUser.Next
-              onClick={askUser.goNext}
-              disabled={askUser.step === total - 1}
+            </Ask.StepLabel>
+            <Ask.Next
+              onClick={requests.goNext}
+              disabled={requests.step === total - 1}
               aria-label="Next question"
               className="cursor-pointer rounded-md px-1.5 disabled:opacity-30"
             >
               ›
-            </AskUser.Next>
-          </AskUser.Navigation>
+            </Ask.Next>
+          </Ask.Navigation>
         )}
-      </AskUser.Header>
-      {question.options && (
-        <AskUser.Options
-          ref={askUser.optionsRef}
-          multiSelect={Boolean(question.multiSelect)}
-          groupName={`question-${askUser.step}`}
+      </Ask.Header>
+      {request.options && (
+        <Ask.Options
+          ref={requests.optionsRef}
+          multiSelect={Boolean(request.multiSelect)}
+          groupName={`request-${requests.step}`}
           className="flex flex-col"
         >
-          {question.options.map((option) => {
-            const selected = Boolean(entry?.selected.has(option.label));
+          {request.options.map((option) => {
+            const selected = Boolean(draft?.selected.has(option.label));
             return (
-              <AskUser.Option
+              <Ask.Option
                 key={option.label}
                 value={option.label}
                 selected={selected}
-                onSelect={() => askUser.toggleOption(option.label)}
+                onSelect={() => requests.toggleOption(option.label)}
                 className="flex cursor-pointer items-start gap-2 rounded-[10px] p-2 outline-none transition-colors data-highlighted:bg-[#f4f4f4] dark:data-highlighted:bg-[#232323]"
               >
                 {/* Decorative: the Option itself carries the radio/checkbox role. */}
@@ -166,41 +170,41 @@ const Prompt = () => {
                 >
                   {selected ? "✓" : ""}
                 </span>
-                <AskUser.OptionContent className="flex flex-col gap-0.5">
-                  <AskUser.OptionLabel className="text-sm leading-tight">
+                <Ask.OptionContent className="flex flex-col gap-0.5">
+                  <Ask.OptionLabel className="text-sm leading-tight">
                     {option.label}
-                  </AskUser.OptionLabel>
+                  </Ask.OptionLabel>
                   {option.description && (
-                    <AskUser.OptionDescription className="text-xs text-[#949494] dark:text-[#6f6f6f]">
+                    <Ask.OptionDescription className="text-xs text-[#949494] dark:text-[#6f6f6f]">
                       {option.description}
-                    </AskUser.OptionDescription>
+                    </Ask.OptionDescription>
                   )}
-                </AskUser.OptionContent>
-              </AskUser.Option>
+                </Ask.OptionContent>
+              </Ask.Option>
             );
           })}
-        </AskUser.Options>
+        </Ask.Options>
       )}
-    </AskUser.Root>
+    </Ask.Root>
   );
 };
 
 // Dismiss is a plain button you wire up; Continue is type=submit, so the
 // enclosing Composer.Root form drives it.
 const Controls = () => {
-  const askUser = useComposer((composer) => composer.askUser);
+  const requests = useComposer((composer) => composer.requests);
 
   return (
     <>
-      <AskUser.Dismiss
-        onClick={askUser.dismissStep}
+      <Ask.Dismiss
+        onClick={requests.dismissStep}
         className="cursor-pointer rounded-full px-3 py-1.5 text-sm text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
       >
         Skip
-      </AskUser.Dismiss>
-      <AskUser.Continue className="cursor-pointer rounded-full bg-[#1a1a1a] px-3.5 py-1.5 text-sm font-medium text-white dark:bg-[#fcfcfc] dark:text-[#111111]">
-        {askUser.isLastStep ? "Done" : "Continue"}
-      </AskUser.Continue>
+      </Ask.Dismiss>
+      <Ask.Continue className="cursor-pointer rounded-full bg-[#1a1a1a] px-3.5 py-1.5 text-sm font-medium text-white dark:bg-[#fcfcfc] dark:text-[#111111]">
+        {requests.isLastStep ? "Done" : "Continue"}
+      </Ask.Continue>
     </>
   );
 };

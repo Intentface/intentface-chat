@@ -10,7 +10,7 @@
 //    operations (chips, paste, setText, intercepted deletes) are the only
 //    imperative DOM writes, always a full render + caret restore.
 // 2. Engine state lives outside React — createEditorEngine below is a plain
-//    closure factory (the createAskUserKeydownHandler pattern). Renders are
+//    closure factory (the createRequestKeydownHandler pattern). Renders are
 //    driven by a version counter through useSyncExternalStore; chip visuals
 //    mount through portals into engine-owned spans, so React never
 //    reconciles the editable's children.
@@ -177,13 +177,13 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
 
     const plainText = getPlainText(nextDoc);
     refreshHasContent();
-    // Single-select questions clear their selection once the user starts
+    // Single-select requests clear their selection once the user starts
     // typing a free-text answer.
     if (docChanged && plainText.trim().length > 0) {
-      const { askUser } = store.getSnapshot();
-      const currentQuestion = askUser.questions?.[askUser.step];
-      if (askUser.questions && !currentQuestion?.multiSelect) askUser.clearSelections();
-      askUser.optionsRef.current?.clearHighlight();
+      const { requests } = store.getSnapshot();
+      const currentRequest = requests.items?.[requests.step];
+      if (requests.items && !currentRequest?.multiSelect) requests.clearSelections();
+      requests.optionsRef.current?.clearHighlight();
     }
     mirrorCommandState();
 
@@ -431,7 +431,7 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
       { key: event.key, shiftKey: event.shiftKey },
       {
         isCommandListOpen: commandState.isOpen,
-        hasActiveAskUser: (store.getSnapshot().askUser.questions?.length ?? 0) > 0,
+        hasActiveRequests: (store.getSnapshot().requests.items?.length ?? 0) > 0,
         isEditorEmpty: getPlainText(doc) === "",
         hasAttachments: store.getSnapshot().attachments.items.length > 0,
         submitOn: options.submitOn,
@@ -473,17 +473,17 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
         }
         return;
       }
-      case "ask-user-arrow": {
+      case "request-arrow": {
         // navigate() moves DOM focus onto the newly highlighted option
         // (roving tabindex) — never blur to <body>. At the list boundary
         // (null) focus stays in the editor.
         event.preventDefault();
-        store.getSnapshot().askUser.optionsRef.current?.navigate(action.direction);
+        store.getSnapshot().requests.optionsRef.current?.navigate(action.direction);
         return;
       }
-      case "ask-user-dismiss": {
+      case "request-dismiss": {
         event.preventDefault();
-        store.getSnapshot().askUser.dismissStep();
+        store.getSnapshot().requests.dismissStep();
         return;
       }
       case "remove-last-attachment": {
@@ -526,7 +526,7 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
   };
 
   const handleFocus = () => {
-    getDependencies().store.getSnapshot().askUser.optionsRef.current?.clearHighlight();
+    getDependencies().store.getSnapshot().requests.optionsRef.current?.clearHighlight();
     if (!root) return;
     const ownerDocument = root.ownerDocument;
     ownerDocument.addEventListener("selectionchange", handleSelectionChange);

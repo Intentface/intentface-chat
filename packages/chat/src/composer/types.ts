@@ -5,18 +5,21 @@
 import type { AttachmentItem } from "../attachments";
 import type { ChipData, ChipIconKey } from "../chip-markdown";
 
-// The composer's ask-user question contract — the minimal shape the flow needs
-// to step through questions, toggle options, and compile answers. It carries no
-// app-tool schema: richer consumer types (extra fields like a tab header)
-// satisfy it structurally.
-export type AskUserOption = {
+// The composer's request contract — the minimal shape the flow needs to step
+// through requests, toggle options, and compile entries. It carries no
+// app-tool schema: richer consumer types satisfy it structurally.
+export type ComposerRequestOption = {
+  /** Machine-readable, echoed back in `selected`. Falls back to `label`. */
+  value?: string;
   label: string;
   description?: string;
 };
 
-export type AskUserQuestion = {
-  question: string;
-  options: AskUserOption[];
+export type ComposerRequest = {
+  /** Opaque to the package — the consumer mints it and gets it back. */
+  id: string;
+  label: string;
+  options: ComposerRequestOption[];
   multiSelect?: boolean;
 };
 
@@ -107,18 +110,22 @@ export type ComposerMessageSubmit = {
   files: AttachmentItem[];
 };
 
-export type ComposerAnswerEntry =
-  | { question: string; option: string }
-  | { question: string; text: string }
-  | { question: string; options: string[]; text: string }
-  | { question: string };
-
-export type ComposerAnswersSubmit = {
-  kind: "answers";
-  answers: ComposerAnswerEntry[];
+// A request, resolved: the same id the consumer minted, plus what the user
+// picked. One flat shape for every request kind.
+export type ComposerRequestEntry = {
+  id: string;
+  /** Option values; empty when skipped or text-only. */
+  selected: string[];
+  /** Present only when the user typed something. */
+  text?: string;
 };
 
-export type ComposerSubmitData = ComposerMessageSubmit | ComposerAnswersSubmit;
+export type ComposerRequestsSubmit = {
+  kind: "requests";
+  requests: ComposerRequestEntry[];
+};
+
+export type ComposerSubmitData = ComposerMessageSubmit | ComposerRequestsSubmit;
 
 export type ComposerCommandsItems =
   | CommandItemData[]

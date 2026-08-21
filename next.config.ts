@@ -13,7 +13,7 @@ const chatSourceAliases = {
   "@intentface/chat/reasoning": "./packages/chat/src/reasoning/index.ts",
   "@intentface/chat/steps": "./packages/chat/src/steps/index.ts",
   "@intentface/chat/attachments": "./packages/chat/src/attachments/index.ts",
-  "@intentface/chat/ask-user": "./packages/chat/src/ask-user/index.ts",
+  "@intentface/chat/ask": "./packages/chat/src/ask/index.ts",
   "@intentface/chat/message": "./packages/chat/src/message/index.ts",
   "@intentface/chat/message-utils": "./packages/chat/src/message-utils.ts",
   "@intentface/chat/chip-markdown": "./packages/chat/src/chip-markdown.ts",

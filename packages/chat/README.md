@@ -34,11 +34,11 @@ hooks, and a `render` prop for swapping the underlying element:
 
 | Import | What it is |
 | --- | --- |
-| `@intentface/chat/composer` | Rich-text input over a purpose-built contenteditable engine: `/` and `@` command palette, inline chips, attachments, ask-user flow. One store per `<Composer>`, or bring your own via `Composer.createStore()`. |
+| `@intentface/chat/composer` | Rich-text input over a purpose-built contenteditable engine: `/` and `@` command palette, inline chips, attachments, request flow (questions and tool approvals). One store per `<Composer>`, or bring your own via `Composer.createStore()`. |
 | `@intentface/chat/thread` | Scroll container with at-bottom detection and auto-follow. |
 | `@intentface/chat/message` | Message parts, turns, chip-segmented text, sources, actions. |
 | `@intentface/chat/steps`, `/reasoning` | Tool-call timelines and reasoning disclosure. |
-| `@intentface/chat/chip`, `/attachments`, `/ask-user` | The remaining building blocks. |
+| `@intentface/chat/chip`, `/attachments`, `/ask` | The remaining building blocks. |
 | `@intentface/chat/types` | The structural message contract + part type guards. |
 | `@intentface/chat/message-utils` | Part segmentation, turn grouping, reasoning/source derivation. |
 | `@intentface/chat/chip-markdown` | The self-describing chip wire format. |

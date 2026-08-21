@@ -28,7 +28,7 @@ jobs:
     # distinguish, and approving costs one click.
     environment: npm-publish
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Pinned to the packageManager version — see the note in ci.yml.
       - uses: oven-sh/setup-bun@v2
@@ -40,7 +40,7 @@ jobs:
       # configured — npm detects the OIDC environment and uses trusted
       # publishing instead. package-manager-cache is off because a restored npm
       # cache can shadow the CLI upgrade below.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Trusted publishing requires Node >= 22.14.0; "22" resolves to the
           # latest 22.x, which satisfies that floor.

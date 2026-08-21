@@ -8,8 +8,9 @@ import type { ComponentProps } from "react";
 //
 // Two disclosure idioms, both keyed off group-data-open/steps-trigger: the
 // timeline header carries a chevron on the right, while a row's status icon
-// morphs into a chevron on hover or open, so a row gains an affordance without
-// gaining a second glyph.
+// morphs into a chevron, so a row gains an affordance without gaining a second
+// glyph. The morph triggers on focus-visible as well as hover — otherwise a
+// keyboard user tabbing onto a closed row gets no hint that it expands.
 //
 // The panels animate their height from --panel-height (see PANEL_CLASS). Collapse
 // and expand the timeline to see it; expand "Searched the web" while the timeline
@@ -35,10 +36,10 @@ export const Basic = () => (
           <Steps.Item>
             <Steps.Trigger className={`${TRIGGER_CLASS} py-0.5`}>
               <Steps.Icon className={`relative ${ICON_CLASS}`}>
-                <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
+                <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-focus-visible/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
                   <CheckIcon />
                 </span>
-                <ChevronIcon className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
+                <ChevronIcon className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-focus-visible/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
               </Steps.Icon>
               <Steps.Label className={LABEL_CLASS}>Searched the web</Steps.Label>
             </Steps.Trigger>

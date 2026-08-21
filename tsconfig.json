@@ -20,7 +20,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@intentface/chat/*": ["./packages/chat/src/*"]
     }
   },
   "include": [

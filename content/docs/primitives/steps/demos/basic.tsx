@@ -6,6 +6,11 @@ import type { ComponentProps } from "react";
 // Steps is recursive: an item's panel can hold rows and further items. A nested
 // panel picks up data-nested, which is how the rail indent is drawn.
 //
+// Two disclosure idioms, both keyed off group-data-open/steps-trigger: the
+// timeline header carries a chevron on the right, while a row's status icon
+// morphs into a chevron on hover or open, so a row gains an affordance without
+// gaining a second glyph.
+//
 // The panels animate their height from --panel-height (see PANEL_CLASS). Collapse
 // and expand the timeline to see it; expand "Searched the web" while the timeline
 // is already open to see the outer panel grow to fit, rather than clipping.
@@ -13,11 +18,12 @@ export const Basic = () => (
   <div className="w-full max-w-xl">
     <Steps.Root className="w-full">
       <Steps.Item defaultOpen>
-        <Steps.Trigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-1 text-sm text-[#686868] transition-colors hover:text-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:text-[#fcfcfc]">
+        <Steps.Trigger className={`${TRIGGER_CLASS} py-1`}>
           <span>Worked for 3 seconds</span>
-          <ChevronIcon className="size-4 shrink-0 -rotate-90 transition-transform group-data-open/trigger:rotate-0" />
+          <ChevronIcon className="size-4 shrink-0 -rotate-90 transition-transform group-data-open/steps-trigger:rotate-0" />
         </Steps.Trigger>
-        <Steps.Panel className={`mt-2 ${PANEL_CLASS}`}>
+
+        <Steps.Panel className={`${PANEL_CLASS}`}>
           <div className="flex items-center gap-2 py-0.5">
             <Steps.Icon className={ICON_CLASS}>
               <CheckIcon />
@@ -27,16 +33,19 @@ export const Basic = () => (
 
           {/* Closed by default, so opening it grows the settled outer panel. */}
           <Steps.Item>
-            <Steps.Trigger className="group/trigger flex w-full cursor-pointer items-center gap-2 py-0.5">
-              <Steps.Icon className={ICON_CLASS}>
-                <CheckIcon />
+            <Steps.Trigger className={`${TRIGGER_CLASS} py-0.5`}>
+              <Steps.Icon className={`relative ${ICON_CLASS}`}>
+                <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
+                  <CheckIcon />
+                </span>
+                <ChevronIcon className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
               </Steps.Icon>
               <Steps.Label className={LABEL_CLASS}>Searched the web</Steps.Label>
-              <ChevronIcon className="size-3.5 shrink-0 -rotate-90 text-[#949494] transition-transform group-data-open/trigger:rotate-0" />
             </Steps.Trigger>
             <Steps.Panel className={PANEL_CLASS}>
               <span className="py-0.5 text-sm text-[#686868] dark:text-[#9b9b9b]">
-                Found three relevant sources and skimmed each.
+                Found three relevant sources and skimmed each. This detail is what the outer panel
+                has to make room for.
               </span>
             </Steps.Panel>
           </Steps.Item>
@@ -54,6 +63,11 @@ export const Basic = () => (
     </Steps.Root>
   </div>
 );
+
+// The group name children read open state through — `steps-trigger` is the name
+// the styled layer uses, so these classes port between the two unchanged.
+const TRIGGER_CLASS =
+  "group/steps-trigger flex w-full cursor-pointer items-center gap-2 text-sm text-[#686868] transition-colors hover:text-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:text-[#fcfcfc]";
 
 // Height animates from --panel-height, which the panel publishes while a
 // transition runs and releases once open — so this both animates the open/close

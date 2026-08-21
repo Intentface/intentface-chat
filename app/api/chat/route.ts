@@ -8,6 +8,7 @@ import {
   stepCountIs,
   streamText,
 } from "ai";
+import { z } from "zod";
 import type { AppUIMessage } from "@/lib/ai/types";
 import { readApiKey } from "@/lib/api-key";
 import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
@@ -84,9 +85,8 @@ const generateThreadTitle = async (
   message: AppUIMessage | undefined,
   openai: OpenAIProvider,
 ): Promise<string | null> => {
-  // `messages` arrives untyped from the request body, so the last entry can be
-  // absent — reading .parts off undefined would throw inside the stream and
-  // surface as an opaque server error.
+  // The schema guarantees a non-empty array but not the shape of its items, so
+  // `parts` can still be missing — reading it unguarded throws inside the stream.
   const text = (message?.parts ?? [])
     .filter((part) => part.type === "text")
     .map((part) => part.text)
@@ -108,6 +108,14 @@ const generateThreadTitle = async (
   }
 };
 
+// Untyped body: a bad shape should fail here as a 400, not inside the stream as a 500.
+const chatRequestSchema = z.object({
+  messages: z.array(z.any()).min(1),
+  model: z.string().optional(),
+  webSearch: z.boolean().optional(),
+  thinking: z.boolean().optional(),
+});
+
 export async function POST(req: Request) {
   // The playground runs on the visitor's own key — there is no server key to
   // fall back to. The client branches on this status to open the key form.
@@ -123,12 +131,12 @@ export async function POST(req: Request) {
   }
   const openai = createOpenAI({ apiKey });
 
-  const {
-    messages,
-    model,
-    webSearch: webSearchEnabled,
-    thinking: thinkingEnabled,
-  } = await req.json();
+  const parsed = chatRequestSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return Response.json({ error: "invalid-request" }, { status: 400 });
+  }
+
+  const { messages, model, webSearch: webSearchEnabled, thinking: thinkingEnabled } = parsed.data;
 
   const modelId = isValidModelId(model) ? model : DEFAULT_MODEL;
 

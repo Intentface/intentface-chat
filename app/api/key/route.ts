@@ -6,6 +6,10 @@ import { API_KEY_COOKIE, isValidApiKeyFormat } from "@/lib/api-key";
 
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
+// Without a bound, a stalled connection to OpenAI holds this request open until
+// the platform's own limit. The .catch below turns the abort into the 502.
+const VERIFICATION_TIMEOUT_MS = 10_000;
+
 export const GET = async () => {
   const store = await cookies();
   return Response.json({ isSet: store.has(API_KEY_COOKIE) });
@@ -23,6 +27,7 @@ export const POST = async (request: Request) => {
   // halfway through the first conversation. Cheapest authenticated endpoint.
   const verification = await fetch("https://api.openai.com/v1/models", {
     headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(VERIFICATION_TIMEOUT_MS),
   }).catch(() => null);
 
   if (!verification) {

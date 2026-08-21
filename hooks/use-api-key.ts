@@ -52,8 +52,11 @@ export const useApiKey = () => {
   const clear = async () => {
     setIsSubmitting(true);
     setError(null);
-    await fetch(KEY_ENDPOINT, { method: "DELETE" }).catch(() => null);
+    const response = await fetch(KEY_ENDPOINT, { method: "DELETE" }).catch(() => null);
     setIsSubmitting(false);
+    // Revalidating either way keeps the reported state honest — a failed delete
+    // still shows the key as set — but silence would leave that unexplained.
+    if (!response?.ok) setError("Couldn't clear the key — try again.");
     await mutate();
   };
 

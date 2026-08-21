@@ -491,9 +491,11 @@ const KeyTab = () => {
                 Save
               </Button>
             </div>
-            {error && <p className="text-destructive text-xs">{error}</p>}
           </div>
         )}
+        {/* Outside the branches on purpose: clear() runs from the is-set side, so
+            an error rendered only in the not-set branch could never be seen. */}
+        {error && <p className="px-3 pb-2 text-destructive text-xs">{error}</p>}
       </SettingsSection>
       <p className="px-3 py-2 text-xs text-ink-tertiary">
         Your key is sent to this site's server to forward each request to OpenAI, and is kept only

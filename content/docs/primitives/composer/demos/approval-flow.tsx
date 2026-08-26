@@ -138,13 +138,14 @@ const Prompt = () => {
         className="flex flex-col"
       >
         {OPTIONS.map((option, index) => {
-          const selected = Boolean(draft?.selected.has(option.label));
+          const optionValue = option.value ?? option.label;
+          const selected = Boolean(draft?.selected.has(optionValue));
           return (
             <Ask.Option
-              key={option.value}
-              value={option.label}
+              key={optionValue}
+              value={optionValue}
               selected={selected}
-              onSelect={() => requests.toggleOption(option.label)}
+              onSelect={() => requests.toggleOption(optionValue)}
               className="group flex cursor-pointer items-start gap-2 rounded-[10px] p-2 outline-none transition-colors data-highlighted:bg-[#f4f4f4] dark:data-highlighted:bg-[#232323]"
             >
               <span

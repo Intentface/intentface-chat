@@ -52,13 +52,15 @@ export const Prompt = () => {
           className="flex flex-col"
         >
           {request.options.map((option) => {
-            const selected = Boolean(draft?.selected.has(option.label));
+            // Options are identified by their value, falling back to the label.
+            const optionValue = option.value ?? option.label;
+            const selected = Boolean(draft?.selected.has(optionValue));
             return (
               <Ask.Option
-                key={option.label}
-                value={option.label}
+                key={optionValue}
+                value={optionValue}
                 selected={selected}
-                onSelect={() => requests.toggleOption(option.label)}
+                onSelect={() => requests.toggleOption(optionValue)}
                 className="flex cursor-pointer items-start gap-2.5 rounded-lg px-2.5 py-2 outline-none transition-colors data-highlighted:bg-zinc-950/5 dark:data-highlighted:bg-white/8"
               >
                 {/* Decorative: the Option itself carries the radio/checkbox role. */}

@@ -155,6 +155,27 @@ describe("compileRequests", () => {
     });
   });
 
+  test("a label colliding with another option's value resolves to the selected option", () => {
+    const colliding: ComposerRequest[] = [
+      {
+        id: "pick",
+        label: "Pick one",
+        options: [
+          { value: "c", label: "b" }, // this label equals the next option's value
+          { value: "b", label: "Alpha" },
+        ],
+      },
+    ];
+    // The widget stores an option's identity (value ?? label) — here, "b" for
+    // the second option. A cross-field lookup would match the first option's
+    // label instead and wrongly emit "c".
+    const state: RequestState = {
+      step: 0,
+      drafts: new Map([[0, { selected: new Set(["b"]), freeText: "" }]]),
+    };
+    expect(compileRequests(state, colliding)[0]).toEqual({ id: "pick", selected: ["b"] });
+  });
+
   test("keys already stored as values resolve to the same values", () => {
     const valued: ComposerRequest[] = [
       { id: "db", label: "Database?", options: [{ value: "pg", label: "PostgreSQL" }] },

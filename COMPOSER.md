@@ -1,6 +1,6 @@
 # Composer
 
-The chat composer — a form-shaped, headless-ish input surface that handles text, attachments, slash commands, mention chips, and questionnaires. It's a single component (`components/ai/composer.tsx`) exposed as a compound API via `Composer.X` parts.
+The chat composer — a form-shaped, headless-ish input surface that handles text, attachments, slash commands, mention chips, and requests. It's a single component (`components/ai/composer.tsx`) exposed as a compound API via `Composer.X` parts.
 
 Import from `@/components/ai/composer`.
 
@@ -44,7 +44,7 @@ type ComposerSubmitData =
     }
   | {
       kind: "requests";
-      answers: ComposerRequestEntry[]; // produced by the questionnaire flow
+      requests: ComposerRequestEntry[]; // produced by the request flow
     };
 
 type ComposerRequestEntry =
@@ -67,7 +67,7 @@ If the editor is empty but attachments exist, `text` is set to `"Sent with attac
 | `onSubmit` | `(data: ComposerSubmitData) => void \| Promise<void>` | Submit handler. |
 | `isSubmitting` | `boolean` | Disables `Composer.Submit` while truthy. Default `false`. |
 | `commands` | `ComposerCommandsMap` | Prefix → command-list config. See [Commands & chips](#commands--chips). |
-| `questions` | `ComposerRequest[]` | When present, the composer enters questionnaire mode. See [Questionnaire](#questionnaire). |
+| `requests` | `ComposerRequest[]` | When present, the composer enters request mode. See [Requests](#add-on-requests). |
 | `defaultValue` | `ComposerSnapshot` | Initial uncontrolled editor content. |
 | `value` | `ComposerSnapshot` | Controlled editor content. |
 | `onValueChange` | `(snapshot) => void` | Fires on editor change. |
@@ -142,7 +142,7 @@ Button that opens the native file picker. Accepts `IconButton` props.
 
 ### Add-on: panel
 
-The panel is the area above the editor that shows command lists, active tool progress, or a questionnaire. It auto-switches to `"command-list"` whenever a command list is open, regardless of the `value` you pass.
+The panel is the area above the editor that shows command lists, active tool progress, or a request prompt. It auto-switches to `"command-list"` whenever a command list is open, regardless of the `value` you pass.
 
 #### `Composer.Panel` / `Composer.PanelItem`
 
@@ -261,9 +261,9 @@ When the filter matches nothing, the empty row acts as the single highlighted op
 
 The default `<Composer.Commands />` renderer already wires this up.
 
-### Add-on: questionnaire
+### Add-on: requests
 
-Pass `questions` to switch the composer into structured-question mode. The default renderer covers the flow:
+Pass `requests` to switch the composer into request mode — clarifying questions, tool approvals, any choice put to the user. The default renderer covers the flow:
 
 ```tsx
 <Composer onSubmit={handleSubmit} requests={composerRequests}>
@@ -291,9 +291,9 @@ Parts:
 - `Composer.AskDismiss` — skip the current question (`Esc`).
 - `Composer.AskContinue` — advance / submit (`Enter`). Auto-toggles label between "Continue" and "Submit".
 
-Keyboard: **↑/↓** navigate options, **Enter** select/advance, **←/→** between questions, **Esc** dismiss, printable keys type free-text.
+Keyboard: **↑/↓** navigate options, **Enter** select/advance, **←/→** between requests, **Esc** dismiss, printable keys type free-text.
 
-On completion, `onSubmit` fires with `{ kind: "requests", requests }` where `answers` is a `ComposerRequestEntry[]` (one entry per question, in order). See [Submit data](#submit-data) for the entry shape.
+On completion, `onSubmit` fires with `{ kind: "requests", requests }` where `requests` is a `ComposerRequestEntry[]` (one entry per request, in order). See [Submit data](#submit-data) for the entry shape.
 
 ## Imperative API & state
 

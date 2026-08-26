@@ -122,8 +122,13 @@ export const compileRequests = (
     const draft = state.drafts.get(index);
     if (!draft) return { id: request.id, selected: [] };
 
+    // Exact identity first, then a label fallback for consumers who wire
+    // `value={option.label}`. Never match value-against-label, so one option's
+    // label cannot resolve to another's value.
     const selected = [...draft.selected].map((key) => {
-      const option = request.options.find((o) => o.label === key || o.value === key);
+      const option =
+        request.options.find((o) => (o.value ?? o.label) === key) ??
+        request.options.find((o) => o.label === key);
       return option ? (option.value ?? option.label) : key;
     });
     const text = draft.freeText.trim();

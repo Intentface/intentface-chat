@@ -616,7 +616,7 @@ const ComposerAsk = () => {
           <Ask.Navigation>
             <Ask.Previous onClick={requests.goBack} disabled={requests.step === 0} />
             <Ask.StepLabel>
-              {({ current, total }) => `${current} of ${total} questions`}
+              {({ current, total }) => `${current} of ${total} requests`}
             </Ask.StepLabel>
             <Ask.Next onClick={requests.goNext} disabled={requests.step === totalRequests - 1} />
           </Ask.Navigation>
@@ -628,22 +628,27 @@ const ComposerAsk = () => {
           multiSelect={!!display.multiSelect}
           groupName={`q-${requests.step}`}
         >
-          {display.options.map((option) => (
-            <Ask.Option
-              key={option.label}
-              value={option.label}
-              selected={entry.selected.has(option.label)}
-              onSelect={() => requests.toggleOption(option.label)}
-            >
-              <Ask.OptionInput />
-              <Ask.OptionContent>
-                <Ask.OptionLabel>{option.label}</Ask.OptionLabel>
-                {option.description && (
-                  <Ask.OptionDescription>{option.description}</Ask.OptionDescription>
-                )}
-              </Ask.OptionContent>
-            </Ask.Option>
-          ))}
+          {display.options.map((option) => {
+            // One identity for key, value, lookup and toggle — so a supplied
+            // `value` is what the submit entry carries.
+            const optionValue = option.value ?? option.label;
+            return (
+              <Ask.Option
+                key={optionValue}
+                value={optionValue}
+                selected={entry.selected.has(optionValue)}
+                onSelect={() => requests.toggleOption(optionValue)}
+              >
+                <Ask.OptionInput />
+                <Ask.OptionContent>
+                  <Ask.OptionLabel>{option.label}</Ask.OptionLabel>
+                  {option.description && (
+                    <Ask.OptionDescription>{option.description}</Ask.OptionDescription>
+                  )}
+                </Ask.OptionContent>
+              </Ask.Option>
+            );
+          })}
         </Ask.Options>
       )}
     </Ask>

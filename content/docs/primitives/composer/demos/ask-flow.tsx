@@ -150,13 +150,14 @@ const Prompt = () => {
           className="flex flex-col"
         >
           {request.options.map((option) => {
-            const selected = Boolean(draft?.selected.has(option.label));
+            const optionValue = option.value ?? option.label;
+            const selected = Boolean(draft?.selected.has(optionValue));
             return (
               <Ask.Option
-                key={option.label}
-                value={option.label}
+                key={optionValue}
+                value={optionValue}
                 selected={selected}
-                onSelect={() => requests.toggleOption(option.label)}
+                onSelect={() => requests.toggleOption(optionValue)}
                 className="flex cursor-pointer items-start gap-2 rounded-[10px] p-2 outline-none transition-colors data-highlighted:bg-[#f4f4f4] dark:data-highlighted:bg-[#232323]"
               >
                 {/* Decorative: the Option itself carries the radio/checkbox role. */}

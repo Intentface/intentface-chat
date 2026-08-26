@@ -475,7 +475,7 @@ A function-over-state hook that decides what the panel above the composer should
 type ComposerPanelState =
   | { type: "idle" }
   | { type: "active"; steps: ComposerStepItem[] }
-  | { type: "ask-user"; toolCallId: string; questions: ComposerRequest[]; isAnswered: boolean };
+  | { type: "ask-user"; toolCallId: string; questions: AskUserQuestion[]; isAnswered: boolean };
 ```
 
 Logic, in order:

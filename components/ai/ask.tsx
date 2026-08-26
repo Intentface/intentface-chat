@@ -18,7 +18,11 @@ export type { AskOptionsHandle };
 type AskRootProps = ComponentProps<typeof AskPrimitive.Root>;
 
 const AskRoot = ({ className, ...props }: AskRootProps) => (
-  <AskPrimitive.Root className={cn("flex flex-col gap-2 p-2", className)} {...props} />
+  <AskPrimitive.Root
+    data-slot="ask"
+    className={cn("flex flex-col gap-2 p-2", className)}
+    {...props}
+  />
 );
 
 /** Request label text. */
@@ -26,6 +30,7 @@ type AskLabelProps = ComponentProps<typeof AskPrimitive.Label>;
 
 const AskLabel = ({ className, ...props }: AskLabelProps) => (
   <AskPrimitive.Label
+    data-slot="ask-label"
     className={cn("min-w-0 flex-1 px-2 text-sm font-medium leading-tight", className)}
     {...props}
   />
@@ -35,7 +40,11 @@ const AskLabel = ({ className, ...props }: AskLabelProps) => (
 type AskHeaderProps = ComponentProps<typeof AskPrimitive.Header>;
 
 const AskHeader = ({ className, ...props }: AskHeaderProps) => (
-  <AskPrimitive.Header className={cn("flex h-7 items-center gap-2", className)} {...props} />
+  <AskPrimitive.Header
+    data-slot="ask-header"
+    className={cn("flex h-7 items-center gap-2", className)}
+    {...props}
+  />
 );
 
 /** Row container for `Previous`, `StepLabel`, and `Next`. */
@@ -43,6 +52,7 @@ type AskNavigationProps = ComponentProps<typeof AskPrimitive.Navigation>;
 
 const AskNavigation = ({ className, ...props }: AskNavigationProps) => (
   <AskPrimitive.Navigation
+    data-slot="ask-navigation"
     className={cn("flex items-center gap-1 shrink-0", className)}
     {...props}
   />
@@ -55,7 +65,11 @@ const navigationButtonClasses =
 type AskPreviousProps = ComponentProps<typeof AskPrimitive.Previous>;
 
 const AskPrevious = ({ className, ...props }: AskPreviousProps) => (
-  <AskPrimitive.Previous className={cn(navigationButtonClasses, className)} {...props}>
+  <AskPrimitive.Previous
+    data-slot="ask-previous"
+    className={cn(navigationButtonClasses, className)}
+    {...props}
+  >
     <ChevronLeftMediumIcon className="size-3.5" />
   </AskPrimitive.Previous>
 );
@@ -64,7 +78,11 @@ const AskPrevious = ({ className, ...props }: AskPreviousProps) => (
 type AskNextProps = ComponentProps<typeof AskPrimitive.Next>;
 
 const AskNext = ({ className, ...props }: AskNextProps) => (
-  <AskPrimitive.Next className={cn(navigationButtonClasses, className)} {...props}>
+  <AskPrimitive.Next
+    data-slot="ask-next"
+    className={cn(navigationButtonClasses, className)}
+    {...props}
+  >
     <ChevronRightMediumIcon className="size-3.5" />
   </AskPrimitive.Next>
 );
@@ -74,6 +92,7 @@ type AskStepLabelProps = ComponentProps<typeof AskPrimitive.StepLabel>;
 
 const AskStepLabel = ({ className, ...props }: AskStepLabelProps) => (
   <AskPrimitive.StepLabel
+    data-slot="ask-step-label"
     className={cn("text-2xs tabular-nums text-ink-tertiary", className)}
     {...props}
   />
@@ -87,6 +106,7 @@ type AskOptionsProps = ComponentProps<typeof AskPrimitive.Options> & {
 
 const AskOptions = ({ multiSelect = false, className, ...props }: AskOptionsProps) => (
   <AskPrimitive.Options
+    data-slot="ask-options"
     multiSelect={multiSelect}
     className={cn("flex flex-col gap-1.5", className)}
     {...props}
@@ -98,6 +118,7 @@ type AskOptionProps = ComponentProps<typeof AskPrimitive.Option>;
 
 const AskOption = ({ className, ...props }: AskOptionProps) => (
   <AskPrimitive.Option
+    data-slot="ask-option"
     className={cn(
       "flex cursor-pointer items-start gap-2 rounded-lg p-2 leading-tight transition-colors",
       "data-highlighted:bg-primary-bg-hover",
@@ -159,6 +180,7 @@ type AskOptionContentProps = ComponentProps<typeof AskPrimitive.OptionContent>;
 
 const AskOptionContent = ({ className, ...props }: AskOptionContentProps) => (
   <AskPrimitive.OptionContent
+    data-slot="ask-option-content"
     className={cn("flex min-w-0 flex-1 gap-1 flex-col", className)}
     {...props}
   />
@@ -168,7 +190,11 @@ const AskOptionContent = ({ className, ...props }: AskOptionContentProps) => (
 type AskOptionLabelProps = ComponentProps<typeof AskPrimitive.OptionLabel>;
 
 const AskOptionLabel = ({ className, ...props }: AskOptionLabelProps) => (
-  <AskPrimitive.OptionLabel className={cn("text-sm leading-tight", className)} {...props} />
+  <AskPrimitive.OptionLabel
+    data-slot="ask-option-label"
+    className={cn("text-sm leading-tight", className)}
+    {...props}
+  />
 );
 
 /** Option subtitle/description text. */
@@ -176,6 +202,7 @@ type AskOptionDescriptionProps = ComponentProps<typeof AskPrimitive.OptionDescri
 
 const AskOptionDescription = ({ className, ...props }: AskOptionDescriptionProps) => (
   <AskPrimitive.OptionDescription
+    data-slot="ask-option-description"
     className={cn("text-ink-secondary text-xs leading-tight", className)}
     {...props}
   />
@@ -186,6 +213,7 @@ type AskHintsProps = ComponentProps<typeof AskPrimitive.Hints>;
 
 const AskHints = ({ className, ...props }: AskHintsProps) => (
   <AskPrimitive.Hints
+    data-slot="ask-hints"
     className={cn("flex items-center gap-3 px-2 pt-1 text-2xs text-ink-tertiary", className)}
     {...props}
   />

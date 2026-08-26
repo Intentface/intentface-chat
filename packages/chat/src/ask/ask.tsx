@@ -82,7 +82,7 @@ export const AskPrevious = ({ className, render, style, ...elementProps }: AskPr
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "aria-label": "Previous question", "data-ask-previous": "" }, elementProps] },
+    { props: [{ "aria-label": "Previous request", "data-ask-previous": "" }, elementProps] },
   );
 
 /** Navigate to the next step. Default accessible name; override via aria-label. */
@@ -92,7 +92,7 @@ export const AskNext = ({ className, render, style, ...elementProps }: AskNextPr
   useRenderElement(
     "button",
     { className, render, style },
-    { props: [{ "aria-label": "Next question", "data-ask-next": "" }, elementProps] },
+    { props: [{ "aria-label": "Next request", "data-ask-next": "" }, elementProps] },
   );
 
 /** Step indicator. Reads the current step + total from the composer store; the

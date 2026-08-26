@@ -104,12 +104,15 @@ export const ComposerRoot = ({
   }, [store, isSubmitting]);
 
   // Sync the requests prop into the store and arm request mode (editor blur
-  // + document-level keyboard handling) while requests are active.
+  // + document-level keyboard handling) while requests are active. An empty
+  // array is normalized to null — otherwise the slice reads active with no
+  // content to render and no keyboard handler attached.
+  const activeRequests = requests?.length ? requests : null;
   useEffect(() => {
-    store.setRequests(requests ?? null);
-    if (!requests?.length) return;
+    store.setRequests(activeRequests);
+    if (!activeRequests) return;
     return store.activateRequests();
-  }, [store, requests]);
+  }, [store, activeRequests]);
 
   const { getRegisteredPrefixes } = useCommandRegistry(commands);
 

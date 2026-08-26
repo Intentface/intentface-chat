@@ -21,3 +21,10 @@ Migration:
 | subpath `@intentface/chat/ask-user` | `@intentface/chat/ask` |
 | namespace `AskUser.*`, hooks `useAskUserOption(s)`, `AskUser*Props` | `Ask.*`, `useAskOption(s)`, `Ask*Props` |
 | attributes `data-ask-user-*` | `data-ask-*` |
+
+Also in this change:
+
+- `requests={[]}` no longer arms request mode — an empty array normalizes to `null`, so the slice can't read active with nothing to render.
+- The request flow's document keydown listener no longer claims events from unrelated elements; it accepts its own editor, its own options, and the `<body>` focus fallback it exists for. Space on an unrelated button can no longer select an option.
+- `Ask.Previous` / `Ask.Next` default accessible names are now "Previous request" / "Next request" (override via `aria-label`), since the flow is no longer questions-only.
+- A disabled composer's hidden form mirror is unchanged here — tracked separately in CHAT-28.

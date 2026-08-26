@@ -205,7 +205,10 @@ const isEventForComposer = (
   if (editableHost) return editableHost === editorDom;
   const optionsHost = target?.closest<HTMLElement>("[data-ask-options]");
   if (optionsHost) return optionsHost === optionsElement;
-  return true;
+  // Only the body fallback the comment above describes. Anything else is a real
+  // element that owns its own keys — Space on an unrelated button must not
+  // select an option here.
+  return target === null || target === document.body;
 };
 
 type RequestKeydownDeps = {

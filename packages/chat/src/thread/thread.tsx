@@ -703,16 +703,18 @@ const useThreadInsets = (rootRef: RefObject<HTMLDivElement | null>) => {
     const root = rootRef.current;
     if (!root) return;
 
+    // Read both insets before writing either property: a write followed by a forced
+    // layout read dips scrollHeight for a frame, and that scrollTop clamp is final.
     const apply = () => {
       const bottomInset = measureDockInset(root);
-      if (bottomInset !== null) {
-        root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
-      }
       const topInset = measureTopInset(root);
       const area = Math.max(
         0,
         Math.round(root.clientHeight - topInset - (bottomInset ?? DEFAULT_BOTTOM_OFFSET)),
       );
+      if (bottomInset !== null) {
+        root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
+      }
       root.style.setProperty("--thread-turn-area", `${area}px`);
     };
 

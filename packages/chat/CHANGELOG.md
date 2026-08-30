@@ -1,5 +1,27 @@
 # @intentface/chat
 
+## 0.2.1
+
+### Patch Changes
+
+- [#76](https://github.com/Intentface/intentface-chat/pull/76) [`fd5575b`](https://github.com/Intentface/intentface-chat/commit/fd5575bc745bf8dc6f91177670c1fded75e8b267) Thanks [@rpvilo](https://github.com/rpvilo)! - `Thread` no longer chases the live edge with a smooth scroll while the container around it is being resized. A consumer that animates the thread open — a collapsed pill springing to a panel, a drawer sliding in — saw the transcript land mid-viewport and then visibly scroll to the bottom over the length of the animation. It now lands at the bottom and stays there.
+
+  The follow is driven by a `ResizeObserver` on the content column, which fires for two different things it could not tell apart: a token streaming in, and the viewport itself changing size. The second is not hypothetical for auto-scrolling threads — in every mode that lands at the top (`follow`, `jump`), the last turn reserves a viewport via `--thread-turn-min-height: var(--thread-turn-area)`, and `--thread-turn-area` is derived from the thread root's `clientHeight`. So a container animating its height rewrites that variable each frame, resizing the content column each frame, and each resize was answered with a fresh smooth scroll to a target that had already moved.
+
+  `follow` now compares the scroll viewport's own box against the previous callback's. Streamed content never changes it; a container animating open or a window resize always does. A composer docked over the transcript is out of the scroller's flow, so growing it moves no box and is not covered here. A changed box still pins to the live end — it just does so instantly, which is the whole difference between landing at the bottom and animating toward it. Width is compared alongside height, so a container that expands horizontally and reflows the transcript is covered too.
+
+  The intent-only gating is unchanged: the resize branch is a synchronous `clientWidth` / `clientHeight` read inside the observer callback, not the one-frame-stale at-bottom snapshot that `follow` deliberately avoids consulting. Threads in a static container are unaffected — the viewport box never changes, so every callback takes the existing smooth path.
+
+  `autoScroll="bottom"` never exhibited this, since it is the one mode that sets no reserve.
+
+- [#76](https://github.com/Intentface/intentface-chat/pull/76) [`fd5575b`](https://github.com/Intentface/intentface-chat/commit/fd5575bc745bf8dc6f91177670c1fded75e8b267) Thanks [@rpvilo](https://github.com/rpvilo)! - `Thread` no longer loses a few pixels of scroll position when the composer changes height. Adding or discarding an attachment — anything that grows or shrinks the dock while you are pinned to the bottom — nudged the transcript down by a handful of pixels and never gave them back. Repeated often enough, the thread drifted away from the live edge.
+
+  `useThreadInsets` derives two custom properties from one dock measurement, and they are designed to cancel: the content wrapper pads by `--thread-overlay-bottom-height`, and the same inset is subtracted from `--thread-turn-area`, which the last turn reserves. Their sum is constant, so the scrollable height should never move when the dock resizes.
+
+  It moved anyway, because the write order broke the cancellation. The padding was written first, then `measureTopInset` and `root.clientHeight` were read — both force a synchronous layout. That layout ran with the _new_ padding against the _old_ reserve, so `scrollHeight` dipped for exactly one frame. The browser clamps `scrollTop` to fit shorter content, and clamping is not reversed when the content grows back a frame later, so each dock resize cost a few pixels permanently.
+
+  Every measurement is now read before either property is written, so both land in the same recalculation and no intermediate layout exists to clamp against. Measured across an attachment discard: `--thread-turn-area` climbs 504px → 566px over 23 frames while `scrollTop`, the scroll maximum, and the last turn's on-screen position all hold still. Previously `scrollTop` dropped 5351 → 5345 on the third frame and stayed there.
+
 ## 0.2.0
 
 ### Minor Changes

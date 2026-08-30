@@ -5,6 +5,8 @@ import {
   measureDockInset,
   measureTopInset,
   queryDock,
+  readViewportBox,
+  sameViewportBox,
   scrollContainerTo,
   wasPrepended,
 } from "../src/thread/geometry";
@@ -22,6 +24,39 @@ describe("scrollContainerTo", () => {
     } as unknown as HTMLElement;
     scrollContainerTo(el, 120, "smooth");
     expect(captured).toEqual({ top: 120, behavior: "smooth" });
+  });
+});
+
+// The growth observer fires for content growth *and* for the container being
+// resized around the thread. sameViewportBox is the whole rule separating them.
+describe("readViewportBox", () => {
+  const scroller = (width: number, height: number) =>
+    ({ clientWidth: width, clientHeight: height }) as unknown as HTMLElement;
+
+  test("reads the scroller's own box", () => {
+    expect(readViewportBox(scroller(400, 592))).toEqual({ width: 400, height: 592 });
+  });
+
+  test("a missing scroller reads as an empty box", () => {
+    expect(readViewportBox(null)).toEqual({ width: 0, height: 0 });
+  });
+});
+
+describe("sameViewportBox", () => {
+  test("a streamed token leaves the viewport box untouched", () => {
+    expect(sameViewportBox({ width: 400, height: 592 }, { width: 400, height: 592 })).toBe(true);
+  });
+
+  test("a container animating open changes the height", () => {
+    expect(sameViewportBox({ width: 400, height: 36 }, { width: 400, height: 592 })).toBe(false);
+  });
+
+  test("a pill expanding changes the width", () => {
+    expect(sameViewportBox({ width: 36, height: 592 }, { width: 400, height: 592 })).toBe(false);
+  });
+
+  test("a spring frame changes both at once", () => {
+    expect(sameViewportBox({ width: 36, height: 36 }, { width: 218, height: 314 })).toBe(false);
   });
 });
 

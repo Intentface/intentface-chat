@@ -17,6 +17,17 @@ export const scrollContainerTo = (el: HTMLElement, top: number, behavior: Scroll
   el.scrollTo({ top, behavior: resolveScrollBehavior(behavior) });
 };
 
+// The scroll viewport's own box. Streamed content never changes it; a container
+// animating open, a window resize or a growing dock always does — which is what
+// separates the two kinds of resize the growth observer sees.
+export type ViewportBox = { width: number; height: number };
+
+export const readViewportBox = (el: HTMLElement | null): ViewportBox =>
+  el ? { width: el.clientWidth, height: el.clientHeight } : { width: 0, height: 0 };
+
+export const sameViewportBox = (a: ViewportBox, b: ViewportBox) =>
+  a.width === b.width && a.height === b.height;
+
 // A prepend = rows were added, nothing removed, and the previously-first row
 // is still connected but no longer first (older history loading in above).
 export const wasPrepended = (

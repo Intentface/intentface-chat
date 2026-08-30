@@ -36,7 +36,9 @@ import {
   measureDockInset,
   measureTopInset,
   queryDock,
+  readViewportBox,
   resolveScrollBehavior,
+  sameViewportBox,
   scrollContainerTo,
   wasPrepended,
 } from "./geometry";
@@ -455,14 +457,23 @@ const useThreadScroll = (
     // late, so a position check here would scroll on stale "at bottom" the
     // instant after the user wheels up, hijacking their scroll and re-arming
     // the follow in a loop they can't escape.
+    //
+    // A resize alone can't say whether content grew or the viewport did: the
+    // reserve tracks --thread-turn-area, so a container animating open resizes
+    // `content` every frame. Only a viewport change moves the scroller's own
+    // box — re-pin those instantly instead of smooth-scrolling a moving target
+    // for the length of the animation.
+    let viewport = readViewportBox(scrollRef.current);
     const follow = () => {
+      const previous = viewport;
+      viewport = readViewportBox(scrollRef.current);
+      const resized = !sameViewportBox(previous, viewport);
       if (skipNextResize) {
         skipNextResize = false;
         return;
       }
-      if (followingRef.current) {
-        scrollToBottom("smooth");
-      }
+      if (!followingRef.current) return;
+      scrollToBottom(resized ? "instant" : "smooth");
     };
 
     land();
@@ -692,16 +703,18 @@ const useThreadInsets = (rootRef: RefObject<HTMLDivElement | null>) => {
     const root = rootRef.current;
     if (!root) return;
 
+    // Read both insets before writing either property: a write followed by a forced
+    // layout read dips scrollHeight for a frame, and that scrollTop clamp is final.
     const apply = () => {
       const bottomInset = measureDockInset(root);
-      if (bottomInset !== null) {
-        root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
-      }
       const topInset = measureTopInset(root);
       const area = Math.max(
         0,
         Math.round(root.clientHeight - topInset - (bottomInset ?? DEFAULT_BOTTOM_OFFSET)),
       );
+      if (bottomInset !== null) {
+        root.style.setProperty("--thread-overlay-bottom-height", `${bottomInset}px`);
+      }
       root.style.setProperty("--thread-turn-area", `${area}px`);
     };
 

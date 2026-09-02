@@ -59,9 +59,9 @@
       "types": "./dist/attachments/index.d.ts",
       "default": "./dist/attachments/index.js"
     },
-    "./ask-user": {
-      "types": "./dist/ask-user/index.d.ts",
-      "default": "./dist/ask-user/index.js"
+    "./ask": {
+      "types": "./dist/ask/index.d.ts",
+      "default": "./dist/ask/index.js"
     },
     "./message": {
       "types": "./dist/message/index.d.ts",

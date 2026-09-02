@@ -17,7 +17,7 @@ import {
 } from "@intentface/chat/composer";
 import { AnimatePresence, motion } from "motion/react";
 import { Children, type ComponentProps, type ReactNode, useMemo, useRef } from "react";
-import { AskUser } from "@/components/ai/ask-user";
+import { Ask } from "@/components/ai/ask";
 import { Attachments } from "@/components/ai/attachments";
 import { Chip } from "@/components/ai/chip";
 import { SendIcon } from "@/components/icons/send";
@@ -47,14 +47,16 @@ export type {
   AttachmentsApi,
   ChipData,
   CommandItemKind,
-  ComposerAnswerEntry,
-  ComposerAnswersSubmit,
   ComposerCommandsConfig,
   ComposerCommandsItems,
   ComposerCommandsMap,
   ComposerEditorHandle,
   ComposerEditorState,
   ComposerMessageSubmit,
+  ComposerRequest,
+  ComposerRequestEntry,
+  ComposerRequestOption,
+  ComposerRequestsSubmit,
   ComposerSnapshot,
   ComposerSubmitData,
   ComposerSubmitOn,
@@ -582,78 +584,83 @@ const ComposerCommands = ({ prefix }: ComposerCommandsProps) => (
 );
 
 // ---------------------------------------------------------------------------
-// AskUser (with sub-Parts) — default render for the ask-user flow registered
-// via the `questions` prop on Composer Root.
+// Ask (with sub-Parts) — default render for the request flow registered
+// via the `requests` prop on Composer Root.
 // ---------------------------------------------------------------------------
 
-const ComposerAskUser = () => {
-  const askUser = useComposer((composer) => composer.askUser);
+const ComposerAsk = () => {
+  const requests = useComposer((composer) => composer.requests);
 
-  // Content only. The consumer gates the enclosing Panel on `askUser.active`;
-  // this renders the question compound, or null when there are none. `display`
-  // keeps the last question on screen through an exit animation.
-  const question = askUser.questions?.[askUser.step] ?? null;
-  const lastQuestionRef = useRef(question);
-  if (question) lastQuestionRef.current = question;
-  const display = question ?? lastQuestionRef.current;
+  // Content only. The consumer gates the enclosing Panel on `requests.active`;
+  // this renders the request compound, or null when there are none. `display`
+  // keeps the last request on screen through an exit animation.
+  const request = requests.items?.[requests.step] ?? null;
+  const lastRequestRef = useRef(request);
+  if (request) lastRequestRef.current = request;
+  const display = request ?? lastRequestRef.current;
 
   if (!display) return null;
 
-  const entry = askUser.answers.get(askUser.step) ?? {
+  const entry = requests.drafts.get(requests.step) ?? {
     selected: new Set<string>(),
     freeText: "",
   };
 
-  const totalQuestions = askUser.questions?.length ?? 0;
+  const totalRequests = requests.items?.length ?? 0;
 
   return (
-    <AskUser>
-      <AskUser.Header>
-        <AskUser.Label>{display.question}</AskUser.Label>
-        {!askUser.isSingle && totalQuestions > 1 && (
-          <AskUser.Navigation>
-            <AskUser.Previous onClick={askUser.goBack} disabled={askUser.step === 0} />
-            <AskUser.StepLabel>
-              {({ current, total }) => `${current} of ${total} questions`}
-            </AskUser.StepLabel>
-            <AskUser.Next onClick={askUser.goNext} disabled={askUser.step === totalQuestions - 1} />
-          </AskUser.Navigation>
+    <Ask>
+      <Ask.Header>
+        <Ask.Label>{display.label}</Ask.Label>
+        {!requests.isSingle && totalRequests > 1 && (
+          <Ask.Navigation>
+            <Ask.Previous onClick={requests.goBack} disabled={requests.step === 0} />
+            <Ask.StepLabel>
+              {({ current, total }) => `${current} of ${total} requests`}
+            </Ask.StepLabel>
+            <Ask.Next onClick={requests.goNext} disabled={requests.step === totalRequests - 1} />
+          </Ask.Navigation>
         )}
-      </AskUser.Header>
+      </Ask.Header>
       {display.options && (
-        <AskUser.Options
-          ref={askUser.optionsRef}
+        <Ask.Options
+          ref={requests.optionsRef}
           multiSelect={!!display.multiSelect}
-          groupName={`q-${askUser.step}`}
+          groupName={`q-${requests.step}`}
         >
-          {display.options.map((option) => (
-            <AskUser.Option
-              key={option.label}
-              value={option.label}
-              selected={entry.selected.has(option.label)}
-              onSelect={() => askUser.toggleOption(option.label)}
-            >
-              <AskUser.OptionInput />
-              <AskUser.OptionContent>
-                <AskUser.OptionLabel>{option.label}</AskUser.OptionLabel>
-                {option.description && (
-                  <AskUser.OptionDescription>{option.description}</AskUser.OptionDescription>
-                )}
-              </AskUser.OptionContent>
-            </AskUser.Option>
-          ))}
-        </AskUser.Options>
+          {display.options.map((option) => {
+            // One identity for key, value, lookup and toggle — so a supplied
+            // `value` is what the submit entry carries.
+            const optionValue = option.value ?? option.label;
+            return (
+              <Ask.Option
+                key={optionValue}
+                value={optionValue}
+                selected={entry.selected.has(optionValue)}
+                onSelect={() => requests.toggleOption(optionValue)}
+              >
+                <Ask.OptionInput />
+                <Ask.OptionContent>
+                  <Ask.OptionLabel>{option.label}</Ask.OptionLabel>
+                  {option.description && (
+                    <Ask.OptionDescription>{option.description}</Ask.OptionDescription>
+                  )}
+                </Ask.OptionContent>
+              </Ask.Option>
+            );
+          })}
+        </Ask.Options>
       )}
-    </AskUser>
+    </Ask>
   );
 };
 
-const ComposerAskUserHints = ({ className, ...props }: ComponentProps<typeof AskUser.Hints>) => {
-  const askUser = useComposer((composer) => composer.askUser);
-  const totalQuestions = askUser.questions?.length ?? 0;
+const ComposerAskHints = ({ className, ...props }: ComponentProps<typeof Ask.Hints>) => {
+  const requests = useComposer((composer) => composer.requests);
+  const totalRequests = requests.items?.length ?? 0;
 
   return (
-    <AskUser.Hints className={cn("flex-1", className)} {...props}>
+    <Ask.Hints className={cn("flex-1", className)} {...props}>
       <span className="inline-flex items-center gap-1">
         <Kbd size="sm">↑</Kbd>
         <Kbd size="sm">↓</Kbd> navigate
@@ -661,7 +668,7 @@ const ComposerAskUserHints = ({ className, ...props }: ComponentProps<typeof Ask
       <span className="inline-flex items-center gap-1">
         <Kbd size="sm">↵</Kbd> select
       </span>
-      {!askUser.isSingle && totalQuestions > 1 && (
+      {!requests.isSingle && totalRequests > 1 && (
         <span className="inline-flex items-center gap-1">
           <Kbd size="sm">←</Kbd>
           <Kbd size="sm">→</Kbd> between questions
@@ -670,21 +677,21 @@ const ComposerAskUserHints = ({ className, ...props }: ComponentProps<typeof Ask
       <span className="inline-flex items-center gap-1">
         <Kbd size="sm">esc</Kbd> skip
       </span>
-    </AskUser.Hints>
+    </Ask.Hints>
   );
 };
 
-type ComposerAskUserDismissProps = ComponentProps<typeof Button>;
+type ComposerAskDismissProps = ComponentProps<typeof Button>;
 
-const ComposerAskUserDismiss = ({ className, ...props }: ComposerAskUserDismissProps) => {
-  const askUser = useComposer((composer) => composer.askUser);
+const ComposerAskDismiss = ({ className, ...props }: ComposerAskDismissProps) => {
+  const requests = useComposer((composer) => composer.requests);
   return (
     <Button
       type="button"
       variant="ghost"
-      data-slot="composer-ask-user-dismiss"
+      data-slot="composer-ask-dismiss"
       className={cn("gap-2", className)}
-      onClick={askUser.dismissStep}
+      onClick={requests.dismissStep}
       {...props}
     >
       Dismiss
@@ -692,19 +699,19 @@ const ComposerAskUserDismiss = ({ className, ...props }: ComposerAskUserDismissP
   );
 };
 
-type ComposerAskUserContinueProps = ComponentProps<typeof Button>;
+type ComposerAskContinueProps = ComponentProps<typeof Button>;
 
-const ComposerAskUserContinue = ({ className, ...props }: ComposerAskUserContinueProps) => {
-  const askUser = useComposer((composer) => composer.askUser);
+const ComposerAskContinue = ({ className, ...props }: ComposerAskContinueProps) => {
+  const requests = useComposer((composer) => composer.requests);
   return (
     <Button
       type="submit"
       variant="tertiary"
-      data-slot="composer-ask-user-continue"
+      data-slot="composer-ask-continue"
       className={cn("gap-2", className)}
       {...props}
     >
-      {askUser.isLastStep ? "Submit" : "Continue"}
+      {requests.isLastStep ? "Submit" : "Continue"}
     </Button>
   );
 };
@@ -725,10 +732,10 @@ export const Composer = Object.assign(ComposerRoot, {
   Panel: ComposerPanel,
   Popover: ComposerPopover,
   Textarea: ComposerTextarea,
-  AskUser: ComposerAskUser,
-  AskUserHints: ComposerAskUserHints,
-  AskUserDismiss: ComposerAskUserDismiss,
-  AskUserContinue: ComposerAskUserContinue,
+  Ask: ComposerAsk,
+  AskHints: ComposerAskHints,
+  AskDismiss: ComposerAskDismiss,
+  AskContinue: ComposerAskContinue,
   Commands: ComposerCommands,
   Command: ComposerCommand,
   CommandList: ComposerCommandList,

@@ -12,12 +12,13 @@ export { useComposerController } from "./controller";
 export { filterArrayItems, fuzzyScore, suggestionRemainder } from "./fuzzy";
 export * as Composer from "./index.parts";
 export type { ComposerSubmitOn, EditorKeyAction, EditorKeyContext } from "./keyboard";
-export { interpretAskUserKey, interpretEditorKey } from "./keyboard";
+export { interpretEditorKey, interpretRequestKey } from "./keyboard";
 export type { ComposerPanelProps } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
 export type { ComposerPopoverProps } from "./popover";
 export type { ActiveTokenState, RegisteredPrefix } from "./prefix-detection";
 export { CLOSED_COMMAND_STATE, detectActivePrefix } from "./prefix-detection";
+export type { RequestDraft } from "./request-machine";
 export type { ComposerRootProps } from "./root";
 export type { Segment, SegmentDoc, TextChange } from "./segments";
 export {
@@ -28,30 +29,30 @@ export {
   spliceSegments,
 } from "./segments";
 export type {
-  ComposerAskUserState,
   ComposerAttachmentsState,
   ComposerCommandsState,
   ComposerEditorState,
   ComposerPanelSlice,
+  ComposerRequestsState,
   ComposerState,
   ComposerStore,
 } from "./store";
 export { useComposer, useComposerStore } from "./store";
 export type { ComposerTextareaProps, ComposerTextareaState } from "./textarea";
 export type {
-  AskUserOption,
-  AskUserQuestion,
   AttachmentsApi,
   ChipData,
   CommandItemData,
   CommandItemKind,
-  ComposerAnswerEntry,
-  ComposerAnswersSubmit,
   ComposerCommandsConfig,
   ComposerCommandsItems,
   ComposerCommandsMap,
   ComposerEditorHandle,
   ComposerMessageSubmit,
+  ComposerRequest,
+  ComposerRequestEntry,
+  ComposerRequestOption,
+  ComposerRequestsSubmit,
   ComposerSnapshot,
   ComposerSubmitData,
   PrefixOnSelectContext,

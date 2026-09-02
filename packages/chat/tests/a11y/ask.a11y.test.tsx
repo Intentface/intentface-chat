@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { AskUser } from "../../src/ask-user";
+import { Ask } from "../../src/ask";
 import { Composer } from "../../src/composer";
 import { useComposer } from "../../src/composer/store";
-import type { AskUserQuestion, ComposerSubmitData } from "../../src/composer/types";
+import type { ComposerRequest, ComposerSubmitData } from "../../src/composer/types";
 import { expectNoAxeViolations } from "./axe";
 
 // Phase 1 interaction tests: real focus in the options group (roving
@@ -11,51 +11,53 @@ import { expectNoAxeViolations } from "./axe";
 // and the whole flow answerable by keyboard alone — the behaviors that
 // replaced the blur-to-body + document-listener model.
 
-const SINGLE: AskUserQuestion[] = [
+const SINGLE: ComposerRequest[] = [
   {
-    question: "Which database should we use?",
+    id: "database",
+    label: "Which database should we use?",
     options: [{ label: "PostgreSQL" }, { label: "MongoDB" }, { label: "SQLite" }],
   },
 ];
 
-const MULTI: AskUserQuestion[] = [
+const MULTI: ComposerRequest[] = [
   {
-    question: "Which features should we enable?",
+    id: "features",
+    label: "Which features should we enable?",
     multiSelect: true,
     options: [{ label: "Dark mode" }, { label: "Analytics" }],
   },
 ];
 
 // Minimal headless consumer, mirroring the styled layer's wiring.
-const AskUserHarness = () => {
-  const askUser = useComposer((composer) => composer.askUser);
-  const question = askUser.questions?.[askUser.step];
-  if (!question) return null;
-  const entry = askUser.answers.get(askUser.step);
-  const selected = entry?.selected ?? new Set<string>();
+const AskHarness = () => {
+  const requests = useComposer((composer) => composer.requests);
+  const request = requests.items?.[requests.step];
+  if (!request) return null;
+  const draft = requests.drafts.get(requests.step);
+  const selected = draft?.selected ?? new Set<string>();
 
   return (
-    <AskUser.Root>
-      <AskUser.Header>
-        <AskUser.Label>{question.question}</AskUser.Label>
-      </AskUser.Header>
-      <AskUser.Options ref={askUser.optionsRef} multiSelect={!!question.multiSelect}>
-        {question.options.map((option) => (
-          <AskUser.Option
+    <Ask.Root>
+      <Ask.Header>
+        <Ask.Label>{request.label}</Ask.Label>
+      </Ask.Header>
+      <Ask.Options ref={requests.optionsRef} multiSelect={!!request.multiSelect}>
+        {request.options.map((option) => (
+          <Ask.Option
             key={option.label}
             value={option.label}
             selected={selected.has(option.label)}
-            onSelect={() => askUser.toggleOption(option.label)}
+            onSelect={() => requests.toggleOption(option.label)}
           >
-            <AskUser.OptionLabel>{option.label}</AskUser.OptionLabel>
-          </AskUser.Option>
+            <Ask.OptionLabel>{option.label}</Ask.OptionLabel>
+          </Ask.Option>
         ))}
-      </AskUser.Options>
-    </AskUser.Root>
+      </Ask.Options>
+    </Ask.Root>
   );
 };
 
-// activateAskUser defers focus/listener attachment one frame past the commit
+// activateRequests defers focus/listener attachment one frame past the commit
 // that mounts the options.
 const flushFrames = async () => {
   await act(async () => {
@@ -65,17 +67,17 @@ const flushFrames = async () => {
   });
 };
 
-describe("ask-user a11y", () => {
+describe("ask a11y", () => {
   test("focus lands in a labelled radiogroup, arrows rove, and the question is answerable by keyboard alone", async () => {
     const submitted: ComposerSubmitData[] = [];
     const { container, unmount } = render(
       <Composer.Root
-        questions={SINGLE}
+        requests={SINGLE}
         onSubmit={(data) => {
           submitted.push(data);
         }}
       >
-        <AskUserHarness />
+        <AskHarness />
       </Composer.Root>,
     );
     await flushFrames();
@@ -99,12 +101,12 @@ describe("ask-user a11y", () => {
     await expectNoAxeViolations(container);
 
     // Enter on a single-select selects AND advances — with one question, the
-    // answers submit. The full flow just happened without a mouse.
+    // entries submit. The full flow just happened without a mouse.
     fireEvent.keyDown(group, { key: "Enter" });
     expect(submitted).toEqual([
       {
-        kind: "answers",
-        answers: [{ question: "Which database should we use?", option: "MongoDB" }],
+        kind: "requests",
+        requests: [{ id: "database", selected: ["MongoDB"] }],
       },
     ]);
 
@@ -114,8 +116,8 @@ describe("ask-user a11y", () => {
 
   test("multi-select checkboxes toggle aria-checked in place with Enter and Space", async () => {
     const { container, unmount } = render(
-      <Composer.Root questions={MULTI} onSubmit={() => {}}>
-        <AskUserHarness />
+      <Composer.Root requests={MULTI} onSubmit={() => {}}>
+        <AskHarness />
       </Composer.Root>,
     );
     await flushFrames();
@@ -144,8 +146,8 @@ describe("ask-user a11y", () => {
 
   test("arrows still navigate after a chrome click drops focus to body", async () => {
     const { unmount } = render(
-      <Composer.Root questions={SINGLE} onSubmit={() => {}}>
-        <AskUserHarness />
+      <Composer.Root requests={SINGLE} onSubmit={() => {}}>
+        <AskHarness />
       </Composer.Root>,
     );
     await flushFrames();
@@ -168,8 +170,8 @@ describe("ask-user a11y", () => {
 
   test("navigating past the list boundary keeps focus instead of dropping to body", async () => {
     const { unmount } = render(
-      <Composer.Root questions={SINGLE} onSubmit={() => {}}>
-        <AskUserHarness />
+      <Composer.Root requests={SINGLE} onSubmit={() => {}}>
+        <AskHarness />
       </Composer.Root>,
     );
     await flushFrames();

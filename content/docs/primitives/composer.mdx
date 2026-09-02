@@ -1,13 +1,14 @@
 ---
 title: Composer
-description: Rich-text chat input with chips, slash/mention commands, attachments, and an ask-user flow.
+description: Rich-text chat input with chips, slash/mention commands, attachments, and a request flow (questions and tool approvals).
 source: composer
 ---
 
 import { Basic } from './composer/demos/basic';
 import { Commands } from './composer/demos/commands';
 import { Popover } from './composer/demos/popover';
-import { AskUserFlow } from './composer/demos/ask-user-flow';
+import { ApprovalFlow } from './composer/demos/approval-flow';
+import { AskFlow } from './composer/demos/ask-flow';
 import { AttachmentsDemo } from './composer/demos/attachments';
 import { Controlled } from './composer/demos/controlled';
 import { Store } from './composer/demos/store';
@@ -18,7 +19,7 @@ import { Store } from './composer/demos/store';
 
 - **Chat input** — a hand-rolled contenteditable over a flat segment model: native typing and IME, inline chips, attachments.
 - **Prefix commands** — type `/`, `@`, or other prefixes to open command lists.
-- **Panel** — hosts command results, live steps, or an ask-user prompt above the field.
+- **Panel** — hosts command results, live steps, or a request prompt above the field.
 - **Headless** — behavior lives in `@intentface/chat`; the demos below show one way to style it, and every class in them is yours to change.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
@@ -58,7 +59,7 @@ The bare nesting — every part is optional except `Composer` and `Container`:
 
 `Composer.Panel` takes plain children or a callback receiving the composer
 state, and shows only while its resolved content is non-empty. Gate each part on
-the state it belongs to (`commands.active`, `askUser.active`, …) and the panel
+the state it belongs to (`commands.active`, `requests.active`, …) and the panel
 opens and closes to match — priority is just the order of your branches.
 
 ## Examples
@@ -81,17 +82,25 @@ or the other; the content is identical.
 
 <Demo component={<Popover />} file="primitives/composer/demos/popover.tsx" />
 
-### Ask-user flow
+### Request flow
 
-Setting the `questions` prop — typically from an assistant's clarifying
-question — arms the ask-user flow and flips `askUser.active`; compose the
-`AskUser` parts from `@intentface/chat/ask-user` inside a `Panel` (or
-`Popover`), reading the current step from `useComposer(c => c.askUser)`. The
+Setting the `requests` prop — a clarifying question, a tool approval, any
+choice you put to the user — arms the request flow and flips `requests.active`;
+compose the `Ask` parts from `@intentface/chat/ask` inside a `Panel` (or
+`Popover`), reading the current step from `useComposer(c => c.requests)`. The
 flow steps through each question (single- or multi-select), and answering or
-skipping the last one fires `onSubmit` with `{ kind: "answers" }`. Passing a
-fresh `questions` array re-arms it from the first step.
+skipping the last one fires `onSubmit` with `{ kind: "requests" }` — one flat
+entry per request, keyed by the id you minted, carrying option values. Passing
+a fresh `requests` array re-arms it from the first step.
 
-<Demo component={<AskUserFlow />} file="primitives/composer/demos/ask-user-flow.tsx" />
+<Demo component={<AskFlow />} file="primitives/composer/demos/ask-flow.tsx" />
+
+A tool approval is the same mechanism, not a feature: mint the tool call id as
+the request id, put your decision vocabulary in the option `value`s, and route
+the entry back to the tool in `onSubmit`. A single request mounts no
+step-navigation parts.
+
+<Demo component={<ApprovalFlow />} file="primitives/composer/demos/approval-flow.tsx" />
 
 ### Attachments
 
@@ -152,7 +161,7 @@ const ChatInputInner = memo(({ panel, status }: ChatInputInnerProps) => (
 ));
 ```
 
-`derivePanelState` is yours — what belongs in the panel (an ask-user prompt, a
+`derivePanelState` is yours — what belongs in the panel (a request prompt, a
 status line) is your product's policy. Return a referentially stable value while
 nothing has changed, so the inner composer bails on every chunk except real panel
 transitions.
@@ -161,7 +170,7 @@ transitions.
 
 `Composer.Root` is a `<form>`, so submission and key handling follow form
 semantics. The editor interprets keys by mode — a command list being open, or
-ask-user being active, takes priority over normal typing.
+the request flow being active, takes priority over normal typing.
 
 **Normal typing**
 
@@ -184,9 +193,9 @@ export const commandKeys = [
 
 <AttributesTable rows={commandKeys} />
 
-**Ask-user active**
+**Request flow active**
 
-export const askUserKeys = [
+export const requestKeys = [
   { attribute: "ArrowUp / ArrowDown", description: "Navigate options; up past the first refocuses the editor." },
   { attribute: "ArrowLeft / ArrowRight", description: "Go to the previous / next question." },
   { attribute: "Enter", description: "Select the highlighted option." },
@@ -194,7 +203,7 @@ export const askUserKeys = [
   { attribute: "Any character", description: "Focus the editor and start typing a free-text answer." },
 ];
 
-<AttributesTable rows={askUserKeys} />
+<AttributesTable rows={requestKeys} />
 
 While `isSubmitting`, `Submit` (via `useComposerSubmit`) also listens document-wide
 for `Escape` to call `onStop`, unless the event was already handled.
@@ -225,12 +234,12 @@ The placeholder overlay is `aria-hidden` — assistive tech hears the string
 string, keep a `placeholder` string alongside (children win visually) so the
 hint still announces.
 
-### Ask-user questions
+### Requests
 
-While `questions` are active, the options form a labelled group: `AskUser.Options`
+While `requests` are active, the options form a labelled group: `Ask.Options`
 renders `role="radiogroup"` (single-select) or `role="group"` (multi-select),
-named by `AskUser.Label` and described by `AskUser.StepLabel` automatically.
-Each `AskUser.Option` is the real control — `role="radio"` / `role="checkbox"`
+named by `Ask.Label` and described by `Ask.StepLabel` automatically.
+Each `Ask.Option` is the real control — `role="radio"` / `role="checkbox"`
 with `aria-checked` — and holds the group's single tab stop via roving
 `tabindex`: DOM focus follows the highlight, entering the group on arrival and
 moving with ArrowUp/ArrowDown. Enter and Space select; Escape dismisses the
@@ -246,7 +255,7 @@ key handling treats native inputs as foreign editables.
   its chrome focuses the editor, but clicks on nested buttons, links, and
   inputs pass through. It carries no role and no tab stop — keyboard users tab
   straight to the editor.
-- **Ask-user focus.** Activating `questions` moves focus into the options
+- **Request focus.** Activating `requests` moves focus into the options
   group; typing any character returns focus to the editor for a free-text
   answer.
 - **Default names.** `Submit` is named "Send message", flipping to
@@ -271,9 +280,9 @@ The `<form>` that owns submission, store resolution, drag-and-drop, and the
 prop → store bridges. Renders `data-composer-root`.
 
 export const rootProps = [
-  { name: "onSubmit", type: "(data: ComposerSubmitData) => void | Promise<void>", description: "Fires on message submit and on ask-user answers. Discriminate on data.kind." },
+  { name: "onSubmit", type: "(data: ComposerSubmitData) => void | Promise<void>", description: "Fires on message submit and on request entries. Discriminate on data.kind." },
   { name: "commands", type: "ComposerCommandsMap", default: "{}", description: "Prefix → command config (kind, trigger, items, suggestion, placeholder). suggestion: false disables ghost-text completion; placeholder sets the per-prefix empty-query hint (never shown alongside a suggestion — the suggestion wins)." },
-  { name: "questions", type: "AskUserQuestion[]", description: "When set, arms the ask-user flow (blurs the editor, flips askUser.active)." },
+  { name: "requests", type: "ComposerRequest[]", description: "When set, arms the request flow (blurs the editor, flips requests.active)." },
   { name: "isSubmitting", type: "boolean", default: "false", description: "Flips Submit to a stop affordance and gates re-submits." },
   { name: "value", type: "ComposerSnapshot", description: "Controlled editor content." },
   { name: "defaultValue", type: "ComposerSnapshot", description: "Uncontrolled initial editor content." },
@@ -303,7 +312,7 @@ Returns a `ComposerStore` handle. Pass it to `store`, read it with
 ```ts
 type ComposerSubmitData =
   | { kind: "message"; text: string; files: AttachmentItem[] }
-  | { kind: "answers"; answers: ComposerAnswerEntry[] };
+  | { kind: "requests"; requests: ComposerRequestEntry[] };
 ```
 
 `files` are the generic attachment descriptors — your `onSubmit` adapts them to
@@ -432,7 +441,7 @@ part-specific props.
 
 A surface region above the field. `children` is either plain nodes or a callback
 `(composer) => ReactNode` receiving the composer state, so you pick what to show
-by priority (`commands.active ? <Command/> : askUser.active ? <AskUser.Root/> :
+by priority (`commands.active ? <Command/> : requests.active ? <Ask.Root/> :
 null`). By default (`anchor`) it renders as a **collision-aware, portaled overlay**
 anchored to the `Container` — flipping / shifting / sizing to stay on screen (via
 `@floating-ui/dom`); anchor a ref/element elsewhere, or pass `anchor={false}` for an
@@ -584,18 +593,18 @@ still flows top-to-bottom — and calls the callback once per group with
 </Composer.CommandGroup>
 ```
 
-### Ask-user
+### Ask
 
-The composer owns the ask-user *state* — `questions`, the current step, the
-answers — but renders none of the question UI. Compose that from the `AskUser`
-namespace in `@intentface/chat/ask-user`, reading the step through
-`useComposer((c) => c.askUser)` and gating the enclosing `Panel` or `Popover` on
-`askUser.active`.
+The composer owns the request *state* — `items`, the current step, the
+drafts — but renders none of the prompt UI. Compose that from the `Ask`
+namespace in `@intentface/chat/ask`, reading the step through
+`useComposer((c) => c.requests)` and gating the enclosing `Panel` or `Popover`
+on `requests.active`.
 
-`AskUser.Dismiss` is a plain button you wire to `askUser.dismissStep`;
-`AskUser.Continue` is `type="submit"`, so the enclosing `Composer.Root` form
+`Ask.Dismiss` is a plain button you wire to `requests.dismissStep`;
+`Ask.Continue` is `type="submit"`, so the enclosing `Composer.Root` form
 drives it. Neither ships copy — supply the labels as children, and read
-`askUser.isLastStep` to switch the continue wording.
+`requests.isLastStep` to switch the continue wording.
 
 ### Hooks
 

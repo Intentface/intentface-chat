@@ -1,0 +1,503 @@
+---
+title: Tabs
+description: An open-ended, closable tab collection whose panel renders either in the layout or in a popover anchored to its own tab.
+source: tabs
+---
+
+import { Basic } from './tabs/demos/basic';
+import { Anchored } from './tabs/demos/anchored';
+
+<Demo component={<Basic />} file="primitives/tabs/demos/basic.tsx" />
+
+## Usage guidelines
+
+- **Open-ended and closable** — tabs are added and removed at runtime, unlike a fixed set of panels.
+- **Open-ness is the selection** — there is no separate `open` flag. `value` is a tab id or `null`, and `null` means nothing is showing. A page-tab strip never reaches `null`; a chat dock does, every time you close the last one.
+- **Order is data** — `items` is an ordered array on the store, not something derived from the DOM. Drag it with whatever library you like through `render`; the result is a state change like any other.
+- **One viewport, not a panel per tab** — switching re-renders the same box, which is what lets a floating surface move rather than tear itself down.
+- **In the layout or anchored** — wrapping the viewport in `Portal` › `Positioner` › `Popup` is the entire difference between the two.
+- **Get started** — see [Quick start](/quick-start) to add the package.
+
+## Anatomy
+
+```tsx
+<Tabs.Root>
+  <Tabs.List>
+    <Tabs.Trigger>
+      <Tabs.Icon />
+      <Tabs.Action>
+        <Tabs.Close />
+      </Tabs.Action>
+    </Tabs.Trigger>
+  </Tabs.List>
+
+  {/* In the layout … */}
+  <Tabs.Viewport />
+
+  {/* … or floating over the open tab. */}
+  <Tabs.Portal>
+    <Tabs.Positioner>
+      <Tabs.Popup>
+        <Tabs.Viewport />
+      </Tabs.Popup>
+    </Tabs.Positioner>
+  </Tabs.Portal>
+</Tabs.Root>
+```
+
+One viewport per collection, in one of those two places — the three wrapping
+parts are the only difference between them.
+
+Both the strip and the viewport take a function, so neither needs a loop, a
+key, or a subscription of its own:
+
+```tsx
+<Tabs.Root defaultItems={["a", "b"]} defaultValue="a" selectOnClose="adjacent">
+  <Tabs.List>
+    {(id) => (
+      <Tabs.Trigger value={id}>
+        <Tabs.Icon />
+        {documents[id].title}
+        <Tabs.Action>
+          <Tabs.Close aria-label="Close tab" />
+        </Tabs.Action>
+      </Tabs.Trigger>
+    )}
+  </Tabs.List>
+  <Tabs.Viewport>{(id) => <Document id={id} />}</Tabs.Viewport>
+</Tabs.Root>
+```
+
+The viewport can sit anywhere in the tree — inside the popup for a floating
+surface, or in a card three components away while the strip stays in the window
+chrome.
+
+## Anchored to its own tab
+
+Wrap the viewport and the panel floats above the open tab instead of sitting in
+the layout. Nothing else changes — same Root, same List, same ARIA — because
+the content portals into the viewport wherever it happens to be:
+
+<Demo component={<Anchored />} file="primitives/tabs/demos/anchored.tsx" />
+
+The panel is a real chat, built from this package's own parts — a
+[Thread](/primitives/thread) of [Messages](/primitives/message) with a docked
+[Composer](/primitives/composer). The dock owns *which* conversation is
+showing; everything inside the panel is the chat primitives' business.
+
+```tsx
+<Tabs.Root defaultItems={chats} selectOnClose="recent">
+  <Tabs.List>{/* … */}</Tabs.List>
+  <Tabs.Portal>
+    <Tabs.Positioner side="top" align="end" sideOffset={8}>
+      <Tabs.Popup>
+        <Tabs.Viewport>{(id) => <Chat id={id} />}</Tabs.Viewport>
+      </Tabs.Popup>
+    </Tabs.Positioner>
+  </Tabs.Portal>
+</Tabs.Root>
+```
+
+Note the Agent button in the demo: a `Tabs.Trigger` written *outside* the list,
+whose value is never in `items`. It anchors a panel to itself without creating
+a tab — a draft, in other words — and it keeps its own tab stop rather than
+joining the roving focus. Selecting something else is all it takes to discard
+it, because there was never a tab to clean up.
+
+One positioner serves the whole collection, anchored to whichever tab is open.
+A positioner per tab would mean an `autoUpdate` loop each — a ResizeObserver
+and an IntersectionObserver apiece, still running while closed — and nothing to
+morph between when the selection moves.
+
+The surface is non-modal throughout: no backdrop, no scroll lock, no focus
+trap, and no dismissal on outside press. A chat dock is something you work
+*behind*.
+
+`Positioner` owns the movement and `Popup` owns the appearance, so the element
+being animated is never the element being moved. Until the first placement
+lands the surface withholds paint rather than showing at 0,0 — otherwise the
+first real position would arrive as `auto` → a length, which CSS cannot
+interpolate, and the surface would slide in from the corner.
+
+## Closing
+
+Where the selection lands when the open tab is closed is a behaviour, and the
+primitive will not invent one you did not ask for — you would have no reason to
+suspect it was configurable.
+
+export const closePolicies = [
+  { value: "unset", default: true, description: "Nowhere: closing what was open shows nothing." },
+  { value: '"adjacent"', description: "Whatever slides into the vacated slot, or the last tab if the tail went — an editor's behaviour." },
+  { value: '"recent"', description: "The tab you were in before this one, falling back to adjacent." },
+];
+
+<ValuesTable rows={closePolicies} />
+
+## Why a toolbar and not a tablist
+
+ARIA's `tablist` cannot describe this widget, for two independent reasons. A
+tablist must own only tabs, so there is nowhere to put a close button; and it
+requires exactly one selected tab, so `value: null` — a dock with everything
+closed — is not a state it can express. Both are real, and axe fails the first
+outright.
+
+So the strip is a `toolbar` of buttons, each a disclosure for its panel:
+`aria-expanded` says whether its panel is showing and `aria-controls` names it.
+Close buttons are real buttons rather than pointer-only affordances, arrow-key
+roving focus is exactly what a toolbar is expected to do, and nothing open is
+an ordinary state.
+
+Static, always-one-selected tabs are a different widget, and `tablist` is the
+right role for those.
+
+## Keyboard
+
+export const keys = [
+  { keys: "Arrow keys", description: "Move focus along the strip, following its orientation." },
+  { keys: "Enter / Space", description: "Open the focused tab." },
+  { keys: "Delete / Backspace", description: "Close the focused tab — only inside a Tabs.List, and the keyboard equivalent of the × beside it." },
+  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape." },
+];
+
+<KeysTable rows={keys} />
+
+Focus follows the arrows but does not select, which is what manual activation
+means; set `activateOnFocus` to select as focus moves. A text field inside the
+strip keeps the arrow key whenever the caret still has somewhere to travel.
+
+## useTabs
+
+Read the collection from anywhere inside `<Tabs.Root>`:
+
+```tsx
+const openTab = useTabs((tabs) => tabs.value);
+```
+
+export const hookMembers = [
+  { name: "value", type: "string | null", description: "The open tab, or null when nothing is." },
+  { name: "items", type: "string[]", description: "The tabs, in order." },
+  { name: "recent", type: "string[]", description: "Most recently opened first — what the recent close policy reads." },
+  { name: "direction", type: "TabsDirection", description: "Which way the selection last moved, for panels that slide rather than fade." },
+  { name: "open", type: "(value, options?) => void", description: "Add a tab (or move it, if already present) and select it." },
+  { name: "close", type: "(value: string) => void", description: "Remove a tab; selectOnClose decides where the selection lands." },
+  { name: "select", type: "(value: string | null) => void", description: "Open a tab, or null to show nothing." },
+  { name: "selectRelative", type: "(direction, options?) => void", description: "Step the selection — what the arrow keys drive." },
+  { name: "move", type: "(value: string, toIndex: number) => void", description: "Reorder; the target index is clamped into range." },
+  { name: "setItems", type: "(items: string[]) => void", description: "Replace the whole collection." },
+];
+
+<PropsTable rows={hookMembers} />
+
+`useTabsStore(store, selector)` is the outside-the-tree twin, taking an
+explicit `Tabs.createStore()` handle — which is how a "new chat" button
+somewhere else in the app opens a tab. There is no global fallback.
+
+## Persistence
+
+Nothing is persisted here. The collection goes out through `onItemsChange` and
+the selection through `onValueChange`, and both come back in as `defaultItems`
+and `defaultValue` — so where they are kept is yours:
+
+```tsx
+<Tabs.Root
+  defaultItems={stored?.items ?? []}
+  defaultValue={stored?.value ?? null}
+  onItemsChange={(items) => save({ items })}
+  onValueChange={(value) => save({ value })}
+>
+```
+
+A restored selection naming a tab that is no longer in `items` is dropped
+rather than trusted, so a stale value cannot open a panel for something that
+does not exist. See [Shell's persistence](/primitives/shell#persistence) for
+why the value has to arrive as a prop rather than be read at init.
+
+## Accessibility
+
+The strip is a `toolbar` of disclosures rather than a `tablist`, for the reasons
+in [Why a toolbar](#why-a-toolbar-and-not-a-tablist): each `Tabs.Trigger`
+carries `aria-expanded` and an `aria-controls` that only claims a viewport
+really in the document, and `Tabs.Viewport` is named by whichever tab is open
+through `aria-labelledby`.
+
+Roving focus means exactly one tab is tabbable, and focus follows the arrows
+without selecting — manual activation, unless `activateOnFocus` says otherwise.
+`Tabs.Close` is a real button rather than a pointer-only affordance, but it
+stays out of the roving order, so the keyboard route to closing is `Delete` on
+the tab itself. `Tabs.Icon` is `aria-hidden`, keeping decoration out of the
+tab's accessible name.
+
+The floating surface is non-modal throughout: no backdrop, no scroll lock, no
+focus trap, and no dismissal on outside press. That is deliberate — a dock is
+something you work behind — and it means focus is never taken from you, but
+also that the surface will not return it. Give the popup a close control, which
+`Escape` then duplicates.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[Styling](/handbook/styling)) and emits a bespoke part attribute
+(`data-<part>`) unless noted. Every part in the collection also carries
+`data-orientation`, `data-disabled` when disabled, `data-empty` when nothing is
+open, and `data-activation-direction`.
+
+### Tabs.Root
+
+The provider and container. Renders `data-tabs`.
+
+export const rootProps = [
+  { name: "defaultItems", type: "string[]", description: "The starting tabs when nothing controls them." },
+  { name: "items", type: "string[]", description: "Controlled collection." },
+  { name: "onItemsChange", type: "(items: string[]) => void", description: "Fires whenever a tab is added, removed or moved." },
+  { name: "defaultValue", type: "string | null", description: "The tab open on first render." },
+  { name: "value", type: "string | null", description: "Controlled selection; null shows nothing." },
+  { name: "onValueChange", type: "(value: string | null) => void", description: "Fires on every selection change." },
+  { name: "selectOnClose", type: "TabsSelectOnClose", description: "Where the selection lands when the open tab is closed. Unset means nowhere." },
+  { name: "orientation", type: '"horizontal" | "vertical"', default: '"horizontal"', description: "Which arrow keys walk the strip." },
+  { name: "loop", type: "boolean", default: "true", description: "Wrap at the ends of the strip." },
+  { name: "activateOnFocus", type: "boolean", default: "false", description: "Select as focus moves, instead of on activation." },
+  { name: "disabled", type: "boolean", default: "false", description: "Disable the whole collection." },
+  { name: "dismissOnEscape", type: "boolean", default: "true", description: "Escape closes the open panel." },
+  { name: "store", type: "TabsStore", description: "An explicit Tabs.createStore() handle. Must be stable for the Root's lifetime." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const rootAttrs = [
+  { attribute: "data-tabs", description: "The container." },
+  { attribute: "data-orientation", values: '"horizontal" | "vertical"', description: "Which arrow keys walk the strip." },
+  { attribute: "data-empty", description: "Present while nothing is open. A page-tab strip never sees this; a dock does." },
+  { attribute: "data-disabled", description: "Present while the whole collection is disabled." },
+  { attribute: "data-activation-direction", values: '"left" | "right" | "up" | "down"', description: "Which way the selection last moved, for panels that slide rather than fade. Absent when it has not moved." },
+];
+
+<AttributesTable rows={rootAttrs} />
+
+### Tabs.List
+
+The strip. Renders `data-tabs-list` with `role="toolbar"` and owns the roving
+focus.
+
+export const listProps = [
+  { name: "children", type: "ReactNode | ((value: string, index: number) => ReactNode)", description: "Plain children when you lay the strip out yourself; a function renders one call per tab, in order." },
+];
+
+<PropsTable rows={listProps} />
+
+export const listAttrs = [
+  { attribute: "data-tabs-list", values: 'role="toolbar"', description: "The strip, with aria-orientation matching the Root's." },
+  { attribute: "data-orientation", values: '"horizontal" | "vertical"', description: "The strip's orientation." },
+  { attribute: "data-empty", description: "Present while nothing is open." },
+  { attribute: "data-disabled", description: "Present while the collection is disabled." },
+  { attribute: "data-activation-direction", values: '"left" | "right" | "up" | "down"', description: "Which way the selection last moved." },
+];
+
+<AttributesTable rows={listAttrs} />
+
+### Tabs.Trigger
+
+One tab. Renders `data-tabs-trigger`, with `aria-expanded` and an
+`aria-controls` that only claims a viewport really in the document.
+
+One part, two situations, decided by where it sits rather than by a prop:
+inside a `Tabs.List` it joins the collection and the roving focus, and `Delete`
+closes it. Outside one it takes an explicit value, keeps its own tab stop, and
+toggles — a panel with no tab behind it, anchored to the button that owns it.
+
+export const triggerProps = [
+  { name: "value", type: "string", description: "The tab's id. Required outside a List; inherited from the enclosing tab inside one." },
+  { name: "disabled", type: "boolean", description: "Disable this tab. It stays in the arrow-key ring." },
+];
+
+<PropsTable rows={triggerProps} />
+
+export const triggerAttrs = [
+  { attribute: "data-tabs-trigger", values: "the tab's value", description: "The tab, and its identity — the strip's roving focus finds tabs by this attribute and reads the value back off it. Select it without the value for styling." },
+  { attribute: "data-selected", description: "Present while this tab's panel is showing." },
+  { attribute: "data-disabled", description: "Present while disabled." },
+  { attribute: "data-orientation", values: '"horizontal" | "vertical"', description: "The strip's orientation." },
+];
+
+<AttributesTable rows={triggerAttrs} />
+
+### Tabs.Icon
+
+Decoration inside a tab. Renders a `<span>` with `data-tabs-icon` and
+`aria-hidden` — the trigger already has an accessible name, and an icon that
+repeats it only makes the announcement longer. It carries the tab's state, so
+the mark can respond to its tab being open without a group selector.
+
+export const iconProps = [
+  { name: "value", type: "string", description: "Only outside a tab, where there is none to inherit from." },
+];
+
+<PropsTable rows={iconProps} />
+
+export const iconAttrs = [
+  { attribute: "data-tabs-icon", description: "The icon slot." },
+  { attribute: "data-selected", description: "Present while the tab's panel is showing." },
+  { attribute: "data-disabled", description: "Present while the tab is disabled." },
+];
+
+<AttributesTable rows={iconAttrs} />
+
+### Tabs.Action
+
+The trailing slot inside a tab — where the close button lives. Renders
+`data-tabs-action`, carrying the tab's state.
+
+export const actionProps = [
+  { name: "value", type: "string", description: "Only outside a tab, where there is none to inherit from." },
+];
+
+<PropsTable rows={actionProps} />
+
+export const actionAttrs = [
+  { attribute: "data-tabs-action", description: "The slot." },
+  { attribute: "data-selected", description: "Present while the tab's panel is showing." },
+  { attribute: "data-disabled", description: "Present while the tab is disabled." },
+];
+
+<AttributesTable rows={actionAttrs} />
+
+It wants to be **positioned rather than in flow** — a tab narrow enough to
+truncate has nowhere to put a control, so the label needs to run *under* the
+button and fade out:
+
+```css
+[data-tabs-trigger] {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-tabs-action] {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  /* The padding starts the button past the end of the gradient. */
+  padding-inline: 0.75rem 0.375rem;
+  background-color: inherit;
+  mask-image: linear-gradient(to right, transparent, #000 0.5rem);
+}
+```
+
+`background-color: inherit` takes the tab's own colour, whatever state it is
+in, and the mask fades that background in from the left — so the label slides
+under it rather than stopping at a hard edge. Laying it out in flow instead
+gives you a button that collides with the label on exactly the tabs where it
+matters.
+
+### Tabs.Close
+
+The × inside a tab. Renders `data-tabs-close` as a `role="button"` with
+`tabIndex="-1"`, for the same reason its parent is a `div`. It keeps out of
+the roving order — arrowing along a strip should walk tabs, not alternate
+between each tab and its close button — so the keyboard route to closing is
+`Delete` on the tab itself. Every event it handles stops there: nested inside
+the trigger, anything that escaped would open the tab on its way out of closing
+it.
+
+export const closeProps = [
+  { name: "value", type: "string", description: "Only outside a tab, where there is none to inherit from." },
+  { name: "disabled", type: "boolean", description: "Defaults to the tab's disabled state." },
+];
+
+<PropsTable rows={closeProps} />
+
+export const closeAttrs = [
+  { attribute: "data-tabs-close", description: "The close button." },
+  { attribute: "data-selected", description: "Present while the tab's panel is showing." },
+  { attribute: "data-disabled", description: "Present while disabled." },
+];
+
+<AttributesTable rows={closeAttrs} />
+
+### Tabs.Viewport
+
+The one box that shows a tab's content. Renders `data-tabs-viewport`, named by
+whichever tab is open via `aria-labelledby`.
+
+Nothing off-screen exists, and that is deliberate: a tab you are not looking at
+has no component, so anything that must keep running while you are elsewhere —
+a reply still streaming — belongs in a store rather than in the panel's state.
+
+export const viewportProps = [
+  { name: "children", type: "(value: string) => ReactNode", description: "Renders the content for whatever is open. Not called when nothing is." },
+];
+
+<PropsTable rows={viewportProps} />
+
+export const viewportAttrs = [
+  { attribute: "data-tabs-viewport", description: "The content box. Carries an id, and `aria-labelledby` naming whichever tab is open." },
+  { attribute: "data-empty", description: "Present while nothing is open — the children function is not called, so the box is empty." },
+  { attribute: "data-orientation", values: '"horizontal" | "vertical"', description: "The collection's orientation." },
+  { attribute: "data-activation-direction", values: '"left" | "right" | "up" | "down"', description: "Which way the selection last moved, so the panel can slide the right way." },
+];
+
+<AttributesTable rows={viewportAttrs} />
+
+The open tab's id is deliberately *not* published as an attribute: it is state
+the viewport needs, but not a styling hook.
+
+### Tabs.Portal
+
+Owns the mounting of the floating surface. Renders no element of its own — so
+it has no attributes to publish — and keeps its children in the DOM through the
+exit animation, which `Tabs.Popup` reports as finished.
+
+export const portalProps = [
+  { name: "container", type: "HTMLElement | null", default: "document.body", description: "Where the surface is portaled." },
+  { name: "keepMounted", type: "boolean", default: "false", description: "Keep the surface mounted while nothing is open. Costs a live positioning loop." },
+];
+
+<PropsTable rows={portalProps} />
+
+### Tabs.Positioner
+
+Owns the placement. Renders `data-tabs-positioner` as `role="presentation"`,
+anchored to whichever tab is open.
+
+export const positionerProps = [
+  { name: "side", type: '"top" | "bottom" | "left" | "right"', default: '"top"', description: "Preferred side; flips when there is no room." },
+  { name: "align", type: '"start" | "center" | "end"', default: '"center"', description: "Alignment along that side." },
+  { name: "sideOffset", type: "number", default: "8", description: "Gap between the tab and the surface." },
+  { name: "collisionPadding", type: "number", default: "8", description: "How far clear of the viewport edges to stay." },
+];
+
+<PropsTable rows={positionerProps} />
+
+Placement lands on the positioner, which is also where the measured geometry is
+published — `position`, `left` and `top` are written imperatively, so do not
+set them from a stylesheet on this part.
+
+export const positionerAttrs = [
+  { attribute: "data-tabs-positioner", values: 'role="presentation"', description: "The positioned wrapper." },
+  { attribute: "data-open", description: "Present while a tab is open." },
+  { attribute: "data-closed", description: "Present while nothing is." },
+  { attribute: "data-side", values: '"top" | "bottom" | "left" | "right"', description: "The resolved side, which flip may have changed — so a surface that flipped can style itself as where it ended up." },
+  { attribute: "data-align", values: '"start" | "center" | "end"', description: "The resolved alignment." },
+  { attribute: "--anchor-width", values: "measured px", description: "The open tab's own width, e.g. so a surface can match it." },
+  { attribute: "--anchor-height", values: "measured px", description: "The open tab's own height." },
+  { attribute: "--anchor-available-width", values: "measured px", description: "Free space toward the placement side — cap a max-width instead of overflowing." },
+  { attribute: "--anchor-available-height", values: "measured px", description: "The same, vertically." },
+];
+
+<AttributesTable rows={positionerAttrs} />
+
+### Tabs.Popup
+
+The surface itself: the part to style and animate. Renders `data-tabs-popup`,
+and it is what reports the exit animation as finished so the portal knows when
+to unmount.
+
+export const popupAttrs = [
+  { attribute: "data-tabs-popup", description: "The surface." },
+  { attribute: "data-open", description: "Present while a tab is open." },
+  { attribute: "data-closed", description: "Present while nothing is." },
+  { attribute: "data-starting-style", description: "Present on the first open frame." },
+  { attribute: "data-ending-style", description: "Present while the exit animation runs." },
+];
+
+<AttributesTable rows={popupAttrs} />

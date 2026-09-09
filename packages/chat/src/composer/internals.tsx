@@ -4,15 +4,8 @@
 // (command registry, editor-update reporting) and the small hooks the parts
 // build on. Not consumer API.
 
-import {
-  createContext,
-  type RefObject,
-  use,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { createContext, type RefObject, use, useCallback, useEffect, useRef } from "react";
+import { useIsomorphicLayoutEffect } from "../internal/iso-layout-effect";
 import { createDragHandlers } from "./attachments-machine";
 import type { RegisteredPrefix } from "./prefix-detection";
 import type { ComposerCommandsMap, ComposerSnapshot, RegisteredEditor } from "./types";
@@ -21,10 +14,8 @@ import type { ComposerCommandsMap, ComposerSnapshot, RegisteredEditor } from "./
 // Generic hooks — small, composer-agnostic utilities the parts build on.
 // ---------------------------------------------------------------------------
 
-// SSR-safe layout effect — same shape as cmdk's. useLayoutEffect runs before
-// paint; useEffect is a no-op fallback when window is undefined (SSR pass).
-export const useIsomorphicLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
+// Re-exported so the composer parts keep importing it from one place.
+export { useIsomorphicLayoutEffect };
 
 // Mirror a prop into a ref so closures always see the latest value without
 // having to add the prop to dep arrays. Layout effect ensures `.current` is

@@ -5,6 +5,7 @@ import { AttributesTable } from "@/components/docs/attributes-table";
 import { CodeBlock } from "@/components/docs/code-block";
 import { Demo } from "@/components/docs/demo";
 import { InstallationBlock } from "@/components/docs/installation-block";
+import { KeysTable } from "@/components/docs/keys-table";
 import { PropsTable } from "@/components/docs/props-table";
 import { ValuesTable } from "@/components/docs/values-table";
 import { cn } from "@/lib/utils";
@@ -102,6 +103,7 @@ const proseComponents: MDXComponents = {
 const docsComponents: MDXComponents = {
   Demo,
   InstallationBlock,
+  KeysTable,
   PropsTable,
   AttributesTable,
   ValuesTable,

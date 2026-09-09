@@ -1,0 +1,448 @@
+---
+title: Nav
+description: A nav tree with roving focus, typeahead, collapsible groups that animate, and a guide ladder down the left edge.
+source: nav
+---
+
+import { Basic } from './nav/demos/basic';
+
+<Demo component={<Basic />} file="primitives/nav/demos/basic.tsx" />
+
+## Usage guidelines
+
+- **Recursive by construction** — a group's list may hold further groups, to any depth, with no second set of parts for the nesting.
+- **One tab stop** — the whole tree is a single tab stop; arrow keys move focus between rows, and typing seeks a row by its label.
+- **Rows hold actions** — `Nav.Item` is a `div` with `role="button"` rather than an anchor, so a menu affordance can sit inside it. Swap in a real link with `render`.
+- **Depth is a variable** — each list publishes its own `--nav-depth`, so one indent rule covers every level.
+- **Persists nothing itself** — the open set goes out through `onExpandedChange` and comes back as `defaultExpanded`, so where it is kept is yours.
+- **Get started** — see [Quick start](/quick-start) to add the package.
+
+## Anatomy
+
+```tsx
+<Nav.Root>
+  <Nav.List>
+    <Nav.Item>
+      <Nav.Icon />
+      <Nav.Label />
+      <Nav.Action />
+    </Nav.Item>
+    <Nav.Group>
+      <Nav.Trigger>
+        <Nav.Label />
+      </Nav.Trigger>
+      <Nav.List />
+    </Nav.Group>
+  </Nav.List>
+</Nav.Root>
+```
+
+A sidebar tree with a rail, one branch open on load, and rows that route:
+
+```tsx
+<Nav.Root guide="rail" defaultExpanded={stored ?? ["docs"]} onExpandedChange={save}>
+  <Nav.List>
+    <Nav.Item value="overview" active={pathname === "/"} render={<Link href="/" />}>
+      <Nav.Label>Overview</Nav.Label>
+    </Nav.Item>
+    <Nav.Group value="docs">
+      <Nav.Trigger>
+        <Nav.Label>Documentation</Nav.Label>
+      </Nav.Trigger>
+      <Nav.List>
+        <Nav.Item value="quick-start" render={<Link href="/quick-start" />}>
+          <Nav.Label>Quick start</Nav.Label>
+        </Nav.Item>
+      </Nav.List>
+    </Nav.Group>
+  </Nav.List>
+</Nav.Root>
+```
+
+## The guide ladder
+
+What a list draws down its left edge is a ladder rather than three independent
+flags, because each rung implies the one before it — a rail lives in the indent
+lane, and an elbow needs a rail to turn off. Expressing them as booleans would
+mean guarding against combinations that mean nothing.
+
+export const guides = [
+  { value: '"none"', default: true, description: "No indent lane and no attributes." },
+  { value: '"indent"', description: "Emits data-indent — the lane exists, nothing is drawn in it." },
+  { value: '"rail"', description: "Emits data-indent and data-rail — a line down the lane." },
+  { value: '"branches"', description: "Emits data-indent, data-rail and data-branches — elbows off the rail." },
+];
+
+<ValuesTable rows={guides} />
+
+The attributes are cumulative on purpose: a stylesheet asking for
+`[data-rail]` gets branches too, which is what keeps the ladder readable in CSS
+without wrapping every selector in `:is()`. Set the default on `Nav.Root` and
+override it per list.
+
+## Collapsing
+
+`height: auto` is not interpolable, so a collapse can only animate between
+lengths — but a list pinned to a length permanently could not hold a group that
+expands inside it, and would clip whatever just opened. So the pin is
+temporary: `--nav-list-height` holds a measured pixel value while a transition
+runs and is released the moment the opening one finishes. An open, settled list
+is `auto` and grows freely.
+
+```css
+[data-nav-group] > [data-nav-list] {
+  height: var(--nav-list-height);
+  overflow: hidden;
+  opacity: 1;
+  /* Not ease-out: the last row is the bottom sliver of the height, and
+     ease-out spends its whole tail crawling through exactly that stretch —
+     which reads as the row popping in at the end. */
+  transition:
+    height 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease-out;
+}
+
+[data-nav-list][data-starting-style],
+[data-nav-list][data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+
+/* The collapsing list squeezes to nothing, and a flex item shrinks below its
+   own height when the column runs short — so without this the rows compress
+   instead of sliding up behind the clip. */
+[data-nav-list] > * {
+  flex-shrink: 0;
+}
+```
+
+With the variable released, `height: var(--nav-list-height)` is invalid at
+computed-value time and `height` lands back on `auto` — which is exactly what a
+settled list wants, without inheriting anything from an ancestor.
+
+## The rail recipe
+
+The package publishes the signal; the geometry is yours. This is the recipe
+rather than a stylesheet you import — copy it and change the numbers:
+
+```css
+/* The lane. `indent` is the first rung and every rung above it emits this too,
+   so one rule sizes the lane for all of them. */
+[data-nav-list][data-indent] {
+  /* Where the elbow aims. Not 50% of the child: a child may itself be a group
+     several rows tall. */
+  --nav-row: 2rem;
+
+  margin-top: 2px;
+  margin-left: 15px;
+  padding-left: 7px;
+}
+
+/* Both halves are laid out unconditionally and only the borders switch on: a
+   box with no edges drawn takes no space and paints nothing. */
+[data-nav-list][data-rail] > *::before,
+[data-nav-list][data-rail] > *::after {
+  content: "";
+  position: absolute;
+  left: -7px;
+  border-color: var(--rail-color);
+  border-left-width: 1px;
+}
+
+[data-nav-list][data-rail] > * {
+  position: relative;
+  /* Never `hidden`: these pseudo-elements sit outside the row's own box, so
+     clipping them erases the rail. Truncate the label instead. */
+  overflow: visible;
+}
+
+/* The top half: down to the row's centre, 6px wide so an elbow fits. */
+[data-nav-list][data-rail] > *::before {
+  top: -2px;
+  width: 6px;
+  height: calc(var(--nav-row) / 2 + 2px);
+}
+
+/* …and the rail carries on to the next row. Never past the last one: a line
+   running into empty space reads as a list that got cut off. */
+[data-nav-list][data-rail] > *::after {
+  top: calc(var(--nav-row) / 2 - 6px);
+  bottom: -2px;
+}
+
+[data-nav-list][data-rail] > *:last-child::after {
+  display: none;
+}
+
+/* The elbow — only on groups. One at every leaf turns the rail into a comb and
+   buries the thing worth spotting, which is where the tree forks. Group and
+   Item carry different identity attributes precisely so CSS can tell them
+   apart without the package taking a view. */
+[data-nav-list][data-branches] > [data-nav-group]::before {
+  border-bottom-width: 1px;
+  border-bottom-left-radius: 6px;
+}
+```
+
+The four numbers are all load-bearing: **15px** hangs the rail under the centre
+of a `size-4` icon at `px-2`, so it drops out of the parent's icon rather than
+beside it; **7px** is the lane, and it is the *list's* padding rather than the
+row's, because an active row paints a background and would cover a line drawn
+inside its own box; **6px** is the elbow's radius, and the curve pulls the
+vertical away that early, so the continuation has to start 6px above the row's
+centre or every branch leaves a radius of rail missing; **2px** is the row gap,
+bridged so the line reads as unbroken.
+
+One more thing the recipe depends on: give rows an **explicit height**. Text at
+a fractional line-height makes a padded row land on a fraction of a pixel, and
+then nothing in the tree lines up — `--nav-row` has to match whatever height
+you set.
+
+## Keyboard
+
+These are the widget's own keys, not global ones: the handler sits on
+`Nav.Root`, so nothing fires unless focus is already inside the tree. Roving
+focus is the reason to reach for a headless nav in the first place.
+
+export const keys = [
+  { keys: "Arrow up / down", description: "Move focus to the previous or next visible row. Collapsed lists are unmounted, so their rows are simply not there to land on." },
+  { keys: "Arrow right", description: "On a closed group, open it; on an open one, step into it. On a leaf, nothing." },
+  { keys: "Arrow left", description: "On an open group, close it; otherwise step out to the parent group's trigger — which is where the row came from." },
+  { keys: "Enter / Space", description: "Activate the focused row." },
+  { keys: "Any letter", description: "Seek to the row whose label starts with what you typed. The query resets after half a second of no typing; turn the whole thing off with the typeahead prop." },
+];
+
+<KeysTable rows={keys} />
+
+A field inside the nav keeps its own arrow keys — an input, a textarea, a
+select, or anything `contenteditable` — or the caret could never move.
+
+## useNav
+
+Read which groups are open from anywhere inside `<Nav.Root>`:
+
+```tsx
+const isOpen = useNav((nav) => nav.expanded.has("docs"));
+```
+
+export const hookMembers = [
+  { name: "expanded", type: "ReadonlySet<string>", description: "Which groups are open, by value." },
+  { name: "toggle", type: "(value: string) => void", description: "Flip one group." },
+  { name: "setOpen", type: "(value: string, open: boolean) => void", description: "Open or close one group explicitly." },
+  { name: "setExpanded", type: "(expanded: Iterable<string>) => void", description: "Replace the whole open set." },
+];
+
+<PropsTable rows={hookMembers} />
+
+`useNavStore(store, selector)` is the outside-the-tree twin, taking an explicit
+`Nav.createStore()` handle. There is no global fallback.
+
+## Persistence
+
+Nothing is persisted here either. `onExpandedChange` reports the open set out
+and `defaultExpanded` takes it back in, so where it is kept is yours:
+
+```tsx
+// A server component reads it before the first paint …
+const stored = readNavState((await cookies()).toString());
+
+// … and the tree reports every change back.
+<Nav.Root
+  defaultExpanded={stored ?? ["docs"]}
+  onExpandedChange={(expanded) => writeNavState(expanded)}
+>
+```
+
+Validate what comes back out of storage — `Array.isArray(x) && x.every((v) =>
+typeof v === "string")` is the whole check for Nav — so a stale or hand-edited
+value falls back to the default rather than reaching the tree. See
+[Shell's persistence](/primitives/shell#persistence) for why the value has to
+arrive as a prop rather than be read at init.
+
+## Accessibility
+
+The tree is a roving-tabindex widget: exactly one row is tabbable, and focus
+follows the arrow keys. Before the roving state is seeded — a server render, or
+the frame before hydration — the `active` row carries the tab stop, which keeps
+a row rendered as a real anchor reachable without JavaScript.
+
+`Nav.Trigger` carries `aria-expanded` and `aria-controls` pointing at the list
+it governs. Disabled rows get `aria-disabled` rather than being removed from
+the ring, so they stay discoverable. `Nav.Icon` is `aria-hidden`, keeping
+decoration out of the row's accessible name. `Nav.Action` sits outside the
+roving order and stops every event it handles — otherwise activating it would
+also activate the row wrapped around it.
+
+Enter and Space are wired by hand, which is the price of a row that can hold an
+action rather than being a real `<button>`. A row that already activates itself
+— a `<button>`, or an `<a href>` swapped in via `render` — is left alone
+instead of being activated twice.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[Styling](/handbook/styling)) and emits a bespoke part attribute
+(`data-<part>`) unless noted. Every part also carries `data-depth` and, when
+nested inside a group, `data-nested`.
+
+### Nav.Root
+
+The provider and container. Renders `data-nav`, and owns the keyboard handling
+for the whole tree.
+
+export const rootProps = [
+  { name: "defaultExpanded", type: "string[]", description: "Groups open when nothing controls them. Read it from the request so the first paint already has the right branches open." },
+  { name: "expanded", type: "string[]", description: "Controlled open set." },
+  { name: "onExpandedChange", type: "(expanded: string[]) => void", description: "Fires whenever a group opens or closes." },
+  { name: "store", type: "NavStore", description: "An explicit Nav.createStore() handle. Must be stable for the Root's lifetime." },
+  { name: "guide", type: "NavGuide", default: '"none"', description: "What every list draws down its left edge, unless it says otherwise." },
+  { name: "loop", type: "boolean", default: "false", description: "Wrap at the ends when arrowing past the first or last row." },
+  { name: "disabled", type: "boolean", default: "false", description: "Disable every row at once — a read-only view of the tree." },
+  { name: "typeahead", type: "boolean", default: "true", description: "Seek a row by typing its label." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const rootAttrs = [
+  { attribute: "data-nav", description: "The container." },
+  { attribute: "data-depth", values: "0", description: "The Root is the top level, so its depth is always zero — spelled out rather than omitted, because `0` is falsy and the default derivation would drop it." },
+];
+
+<AttributesTable rows={rootAttrs} />
+
+### Nav.List
+
+A level of the tree. Renders `data-nav-list`. A list inside a group is that
+group's collapsible panel; a top-level list is not collapsible, because there
+is no trigger above it.
+
+export const listProps = [
+  { name: "guide", type: "NavGuide", description: "Overrides the Root's default for this list." },
+  { name: "keepMounted", type: "boolean", default: "false", description: "Keep a closed list in the DOM behind `hidden`. Its rows are not navigable while hidden." },
+];
+
+<PropsTable rows={listProps} />
+
+export const listAttrs = [
+  { attribute: "data-nav-list", description: "The list." },
+  { attribute: "data-depth", values: "number", description: "Nesting level; 0 is the top." },
+  { attribute: "data-open", description: "Present while open." },
+  { attribute: "data-closed", description: "Present while closed." },
+  { attribute: "data-indent", description: "Present for every guide but none." },
+  { attribute: "data-rail", description: "Present for rail and branches." },
+  { attribute: "data-branches", description: "Present for branches only." },
+  { attribute: "data-starting-style", description: "Present on the first open frame." },
+  { attribute: "data-ending-style", description: "Present while the close animation runs." },
+  { attribute: "--nav-depth", values: "number", description: "This list's depth, for one indent rule that covers every level." },
+  { attribute: "--nav-list-height", values: "measured px", description: "The content's height, published only while a transition runs so the collapse has a number to animate between. Released once settled open, so the list tracks content that grows." },
+  { attribute: "--nav-list-width", values: "measured px", description: "The same, for a horizontal collapse." },
+];
+
+<AttributesTable rows={listAttrs} />
+
+### Nav.Group
+
+A collapsible branch. Renders `data-nav-group` set to its `value`, and provides
+the group context its trigger and list read.
+
+export const groupProps = [
+  { name: "value", type: "string", default: "(required)", description: "Identifies the group in the expanded set, and in persistence." },
+  { name: "disabled", type: "boolean", description: "Disable this branch's rows." },
+];
+
+<PropsTable rows={groupProps} />
+
+export const groupAttrs = [
+  { attribute: "data-nav-group", values: "the group's value", description: "The branch." },
+  { attribute: "data-open", description: "Present while open." },
+  { attribute: "data-closed", description: "Present while closed." },
+];
+
+<AttributesTable rows={groupAttrs} />
+
+### Nav.Trigger
+
+The row that opens a group — its heading and its disclosure in one, because in
+a sidebar they are the same thing you click. Renders `data-nav-trigger` set to
+the group's value. Takes no `value`: it belongs to the group it is written
+inside.
+
+export const triggerProps = [
+  { name: "active", type: "boolean", default: "false", description: "This branch is the one being shown." },
+  { name: "disabled", type: "boolean", description: "Defaults to the group's own disabled state." },
+];
+
+<PropsTable rows={triggerProps} />
+
+export const triggerAttrs = [
+  { attribute: "data-nav-trigger", values: "the group's value", description: "The disclosure row, and its identity — the same channel `data-nav-item` uses, which is how one selector walks leaves and headings alike." },
+  { attribute: "data-open", description: "Present while the group is open." },
+  { attribute: "data-closed", description: "Present while it is closed." },
+  { attribute: "data-active", description: "Present while active." },
+  { attribute: "data-disabled", description: "Present while disabled." },
+];
+
+<AttributesTable rows={triggerAttrs} />
+
+### Nav.Item
+
+A leaf row. Renders `data-nav-item` set to its `value`.
+
+export const itemProps = [
+  { name: "value", type: "string", default: "(required)", description: "Identifies the row for roving focus and typeahead." },
+  { name: "active", type: "boolean", default: "false", description: "The route this row points at is the one being shown." },
+  { name: "disabled", type: "boolean", description: "Defaults to the Root's disabled state." },
+];
+
+<PropsTable rows={itemProps} />
+
+export const itemAttrs = [
+  { attribute: "data-nav-item", values: "the row's value", description: "The row, and its identity. Root's keyboard handling finds rows by this attribute and reads the value straight back off it — so the DOM is the row order, and no row has to register itself. Select it without the value for styling." },
+  { attribute: "data-active", description: "Present while active." },
+  { attribute: "data-disabled", description: "Present while disabled." },
+];
+
+<AttributesTable rows={itemAttrs} />
+
+### Nav.Label
+
+The row's text. Renders a `<span>` with `data-nav-label` — its own element so
+it can truncate while the row does not. A row must never be `overflow: hidden`
+itself, because the rail's pseudo-elements sit outside its box.
+
+export const labelAttrs = [
+  { attribute: "data-nav-label", description: "The text." },
+  { attribute: "data-depth", values: "number", description: "The enclosing list's depth." },
+  { attribute: "data-nested", description: "Present inside a group." },
+];
+
+<AttributesTable rows={labelAttrs} />
+
+### Nav.Icon
+
+Decoration. Renders a `<span>` with `data-nav-icon` and `aria-hidden`, so it
+stays out of the row's accessible name.
+
+export const iconAttrs = [
+  { attribute: "data-nav-icon", description: "The icon slot." },
+  { attribute: "data-depth", values: "number", description: "The enclosing list's depth." },
+  { attribute: "data-nested", description: "Present inside a group." },
+];
+
+<AttributesTable rows={iconAttrs} />
+
+### Nav.Action
+
+A control inside a row — the affordance that opens a menu, say. Renders
+`data-nav-action` as a `role="button"` with `tabIndex="-1"`: out of the roving
+order, so arrowing walks rows rather than stopping at every affordance, and it
+stops every event it handles — anything that escaped would activate the row on
+its way out of opening the menu.
+
+export const actionAttrs = [
+  { attribute: "data-nav-action", description: "The control." },
+  { attribute: "data-depth", values: "number", description: "The enclosing list's depth." },
+  { attribute: "data-nested", description: "Present inside a group." },
+];
+
+<AttributesTable rows={actionAttrs} />

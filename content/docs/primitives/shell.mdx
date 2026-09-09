@@ -1,0 +1,394 @@
+---
+title: Shell
+description: A collapsible, resizable sidebar beside the viewport it shares the screen with, with hover-peek and cookie persistence.
+source: shell
+---
+
+import { Basic } from './shell/demos/basic';
+
+<Demo component={<Basic />} file="primitives/shell/demos/basic.tsx" />
+
+The sidebar above holds a [Nav](/primitives/nav); the two are separate
+primitives that happen to be built for each other.
+
+## Usage guidelines
+
+- **App shell, not a chat part** — the sidebar-and-viewport frame an app sits in.
+- **No global keys** — the package claims none; bind your own around `toggle`. Only the resize handle's arrow keys are local enough to belong here.
+- **Width is CSS** — the sidebar's size and the range the drag may move it through are `width` / `min-width` / `max-width` in your stylesheet. The primitive measures; it never sizes.
+- **Hover-peek** — a collapsed sidebar floats back out when the pointer rests against the screen edge. Render `Shell.PeekZone` to opt in; omit it to opt out.
+- **Persists nothing itself** — `open` goes out through `onOpenChange` and back as `defaultOpen`; the width goes out through the sidebar's `onResize` and back as CSS. Where it is kept is yours, and reading it from the request keeps the first paint right.
+- **State via `useShell`** — read open, peek, resizing and the measured width from anywhere inside.
+- **Get started** — see [Quick start](/quick-start) to add the package.
+
+## Anatomy
+
+```tsx
+<Shell.Root>
+  <Shell.PeekZone />
+  <Shell.Sidebar>
+    <Shell.Trigger />
+    <Shell.ResizeHandle />
+  </Shell.Sidebar>
+  <Shell.Viewport />
+</Shell.Root>
+```
+
+A shell whose sidebar starts where the visitor left it. Note the gutter — it is
+not a part of the package, and it is the piece that makes the rest work:
+
+```tsx
+<Shell.Root defaultOpen={stored?.open ?? true} onOpenChange={save}>
+  <Shell.PeekZone />
+  <Gutter />
+
+  <Shell.Sidebar>
+    <Shell.Trigger aria-label="Collapse sidebar" />
+    <WorkspaceNav />
+    <Shell.ResizeHandle aria-label="Resize sidebar" />
+  </Shell.Sidebar>
+
+  <Shell.Viewport>{children}</Shell.Viewport>
+</Shell.Root>
+```
+
+## Layout: take the sidebar out of flow
+
+This is the arrangement everything else depends on, and the one that is easy to
+get wrong. The sidebar is **positioned**, not a flex item, and a plain spacer —
+a gutter — holds its place in the layout:
+
+```css
+[data-shell-sidebar] {
+  position: fixed;
+  inset-block: 0;
+  left: 0;
+  width: var(--shell-sidebar-width, 240px);
+  /* Opaque in every state: the content passes beneath the panel while the two
+     animate, and a transparent expanded state would show it through. */
+  background: var(--chrome);
+}
+
+/* The gutter: your own div, reading the property the handle writes. */
+[data-slot="shell-gutter"] {
+  width: var(--shell-sidebar-width, 240px);
+  flex-shrink: 0;
+  transition: width 150ms linear;
+}
+
+[data-shell][data-state="collapsed"] [data-slot="shell-gutter"] {
+  width: 0;
+}
+```
+
+That split is what lets all three states be one element morphing between three
+positions — flush while expanded, off-canvas while collapsed, floating just
+inside the edge while peeking. A sidebar left in flow can only animate its own
+width, so it can never float *over* the content, and the peek has nothing to
+slide across.
+
+It also means the collapse animates two cheap properties on two different
+elements — `left` on the panel, `width` on the gutter — rather than fighting
+one element to do both.
+
+## Sizing
+
+The drag range is `min-width` and `max-width` on the sidebar — that pair *is*
+the whole configuration, and there is no prop for it:
+
+```css
+[data-shell-sidebar] {
+  min-width: 200px;
+  max-width: 380px;
+}
+```
+
+The handle writes `--shell-sidebar-width` on the root, the browser clamps it
+against those bounds, and the sidebar reports back whatever the browser settled
+on — which is the number that gets persisted and announced as `aria-valuenow`.
+Measure in JS, size in CSS; nothing here second-guesses your stylesheet.
+
+Publishing the variable on the root rather than the sidebar is what lets the
+gutter read the same number, and anything else in the shell size itself to
+match.
+
+## Hover-peek
+
+With the sidebar collapsed, resting the pointer in the edge strip floats it out
+as a card; leaving both the card and the strip slides it away after a grace
+period. Both delays are intent filters — a pointer merely crossing the strip
+never opens it, and clipping a corner on the way to the panel never loses it.
+Collapse the demo above and hover its left edge to see it.
+
+The card geometry is worth baking into the *whole* collapsed state rather than
+into `data-peek` alone:
+
+```css
+[data-shell-sidebar][data-state="collapsed"] {
+  left: calc(-1 * var(--shell-sidebar-width));
+  inset-block: 0.5rem;
+  border-radius: 0.75rem;
+}
+
+[data-shell-sidebar][data-state="collapsed"][data-peek] {
+  left: 0.5rem;
+}
+```
+
+Off-canvas the card is invisible anyway, so the peek animates `left` only — no
+vertical movement, and the inset never grows mid-slide. Only expand and
+collapse morph card ↔ flat.
+
+Peek is never persisted, and it only means anything while collapsed. Clicking
+the trigger inside a peeked sidebar pins it open rather than closing it.
+
+## Keyboard
+
+There is no global key binding in the package, and that is deliberate: it
+cannot know which combinations your app has already spent, and a window-level
+`keydown` claimed by a library is a collision waiting to happen. `toggle` is all
+a binding needs — it pins a peeking sidebar open rather than closing it:
+
+```tsx
+const SidebarShortcut = () => {
+  const toggle = useShell((shell) => shell.toggle);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "b" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      toggle();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [toggle]);
+
+  return null;
+};
+```
+
+`Shell.ResizeHandle` does own its keys, because those are local rather than
+global: with the handle focused, the arrow keys nudge the width by `step`.
+
+## useShell
+
+Read shell state from anywhere inside `<Shell.Root>`. Pass a selector so a
+component re-renders only for the value it reads:
+
+```tsx
+const collapsed = useShell((shell) => !shell.open);
+```
+
+export const hookMembers = [
+  { name: "open", type: "boolean", description: "Whether the sidebar is expanded." },
+  { name: "peek", type: "boolean", description: "The collapsed sidebar is floating out on hover. Never persisted." },
+  { name: "resizing", type: "boolean", description: "True for the duration of a resize drag, so parts can suppress transitions." },
+  { name: "width", type: "number | null", description: "The width the browser settled on. Null until the sidebar has mounted and been measured." },
+  { name: "setOpen", type: "(open: boolean) => void", description: "Expand or collapse." },
+  { name: "toggle", type: "() => void", description: "Flip it; a peeking sidebar expands in place rather than closing. This is what an app's keyboard shortcut calls." },
+  { name: "setPeek", type: "(peek: boolean) => void", description: "Float a collapsed sidebar out, or put it away. Ignored while it is already open." },
+  { name: "setResizing", type: "(resizing: boolean) => void", description: "Marks a drag in progress, which is what defers the settled-width report." },
+  { name: "setWidth", type: "(width: number) => void", description: "Reports a measurement. Not a request to resize — CSS decides the size." },
+];
+
+<PropsTable rows={hookMembers} />
+
+To drive the same state from outside the tree — a command palette, a global
+shortcut handler — create the store yourself and pass it in:
+
+```tsx
+const store = Shell.createStore();
+
+<Shell.Root store={store}>{/* … */}</Shell.Root>;
+
+// Anywhere, including outside the tree:
+const open = useShellStore(store, (shell) => shell.open);
+```
+
+There is deliberately no global fallback, so shell state is never read or
+driven by accident from somewhere that merely imported this.
+
+## Persistence
+
+`Shell` persists nothing and knows nothing about where you keep things. `open`
+goes **out** through `onOpenChange` and comes back **in** as `defaultOpen`.
+Format, key, cookie flags, per-browser or per-user account — all yours, and all
+changeable without waiting on a release here.
+
+The one thing worth stating plainly: the value has to arrive as a prop. Reading
+storage at init is a client-only act, so a server-rendered shell would paint the
+default layout and snap to the stored one a frame later — the flash the whole
+arrangement exists to avoid.
+
+```tsx
+// app/layout.tsx — a server component
+const stored = readSidebarLayout((await cookies()).toString());
+
+return <AppShell defaultOpen={stored?.open ?? true} width={stored?.width} />;
+```
+
+```tsx
+// Writing is a client-only act, so it goes in the callback.
+<Shell.Root defaultOpen={defaultOpen} onOpenChange={(open) => save({ open })}>
+```
+
+### Width goes back as CSS, not as a prop
+
+There is deliberately no `defaultWidth`. The width already lives in your
+stylesheet — the resize handle writes `--shell-sidebar-width` and your rule
+reads it — so restoring one means setting that property, which is the same
+mechanism rather than a second one:
+
+```tsx
+<Shell.Root
+  style={stored?.width ? { "--shell-sidebar-width": `${stored.width}px` } : undefined}
+>
+```
+
+Coming the other way, `Shell.Sidebar`'s `onResize` reports a **settled**
+width — once when a drag ends, not once per frame. That debounce is the one
+piece of persistence machinery worth having in the package, because it depends
+on knowing a drag is in progress. Everything else is yours:
+
+```tsx
+<Shell.Sidebar onResize={(width) => save({ width })} />
+```
+
+A cookie is worth choosing over `localStorage` for exactly one reason: it is
+readable from the request, which is what makes the server read above possible.
+And validate on the way in — stored state outlives the code that wrote it, so a
+value from an older release or a half-written entry should fall back to the
+defaults rather than reach your tree.
+
+## Accessibility
+
+`Shell.Trigger` is a `<button>` carrying `aria-expanded` and `aria-controls`
+pointing at the sidebar it governs, so the collapsed/expanded state and the
+relationship are both announced. `Shell.ResizeHandle` is a focusable
+`role="separator"` with `aria-orientation`, `aria-valuenow`, `aria-valuemin`
+and `aria-valuemax`, and it responds to the arrow keys — so resizing is never
+mouse-only. It always carries a value, falling back to the minimum before the
+first measurement lands, because a focusable separator without one is an
+invalid widget.
+
+`Shell.PeekZone` is `aria-hidden`: it is a pointer affordance with no keyboard
+or screen-reader meaning, and the trigger already covers both.
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[Styling](/handbook/styling)) and emits a bespoke part attribute
+(`data-<part>`) unless noted. `className` and `style` may be functions of the
+part's state.
+
+### Shell.Root
+
+The provider and container. Renders `data-shell`.
+
+Everything on the Root is shell-wide state, and it has to be: the store is
+created in the Root's initialiser, and every part reads it in the same commit —
+so a `defaultOpen` arriving from a child would guarantee the flash this design
+exists to avoid. Anything belonging to one part lives on that part.
+
+export const rootProps = [
+  { name: "defaultOpen", type: "boolean", description: "Where the sidebar starts when nothing controls it. Read it from the request so the first paint is already right." },
+  { name: "open", type: "boolean", description: "Controlled open state." },
+  { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on every open/close. Persist it here." },
+  { name: "store", type: "ShellStore", description: "An explicit Shell.createStore() handle, for state reachable from outside this tree. Must be stable for the Root's lifetime." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const rootAttrs = [
+  { attribute: "data-shell", description: "The container." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-peek", description: "Present while the collapsed sidebar is floating out." },
+  { attribute: "data-resizing", description: "Present for the duration of a resize drag." },
+  { attribute: "--shell-sidebar-width", values: "measured px", description: "Written by the resize handle, on the root rather than the sidebar so anything in the shell can size itself to match." },
+];
+
+<AttributesTable rows={rootAttrs} />
+
+### Shell.Sidebar
+
+The panel. Renders `data-shell-sidebar` and reports its measured width back to
+the store. Carries the `id` the trigger's `aria-controls` points at.
+
+export const sidebarProps = [
+  { name: "side", type: '"left" | "right"', default: '"left"', description: "Which edge it sits against. Surfaces as data-side; the resize drag inverts accordingly." },
+  { name: "onResize", type: "(width: number) => void", description: "A settled width in pixels — once when a drag ends, never per frame, and whenever anything else resizes the panel. This is the measurement coming back out; there is no width prop going in, because that is CSS's." },
+];
+
+<PropsTable rows={sidebarProps} />
+
+export const sidebarAttrs = [
+  { attribute: "data-shell-sidebar", description: "The panel." },
+  { attribute: "data-side", values: '"left" | "right"', description: "The edge it sits against." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether it is open." },
+  { attribute: "data-peek", description: "Present while floating out on hover." },
+  { attribute: "data-resizing", description: "Present mid-drag — use it to suppress width transitions." },
+];
+
+<AttributesTable rows={sidebarAttrs} />
+
+### Shell.Viewport
+
+The content area beside the sidebar. Renders `data-shell-viewport`, and carries
+the same state attributes so it can react to the sidebar without a group
+selector.
+
+export const viewportAttrs = [
+  { attribute: "data-shell-viewport", description: "The content area." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-peek", description: "Present while the sidebar is floating out." },
+  { attribute: "data-resizing", description: "Present mid-drag." },
+];
+
+<AttributesTable rows={viewportAttrs} />
+
+### Shell.Trigger
+
+Toggles the sidebar. Renders a `<button>` with `data-shell-trigger`. Ships no
+copy — supply the label as children.
+
+export const triggerAttrs = [
+  { attribute: "data-shell-trigger", description: "The toggle button." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-peek", description: "Present while the sidebar is floating out." },
+];
+
+<AttributesTable rows={triggerAttrs} />
+
+### Shell.ResizeHandle
+
+The drag affordance. Renders `data-shell-resize-handle` as a focusable
+`role="separator"`. Give it a width and a cursor in CSS.
+
+export const handleProps = [
+  { name: "step", type: "number", default: "16", description: "Pixels moved per arrow-key press." },
+];
+
+<PropsTable rows={handleProps} />
+
+export const handleAttrs = [
+  { attribute: "data-shell-resize-handle", description: "The separator." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-resizing", description: "Present while this handle is being dragged." },
+];
+
+<AttributesTable rows={handleAttrs} />
+
+### Shell.PeekZone
+
+The strip along the screen edge that floats a collapsed sidebar out on hover.
+Renders `data-shell-peek-zone`, `aria-hidden`. Give it a width and a position
+in CSS. Omitting the part is how you opt out of peek — there is no prop for it,
+because not rendering it already says so.
+
+export const peekAttrs = [
+  { attribute: "data-shell-peek-zone", description: "The hover strip." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open — key the strip off collapsed so it vanishes when expanded." },
+  { attribute: "data-peek", description: "Present while the sidebar is floating out." },
+];
+
+<AttributesTable rows={peekAttrs} />

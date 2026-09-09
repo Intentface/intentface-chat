@@ -1,16 +1,15 @@
 "use client";
 
 import { useRender } from "@base-ui/react/use-render";
+import { SHELL_SIDEBAR_WIDTH_VAR, Shell, useShell } from "@intentface/chat/shell";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
   type ComponentProps,
+  type CSSProperties,
   createContext,
-  type RefObject,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { SidebarIcon } from "@/components/icons/sidebar";
@@ -19,146 +18,133 @@ import Input from "@/components/ui/input";
 import Separator from "@/components/ui/separator";
 import Tooltip from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { writeSidebarLayout } from "@/lib/sidebar-cookie";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./icon-button";
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
-// Hover-peek: pointer resting in the left-edge strip floats the collapsed
-// sidebar out as a card; leaving panel + strip slides it back after a grace.
-const SIDEBAR_PEEK_EDGE_WIDTH_PX = 20; // matches w-5 on the peek zone
-const SIDEBAR_PEEK_OPEN_DELAY_MS = 200;
-const SIDEBAR_PEEK_CLOSE_DELAY_MS = 250;
+/*
+ * Open/collapsed state and the whole hover-peek choreography live in `Shell`
+ * from @intentface/chat/shell — this file is the styled layer over it. What
+ * stays here is what the package deliberately has no opinion about: every
+ * class, the off-canvas/card geometry, the mobile drawer, where the layout is
+ * persisted, and the keyboard shortcut.
+ *
+ * Mobile is the one piece of state Shell does not own. It is a separate fact
+ * from the desktop sidebar's: `open` is restored from a cookie and defaults
+ * open, which is exactly what you do *not* want a drawer to do on load.
+ */
 
-type SidebarContextType = {
-  state: "expanded" | "collapsed";
-  open: boolean;
-  setOpen: (open: boolean) => void;
+type SidebarMobileContextType = {
+  isMobile: boolean;
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
-  isMobile: boolean;
-  toggleSidebar: () => void;
-  /** Collapsed sidebar floating over the content as a card (ephemeral, never persisted). */
-  peek: boolean;
-  setPeek: (peek: boolean) => void;
-  // Set on collapse so the panel sliding out from under a parked pointer
-  // doesn't bounce straight back as a peek; cleared once the pointer leaves
-  // the edge strip.
-  peekSuppressionRef: RefObject<boolean>;
 };
 
-const SidebarContext = createContext<SidebarContextType | null>(null);
+const SidebarMobileContext = createContext<SidebarMobileContextType | null>(null);
 
+/**
+ * The styled layer's view of the shell: Shell's own state plus the mobile
+ * drawer's. Kept as one hook so the parts below read one thing, the way they
+ * did when this file owned all of it.
+ */
 const useSidebar = () => {
-  const context = useContext(SidebarContext);
-  if (!context) {
+  const mobile = useContext(SidebarMobileContext);
+  if (!mobile) {
     throw new Error("useSidebar must be used within a SidebarProvider.");
   }
-  return context;
+
+  const open = useShell((shell) => shell.open);
+  const peek = useShell((shell) => shell.peek);
+  const setOpen = useShell((shell) => shell.setOpen);
+  const toggle = useShell((shell) => shell.toggle);
+
+  return {
+    state: open ? ("expanded" as const) : ("collapsed" as const),
+    open,
+    setOpen,
+    peek,
+    // On mobile the trigger drives the drawer; Shell's own toggle already
+    // expands a peeking sidebar in place rather than closing it.
+    toggleSidebar: () => (mobile.isMobile ? mobile.setOpenMobile(!mobile.openMobile) : toggle()),
+    ...mobile,
+  };
 };
 
 const SidebarProvider = ({
   defaultOpen = true,
-  open: openProp,
-  onOpenChange: setOpenProp,
+  width,
+  open,
+  onOpenChange,
   className,
-  style,
   children,
   ...props
 }: ComponentProps<"div"> & {
+  /** Read it from the request with `readSidebarLayout` so the first paint is already right. */
   defaultOpen?: boolean;
+  /** A restored width, applied as the custom property the sidebar's `width` reads. */
+  width?: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) => {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = useState(false);
 
-  const [_open, _setOpen] = useState(defaultOpen);
-  const open = openProp ?? _open;
-
-  const [peek, _setPeek] = useState(false);
-  // Guarded so a stale peek timer can never float an expanded sidebar.
-  const setPeek = useCallback((value: boolean) => _setPeek(value && !open), [open]);
-  const peekSuppressionRef = useRef(false);
-
-  const setOpen = useCallback(
-    (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === "function" ? value(open) : value;
-      // Collapsing arms the bounce-back suppression; both directions kill the
-      // peek in the same render — that's what makes expand-from-peek a single
-      // CSS morph instead of a close-then-open.
-      if (!openState) peekSuppressionRef.current = true;
-      _setPeek(false);
-      if (setOpenProp) {
-        setOpenProp(openState);
-      } else {
-        _setOpen(openState);
-      }
-
-      // biome-ignore lint/suspicious/noDocumentCookie: The sidebar open state is mirrored for SSR layout defaults.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
-    },
-    [setOpenProp, open],
+  const mobile = useMemo<SidebarMobileContextType>(
+    () => ({ isMobile, openMobile, setOpenMobile }),
+    [isMobile, openMobile],
   );
 
-  const toggleSidebar = useCallback(() => {
-    if (isMobile) return setOpenMobile((open) => !open);
-    // A peeking sidebar expands in place (the trigger inside the peek, Cmd+B).
-    if (peek) return setOpen(true);
-    setOpen(!open);
-  }, [isMobile, peek, open, setOpen]);
+  return (
+    <SidebarMobileContext.Provider value={mobile}>
+      <Shell.Root
+        defaultOpen={defaultOpen}
+        open={open}
+        // Where the layout is kept is this app's business, not the package's —
+        // see lib/sidebar-cookie.
+        onOpenChange={(next) => {
+          onOpenChange?.(next);
+          writeSidebarLayout({ open: next });
+        }}
+        data-slot="sidebar-wrapper"
+        // A restored width goes back the way the resize handle writes it: the
+        // custom property. There is no prop for it, because the width is CSS's.
+        style={
+          width === undefined
+            ? undefined
+            : ({ [SHELL_SIDEBAR_WIDTH_VAR]: `${width}px` } as CSSProperties)
+        }
+        className={cn("group/sidebar-wrapper flex min-h-svh w-full bg-base-bg", className)}
+        {...props}
+      >
+        <SidebarShortcut />
+        {children}
+      </Shell.Root>
+    </SidebarMobileContext.Provider>
+  );
+};
+
+/**
+ * Cmd/Ctrl+B. The package claims no window-level key — it cannot know which
+ * ones this app has spent — so the binding is ours, and `toggle` is all it
+ * needs: a peeking sidebar pins open rather than closing.
+ *
+ * A component rather than a hook in the provider, so it can read the store
+ * through context like every other part.
+ */
+const SidebarShortcut = () => {
+  const toggle = useShell((shell) => shell.toggle);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        toggleSidebar();
-      }
+      if (event.key !== "b" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      toggle();
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggleSidebar]);
+  }, [toggle]);
 
-  const state = open ? "expanded" : "collapsed";
-
-  const contextValue = useMemo<SidebarContextType>(
-    () => ({
-      state,
-      open,
-      setOpen,
-      isMobile,
-      openMobile,
-      setOpenMobile,
-      toggleSidebar,
-      peek,
-      setPeek,
-      peekSuppressionRef,
-    }),
-    [state, open, setOpen, isMobile, openMobile, toggleSidebar, peek, setPeek],
-  );
-
-  // Suppression is armed on every collapse but any movement outside the edge
-  // strip clears it — so it only survives when the pointer was parked in the
-  // strip at collapse time. Ref write only; no re-render.
-  const handleWrapperPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.clientX > SIDEBAR_PEEK_EDGE_WIDTH_PX) peekSuppressionRef.current = false;
-  };
-
-  return (
-    <SidebarContext.Provider value={contextValue}>
-      <div
-        data-slot="sidebar-wrapper"
-        className={cn("group/sidebar-wrapper flex min-h-svh w-full bg-base-bg", className)}
-        data-state={state}
-        onPointerMove={handleWrapperPointerMove}
-        {...props}
-      >
-        {children}
-      </div>
-    </SidebarContext.Provider>
-  );
+  return null;
 };
 
 const SidebarRoot = ({
@@ -171,63 +157,7 @@ const SidebarRoot = ({
   side?: "left" | "right";
   collapsible?: "offcanvas" | "icon" | "none";
 }) => {
-  const { isMobile, state, openMobile, setOpenMobile, peek, setPeek, peekSuppressionRef } =
-    useSidebar();
-
-  // Peek choreography timers — set only from pointer handlers, cleared
-  // wherever a newer intent supersedes them. Refs, not state: firing is the
-  // only render-relevant event.
-  const peekOpenTimerRef = useRef<number | undefined>(undefined);
-  const peekCloseTimerRef = useRef<number | undefined>(undefined);
-
-  const handlePeekZoneEnter = () => {
-    if (peekSuppressionRef.current) return;
-    // Re-entering during the close grace keeps the peek up.
-    window.clearTimeout(peekCloseTimerRef.current);
-    if (!peek) {
-      peekOpenTimerRef.current = window.setTimeout(() => setPeek(true), SIDEBAR_PEEK_OPEN_DELAY_MS);
-    }
-  };
-
-  const handlePeekZoneLeave = () => {
-    // First zone exit ends the post-collapse suppression (covers leaving via
-    // the window's left edge, where the wrapper's pointermove never clears it).
-    peekSuppressionRef.current = false;
-    // Darting through the strip never opens.
-    window.clearTimeout(peekOpenTimerRef.current);
-    if (peek) {
-      peekCloseTimerRef.current = window.setTimeout(
-        () => setPeek(false),
-        SIDEBAR_PEEK_CLOSE_DELAY_MS,
-      );
-    }
-  };
-
-  const handlePanelEnter = () => {
-    window.clearTimeout(peekCloseTimerRef.current);
-  };
-
-  const handlePanelLeave = () => {
-    if (peek) {
-      peekCloseTimerRef.current = window.setTimeout(
-        () => setPeek(false),
-        SIDEBAR_PEEK_CLOSE_DELAY_MS,
-      );
-    }
-  };
-
-  // Cmd-Tab away mid-peek fires no pointerleave — without this the peek sticks
-  // open and a pending open timer would fire in a backgrounded window.
-  // External subscription, same shape as the provider's Cmd+B listener.
-  useEffect(() => {
-    const handleWindowBlur = () => {
-      window.clearTimeout(peekOpenTimerRef.current);
-      window.clearTimeout(peekCloseTimerRef.current);
-      setPeek(false);
-    };
-    window.addEventListener("blur", handleWindowBlur);
-    return () => window.removeEventListener("blur", handleWindowBlur);
-  }, [setPeek]);
+  const { isMobile, state, openMobile, setOpenMobile, peek } = useSidebar();
 
   if (isMobile) {
     return (
@@ -267,7 +197,10 @@ const SidebarRoot = ({
           1px transparent in the flat state so only border-color animates —
           no width jump. The stacked collapsed+peek variant outranks the
           off-canvas left on specificity, not stylesheet order. */}
-      <div
+      {/* Shell.Sidebar brings the peek hold/release pointer handlers with it. */}
+      <Shell.Sidebar
+        side={side}
+        onResize={(next) => writeSidebarLayout({ width: next })}
         data-slot="sidebar"
         className={cn(
           "fixed z-10 hidden w-(--sidebar-width) border border-transparent bg-base-bg overflow-hidden transition-[left,right,top,bottom,border-color,border-radius,box-shadow] duration-150 ease-linear motion-reduce:transition-none md:flex",
@@ -282,8 +215,6 @@ const SidebarRoot = ({
             : "right-0 inset-y-0 group-data-[state=collapsed]:-right-(--sidebar-width)",
           className,
         )}
-        onPointerEnter={handlePanelEnter}
-        onPointerLeave={handlePanelLeave}
         {...props}
       >
         <div
@@ -294,18 +225,16 @@ const SidebarRoot = ({
         >
           {children}
         </div>
-      </div>
+      </Shell.Sidebar>
       {/* Invisible hover strip that summons the peek. Keyed on collapsed state,
           so it stays live during peek (state remains "collapsed") and vanishes
           the instant the sidebar expands. Its overlap with the peeked card
           covers only border/padding. */}
+      {/* Not rendering it is how you opt out of peek — there is no prop for that. */}
       {side === "left" && (
-        <div
+        <Shell.PeekZone
           data-slot="sidebar-peek-zone"
-          aria-hidden
           className="fixed inset-y-0 left-0 z-20 hidden w-5 group-data-[state=collapsed]:block"
-          onPointerEnter={handlePeekZoneEnter}
-          onPointerLeave={handlePeekZoneLeave}
         />
       )}
     </div>
@@ -313,16 +242,11 @@ const SidebarRoot = ({
 };
 
 const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button">) => {
-  const { toggleSidebar } = useSidebar();
+  const { isMobile, toggleSidebar } = useSidebar();
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    onClick?.(event);
-    toggleSidebar();
-  };
-  return (
+  const button = (
     <IconButton
       data-slot="sidebar-trigger"
-      onClick={handleClick}
       variant="ghost"
       className={cn("hover:bg-base-bg-hover", className)}
       {...props}
@@ -330,6 +254,27 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
       <SidebarIcon />
       <span className="sr-only">Toggle Sidebar</span>
     </IconButton>
+  );
+
+  // The drawer is the app's own state, so mobile drives it directly. On desktop
+  // Shell.Trigger supplies the toggle plus aria-expanded/aria-controls pointing
+  // at the sidebar it actually governs.
+  return isMobile ? (
+    <IconButton
+      data-slot="sidebar-trigger"
+      onClick={(event) => {
+        onClick?.(event);
+        toggleSidebar();
+      }}
+      variant="ghost"
+      className={cn("hover:bg-base-bg-hover", className)}
+      {...props}
+    >
+      <SidebarIcon />
+      <span className="sr-only">Toggle Sidebar</span>
+    </IconButton>
+  ) : (
+    <Shell.Trigger onClick={onClick} render={button} />
   );
 };
 

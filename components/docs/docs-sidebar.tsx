@@ -28,6 +28,10 @@ type DocsSidebarProps = {
   tree: { children: TreeNode[] };
 };
 
+// Pages to flag as new in the sidebar. Drop a URL once its primitive has been
+// out for a release or two.
+const NEW_PAGES = new Set(["/primitives/shell", "/primitives/nav", "/primitives/tabs"]);
+
 const NavLink = ({ url, name }: { url: string; name: ReactNode }) => {
   const pathname = usePathname();
   const isActive = pathname === url;
@@ -35,13 +39,18 @@ const NavLink = ({ url, name }: { url: string; name: ReactNode }) => {
     <Link
       href={url}
       className={cn(
-        "flex h-8 items-center rounded-md px-3 text-md font-medium transition-colors duration-0",
+        "flex h-8 items-center gap-2 rounded-md px-3 text-md font-medium transition-colors duration-0",
         isActive
           ? "bg-secondary-bg-hover text-ink-primary"
           : "text-ink-secondary hover:bg-secondary-bg-hover hover:text-ink-primary",
       )}
     >
-      {name}
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      {NEW_PAGES.has(url) && (
+        <span className="flex h-4 shrink-0 items-center rounded-sm bg-accent-bg/10 px-1.5 font-medium text-2xs text-accent-bg">
+          New
+        </span>
+      )}
     </Link>
   );
 };

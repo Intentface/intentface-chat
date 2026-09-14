@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { act, fireEvent, render } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { SHELL_SIDEBAR_WIDTH_VAR, Shell } from "../src/shell";
 import { createShellStore } from "../src/shell/store";
 
@@ -352,5 +353,31 @@ describe("Shell.Grip", () => {
         void fireEvent.pointerDown(getByTestId("handle"), { button: 2, clientX: 0, pointerId: 1 }),
     );
     expect(getByTestId("sidebar").hasAttribute("data-resizing")).toBe(false);
+  });
+});
+
+describe("server render", () => {
+  // A Testing Library assertion cannot catch this: `render` flushes layout
+  // effects, so the controlled value is already applied by the time you look.
+  // The bug lives entirely in the markup the server ships.
+  test("a controlled `open` seeds the first render", () => {
+    const html = renderToString(
+      <Shell.Root open={false}>
+        <Shell.Sidebar />
+      </Shell.Root>,
+    );
+
+    expect(html).toContain('data-state="collapsed"');
+    expect(html).not.toContain('data-state="expanded"');
+  });
+
+  test("`defaultOpen` still drives the first render when uncontrolled", () => {
+    const html = renderToString(
+      <Shell.Root defaultOpen={false}>
+        <Shell.Sidebar />
+      </Shell.Root>,
+    );
+
+    expect(html).toContain('data-state="collapsed"');
   });
 });

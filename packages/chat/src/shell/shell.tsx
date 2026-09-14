@@ -190,8 +190,11 @@ export const ShellRoot = ({
 
   const [store] = useState(() => {
     const created = storeProp ?? createShellStore();
-    // Before anything has subscribed, so no notify and no write-back.
-    created.hydrate({ open: defaultOpen });
+    // Before anything has subscribed, so no notify and no write-back. The
+    // controlled value wins over the default: the layout effect below would
+    // otherwise correct it only after the server had already shipped the wrong
+    // markup, which is the pre-hydration flash `defaultOpen` exists to prevent.
+    created.hydrate({ open: open ?? defaultOpen });
     created.sidebarId = sidebarId;
     return created;
   });

@@ -11,8 +11,22 @@ focus indication — is your application's responsibility.
 
 The primitives follow the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/).
 The composer's editor interprets keys by mode: an open command list, or an active
-ask-user flow, takes priority over normal typing. Each primitive page documents
-its own key table.
+ask-user flow, takes priority over normal typing. A primitive that claims keys of
+its own documents them in a key table on its page; one that relies on native focus
+order does not.
+
+Anything draggable is also operable from the keyboard. The shell's grip resizes
+the sidebar with the arrow keys once focused, so no layout a visitor can reach
+with a pointer is closed to them without one.
+
+A strip or a tree is one tab stop, not one per item. Focus follows the arrow
+keys without selecting, which is manual activation; a primitive that should
+select as focus moves says so through a prop rather than by default. The nav is a roving-tabindex widget:
+exactly one row is tabbable and the arrow keys move focus between rows. Before
+that state is seeded — a server render, or the frame before hydration — the
+active row carries the tab stop, which keeps a row rendered as a real anchor
+reachable without JavaScript. A field inside the tree keeps its own arrow keys,
+or its caret could never move.
 
 Command lists and ask-user options move a highlight rather than DOM focus, so the
 caret stays in the editor while you navigate. Arrowing past the end of a list
@@ -39,6 +53,43 @@ announced but skipped by highlight and selection.
 
 `Steps` marks the active item with `aria-current="step"`. `Reasoning.Root` carries
 `aria-busy` while streaming.
+
+Disclosure controls announce both their state and what they govern: the shell's
+trigger is a `<button>` with `aria-expanded` and an `aria-controls` pointing at
+the sidebar it opens. Its grip is a focusable `role="separator"` carrying
+`aria-orientation` and the `aria-valuenow` / `aria-valuemin` / `aria-valuemax`
+trio, and it always carries a value, falling back to the minimum before the first
+measurement lands — a focusable separator without one is an invalid widget.
+
+A part that exists only for the pointer is hidden from everything else. The
+shell's hotspot, the strip that floats a collapsed sidebar back out on hover, is
+`aria-hidden`, because the trigger already covers the same state change for
+keyboard and screen-reader users.
+
+The nav's trigger carries the same `aria-expanded` and `aria-controls` pair,
+pointing at the list it governs. Disabled rows get `aria-disabled` rather than
+leaving the focus ring, so they stay discoverable. `Nav.Action` sits outside the
+roving order and stops every event it handles, or activating it would also
+activate the row wrapped around it.
+
+Where a row is not a native control, activation is wired by hand. That is the
+price of a row that can hold an action rather than being a `<button>`, and a row
+that already activates itself — a real button, or an anchor swapped in through
+`render` — is left alone rather than activated twice.
+
+Where the standard role cannot describe the widget, the primitives say so and
+choose a different one rather than fail silently. A closable, open-ended tab
+strip is a `toolbar` of disclosures, not a `tablist`: a tablist may own only
+tabs, leaving nowhere for a close button, and it requires one selected tab, so
+"nothing open" is not a state it can express. Each trigger then carries
+`aria-expanded` and an `aria-controls` that only claims a viewport really in the
+document. Static, always-one-selected tabs are a different widget, and `tablist`
+is right for those.
+
+A floating surface that you work behind is non-modal throughout: no backdrop, no
+scroll lock, no focus trap, and no dismissal on outside press. Focus is never
+taken from you, but it is also never returned, so give such a surface its own
+close control — `Escape` then duplicates it rather than being the only way out.
 
 ## Accessible labels
 

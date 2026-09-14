@@ -246,7 +246,7 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
   const isDraft = open === DRAFT;
 
   return (
-    <header className="flex h-10 shrink-0 items-center gap-1 border-[#f0f0f0] border-b px-2.5 dark:border-[#262626]">
+    <header className="flex h-10 shrink-0 items-center gap-1 px-2.5">
       <span className="min-w-0 flex-1 truncate font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">
         {open === null || isDraft ? null : title(open)}
       </span>
@@ -286,11 +286,17 @@ const ChatThread = ({
 }) => {
   if (!chat) return null;
 
+  // `bottom` rather than the default `follow`: it is the one mode that reserves
+  // no viewport for the last turn. In a dock this small the reserve would push
+  // every earlier turn out of sight, so each chat would look like one exchange.
   return (
-    <Thread.Root className="relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:0.75rem]">
+    <Thread.Root
+      autoScroll="bottom"
+      className="relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:0.75rem]"
+    >
       <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto]">
         <div className="relative flex min-h-full w-full flex-col pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
-          <Thread.Content className="flex min-h-full w-full flex-col gap-3 px-3 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)">
+          <Thread.Content className="flex w-full flex-col justify-end gap-3 px-3">
             {chat.turns.map((turn, index) => (
               <Message.Root
                 key={turn.id}

@@ -13,8 +13,8 @@ import type { ComponentProps } from "react";
  * sidebar is taken *out of flow* and a plain spacer — the gutter — holds its
  * place. That is what lets all three states be one element morphing between
  * three positions: flush while expanded, off-canvas while collapsed, floating
- * just inside the edge while peeking. A sidebar left in flow can only animate
- * its own width, so it can never float over the content, and the peek has
+ * just inside the edge while the hotspot holds it out. A sidebar left in flow can only animate
+ * its own width, so it can never float over the content, and the hotspot has
  * nothing to slide across.
  *
  * `absolute` inside a `relative` root because this is a box on a docs page; a
@@ -25,7 +25,7 @@ export const Basic = () => (
     defaultOpen
     className="group/shell relative flex h-128 w-full overflow-hidden rounded-xl border border-[#f0f0f0] bg-[#fafafa] [--shell-sidebar-width:224px] dark:border-[#262626] dark:bg-[#111111]"
   >
-    {/* Not rendering this is how you opt out of hover-peek. */}
+    {/* Not rendering this is how you opt out of hotspot. */}
     <Shell.Hotspot className="absolute inset-y-0 left-0 z-20 hidden w-5 data-[state=collapsed]:block" />
 
     {/* The gutter. Not a part of the package: a div reading the property the
@@ -46,14 +46,14 @@ export const Basic = () => (
         "bg-[#fafafa] dark:bg-[#111111]",
         "border border-transparent transition-[left,top,bottom,padding-top,background-color,border-color,border-radius,box-shadow] duration-150 ease-linear",
         // The card geometry is baked into the whole collapsed state. Off-canvas
-        // it is invisible, so the peek animates `left` alone — the panel never
+        // it is invisible, so the hotspot animates `left` alone — the panel never
         // changes height mid-slide. Only expand/collapse morphs card ↔ flat.
         // The card's own inset supplies the 8px, so the padding goes — and
         // because both transition, the header stays put while the edge moves.
         "data-[state=collapsed]:-left-(--shell-sidebar-width) data-[state=collapsed]:inset-y-2 data-[state=collapsed]:rounded-xl data-[state=collapsed]:pt-0",
-        "data-[state=collapsed]:bg-white data-[state=collapsed]:not-data-[peek]:border-[#f0f0f0]",
-        "dark:data-[state=collapsed]:bg-[#181818] dark:data-[state=collapsed]:not-data-[peek]:border-[#262626]",
-        "data-[state=collapsed]:data-[peek]:left-2 data-[peek]:smooth-shadow-ring-lg",
+        "data-[state=collapsed]:bg-white data-[state=collapsed]:not-data-[hotspot]:border-[#f0f0f0]",
+        "dark:data-[state=collapsed]:bg-[#181818] dark:data-[state=collapsed]:not-data-[hotspot]:border-[#262626]",
+        "data-[state=collapsed]:data-[hotspot]:left-2 data-[hotspot]:smooth-shadow-ring-lg",
         "motion-reduce:transition-none",
       ].join(" ")}
     >

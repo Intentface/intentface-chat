@@ -5,6 +5,9 @@ source: nav
 ---
 
 import { Basic } from './nav/demos/basic';
+import { Collapse } from './nav/demos/collapse';
+import { ExternalNav } from './nav/demos/external';
+import { Guides } from './nav/demos/guides';
 
 <Demo component={<Basic />} file="primitives/nav/demos/basic.tsx" />
 
@@ -14,6 +17,7 @@ import { Basic } from './nav/demos/basic';
 - **One tab stop** — the whole tree is a single tab stop; arrow keys move focus between rows, and typing seeks a row by its label.
 - **Rows hold actions** — `Nav.Item` is a `div` with `role="button"` rather than an anchor, so a menu affordance can sit inside it. Swap in a real link with `render`.
 - **Depth is a variable** — each list publishes its own `--nav-depth`, so one indent rule covers every level.
+- **The guide is cumulative** — `rail` implies `indent`, and `branches` implies both. See [Why the guide is a ladder](#why-the-guide-is-a-ladder).
 - **Persists nothing itself** — the open set goes out through `onExpandedChange` and comes back as `defaultExpanded`, so where it is kept is yours.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
@@ -59,12 +63,12 @@ A sidebar tree with a rail, one branch open on load, and rows that route:
 </Nav.Root>
 ```
 
-## The guide ladder
+## Examples
 
-What a list draws down its left edge is a ladder rather than three independent
-flags, because each rung implies the one before it — a rail lives in the indent
-lane, and an elbow needs a rail to turn off. Expressing them as booleans would
-mean guarding against combinations that mean nothing.
+### Choosing a guide
+
+`guide` sets what every list draws down its left edge. Set the default on
+`Nav.Root` and override it per list.
 
 export const guides = [
   { value: '"none"', default: true, description: "No indent lane and no attributes." },
@@ -75,55 +79,13 @@ export const guides = [
 
 <ValuesTable rows={guides} />
 
-The attributes are cumulative on purpose: a stylesheet asking for
-`[data-rail]` gets branches too, which is what keeps the ladder readable in CSS
-without wrapping every selector in `:is()`. Set the default on `Nav.Root` and
-override it per list.
+<Demo component={<Guides />} file="primitives/nav/demos/guides.tsx" />
 
-## Collapsing
+The attributes are cumulative, so a stylesheet asking for `[data-rail]` gets
+branches too. See [Why the guide is a ladder](#why-the-guide-is-a-ladder).
 
-`height: auto` is not interpolable, so a collapse can only animate between
-lengths — but a list pinned to a length permanently could not hold a group that
-expands inside it, and would clip whatever just opened. So the pin is
-temporary: `--nav-list-height` holds a measured pixel value while a transition
-runs and is released the moment the opening one finishes. An open, settled list
-is `auto` and grows freely.
-
-```css
-[data-nav-group] > [data-nav-list] {
-  height: var(--nav-list-height);
-  overflow: hidden;
-  opacity: 1;
-  /* Not ease-out: the last row is the bottom sliver of the height, and
-     ease-out spends its whole tail crawling through exactly that stretch —
-     which reads as the row popping in at the end. */
-  transition:
-    height 200ms cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 200ms ease-out;
-}
-
-[data-nav-list][data-starting-style],
-[data-nav-list][data-ending-style] {
-  height: 0;
-  opacity: 0;
-}
-
-/* The collapsing list squeezes to nothing, and a flex item shrinks below its
-   own height when the column runs short — so without this the rows compress
-   instead of sliding up behind the clip. */
-[data-nav-list] > * {
-  flex-shrink: 0;
-}
-```
-
-With the variable released, `height: var(--nav-list-height)` is invalid at
-computed-value time and `height` lands back on `auto` — which is exactly what a
-settled list wants, without inheriting anything from an ancestor.
-
-## The rail recipe
-
-The package publishes the signal; the geometry is yours. This is the recipe
-rather than a stylesheet you import — copy it and change the numbers:
+The package publishes the signal; the geometry is yours. This is what draws the
+`rail` and `branches` trees above — copy it and change the numbers.
 
 ```css
 /* The lane. `indent` is the first rung and every rung above it emits this too,
@@ -184,63 +146,66 @@ rather than a stylesheet you import — copy it and change the numbers:
 }
 ```
 
-The four numbers are all load-bearing: **15px** hangs the rail under the centre
+The four numbers are all load-bearing. **15px** hangs the rail under the centre
 of a `size-4` icon at `px-2`, so it drops out of the parent's icon rather than
-beside it; **7px** is the lane, and it is the *list's* padding rather than the
+beside it. **7px** is the lane, and it is the list's padding rather than the
 row's, because an active row paints a background and would cover a line drawn
-inside its own box; **6px** is the elbow's radius, and the curve pulls the
+inside its own box. **6px** is the elbow's radius, and the curve pulls the
 vertical away that early, so the continuation has to start 6px above the row's
-centre or every branch leaves a radius of rail missing; **2px** is the row gap,
+centre or every branch leaves a radius of rail missing. **2px** is the row gap,
 bridged so the line reads as unbroken.
 
-One more thing the recipe depends on: give rows an **explicit height**. Text at
-a fractional line-height makes a padded row land on a fraction of a pixel, and
-then nothing in the tree lines up — `--nav-row` has to match whatever height
-you set.
+Give rows an explicit height. Text at a fractional line-height makes a padded
+row land on a fraction of a pixel, and then nothing in the tree lines up.
+`--nav-row` has to match whatever height you set.
 
-## Keyboard
 
-These are the widget's own keys, not global ones: the handler sits on
-`Nav.Root`, so nothing fires unless focus is already inside the tree. Roving
-focus is the reason to reach for a headless nav in the first place.
 
-export const keys = [
-  { keys: "Arrow up / down", description: "Move focus to the previous or next visible row. Collapsed lists are unmounted, so their rows are simply not there to land on." },
-  { keys: "Arrow right", description: "On a closed group, open it; on an open one, step into it. On a leaf, nothing." },
-  { keys: "Arrow left", description: "On an open group, close it; otherwise step out to the parent group's trigger — which is where the row came from." },
-  { keys: "Enter / Space", description: "Activate the focused row." },
-  { keys: "Any letter", description: "Seek to the row whose label starts with what you typed. The query resets after half a second of no typing; turn the whole thing off with the typeahead prop." },
-];
+### Animating a group open
 
-<KeysTable rows={keys} />
+`height: auto` is not interpolable, so a collapse can only animate between
+lengths. `--nav-list-height` holds a measured pixel value while a transition
+runs and is released the moment it finishes, so an open, settled list is `auto`
+and grows freely. The demo below is slowed to 500ms; open the outer group, then
+the inner one, and watch the outer keep growing.
 
-A field inside the nav keeps its own arrow keys — an input, a textarea, a
-select, or anything `contenteditable` — or the caret could never move.
+<Demo component={<Collapse />} file="primitives/nav/demos/collapse.tsx" />
 
-## useNav
+```css
+[data-nav-group] > [data-nav-list] {
+  height: var(--nav-list-height);
+  overflow: hidden;
+  opacity: 1;
+  /* Not ease-out: the last row is the bottom sliver of the height, and
+     ease-out spends its whole tail crawling through exactly that stretch —
+     which reads as the row popping in at the end. */
+  transition:
+    height 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease-out;
+}
 
-Read which groups are open from anywhere inside `<Nav.Root>`:
+[data-nav-list][data-starting-style],
+[data-nav-list][data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
 
-```tsx
-const isOpen = useNav((nav) => nav.expanded.has("docs"));
+/* The collapsing list squeezes to nothing, and a flex item shrinks below its
+   own height when the column runs short — so without this the rows compress
+   instead of sliding up behind the clip. */
+[data-nav-list] > * {
+  flex-shrink: 0;
+}
 ```
 
-export const hookMembers = [
-  { name: "expanded", type: "ReadonlySet<string>", description: "Which groups are open, by value." },
-  { name: "toggle", type: "(value: string) => void", description: "Flip one group." },
-  { name: "setOpen", type: "(value: string, open: boolean) => void", description: "Open or close one group explicitly." },
-  { name: "setExpanded", type: "(expanded: Iterable<string>) => void", description: "Replace the whole open set." },
-];
+With the variable released, `height: var(--nav-list-height)` is invalid at
+computed-value time and `height` lands back on `auto`, which is what a settled
+list wants without inheriting anything from an ancestor.
 
-<PropsTable rows={hookMembers} />
+### Persisting the open set
 
-`useNavStore(store, selector)` is the outside-the-tree twin, taking an explicit
-`Nav.createStore()` handle. There is no global fallback.
-
-## Persistence
-
-Nothing is persisted here either. `onExpandedChange` reports the open set out
-and `defaultExpanded` takes it back in, so where it is kept is yours:
+`onExpandedChange` reports the open set out and `defaultExpanded` takes it back
+in, so where it is kept is yours.
 
 ```tsx
 // A server component reads it before the first paint …
@@ -256,27 +221,46 @@ const stored = readNavState((await cookies()).toString());
 Validate what comes back out of storage — `Array.isArray(x) && x.every((v) =>
 typeof v === "string")` is the whole check for Nav — so a stale or hand-edited
 value falls back to the default rather than reaching the tree. See
-[Shell's persistence](/primitives/shell#persistence) for why the value has to
+[Shell](/primitives/shell#persisting-across-sessions) for why the value has to
 arrive as a prop rather than be read at init.
 
-## Accessibility
+### Driving the tree from outside
 
-The tree is a roving-tabindex widget: exactly one row is tabbable, and focus
-follows the arrow keys. Before the roving state is seeded — a server render, or
-the frame before hydration — the `active` row carries the tab stop, which keeps
-a row rendered as a real anchor reachable without JavaScript.
+`useNavStore(store, selector)` is the outside-the-tree twin of `useNav`, taking
+an explicit `Nav.createStore()` handle. There is no global fallback, which is
+what stops a tree being driven by accident from somewhere that merely imported
+it.
 
-`Nav.Trigger` carries `aria-expanded` and `aria-controls` pointing at the list
-it governs. Disabled rows get `aria-disabled` rather than being removed from
-the ring, so they stay discoverable. `Nav.Icon` is `aria-hidden`, keeping
-decoration out of the row's accessible name. `Nav.Action` sits outside the
-roving order and stops every event it handles — otherwise activating it would
-also activate the row wrapped around it.
+<Demo component={<ExternalNav />} file="primitives/nav/demos/external.tsx" />
 
-Enter and Space are wired by hand, which is the price of a row that can hold an
-action rather than being a real `<button>`. A row that already activates itself
-— a `<button>`, or an `<a href>` swapped in via `render` — is left alone
-instead of being activated twice.
+## Why the guide is a ladder
+
+What a list draws down its left edge is a ladder rather than three independent
+flags, because each rung implies the one before it. A rail lives in the indent
+lane, and an elbow needs a rail to turn off.
+
+Expressing them as booleans would mean guarding against combinations that mean
+nothing — branches without a rail, a rail with no lane to sit in. Making the
+attributes cumulative instead keeps the ladder readable in CSS without wrapping
+every selector in `:is()`.
+
+## Keyboard
+
+These are the widget's own keys, not global ones: the handler sits on
+`Nav.Root`, so nothing fires unless focus is already inside the tree.
+
+export const keys = [
+  { keys: "Arrow up / down", description: "Move focus to the previous or next visible row. Collapsed lists are unmounted, so their rows are simply not there to land on." },
+  { keys: "Arrow right", description: "On a closed group, open it; on an open one, step into it. On a leaf, nothing." },
+  { keys: "Arrow left", description: "On an open group, close it; otherwise step out to the parent group's trigger — which is where the row came from." },
+  { keys: "Enter / Space", description: "Activate the focused row." },
+  { keys: "Any letter", description: "Seek to the row whose label starts with what you typed. The query resets after half a second of no typing; turn the whole thing off with the typeahead prop." },
+];
+
+<KeysTable rows={keys} />
+
+A field inside the nav keeps its own arrow keys — an input, a textarea, a
+select, or anything `contenteditable` — or the caret could never move.
 
 ## API reference
 
@@ -295,7 +279,7 @@ export const rootProps = [
   { name: "expanded", type: "string[]", description: "Controlled open set." },
   { name: "onExpandedChange", type: "(expanded: string[]) => void", description: "Fires whenever a group opens or closes." },
   { name: "store", type: "NavStore", description: "An explicit Nav.createStore() handle. Must be stable for the Root's lifetime." },
-  { name: "guide", type: "NavGuide", default: '"none"', description: "What every list draws down its left edge, unless it says otherwise." },
+  { name: "guide", type: '"none" | "indent" | "rail" | "branches"', default: '"none"', description: "What every list draws down its left edge, unless it says otherwise." },
   { name: "loop", type: "boolean", default: "false", description: "Wrap at the ends when arrowing past the first or last row." },
   { name: "disabled", type: "boolean", default: "false", description: "Disable every row at once — a read-only view of the tree." },
   { name: "typeahead", type: "boolean", default: "true", description: "Seek a row by typing its label." },
@@ -317,7 +301,7 @@ group's collapsible panel; a top-level list is not collapsible, because there
 is no trigger above it.
 
 export const listProps = [
-  { name: "guide", type: "NavGuide", description: "Overrides the Root's default for this list." },
+  { name: "guide", type: '"none" | "indent" | "rail" | "branches"', description: "Overrides the Root's default for this list." },
   { name: "keepMounted", type: "boolean", default: "false", description: "Keep a closed list in the DOM behind `hidden`. Its rows are not navigable while hidden." },
 ];
 
@@ -446,3 +430,20 @@ export const actionAttrs = [
 ];
 
 <AttributesTable rows={actionAttrs} />
+
+## useNav
+
+Read which groups are open from anywhere inside `<Nav.Root>`:
+
+```tsx
+const isOpen = useNav((nav) => nav.expanded.has("docs"));
+```
+
+export const hookMembers = [
+  { name: "expanded", type: "ReadonlySet<string>", description: "Which groups are open, by value." },
+  { name: "toggle", type: "(value: string) => void", description: "Flip one group." },
+  { name: "setOpen", type: "(value: string, open: boolean) => void", description: "Open or close one group explicitly." },
+  { name: "setExpanded", type: "(expanded: Iterable<string>) => void", description: "Replace the whole open set. Takes an array or a Set, so a value derived from `expanded` goes straight back in without a spread." },
+];
+
+<PropsTable rows={hookMembers} />

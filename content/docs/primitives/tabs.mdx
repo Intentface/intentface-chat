@@ -6,6 +6,8 @@ source: tabs
 
 import { Basic } from './tabs/demos/basic';
 import { Anchored } from './tabs/demos/anchored';
+import { Closing } from './tabs/demos/closing';
+import { ExternalTabs } from './tabs/demos/external';
 
 <Demo component={<Basic />} file="primitives/tabs/demos/basic.tsx" />
 
@@ -72,7 +74,9 @@ The viewport can sit anywhere in the tree — inside the popup for a floating
 surface, or in a card three components away while the strip stays in the window
 chrome.
 
-## Anchored to its own tab
+## Examples
+
+### Anchoring the panel to its tab
 
 Wrap the viewport and the panel floats above the open tab instead of sitting in
 the layout. Nothing else changes — same Root, same List, same ARIA — because
@@ -119,11 +123,11 @@ lands the surface withholds paint rather than showing at 0,0 — otherwise the
 first real position would arrive as `auto` → a length, which CSS cannot
 interpolate, and the surface would slide in from the corner.
 
-## Closing
+### Choosing where the selection lands
 
-Where the selection lands when the open tab is closed is a behaviour, and the
-primitive will not invent one you did not ask for — you would have no reason to
-suspect it was configurable.
+Where the selection goes when the open tab is closed is a behaviour, and the
+primitive will not invent one you did not ask for. `selectOnClose` is the only
+difference between the three strips below.
 
 export const closePolicies = [
   { value: "unset", default: true, description: "Nowhere: closing what was open shows nothing." },
@@ -132,6 +136,38 @@ export const closePolicies = [
 ];
 
 <ValuesTable rows={closePolicies} />
+
+<Demo component={<Closing />} file="primitives/tabs/demos/closing.tsx" />
+
+### Persisting the collection
+
+The collection goes out through `onItemsChange` and the selection through
+`onValueChange`, and both come back in as `defaultItems` and `defaultValue`.
+
+```tsx
+<Tabs.Root
+  defaultItems={stored?.items ?? []}
+  defaultValue={stored?.value ?? null}
+  onItemsChange={(items) => save({ items })}
+  onValueChange={(value) => save({ value })}
+>
+```
+
+A restored selection naming a tab that is no longer in `items` is dropped
+rather than trusted, so a stale value cannot open a panel for something that
+does not exist. See [Shell](/primitives/shell#persisting-across-sessions) for
+why the value has to arrive as a prop rather than be read at init.
+
+### Opening a tab from elsewhere
+
+`useTabsStore(store, selector)` is the outside-the-tree twin of `useTabs`,
+taking an explicit `Tabs.createStore()` handle — which is how a "new chat"
+button somewhere else in the app opens a tab. There is no global fallback.
+
+`open` adds a tab and selects it, or moves and selects one already present, so
+the caller never has to check first.
+
+<Demo component={<ExternalTabs />} file="primitives/tabs/demos/external.tsx" />
 
 ## Why a toolbar and not a tablist
 
@@ -165,74 +201,6 @@ Focus follows the arrows but does not select, which is what manual activation
 means; set `activateOnFocus` to select as focus moves. A text field inside the
 strip keeps the arrow key whenever the caret still has somewhere to travel.
 
-## useTabs
-
-Read the collection from anywhere inside `<Tabs.Root>`:
-
-```tsx
-const openTab = useTabs((tabs) => tabs.value);
-```
-
-export const hookMembers = [
-  { name: "value", type: "string | null", description: "The open tab, or null when nothing is." },
-  { name: "items", type: "string[]", description: "The tabs, in order." },
-  { name: "recent", type: "string[]", description: "Most recently opened first — what the recent close policy reads." },
-  { name: "direction", type: "TabsDirection", description: "Which way the selection last moved, for panels that slide rather than fade." },
-  { name: "open", type: "(value, options?) => void", description: "Add a tab (or move it, if already present) and select it." },
-  { name: "close", type: "(value: string) => void", description: "Remove a tab; selectOnClose decides where the selection lands." },
-  { name: "select", type: "(value: string | null) => void", description: "Open a tab, or null to show nothing." },
-  { name: "selectRelative", type: "(direction, options?) => void", description: "Step the selection — what the arrow keys drive." },
-  { name: "move", type: "(value: string, toIndex: number) => void", description: "Reorder; the target index is clamped into range." },
-  { name: "setItems", type: "(items: string[]) => void", description: "Replace the whole collection." },
-];
-
-<PropsTable rows={hookMembers} />
-
-`useTabsStore(store, selector)` is the outside-the-tree twin, taking an
-explicit `Tabs.createStore()` handle — which is how a "new chat" button
-somewhere else in the app opens a tab. There is no global fallback.
-
-## Persistence
-
-Nothing is persisted here. The collection goes out through `onItemsChange` and
-the selection through `onValueChange`, and both come back in as `defaultItems`
-and `defaultValue` — so where they are kept is yours:
-
-```tsx
-<Tabs.Root
-  defaultItems={stored?.items ?? []}
-  defaultValue={stored?.value ?? null}
-  onItemsChange={(items) => save({ items })}
-  onValueChange={(value) => save({ value })}
->
-```
-
-A restored selection naming a tab that is no longer in `items` is dropped
-rather than trusted, so a stale value cannot open a panel for something that
-does not exist. See [Shell's persistence](/primitives/shell#persistence) for
-why the value has to arrive as a prop rather than be read at init.
-
-## Accessibility
-
-The strip is a `toolbar` of disclosures rather than a `tablist`, for the reasons
-in [Why a toolbar](#why-a-toolbar-and-not-a-tablist): each `Tabs.Trigger`
-carries `aria-expanded` and an `aria-controls` that only claims a viewport
-really in the document, and `Tabs.Viewport` is named by whichever tab is open
-through `aria-labelledby`.
-
-Roving focus means exactly one tab is tabbable, and focus follows the arrows
-without selecting — manual activation, unless `activateOnFocus` says otherwise.
-`Tabs.Close` is a real button rather than a pointer-only affordance, but it
-stays out of the roving order, so the keyboard route to closing is `Delete` on
-the tab itself. `Tabs.Icon` is `aria-hidden`, keeping decoration out of the
-tab's accessible name.
-
-The floating surface is non-modal throughout: no backdrop, no scroll lock, no
-focus trap, and no dismissal on outside press. That is deliberate — a dock is
-something you work behind — and it means focus is never taken from you, but
-also that the surface will not return it. Give the popup a close control, which
-`Escape` then duplicates.
-
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
@@ -252,7 +220,7 @@ export const rootProps = [
   { name: "defaultValue", type: "string | null", description: "The tab open on first render." },
   { name: "value", type: "string | null", description: "Controlled selection; null shows nothing." },
   { name: "onValueChange", type: "(value: string | null) => void", description: "Fires on every selection change." },
-  { name: "selectOnClose", type: "TabsSelectOnClose", description: "Where the selection lands when the open tab is closed. Unset means nowhere." },
+  { name: "selectOnClose", type: '"adjacent" | "recent"', description: "Where the selection lands when the open tab is closed. Unset means nowhere." },
   { name: "orientation", type: '"horizontal" | "vertical"', default: '"horizontal"', description: "Which arrow keys walk the strip." },
   { name: "loop", type: "boolean", default: "true", description: "Wrap at the ends of the strip." },
   { name: "activateOnFocus", type: "boolean", default: "false", description: "Select as focus moves, instead of on activation." },
@@ -501,3 +469,30 @@ export const popupAttrs = [
 ];
 
 <AttributesTable rows={popupAttrs} />
+
+## useTabs
+
+Read the collection from anywhere inside `<Tabs.Root>`:
+
+```tsx
+const openTab = useTabs((tabs) => tabs.value);
+```
+
+export const hookMembers = [
+  { name: "value", type: "string | null", description: "The open tab, or null when nothing is." },
+  { name: "items", type: "string[]", description: "The tabs, in order." },
+  { name: "recent", type: "string[]", description: "Most recently opened first — what the recent close policy reads." },
+  { name: "direction", type: '"left" | "right" | "up" | "down" | "none"', description: "Which way the selection last moved, for panels that slide rather than fade." },
+  { name: "open", type: "(value, options?) => void", description: "Add a tab (or move it, if already present) and select it." },
+  { name: "close", type: "(value: string) => void", description: "Remove a tab; selectOnClose decides where the selection lands." },
+  { name: "select", type: "(value: string | null) => void", description: "Open a tab, or null to show nothing." },
+  { name: "selectRelative", type: "(direction, options?) => void", description: "Step the selection — what the arrow keys drive." },
+  { name: "move", type: "(value: string, toIndex: number) => void", description: "Reorder; the target index is clamped into range." },
+  { name: "setItems", type: "(items: string[]) => void", description: "Replace the whole collection." },
+];
+
+<PropsTable rows={hookMembers} />
+
+`useTabsStore(store, selector)` is the outside-the-tree twin, taking an
+explicit `Tabs.createStore()` handle — which is how a "new chat" button
+somewhere else in the app opens a tab. There is no global fallback.

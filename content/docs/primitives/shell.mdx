@@ -1,0 +1,353 @@
+---
+title: Shell
+description: A collapsible, resizable sidebar beside the viewport it shares the screen with, with an edge hotspot and cookie persistence.
+source: shell
+---
+
+import { Basic } from './shell/demos/basic';
+import { External } from './shell/demos/external';
+import { Grip } from './shell/demos/grip';
+import { HotspotDemo } from './shell/demos/hotspot';
+import { Range } from './shell/demos/range';
+
+<Demo component={<Basic />} file="primitives/shell/demos/basic.tsx" />
+
+## Usage guidelines
+
+- **App shell, not a chat part** — the sidebar-and-viewport frame an app sits in. The sidebar in the demo holds a [Nav](/primitives/nav); the two are separate primitives built for each other.
+- **Width is CSS** — the sidebar's size and the range the drag may move it through are `width` / `min-width` / `max-width` in your stylesheet. The primitive measures; it never sizes.
+- **No global keys** — the package claims none, because it cannot know which combinations your app has already spent. Bind your own around `toggle`.
+- **Hotspot is opt-in** — render `Shell.Hotspot` and a collapsed sidebar floats back out when the pointer rests against the screen edge. Omit the part to opt out; there is no prop, because not rendering it already says so.
+- **Persists nothing itself** — state goes out through `onOpenChange` and `onResize`, and comes back as `defaultOpen` and a CSS custom property. Where it is kept is yours.
+- **The sidebar must leave the flow** — see [Why the sidebar is positioned](#why-the-sidebar-is-positioned). This is the one arrangement everything else depends on.
+- **Get started** — see [Quick start](/quick-start) to add the package.
+
+## Anatomy
+
+```tsx
+<Shell.Root>
+  <Shell.Hotspot />
+  <Shell.Sidebar>
+    <Shell.Trigger />
+    <Shell.Grip />
+  </Shell.Sidebar>
+  <Shell.Viewport />
+</Shell.Root>
+```
+
+A shell whose sidebar starts where the visitor left it. Note the gutter — it is
+not a part of the package, and it is the piece that makes the rest work:
+
+```tsx
+<Shell.Root defaultOpen={stored?.open ?? true} onOpenChange={save}>
+  <Shell.Hotspot />
+  <Gutter />
+
+  <Shell.Sidebar onResize={(width) => save({ width })}>
+    <Shell.Trigger aria-label="Collapse sidebar" />
+    <WorkspaceNav />
+    <Shell.Grip aria-label="Resize sidebar" />
+  </Shell.Sidebar>
+
+  <Shell.Viewport>{children}</Shell.Viewport>
+</Shell.Root>
+```
+
+## Examples
+
+### Setting the drag range
+
+`min-width` and `max-width` on the sidebar are the whole configuration, and
+there is no prop for either. The range below is deliberately narrow, so both
+stops are a short drag away.
+
+<Demo component={<Range />} file="primitives/shell/demos/range.tsx" />
+
+```css
+[data-shell-sidebar] {
+  min-width: 200px;
+  max-width: 380px;
+}
+```
+
+The grip writes `--shell-sidebar-width` on the root, the browser clamps it
+against those bounds, and the sidebar reports back whatever the browser settled
+on. That number is what gets persisted and announced as `aria-valuenow`.
+
+### Styling the grip
+
+The grip is a bare div with a role and some keys, so the whole appearance is
+yours. This one draws nothing at rest and fades in an iOS-style pill that rides
+the pointer vertically, clamped by half its own height at each end so it never
+hangs out of the track.
+
+The pointer position goes straight into a custom property rather than React
+state. A `pointermove` that re-rendered would re-render the whole shell on every
+frame of a drag, and there is nothing here React needs to know — only a number
+CSS reads. Passing `onPointerMove` is safe because the primitive merges handlers
+rather than replacing them, so the drag on that same event still runs.
+
+<Demo component={<Grip />} file="primitives/shell/demos/grip.tsx" />
+
+### Styling the hotspot
+
+Resting the pointer on `Shell.Hotspot` floats a collapsed sidebar out as a card,
+and every part in the shell carries `data-hotspot` while it is out. Bake the card
+geometry into the whole collapsed state rather than into `data-hotspot` alone, so
+only `left` animates as it slides. The demo starts collapsed and tints the
+hotspot, which is invisible in a real app.
+
+<Demo component={<HotspotDemo />} file="primitives/shell/demos/hotspot.tsx" />
+
+```css
+[data-shell-sidebar][data-state="collapsed"] {
+  left: calc(-1 * var(--shell-sidebar-width));
+  inset-block: 0.5rem;
+  border-radius: 0.75rem;
+}
+
+[data-shell-sidebar][data-state="collapsed"][data-hotspot] {
+  left: 0.5rem;
+}
+```
+
+Off-canvas the card is invisible, so nothing moves vertically mid-slide. Only
+expand and collapse morph card to flat. Hotspot is never persisted, and it means
+nothing while the sidebar is open.
+
+### Driving the shell from outside
+
+Pass a `Shell.createStore()` handle to the Root and anything holding the same
+handle can read and drive the state, including a control that is not inside the
+tree at all. The package binds no global keys, so the shortcut below is the
+app's own; `toggle` pins a floated-out sidebar open rather than closing it.
+
+Press Cmd or Ctrl and B with the pointer over the demo. The hover test in the
+source is this page's problem rather than yours, since a docs page carries many
+demos and a search field; an app binds the key for its whole window.
+
+<Demo component={<External />} file="primitives/shell/demos/external.tsx" />
+
+### Persisting across sessions
+
+The stored value has to arrive as a prop. Reading storage at init is a
+client-only act, so a server-rendered shell would paint the default layout and
+snap to the stored one a frame later — the flash this arrangement exists to
+avoid. A cookie is worth choosing over `localStorage` for that one reason: it is
+readable from the request.
+
+```tsx
+// app/layout.tsx — a server component
+const stored = readSidebarLayout((await cookies()).toString());
+
+return <AppShell defaultOpen={stored?.open ?? true} width={stored?.width} />;
+```
+
+The width goes back as the custom property, not as a prop, because that is
+where it already lives:
+
+```tsx
+<Shell.Root
+  defaultOpen={defaultOpen}
+  onOpenChange={(open) => save({ open })}
+  style={stored?.width ? { "--shell-sidebar-width": `${stored.width}px` } : undefined}
+>
+```
+
+Validate on the way in. Stored state outlives the code that wrote it, so a
+value from an older release should fall back to the defaults rather than reach
+your tree.
+
+## Why the sidebar is positioned
+
+Taking the sidebar out of flow is not a styling preference, and the primitive
+does not work without it.
+
+All three states are one element morphing between three positions: flush while
+expanded, off-canvas while collapsed, floating just inside the edge while the
+hotspot holds it out. A sidebar left in flow can only animate its own width. It can never
+float over the content, so the hotspot has nothing to slide across and the state
+has nowhere to exist.
+
+The gutter is what makes the layout still add up once the panel has left it.
+Because the gutter reads the same custom property the grip writes, the two stay
+in agreement at every width without either knowing about the other. Collapsing
+then animates two cheap properties on two different elements — `left` on the
+panel and `width` on the gutter — rather than fighting one element to do both.
+
+```css
+[data-shell-sidebar] {
+  position: fixed;
+  inset-block: 0;
+  left: 0;
+  width: var(--shell-sidebar-width, 240px);
+  /* Opaque in every state: the content passes beneath the panel while the two
+     animate, and a transparent expanded state would show it through. */
+  background: var(--chrome);
+}
+
+/* The gutter: your own div, reading the property the grip writes. */
+[data-slot="shell-gutter"] {
+  width: var(--shell-sidebar-width, 240px);
+  flex-shrink: 0;
+  transition: width 150ms linear;
+}
+
+[data-shell][data-state="collapsed"] [data-slot="shell-gutter"] {
+  width: 0;
+}
+```
+
+
+## Keyboard
+
+Only the grip claims keys, and only while it has focus. Everything else is
+yours to bind.
+
+export const shellKeys = [
+  { keys: "Arrow left", description: "Narrows a left sidebar by `step` pixels, and widens a right one." },
+  { keys: "Arrow right", description: "Widens a left sidebar by `step` pixels, and narrows a right one." },
+  { keys: "Tab", description: "Moves focus to the grip, which is a focusable separator so resizing is never mouse-only." },
+];
+
+<KeysTable rows={shellKeys} />
+
+## API reference
+
+Every part accepts `className`, `style`, and `render` (see
+[Styling](/handbook/styling)) and emits a bespoke part attribute
+(`data-<part>`) unless noted. `className` and `style` may be functions of the
+part's state.
+
+### Shell.Root
+
+The provider and container. Holds the store every other part reads, so
+`defaultOpen` and the width must arrive here rather than on a child. Renders a
+`<div>` element.
+
+export const rootProps = [
+  { name: "defaultOpen", type: "boolean", description: "Where the sidebar starts when nothing controls it. Read it from the request so the first paint is already right." },
+  { name: "open", type: "boolean", description: "Controlled open state." },
+  { name: "onOpenChange", type: "(open: boolean) => void", description: "Fires on every open/close. Persist it here." },
+  { name: "store", type: "ShellStore", description: "An explicit Shell.createStore() handle, for state reachable from outside this tree. Must be stable for the Root's lifetime." },
+];
+
+<PropsTable rows={rootProps} />
+
+export const rootAttrs = [
+  { attribute: "data-shell", description: "The container." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-hotspot", description: "Present while the collapsed sidebar is floating out." },
+  { attribute: "data-resizing", description: "Present for the duration of a resize drag." },
+  { attribute: "--shell-sidebar-width", values: "measured px", description: "Written by the grip, on the root rather than the sidebar so anything in the shell can size itself to match." },
+];
+
+<AttributesTable rows={rootAttrs} />
+
+### Shell.Sidebar
+
+The panel, and the element whose width is measured and reported back. Carries
+the `id` the trigger's `aria-controls` points at. Renders a `<div>` element.
+
+export const sidebarProps = [
+  { name: "side", type: '"left" | "right"', default: '"left"', description: "Which edge it sits against. Surfaces as data-side; the resize drag inverts accordingly." },
+  { name: "onResize", type: "(width: number) => void", description: "A settled width in pixels — once when a drag ends, never per frame, and whenever anything else resizes the panel. This is the measurement coming back out; there is no width prop going in, because that is CSS's." },
+];
+
+<PropsTable rows={sidebarProps} />
+
+export const sidebarAttrs = [
+  { attribute: "data-shell-sidebar", description: "The panel." },
+  { attribute: "data-side", values: '"left" | "right"', description: "The edge it sits against." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether it is open." },
+  { attribute: "data-hotspot", description: "Present while floating out on hover." },
+  { attribute: "data-resizing", description: "Present mid-drag — use it to suppress width transitions." },
+];
+
+<AttributesTable rows={sidebarAttrs} />
+
+### Shell.Viewport
+
+The content area beside the sidebar. Carries the same state attributes as the
+root, so it can react to the sidebar without a group selector. Renders a
+`<div>` element.
+
+export const viewportAttrs = [
+  { attribute: "data-shell-viewport", description: "The content area." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-hotspot", description: "Present while the sidebar is floating out." },
+  { attribute: "data-resizing", description: "Present mid-drag." },
+];
+
+<AttributesTable rows={viewportAttrs} />
+
+### Shell.Trigger
+
+Toggles the sidebar, and pins a floated-out one open rather than closing it. Ships
+no copy — supply the label as children. Renders a `<button>` element.
+
+export const triggerAttrs = [
+  { attribute: "data-shell-trigger", description: "The toggle button." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-hotspot", description: "Present while the sidebar is floating out." },
+];
+
+<AttributesTable rows={triggerAttrs} />
+
+### Shell.Grip
+
+The drag affordance. Give it a width and a cursor in CSS; the drag range comes
+from the sidebar's own `min-width` and `max-width`. Renders a `<div>` element
+with `role="separator"`.
+
+export const gripProps = [
+  { name: "step", type: "number", default: "16", description: "Pixels moved per arrow-key press." },
+];
+
+<PropsTable rows={gripProps} />
+
+export const gripAttrs = [
+  { attribute: "data-shell-grip", description: "The separator." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
+  { attribute: "data-resizing", description: "Present while this grip is being dragged." },
+];
+
+<AttributesTable rows={gripAttrs} />
+
+### Shell.Hotspot
+
+The strip along the screen edge that floats a collapsed sidebar out on hover.
+Give it a width and a position in CSS. Omitting it is how you opt out of hotspot
+entirely — there is no prop to turn it off, because not rendering it already
+says that. Renders a `<div>` element with `aria-hidden`.
+
+export const hotspotAttrs = [
+  { attribute: "data-shell-hotspot", description: "The hover strip." },
+  { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open — key the strip off collapsed so it vanishes when expanded." },
+  { attribute: "data-hotspot", description: "Present while the sidebar is floating out." },
+];
+
+<AttributesTable rows={hotspotAttrs} />
+
+## useShell
+
+Read shell state from anywhere inside `<Shell.Root>`. Pass a selector so a
+component re-renders only for the value it reads:
+
+```tsx
+const collapsed = useShell((shell) => !shell.open);
+```
+
+export const hookMembers = [
+  { name: "open", type: "boolean", description: "Whether the sidebar is expanded." },
+  { name: "hotspot", type: "boolean", description: "The collapsed sidebar is floating out on hover. Never persisted." },
+  { name: "resizing", type: "boolean", description: "True for the duration of a resize drag, so parts can suppress transitions." },
+  { name: "width", type: "number | null", description: "The width the browser settled on. Null until the sidebar has mounted and been measured." },
+  { name: "setOpen", type: "(open: boolean) => void", description: "Expand or collapse." },
+  { name: "toggle", type: "() => void", description: "Flip it; a floated-out sidebar expands in place rather than closing. This is what an app's keyboard shortcut calls." },
+  { name: "setHotspot", type: "(hotspot: boolean) => void", description: "Float a collapsed sidebar out, or put it away. Ignored while it is already open." },
+  { name: "setResizing", type: "(resizing: boolean) => void", description: "Marks a drag in progress, which is what defers the settled-width report." },
+  { name: "setWidth", type: "(width: number) => void", description: "Reports a measurement. Not a request to resize — CSS decides the size." },
+];
+
+<PropsTable rows={hookMembers} />

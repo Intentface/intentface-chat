@@ -18,8 +18,12 @@ const actionButtonClass =
 // component on GitHub — not the demos), mirroring Base UI's page header.
 export const PageActions = ({ slug, source }: PageActionsProps) => (
   <div className="flex items-center gap-2">
+    {/* These navigate rather than act, so they render as anchors. Base UI needs
+        telling: `nativeButton` defaults to true and warns when the rendered
+        element is not a real <button>. */}
     <Button
       variant="ghost"
+      nativeButton={false}
       className={actionButtonClass}
       render={
         <a href={`/${slug.join("/")}.md`} target="_blank" rel="noreferrer">
@@ -31,6 +35,7 @@ export const PageActions = ({ slug, source }: PageActionsProps) => (
     {source && (
       <Button
         variant="ghost"
+        nativeButton={false}
         className={actionButtonClass}
         render={
           <a

@@ -11,6 +11,7 @@ import { PlaygroundIcon } from "@/components/icons/playground";
 import { Collapsible } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { DocsSearch } from "./docs-search";
+import { DocsThemeToggle } from "./docs-theme-toggle";
 
 // Structural mirror of fumadocs' page-tree nodes (typeof source.pageTree). We
 // only render the two node shapes our docs use: pages and one level of folder.
@@ -28,6 +29,10 @@ type DocsSidebarProps = {
   tree: { children: TreeNode[] };
 };
 
+// Pages to flag as new in the sidebar. Drop a URL once its primitive has been
+// out for a release or two.
+const NEW_PAGES = new Set(["/primitives/shell", "/primitives/nav", "/primitives/tabs"]);
+
 const NavLink = ({ url, name }: { url: string; name: ReactNode }) => {
   const pathname = usePathname();
   const isActive = pathname === url;
@@ -35,13 +40,18 @@ const NavLink = ({ url, name }: { url: string; name: ReactNode }) => {
     <Link
       href={url}
       className={cn(
-        "flex h-8 items-center rounded-md px-3 text-md font-medium transition-colors duration-0",
+        "flex h-8 items-center gap-2 rounded-md px-3 text-md font-medium transition-colors duration-0",
         isActive
           ? "bg-secondary-bg-hover text-ink-primary"
           : "text-ink-secondary hover:bg-secondary-bg-hover hover:text-ink-primary",
       )}
     >
-      {name}
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      {NEW_PAGES.has(url) && (
+        <span className="flex h-4 shrink-0 items-center rounded-sm bg-accent-bg/10 px-1.5 font-medium text-2xs text-accent-bg">
+          New
+        </span>
+      )}
     </Link>
   );
 };
@@ -127,15 +137,18 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
 
 export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
   <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-3 md:flex">
-    <Link
-      href="/"
-      className="flex h-8 items-center px-3 text-ink-primary"
-      aria-label="@intentface/chat"
-    >
-      <IntentfaceLogo className="size-6" />
-    </Link>
-    <div className="shrink-0">
-      <DocsSearch />
+    <div className="flex h-9 shrink-0 items-center justify-between gap-2 px-1">
+      <Link
+        href="/"
+        className="flex items-center px-2 text-ink-primary"
+        aria-label="@intentface/chat"
+      >
+        <IntentfaceLogo className="size-6" />
+      </Link>
+      <div className="flex shrink-0 items-center gap-1">
+        <DocsThemeToggle />
+        <DocsSearch />
+      </div>
     </div>
     <nav className="flex-1">
       <TreeNodes nodes={tree.children} />

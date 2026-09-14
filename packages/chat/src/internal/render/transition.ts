@@ -4,7 +4,10 @@
 // (internals/useTransitionStatus, useAnimationsFinished, useOpenChangeComplete). Consolidated
 // into one self-contained module and trimmed of the @base-ui/utils runtime dep (the tiny
 // AnimationFrame / useStableCallback / resolveRef helpers are inlined), mirroring how this
-// package already vendors useRenderElement. Behavior is preserved.
+// package already vendors useRenderElement. Behavior is preserved bar two deliberate
+// departures in useAnimationsFinished: a `subtree` option (the animating element is not always
+// the one unmounting), and running the callback when there is no element instead of returning
+// silently, which otherwise strands whoever unmounts from it.
 //
 // Model: presence is the `mounted` boolean; `transitionStatus` is a CSS-animation status
 // ('starting' | 'ending' | 'idle' | undefined). Pair with data-starting-style/data-ending-style
@@ -147,6 +150,11 @@ export const useAnimationsFinished = (
   elementOrRef: RefObject<HTMLElement | null> | HTMLElement | null,
   waitForStartingStyleRemoved = false,
   treatAbortedAsFinished = true,
+  /**
+   * Wait on descendants too — for when the element that animates is not the one being
+   * unmounted, such as a collapsible whose wrapper carries the transition.
+   */
+  subtree = false,
 ) => {
   const frame = useAnimationFrame();
 
@@ -154,7 +162,13 @@ export const useAnimationsFinished = (
     frame.cancel();
 
     const element = resolveRef(elementOrRef);
-    if (element == null) return;
+    // No element means there is nothing to wait for. Run the callback rather than returning,
+    // or a caller that unmounts from it (setMounted(false)) is stranded and the surface stays
+    // mounted for good.
+    if (element == null) {
+      fnToExecute();
+      return;
+    }
     const resolvedElement = element;
 
     const done = () => flushSync(fnToExecute);
@@ -165,7 +179,9 @@ export const useAnimationsFinished = (
     }
 
     const exec = () => {
-      Promise.all(resolvedElement.getAnimations().map((animation) => animation.finished))
+      Promise.all(
+        resolvedElement.getAnimations({ subtree }).map((animation) => animation.finished),
+      )
         .then(() => {
           if (!signal?.aborted) done();
         })
@@ -174,7 +190,7 @@ export const useAnimationsFinished = (
             if (!signal?.aborted) done();
             return;
           }
-          const current = resolvedElement.getAnimations();
+          const current = resolvedElement.getAnimations({ subtree });
           if (
             !signal?.aborted &&
             current.length > 0 &&

@@ -1,7 +1,7 @@
 {
   "name": "@intentface/chat",
   "version": "0.2.1",
-  "description": "Headless chat UI primitives — unstyled compound components, hooks, and wire formats for building AI chat interfaces.",
+  "description": "Headless UI primitives — unstyled compound components, hooks, and wire formats for AI chat interfaces and the app shells around them.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -23,7 +23,11 @@
     "ui",
     "components",
     "composer",
-    "ai-sdk"
+    "ai-sdk",
+    "shell",
+    "sidebar",
+    "tabs",
+    "nav"
   ],
   "files": [
     "dist",
@@ -66,6 +70,18 @@
     "./message": {
       "types": "./dist/message/index.d.ts",
       "default": "./dist/message/index.js"
+    },
+    "./shell": {
+      "types": "./dist/shell/index.d.ts",
+      "default": "./dist/shell/index.js"
+    },
+    "./nav": {
+      "types": "./dist/nav/index.d.ts",
+      "default": "./dist/nav/index.js"
+    },
+    "./tabs": {
+      "types": "./dist/tabs/index.d.ts",
+      "default": "./dist/tabs/index.js"
     },
     "./message-utils": {
       "types": "./dist/message-utils.d.ts",

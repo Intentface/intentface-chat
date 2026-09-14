@@ -1,4 +1,15 @@
 {
   "title": "Primitives",
-  "pages": ["composer", "message", "thread", "steps", "reasoning", "chip", "attachments"]
+  "pages": [
+    "composer",
+    "message",
+    "thread",
+    "steps",
+    "reasoning",
+    "chip",
+    "attachments",
+    "shell",
+    "nav",
+    "tabs"
+  ]
 }

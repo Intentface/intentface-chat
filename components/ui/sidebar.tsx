@@ -125,24 +125,28 @@ const SidebarProvider = ({
 
 /**
  * Cmd/Ctrl+B. The package claims no window-level key — it cannot know which
- * ones this app has spent — so the binding is ours, and `toggle` is all it
- * needs: a floated-out sidebar pins open rather than closing.
+ * ones this app has spent — so the binding is ours.
+ *
+ * It goes through `toggleSidebar` rather than Shell's own `toggle`, for the
+ * same reason the trigger button does: below the mobile breakpoint the desktop
+ * panel is not rendered, so toggling Shell would change nothing on screen while
+ * still persisting a collapsed sidebar that reappears when the window widens.
  *
  * A component rather than a hook in the provider, so it can read the store
  * through context like every other part.
  */
 const SidebarShortcut = () => {
-  const toggle = useShell((shell) => shell.toggle);
+  const { toggleSidebar } = useSidebar();
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "b" || !(event.metaKey || event.ctrlKey)) return;
       event.preventDefault();
-      toggle();
+      toggleSidebar();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggle]);
+  }, [toggleSidebar]);
 
   return null;
 };

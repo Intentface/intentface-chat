@@ -26,7 +26,7 @@ export const Basic = () => (
     className="group/shell relative flex h-128 w-full overflow-hidden rounded-xl border border-[#f0f0f0] bg-[#fafafa] [--shell-sidebar-width:224px] dark:border-[#262626] dark:bg-[#111111]"
   >
     {/* Not rendering this is how you opt out of hover-peek. */}
-    <Shell.PeekZone className="absolute inset-y-0 left-0 z-20 hidden w-5 data-[state=collapsed]:block" />
+    <Shell.Hotspot className="absolute inset-y-0 left-0 z-20 hidden w-5 data-[state=collapsed]:block" />
 
     {/* The gutter. Not a part of the package: a div reading the property the
         grip writes, animating to zero while the panel slides away. */}
@@ -120,7 +120,7 @@ export const Basic = () => (
         half. Positioned instead against the viewport's left edge — the 6px hit
         area straddles the content card's border, so the hairline it reveals
         lands exactly on the line already drawn there. */}
-    <Shell.ResizeHandle
+    <Shell.Grip
       aria-label="Resize sidebar"
       className={[
         "absolute inset-y-0 left-[calc(var(--shell-sidebar-width)+8px)] z-20 w-1.5 -translate-x-1/2 cursor-col-resize select-none",

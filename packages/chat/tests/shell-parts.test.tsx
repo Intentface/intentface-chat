@@ -9,10 +9,10 @@ const PEEK_CLOSE = 250;
 
 const Layout = (props: Parameters<typeof Shell.Root>[0]) => (
   <Shell.Root data-testid="root" {...props}>
-    <Shell.PeekZone data-testid="zone" />
+    <Shell.Hotspot data-testid="zone" />
     <Shell.Sidebar data-testid="sidebar">
       <Shell.Trigger data-testid="trigger">Toggle</Shell.Trigger>
-      <Shell.ResizeHandle aria-label="Resize sidebar" data-testid="handle" />
+      <Shell.Grip aria-label="Resize sidebar" data-testid="handle" />
     </Shell.Sidebar>
     <Shell.Viewport data-testid="viewport" />
   </Shell.Root>
@@ -229,7 +229,7 @@ describe("peek", () => {
   });
 });
 
-describe("Shell.ResizeHandle", () => {
+describe("Shell.Grip", () => {
   /** The bounds are the stylesheet's to declare, so the tests declare them. */
   const withBounds = (sidebar: HTMLElement, min: string, max: string) => {
     sidebar.style.minWidth = min;
@@ -303,7 +303,7 @@ describe("Shell.ResizeHandle", () => {
     const { getByTestId } = render(
       <Shell.Root data-testid="root">
         <Shell.Sidebar data-testid="sidebar" side="right">
-          <Shell.ResizeHandle data-testid="handle" />
+          <Shell.Grip data-testid="handle" />
         </Shell.Sidebar>
       </Shell.Root>,
     );

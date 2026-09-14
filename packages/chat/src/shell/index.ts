@@ -3,9 +3,9 @@
 
 export * as Shell from "./index.parts";
 export type {
+  ShellGripProps,
+  ShellHotspotProps,
   ShellPartState,
-  ShellPeekZoneProps,
-  ShellResizeHandleProps,
   ShellRootProps,
   ShellSidebarProps,
   ShellSidebarState,

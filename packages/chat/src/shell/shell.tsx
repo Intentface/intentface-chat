@@ -42,7 +42,7 @@ import { createShellStore, ShellStoreContext, useShellContextStore, useShellStor
  * claiming a window-level `keydown` for a key it cannot know is free.
  */
 
-/** Written by the resize handle; read by your `width`. */
+/** Written by the grip; read by your `width`. */
 export const SHELL_SIDEBAR_WIDTH_VAR = "--shell-sidebar-width";
 
 // Both delays are intent filters: the open delay stops a pointer merely
@@ -217,7 +217,7 @@ export const ShellRoot = ({
   const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
     if (!store.peekSuppressionRef.current) return;
     const target = event.target as HTMLElement | null;
-    if (target?.closest("[data-shell-peek-zone]")) return;
+    if (target?.closest("[data-shell-hotspot]")) return;
     store.peekSuppressionRef.current = false;
   };
 
@@ -310,7 +310,7 @@ export const ShellSidebar = ({
 };
 
 // ---------------------------------------------------------------------------
-// Viewport, peek zone, trigger
+// Viewport, hotspot, trigger
 // ---------------------------------------------------------------------------
 
 export type ShellViewportProps = PrimitiveProps<"div", ShellPartState>;
@@ -325,7 +325,7 @@ export const ShellViewport = ({ className, render, style, ...elementProps }: She
     },
   );
 
-export type ShellPeekZoneProps = PrimitiveProps<"div", ShellPartState>;
+export type ShellHotspotProps = PrimitiveProps<"div", ShellPartState>;
 
 /**
  * The strip along the screen edge that floats a collapsed sidebar out on
@@ -333,12 +333,7 @@ export type ShellPeekZoneProps = PrimitiveProps<"div", ShellPartState>;
  * of peek entirely — there is no prop to turn it off, because not rendering it
  * already says that.
  */
-export const ShellPeekZone = ({
-  className,
-  render,
-  style,
-  ...elementProps
-}: ShellPeekZoneProps) => {
+export const ShellHotspot = ({ className, render, style, ...elementProps }: ShellHotspotProps) => {
   const peek = usePeekContext();
 
   return useRenderElement(
@@ -348,7 +343,7 @@ export const ShellPeekZone = ({
       state: usePartState(useShellContextStore()),
       props: [
         {
-          "data-shell-peek-zone": "",
+          "data-shell-hotspot": "",
           "aria-hidden": true,
           onPointerEnter: peek.request,
           onPointerLeave: peek.release,
@@ -391,10 +386,10 @@ export const ShellTrigger = ({ className, render, style, ...elementProps }: Shel
 };
 
 // ---------------------------------------------------------------------------
-// Resize handle
+// Grip
 // ---------------------------------------------------------------------------
 
-export type ShellResizeHandleProps = PrimitiveProps<"div", ShellPartState> & {
+export type ShellGripProps = PrimitiveProps<"div", ShellPartState> & {
   /** Pixels moved per arrow-key press. */
   step?: number;
 };
@@ -427,13 +422,13 @@ const publishWidth = (store: ShellStore, width: number, bounds: Bounds) => {
 /** Dragging right widens a left sidebar and narrows a right one. */
 const widenDirection = (sidebar: HTMLElement) => (sidebar.dataset.side === "right" ? -1 : 1);
 
-export const ShellResizeHandle = ({
+export const ShellGrip = ({
   step = 16,
   className,
   render,
   style,
   ...elementProps
-}: ShellResizeHandleProps) => {
+}: ShellGripProps) => {
   const store = useShellContextStore();
   const state = usePartState(store);
   const width = useShellStore(store, selectWidth);
@@ -525,7 +520,7 @@ export const ShellResizeHandle = ({
       state,
       props: [
         {
-          "data-shell-resize-handle": "",
+          "data-shell-grip": "",
           role: "separator",
           "aria-orientation": "vertical",
           // A focusable separator must always carry a value; omitting it until

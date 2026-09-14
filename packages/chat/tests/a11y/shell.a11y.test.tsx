@@ -19,13 +19,13 @@ const audit = async (container: HTMLElement) => {
 
 const Layout = ({ defaultOpen = true }: { defaultOpen?: boolean }) => (
   <Shell.Root defaultOpen={defaultOpen}>
-    <Shell.PeekZone data-testid="zone" />
+    <Shell.Hotspot data-testid="zone" />
     <Shell.Sidebar data-testid="sidebar">
       <Shell.Trigger data-testid="trigger">Toggle sidebar</Shell.Trigger>
       <nav aria-label="Main">
         <a href="#main">Inbox</a>
       </nav>
-      <Shell.ResizeHandle aria-label="Resize sidebar" data-testid="handle" />
+      <Shell.Grip aria-label="Resize sidebar" data-testid="handle" />
     </Shell.Sidebar>
     <Shell.Viewport>
       <h2>Content</h2>
@@ -52,7 +52,7 @@ describe("Shell accessibility", () => {
     expect(container.querySelector(`#${CSS.escape(controls ?? "")}`)).toBe(getByTestId("sidebar"));
   });
 
-  test("the resize handle is a keyboard-reachable separator with a range", () => {
+  test("the grip is a keyboard-reachable separator with a range", () => {
     const { getByTestId } = render(<Layout />);
     const sidebar = getByTestId("sidebar");
     sidebar.style.minWidth = "200px";

@@ -106,7 +106,7 @@ const SidebarProvider = ({
           writeSidebarLayout({ open: next });
         }}
         data-slot="sidebar-wrapper"
-        // A restored width goes back the way the resize handle writes it: the
+        // A restored width goes back the way the grip writes it: the
         // custom property. There is no prop for it, because the width is CSS's.
         style={
           width === undefined
@@ -232,8 +232,8 @@ const SidebarRoot = ({
           covers only border/padding. */}
       {/* Not rendering it is how you opt out of peek — there is no prop for that. */}
       {side === "left" && (
-        <Shell.PeekZone
-          data-slot="sidebar-peek-zone"
+        <Shell.Hotspot
+          data-slot="sidebar-hotspot"
           className="fixed inset-y-0 left-0 z-20 hidden w-5 group-data-[state=collapsed]:block"
         />
       )}

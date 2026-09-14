@@ -3,8 +3,8 @@
 // Server Component can reach Shell.Root and its siblings through them. Each
 // part module carries the directive itself.
 export {
-  ShellPeekZone as PeekZone,
-  ShellResizeHandle as ResizeHandle,
+  ShellGrip as Grip,
+  ShellHotspot as Hotspot,
   ShellRoot as Root,
   ShellSidebar as Sidebar,
   ShellTrigger as Trigger,

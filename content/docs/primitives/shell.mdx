@@ -14,9 +14,9 @@ primitives that happen to be built for each other.
 ## Usage guidelines
 
 - **App shell, not a chat part** — the sidebar-and-viewport frame an app sits in.
-- **No global keys** — the package claims none; bind your own around `toggle`. Only the resize handle's arrow keys are local enough to belong here.
+- **No global keys** — the package claims none; bind your own around `toggle`. Only the grip's arrow keys are local enough to belong here.
 - **Width is CSS** — the sidebar's size and the range the drag may move it through are `width` / `min-width` / `max-width` in your stylesheet. The primitive measures; it never sizes.
-- **Hover-peek** — a collapsed sidebar floats back out when the pointer rests against the screen edge. Render `Shell.PeekZone` to opt in; omit it to opt out.
+- **Hover-peek** — a collapsed sidebar floats back out when the pointer rests against the screen edge. Render `Shell.Hotspot` to opt in; omit it to opt out.
 - **Persists nothing itself** — `open` goes out through `onOpenChange` and back as `defaultOpen`; the width goes out through the sidebar's `onResize` and back as CSS. Where it is kept is yours, and reading it from the request keeps the first paint right.
 - **State via `useShell`** — read open, peek, resizing and the measured width from anywhere inside.
 - **Get started** — see [Quick start](/quick-start) to add the package.
@@ -25,10 +25,10 @@ primitives that happen to be built for each other.
 
 ```tsx
 <Shell.Root>
-  <Shell.PeekZone />
+  <Shell.Hotspot />
   <Shell.Sidebar>
     <Shell.Trigger />
-    <Shell.ResizeHandle />
+    <Shell.Grip />
   </Shell.Sidebar>
   <Shell.Viewport />
 </Shell.Root>
@@ -39,13 +39,13 @@ not a part of the package, and it is the piece that makes the rest work:
 
 ```tsx
 <Shell.Root defaultOpen={stored?.open ?? true} onOpenChange={save}>
-  <Shell.PeekZone />
+  <Shell.Hotspot />
   <Gutter />
 
   <Shell.Sidebar>
     <Shell.Trigger aria-label="Collapse sidebar" />
     <WorkspaceNav />
-    <Shell.ResizeHandle aria-label="Resize sidebar" />
+    <Shell.Grip aria-label="Resize sidebar" />
   </Shell.Sidebar>
 
   <Shell.Viewport>{children}</Shell.Viewport>
@@ -167,8 +167,8 @@ const SidebarShortcut = () => {
 };
 ```
 
-`Shell.ResizeHandle` does own its keys, because those are local rather than
-global: with the handle focused, the arrow keys nudge the width by `step`.
+`Shell.Grip` does own its keys, because those are local rather than
+global: with the grip focused, the arrow keys nudge the width by `step`.
 
 ## useShell
 
@@ -235,7 +235,7 @@ return <AppShell defaultOpen={stored?.open ?? true} width={stored?.width} />;
 ### Width goes back as CSS, not as a prop
 
 There is deliberately no `defaultWidth`. The width already lives in your
-stylesheet — the resize handle writes `--shell-sidebar-width` and your rule
+stylesheet — the grip writes `--shell-sidebar-width` and your rule
 reads it — so restoring one means setting that property, which is the same
 mechanism rather than a second one:
 
@@ -264,14 +264,14 @@ defaults rather than reach your tree.
 
 `Shell.Trigger` is a `<button>` carrying `aria-expanded` and `aria-controls`
 pointing at the sidebar it governs, so the collapsed/expanded state and the
-relationship are both announced. `Shell.ResizeHandle` is a focusable
+relationship are both announced. `Shell.Grip` is a focusable
 `role="separator"` with `aria-orientation`, `aria-valuenow`, `aria-valuemin`
 and `aria-valuemax`, and it responds to the arrow keys — so resizing is never
 mouse-only. It always carries a value, falling back to the minimum before the
 first measurement lands, because a focusable separator without one is an
 invalid widget.
 
-`Shell.PeekZone` is `aria-hidden`: it is a pointer affordance with no keyboard
+`Shell.Hotspot` is `aria-hidden`: it is a pointer affordance with no keyboard
 or screen-reader meaning, and the trigger already covers both.
 
 ## API reference
@@ -304,7 +304,7 @@ export const rootAttrs = [
   { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
   { attribute: "data-peek", description: "Present while the collapsed sidebar is floating out." },
   { attribute: "data-resizing", description: "Present for the duration of a resize drag." },
-  { attribute: "--shell-sidebar-width", values: "measured px", description: "Written by the resize handle, on the root rather than the sidebar so anything in the shell can size itself to match." },
+  { attribute: "--shell-sidebar-width", values: "measured px", description: "Written by the grip, on the root rather than the sidebar so anything in the shell can size itself to match." },
 ];
 
 <AttributesTable rows={rootAttrs} />
@@ -359,9 +359,9 @@ export const triggerAttrs = [
 
 <AttributesTable rows={triggerAttrs} />
 
-### Shell.ResizeHandle
+### Shell.Grip
 
-The drag affordance. Renders `data-shell-resize-handle` as a focusable
+The drag affordance. Renders `data-shell-grip` as a focusable
 `role="separator"`. Give it a width and a cursor in CSS.
 
 export const handleProps = [
@@ -371,22 +371,22 @@ export const handleProps = [
 <PropsTable rows={handleProps} />
 
 export const handleAttrs = [
-  { attribute: "data-shell-resize-handle", description: "The separator." },
+  { attribute: "data-shell-grip", description: "The separator." },
   { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open." },
   { attribute: "data-resizing", description: "Present while this handle is being dragged." },
 ];
 
 <AttributesTable rows={handleAttrs} />
 
-### Shell.PeekZone
+### Shell.Hotspot
 
 The strip along the screen edge that floats a collapsed sidebar out on hover.
-Renders `data-shell-peek-zone`, `aria-hidden`. Give it a width and a position
+Renders `data-shell-hotspot`, `aria-hidden`. Give it a width and a position
 in CSS. Omitting the part is how you opt out of peek — there is no prop for it,
 because not rendering it already says so.
 
 export const peekAttrs = [
-  { attribute: "data-shell-peek-zone", description: "The hover strip." },
+  { attribute: "data-shell-hotspot", description: "The hover strip." },
   { attribute: "data-state", values: '"expanded" | "collapsed"', description: "Whether the sidebar is open — key the strip off collapsed so it vanishes when expanded." },
   { attribute: "data-peek", description: "Present while the sidebar is floating out." },
 ];

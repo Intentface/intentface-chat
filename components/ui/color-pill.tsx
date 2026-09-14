@@ -1,10 +1,9 @@
 "use client";
+import { IconChevronDown, IconColorPicker } from "@tabler/icons-react";
 
 import { useCallback, useState } from "react";
 import { HexColorPicker } from "react-colorful";
 
-import { ChevronDownMediumIcon } from "@/components/icons/chevron-down-medium";
-import { EyedropperIcon } from "@/components/icons/eyedropper";
 import { Popover } from "@/components/ui/popover";
 import { HexSchema } from "@/lib/interface-theme";
 import { cn } from "@/lib/utils";
@@ -58,7 +57,7 @@ export const ColorPill = ({
           className="flex size-5 shrink-0 items-center justify-center rounded-sm outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent-bg/50 disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Pick color"
         >
-          <EyedropperIcon className="size-3.5" />
+          <IconColorPicker className="size-3.5" />
         </Popover.Trigger>
         <input
           id={id}
@@ -69,7 +68,7 @@ export const ColorPill = ({
           spellCheck={false}
           className="flex-1 bg-transparent font-mono text-xs uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
         />
-        <ChevronDownMediumIcon
+        <IconChevronDown
           className={cn("size-3 shrink-0 opacity-70", size === "compact" && "hidden")}
         />
       </div>

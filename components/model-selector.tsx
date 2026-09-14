@@ -1,7 +1,6 @@
 "use client";
+import { IconCheck, IconSelector } from "@tabler/icons-react";
 
-import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
-import { ChevronGrabberVerticalIcon } from "@/components/icons/chevron-grabber-vertical";
 import { ClaudeIcon } from "@/components/icons/claude";
 import { GeminiIcon } from "@/components/icons/gemini";
 import { GrokIcon } from "@/components/icons/grok";
@@ -55,7 +54,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
           <Button variant="ghost" size="md" type="button" className="rounded-full gap-1.5">
             {CurrentProviderIcon ? <CurrentProviderIcon className="text-ink-secondary" /> : null}
             <span>{currentLabel}</span>
-            <ChevronGrabberVerticalIcon className="text-ink-tertiary" />
+            <IconSelector className="text-ink-tertiary" />
           </Button>
         }
       />
@@ -73,7 +72,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
                 {group.models.map((model) => {
                   return (
                     <DropdownMenu.Item key={model.id} onClick={() => onValueChange(model.id)}>
-                      <CheckMarkMediumIcon className={cn(value !== model.id && "opacity-0")} />
+                      <IconCheck className={cn(value !== model.id && "opacity-0")} />
                       <span>{model.label}</span>
                     </DropdownMenu.Item>
                   );

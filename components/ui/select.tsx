@@ -1,13 +1,10 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { IconCheck, IconChevronDown, IconChevronUp, IconSelector } from "@tabler/icons-react";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
-import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
-import { ChevronDownMediumIcon } from "../icons/chevron-down-medium";
-import { ChevronGrabberVerticalIcon } from "../icons/chevron-grabber-vertical";
-import { ChevronTopMediumIcon } from "../icons/chevron-top-medium";
 
 const selectTriggerVariants = cva(
   [
@@ -80,7 +77,7 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon data-slot="select-icon" render={<ChevronGrabberVerticalIcon />} />
+      <SelectPrimitive.Icon data-slot="select-icon" render={<IconSelector />} />
     </SelectPrimitive.Trigger>
   );
 }
@@ -196,7 +193,7 @@ const SelectItem = ({ className, children, ...props }: SelectPrimitive.Item.Prop
 
       <div className={cn(["pointer-events-none flex size-4 shrink-0 items-center justify-center"])}>
         <SelectPrimitive.ItemIndicator>
-          <CheckMarkMediumIcon className="pointer-events-none" />
+          <IconCheck className="pointer-events-none" />
         </SelectPrimitive.ItemIndicator>
       </div>
     </SelectPrimitive.Item>
@@ -234,7 +231,7 @@ const SelectScrollUpButton = ({
       )}
       {...props}
     >
-      <ChevronTopMediumIcon />
+      <IconChevronUp />
     </SelectPrimitive.ScrollUpArrow>
   );
 };
@@ -259,7 +256,7 @@ const SelectScrollDownButton = ({
       )}
       {...props}
     >
-      <ChevronDownMediumIcon />
+      <IconChevronDown />
     </SelectPrimitive.ScrollDownArrow>
   );
 };

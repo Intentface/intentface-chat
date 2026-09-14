@@ -1,4 +1,5 @@
 "use client";
+import { IconArrowUp, IconPlayerStopFilled } from "@tabler/icons-react";
 
 // Styled composer — thin wrappers over @intentface/chat/composer. Behavior
 // (editor, store, machines, command plumbing) lives in the package; this file
@@ -20,8 +21,6 @@ import { Children, type ComponentProps, type ReactNode, useMemo, useRef } from "
 import { AskUser } from "@/components/ai/ask-user";
 import { Attachments } from "@/components/ai/attachments";
 import { Chip } from "@/components/ai/chip";
-import { SendIcon } from "@/components/icons/send";
-import { StopIcon } from "@/components/icons/stop";
 import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Kbd } from "@/components/ui/kbd";
@@ -336,7 +335,7 @@ const ComposerSubmit = ({
           transition={{ duration: 0.15 }}
           className="flex items-center justify-center"
         >
-          {isGenerating ? <StopIcon /> : (children ?? <SendIcon />)}
+          {isGenerating ? <IconPlayerStopFilled /> : (children ?? <IconArrowUp />)}
         </motion.span>
       </AnimatePresence>
     </IconButton>

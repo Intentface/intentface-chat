@@ -1,9 +1,8 @@
 "use client";
 
+import { IconCheck, IconCopy } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
-import { CopyIcon } from "@/components/icons/copy";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +48,7 @@ export const InstallationBlockTabs = ({ entries }: InstallationBlockTabsProps) =
           aria-label={`Copy: ${current.command}`}
           className="ml-auto cursor-pointer rounded-md p-1.5 text-ink-tertiary transition-colors hover:bg-primary-bg-hover hover:text-ink-secondary"
         >
-          {copied === current.command ? <CheckMarkMediumIcon /> : <CopyIcon />}
+          {copied === current.command ? <IconCheck /> : <IconCopy />}
         </button>
       </div>
       <div className="[&_pre]:rounded-none [&_pre]:border-0">{current.code}</div>

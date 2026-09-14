@@ -1,24 +1,26 @@
+import {
+  IconBrain,
+  IconBugFilled,
+  IconChartBar,
+  IconCode,
+  IconFileTextFilled,
+  IconMessageChatbotFilled,
+  IconPhotoFilled,
+  IconTableFilled,
+  IconWorldFilled,
+} from "@tabler/icons-react";
 import type { ReactNode } from "react";
-import { BrainIcon } from "@/components/icons/brain";
-import { BubbleWideSparkleIcon } from "@/components/icons/bubble-wide-sparkle";
-import { BugIcon } from "@/components/icons/bug";
-import { CodeIcon } from "@/components/icons/code";
-import { FileChartIcon } from "@/components/icons/file-chart";
-import { FileTextIcon } from "@/components/icons/file-text";
-import { GlobeIcon } from "@/components/icons/globe";
-import { ImageAltIcon } from "@/components/icons/image-alt";
-import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 
 export const CHIP_ICONS = {
-  brain: <BrainIcon />,
-  bug: <BugIcon />,
-  bubbleWideSparkle: <BubbleWideSparkleIcon />,
-  code: <CodeIcon />,
-  fileChart: <FileChartIcon />,
-  fileText: <FileTextIcon />,
-  globe: <GlobeIcon />,
-  imageAlt: <ImageAltIcon />,
-  spreadsheet: <SpreadsheetIcon />,
+  brain: <IconBrain />,
+  bug: <IconBugFilled />,
+  bubbleWideSparkle: <IconMessageChatbotFilled />,
+  code: <IconCode />,
+  fileChart: <IconChartBar />,
+  fileText: <IconFileTextFilled />,
+  globe: <IconWorldFilled />,
+  imageAlt: <IconPhotoFilled />,
+  spreadsheet: <IconTableFilled />,
 } satisfies Record<string, ReactNode>;
 
 export type ChipIconKey = keyof typeof CHIP_ICONS;

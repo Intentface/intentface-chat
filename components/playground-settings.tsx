@@ -1,4 +1,13 @@
 "use client";
+import {
+  IconAdjustmentsHorizontalFilled,
+  IconDeviceDesktopFilled,
+  IconForms,
+  IconLayoutListFilled,
+  IconMoonFilled,
+  IconSettingsFilled,
+  IconSunFilled,
+} from "@tabler/icons-react";
 
 // Playground settings — a Linear-style display-options popover behind a single
 // icon trigger in the chat area's top-right corner, on every chat page. The
@@ -13,14 +22,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { type ReactNode, useState } from "react";
 import type { ComposerSubmitOn } from "@/components/ai/composer";
 import type { ThreadAutoScrollMode } from "@/components/ai/thread";
-import { AppearanceIcon } from "@/components/icons/appearance";
-import { InputFormIcon } from "@/components/icons/input-form";
-import { MoonIcon } from "@/components/icons/moon";
 import { OpenAIIcon } from "@/components/icons/openai";
-import { SettingsIcon } from "@/components/icons/settings";
-import { SettingsSliderThreeIcon } from "@/components/icons/settings-slider-three";
-import { SquareLinesIcon } from "@/components/icons/square-lines";
-import { SunIcon } from "@/components/icons/sun";
 import Button from "@/components/ui/button";
 import { ColorPill } from "@/components/ui/color-pill";
 import { IconButton } from "@/components/ui/icon-button";
@@ -120,11 +122,11 @@ const CUSTOM_PRESET_VALUE = "__custom__";
 const MODE_OPTIONS: ReadonlyArray<{
   value: InterfaceThemeMode;
   label: string;
-  Icon: typeof SunIcon;
+  Icon: typeof IconSunFilled;
 }> = [
-  { value: "light", label: "Light", Icon: SunIcon },
-  { value: "dark", label: "Dark", Icon: MoonIcon },
-  { value: "system", label: "System", Icon: AppearanceIcon },
+  { value: "light", label: "Light", Icon: IconSunFilled },
+  { value: "dark", label: "Dark", Icon: IconMoonFilled },
+  { value: "system", label: "System", Icon: IconDeviceDesktopFilled },
 ];
 
 const ThemeTab = () => {
@@ -516,9 +518,9 @@ const KeyTab = () => {
 };
 
 const PLAYGROUND_TABS = [
-  { value: "theme", label: "Theme", Icon: SettingsSliderThreeIcon, content: <ThemeTab /> },
-  { value: "thread", label: "Thread", Icon: SquareLinesIcon, content: <ThreadTab /> },
-  { value: "composer", label: "Composer", Icon: InputFormIcon, content: <ComposerTab /> },
+  { value: "theme", label: "Theme", Icon: IconAdjustmentsHorizontalFilled, content: <ThemeTab /> },
+  { value: "thread", label: "Thread", Icon: IconLayoutListFilled, content: <ThreadTab /> },
+  { value: "composer", label: "Composer", Icon: IconForms, content: <ComposerTab /> },
   { value: "key", label: "Key", Icon: OpenAIIcon, content: <KeyTab /> },
 ] as const;
 
@@ -570,7 +572,7 @@ export const PlaygroundSettings = () => {
             />
           }
         >
-          <SettingsIcon className="size-4" />
+          <IconSettingsFilled className="size-4" />
         </Popover.Trigger>
         <Popover.Content
           align="end"

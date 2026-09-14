@@ -9,8 +9,19 @@ import {
   type MessageSegment,
 } from "@intentface/chat/message-utils";
 import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
+import {
+  IconAlertTriangleFilled,
+  IconBrain,
+  IconCheck,
+  IconChevronDown,
+  IconCircleFilled,
+  IconHelpCircleFilled,
+  IconQuoteFilled,
+  IconRefresh,
+  IconSandbox,
+  IconX,
+} from "@tabler/icons-react";
 import type { ChatStatus } from "ai";
-import { CircleIcon } from "lucide-react";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
 import {
@@ -37,15 +48,6 @@ import { Steps } from "@/components/ai/steps";
 import { Thread } from "@/components/ai/thread";
 import { ActiveTools, ToolsMenu } from "@/components/composer-tools";
 import { Header } from "@/components/header";
-import { BrainIcon } from "@/components/icons/brain";
-import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
-import { ChevronDownIcon } from "@/components/icons/chevron-down";
-import { CircleQuestionmarkIcon } from "@/components/icons/circle-questionmark";
-import { CrossMediumIcon } from "@/components/icons/cross-medium";
-import { ExclamationTriangleIcon } from "@/components/icons/exclamation-triangle";
-import { OpenQuote2Icon } from "@/components/icons/open-quote-2";
-import { PlaygroundIcon } from "@/components/icons/playground";
-import { RefreshIcon } from "@/components/icons/refresh";
 import { ModelSelector } from "@/components/model-selector";
 import { PlaygroundSettings } from "@/components/playground-settings";
 import { Markdown } from "@/components/ui/markdown";
@@ -128,10 +130,10 @@ export const useChatMessages = (): ChatMessagesValue => {
 type IconComponent = React.ComponentType<{ className?: string }>;
 
 const statusIcons: Record<StepStatus, IconComponent> = {
-  complete: CheckMarkMediumIcon,
-  active: CircleIcon,
-  pending: CircleIcon,
-  error: ExclamationTriangleIcon,
+  complete: IconCheck,
+  active: IconCircleFilled,
+  pending: IconCircleFilled,
+  error: IconAlertTriangleFilled,
 };
 
 // A timeline row: static when it has no detail, collapsible (icon morphs to a
@@ -186,7 +188,7 @@ const TimelineStep = ({
           <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
             <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
           </span>
-          <ChevronDownIcon className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
+          <IconChevronDown className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
         </span>
         <span className={labelClasses}>{label}</span>
       </Steps.Trigger>
@@ -222,7 +224,7 @@ const TimelineAskUser = ({ part }: { part: ToolPart }) => {
   const { label, status, questions, answers, isComplete } = getAskUserStepInfo(part);
 
   return (
-    <TimelineStep label={label} status={status} icon={CircleQuestionmarkIcon}>
+    <TimelineStep label={label} status={status} icon={IconHelpCircleFilled}>
       <div className="flex flex-col gap-1.5">
         {questions.map((q) => (
           <div key={q.question} className="flex flex-col gap-0.5">
@@ -358,7 +360,7 @@ const InterleavedSteps = ({
       <Steps.Item open={open} onOpenChange={setUserOpen}>
         <Steps.Trigger>
           <span className="overflow-hidden text-left">{header}</span>
-          <ChevronDownIcon className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
+          <IconChevronDown className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
         </Steps.Trigger>
         <Steps.Panel>
           {segments.map((seg, i) => {
@@ -374,7 +376,7 @@ const InterleavedSteps = ({
                   key={`r-${i}-${j}`}
                   label={section.header ?? "Thinking"}
                   status={streaming && j === sections.length - 1 ? "active" : "complete"}
-                  icon={BrainIcon}
+                  icon={IconBrain}
                 >
                   {section.body && (
                     <Markdown className="text-sm leading-tight text-ink-secondary [&_p]:mb-0">
@@ -523,7 +525,7 @@ const ChatMessageItem = memo(
                 onClick={() => regenerate({ messageId: message.id })}
                 tooltip="Regenerate"
               >
-                <RefreshIcon />
+                <IconRefresh />
               </Message.Action>
             )}
             <Message.Copy value={textInfo.text} />
@@ -966,13 +968,13 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
               "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-secondary",
             )}
           >
-            <PlaygroundIcon className="size-3.5 opacity-70" aria-hidden />
+            <IconSandbox className="size-3.5 opacity-70" aria-hidden />
             Playground
           </span>
         )}
         {selections.length > 0 && (
           <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
-            <OpenQuote2Icon className="size-3.5" />
+            <IconQuoteFilled className="size-3.5" />
             <span>
               {selections.length} selection{selections.length === 1 ? "" : "s"}
             </span>
@@ -982,7 +984,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
               className="cursor-pointer rounded-full p-0.5 hover:bg-primary-bg-hover hover:text-ink-primary"
               onClick={clearSelections}
             >
-              <CrossMediumIcon className="size-3" />
+              <IconX className="size-3" />
             </button>
           </div>
         )}

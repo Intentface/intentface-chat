@@ -1,13 +1,10 @@
 "use client";
 
+import { IconBrandGithub, IconBrandNpm, IconChevronDown, IconSandbox } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { ChevronDownIcon } from "@/components/icons/chevron-down";
-import { GitHubIcon } from "@/components/icons/github";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
-import { NpmIcon } from "@/components/icons/npm";
-import { PlaygroundIcon } from "@/components/icons/playground";
 import { Collapsible } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { DocsSearch } from "./docs-search";
@@ -40,7 +37,7 @@ const NavLink = ({ url, name }: { url: string; name: ReactNode }) => {
     <Link
       href={url}
       className={cn(
-        "flex h-8 items-center gap-2 rounded-md px-3 text-md font-medium transition-colors duration-0",
+        "flex h-8 items-center gap-2 rounded-md px-2 text-md font-medium transition-colors duration-0",
         isActive
           ? "bg-secondary-bg-hover text-ink-primary"
           : "text-ink-secondary hover:bg-secondary-bg-hover hover:text-ink-primary",
@@ -81,9 +78,9 @@ const TreeFolderNode = ({ node, index }: { node: TreeFolder; index: number }) =>
   return (
     <li key={`folder-${index}`} className="mt-2">
       <Collapsible open={open} onOpenChange={setOpen}>
-        <Collapsible.Trigger className="flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-md px-3 text-left font-medium text-ink-tertiary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-secondary">
+        <Collapsible.Trigger className="flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-md px-2 text-left font-medium text-ink-tertiary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-secondary">
           <span className="flex-1">{node.name}</span>
-          <ChevronDownIcon
+          <IconChevronDown
             className={cn(
               "size-[18px] shrink-0 transition-transform",
               open ? "rotate-0" : "-rotate-90",
@@ -105,7 +102,7 @@ const TreeNodes = ({ nodes }: { nodes: TreeNode[] }) => (
         return (
           <li
             key={`sep-${index}`}
-            className="mt-2 flex h-8 items-center px-3 font-medium text-ink-tertiary text-md"
+            className="mt-2 flex h-8 items-center px-2 font-medium text-ink-tertiary text-md"
           >
             {node.name}
           </li>
@@ -128,7 +125,7 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
     href={href}
     target="_blank"
     rel="noreferrer"
-    className="flex h-8 items-center gap-2 rounded-md px-3 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-primary"
+    className="flex h-8 items-center gap-2 rounded-md px-2 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-primary"
   >
     <span className="[&>svg]:size-4">{icon}</span>
     {label}
@@ -136,8 +133,8 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
 );
 
 export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
-  <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-3 md:flex">
-    <div className="flex h-9 shrink-0 items-center justify-between gap-2 px-1">
+  <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-2 md:flex">
+    <div className="flex h-9 shrink-0 items-center justify-between gap-2">
       <Link
         href="/"
         className="flex items-center px-2 text-ink-primary"
@@ -158,21 +155,21 @@ export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
           The chat root IS the playground (corner config cards). */}
       <Link
         href="/playground"
-        className="flex h-8 items-center gap-2 rounded-md px-3 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-primary"
+        className="flex h-8 items-center gap-2 rounded-md px-2 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-primary"
       >
         <span className="[&>svg]:size-4">
-          <PlaygroundIcon />
+          <IconSandbox />
         </span>
         Playground
       </Link>
       <ExternalLink
         href="https://github.com/Intentface/intentface-chat"
-        icon={<GitHubIcon />}
+        icon={<IconBrandGithub />}
         label="GitHub"
       />
       <ExternalLink
         href="https://www.npmjs.com/package/@intentface/chat"
-        icon={<NpmIcon />}
+        icon={<IconBrandNpm />}
         label="npm"
       />
     </div>

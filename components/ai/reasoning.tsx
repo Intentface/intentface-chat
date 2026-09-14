@@ -1,13 +1,12 @@
 "use client";
 
 import { Reasoning as ReasoningPrimitive, useReasoning } from "@intentface/chat/reasoning";
+import { IconBrain, IconChevronDown } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ComponentProps, memo, type ReactNode } from "react";
-import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Markdown } from "@/components/ui/markdown";
 import { splitReasoningByHeaders } from "@/lib/ai/message-info";
 import { cn } from "@/lib/utils";
-import { BrainIcon } from "../icons/brain";
 import { TextShimmer } from "../ui/text-shimmer";
 
 export { useReasoning };
@@ -76,7 +75,7 @@ const ReasoningTrigger = memo(
         {children ?? (
           <>
             <div className="flex items-center gap-1">
-              <BrainIcon className="size-4" />
+              <IconBrain className="size-4" />
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.span
                   key={key}
@@ -90,7 +89,7 @@ const ReasoningTrigger = memo(
                 </motion.span>
               </AnimatePresence>
             </div>
-            <ChevronDownIcon
+            <IconChevronDown
               className={cn("size-5 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
             />
           </>

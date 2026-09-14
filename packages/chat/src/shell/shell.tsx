@@ -53,14 +53,14 @@ const PEEK_CLOSE_DELAY_MS = 250;
 
 export type ShellPartState = {
   state: "expanded" | "collapsed";
-  peek: boolean;
+  hotspot: boolean;
   resizing: boolean;
 };
 
 export type ShellSidebarState = ShellPartState & { side: "left" | "right" };
 
 const selectOpen = (shell: ShellState) => shell.open;
-const selectPeek = (shell: ShellState) => shell.peek;
+const selectHotspot = (shell: ShellState) => shell.hotspot;
 const selectResizing = (shell: ShellState) => shell.resizing;
 const selectWidth = (shell: ShellState) => shell.width;
 
@@ -69,15 +69,15 @@ const selectWidth = (shell: ShellState) => shell.width;
 // a fresh object every call would never settle.
 const usePartState = (store: ShellStore): ShellPartState => ({
   state: useShellStore(store, selectOpen) ? "expanded" : "collapsed",
-  peek: useShellStore(store, selectPeek),
+  hotspot: useShellStore(store, selectHotspot),
   resizing: useShellStore(store, selectResizing),
 });
 
 // ---------------------------------------------------------------------------
-// Peek choreography
+// Hotspot choreography
 // ---------------------------------------------------------------------------
 
-type PeekControls = {
+type HotspotControls = {
   /** The pointer entered the edge strip. */
   request: () => void;
   /** The pointer entered the panel: cancel any pending close. */
@@ -86,37 +86,37 @@ type PeekControls = {
   release: () => void;
 };
 
-const ShellPeekContext = createContext<PeekControls | null>(null);
+const ShellHotspotContext = createContext<HotspotControls | null>(null);
 
-const usePeekControls = (store: ShellStore) => {
+const useHotspotControls = (store: ShellStore) => {
   const openTimer = useRef<number | undefined>(undefined);
   const closeTimer = useRef<number | undefined>(undefined);
 
-  const controls = useMemo<PeekControls>(
+  const controls = useMemo<HotspotControls>(
     () => ({
       request: () => {
         // Armed by the collapse that just happened under this pointer.
-        if (store.peekSuppressionRef.current) return;
+        if (store.hotspotSuppressionRef.current) return;
         window.clearTimeout(closeTimer.current);
-        if (store.getSnapshot().peek) return;
+        if (store.getSnapshot().hotspot) return;
         openTimer.current = window.setTimeout(() => {
           // Re-checked on firing, not just on arming. A timer started while the
           // sidebar was still expanded outlives a collapse that happens during
           // the delay, and would then float the panel straight back out from
           // under the pointer that just closed it.
-          if (store.peekSuppressionRef.current) return;
-          store.getSnapshot().setPeek(true);
+          if (store.hotspotSuppressionRef.current) return;
+          store.getSnapshot().setHotspot(true);
         }, PEEK_OPEN_DELAY_MS);
       },
       hold: () => window.clearTimeout(closeTimer.current),
       release: () => {
         // The pointer has moved on, so the bounce-back guard has done its job.
-        store.peekSuppressionRef.current = false;
+        store.hotspotSuppressionRef.current = false;
         // Darting through the strip never opens it.
         window.clearTimeout(openTimer.current);
-        if (!store.getSnapshot().peek) return;
+        if (!store.getSnapshot().hotspot) return;
         closeTimer.current = window.setTimeout(
-          () => store.getSnapshot().setPeek(false),
+          () => store.getSnapshot().setHotspot(false),
           PEEK_CLOSE_DELAY_MS,
         );
       },
@@ -124,13 +124,13 @@ const usePeekControls = (store: ShellStore) => {
     [store],
   );
 
-  // Cmd-Tab away mid-peek fires no pointerleave: without this the panel stays
+  // Cmd-Tab away mid-hotspot fires no pointerleave: without this the panel stays
   // floated and a pending open timer fires into a backgrounded window.
   useEffect(() => {
     const dismiss = () => {
       window.clearTimeout(openTimer.current);
       window.clearTimeout(closeTimer.current);
-      store.getSnapshot().setPeek(false);
+      store.getSnapshot().setHotspot(false);
     };
     window.addEventListener("blur", dismiss);
     return () => {
@@ -143,8 +143,8 @@ const usePeekControls = (store: ShellStore) => {
   return controls;
 };
 
-const usePeekContext = () => {
-  const controls = use(ShellPeekContext);
+const useHotspotContext = () => {
+  const controls = use(ShellHotspotContext);
   if (!controls) throw new Error("Shell parts must be used within <Shell.Root>");
   return controls;
 };
@@ -171,6 +171,11 @@ export type ShellRootProps = PrimitiveProps<"div", ShellPartState> & {
   children?: ReactNode;
 };
 
+/**
+ * The provider and container. Holds the store every other part reads, so
+ * `defaultOpen` and the width must arrive here rather than on a child.
+ * Renders a `<div>` element.
+ */
 export const ShellRoot = ({
   defaultOpen,
   open,
@@ -201,7 +206,7 @@ export const ShellRoot = ({
     if (open !== undefined) store.commitOpen(open);
   }, [open, store]);
 
-  const peek = usePeekControls(store);
+  const hotspot = useHotspotControls(store);
   const state = usePartState(store);
 
   /*
@@ -215,10 +220,10 @@ export const ShellRoot = ({
    * armed — which is almost always.
    */
   const handlePointerMove = (event: PointerEvent<HTMLElement>) => {
-    if (!store.peekSuppressionRef.current) return;
+    if (!store.hotspotSuppressionRef.current) return;
     const target = event.target as HTMLElement | null;
     if (target?.closest("[data-shell-hotspot]")) return;
-    store.peekSuppressionRef.current = false;
+    store.hotspotSuppressionRef.current = false;
   };
 
   const element = useRenderElement(
@@ -233,7 +238,7 @@ export const ShellRoot = ({
 
   return (
     <ShellStoreContext value={store}>
-      <ShellPeekContext value={peek}>{element}</ShellPeekContext>
+      <ShellHotspotContext value={hotspot}>{element}</ShellHotspotContext>
     </ShellStoreContext>
   );
 };
@@ -253,6 +258,11 @@ export type ShellSidebarProps = PrimitiveProps<"div", ShellSidebarState> & {
   onResize?: (width: number) => void;
 };
 
+/**
+ * The panel, and the element whose width is measured and reported back.
+ * Carries the `id` the trigger's `aria-controls` points at.
+ * Renders a `<div>` element.
+ */
 export const ShellSidebar = ({
   side = "left",
   onResize,
@@ -265,7 +275,7 @@ export const ShellSidebar = ({
   // Latest-ref bridge, written during render: idempotent, and current before
   // the measurement below can report anything.
   store.onResizeRef.current = onResize ?? null;
-  const peek = usePeekContext();
+  const hotspot = useHotspotContext();
   const partState = usePartState(store);
 
   // Report the width the browser settled on, so persistence and the resize
@@ -300,8 +310,8 @@ export const ShellSidebar = ({
         {
           "data-shell-sidebar": "",
           id: store.sidebarId,
-          onPointerEnter: peek.hold,
-          onPointerLeave: peek.release,
+          onPointerEnter: hotspot.hold,
+          onPointerLeave: hotspot.release,
         },
         elementProps,
       ],
@@ -315,6 +325,11 @@ export const ShellSidebar = ({
 
 export type ShellViewportProps = PrimitiveProps<"div", ShellPartState>;
 
+/**
+ * The content area beside the sidebar. Carries the same state attributes as
+ * the root, so it can react to the sidebar without a group selector.
+ * Renders a `<div>` element.
+ */
 export const ShellViewport = ({ className, render, style, ...elementProps }: ShellViewportProps) =>
   useRenderElement(
     "div",
@@ -330,11 +345,11 @@ export type ShellHotspotProps = PrimitiveProps<"div", ShellPartState>;
 /**
  * The strip along the screen edge that floats a collapsed sidebar out on
  * hover. Give it a width and a position in CSS. Omitting it is how you opt out
- * of peek entirely — there is no prop to turn it off, because not rendering it
+ * of hotspot entirely — there is no prop to turn it off, because not rendering it
  * already says that.
  */
 export const ShellHotspot = ({ className, render, style, ...elementProps }: ShellHotspotProps) => {
-  const peek = usePeekContext();
+  const hotspot = useHotspotContext();
 
   return useRenderElement(
     "div",
@@ -345,8 +360,8 @@ export const ShellHotspot = ({ className, render, style, ...elementProps }: Shel
         {
           "data-shell-hotspot": "",
           "aria-hidden": true,
-          onPointerEnter: peek.request,
-          onPointerLeave: peek.release,
+          onPointerEnter: hotspot.request,
+          onPointerLeave: hotspot.release,
         },
         elementProps,
       ],
@@ -356,6 +371,11 @@ export const ShellHotspot = ({ className, render, style, ...elementProps }: Shel
 
 export type ShellTriggerProps = PrimitiveProps<"button", ShellPartState>;
 
+/**
+ * Toggles the sidebar, and pins a floated-out one open rather than closing it.
+ * Ships no copy — supply the label as children.
+ * Renders a `<button>` element.
+ */
 export const ShellTrigger = ({ className, render, style, ...elementProps }: ShellTriggerProps) => {
   const store = useShellContextStore();
   const state = usePartState(store);
@@ -363,7 +383,7 @@ export const ShellTrigger = ({ className, render, style, ...elementProps }: Shel
   const handleClick = useCallback(() => {
     const shell = store.getSnapshot();
     // Clicking the trigger inside a floated sidebar pins it open.
-    shell.setOpen(shell.peek ? true : !shell.open);
+    shell.setOpen(shell.hotspot ? true : !shell.open);
   }, [store]);
 
   return useRenderElement(
@@ -422,6 +442,11 @@ const publishWidth = (store: ShellStore, width: number, bounds: Bounds) => {
 /** Dragging right widens a left sidebar and narrows a right one. */
 const widenDirection = (sidebar: HTMLElement) => (sidebar.dataset.side === "right" ? -1 : 1);
 
+/**
+ * The drag affordance. Give it a width and a cursor in CSS; the drag range
+ * comes from the sidebar's own `min-width` and `max-width`.
+ * Renders a `<div>` element with `role="separator"`.
+ */
 export const ShellGrip = ({
   step = 16,
   className,

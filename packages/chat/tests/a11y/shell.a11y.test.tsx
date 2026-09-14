@@ -66,7 +66,7 @@ describe("Shell accessibility", () => {
     expect(handle.tabIndex).toBe(0);
   });
 
-  test("the peek strip is decoration and stays out of the accessibility tree", () => {
+  test("the hotspot strip is decoration and stays out of the accessibility tree", () => {
     const { getByTestId } = render(<Layout defaultOpen={false} />);
     expect(getByTestId("zone").getAttribute("aria-hidden")).toBe("true");
   });

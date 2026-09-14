@@ -23,7 +23,7 @@ describe("createShellStore", () => {
   test("takes no arguments and starts open, unmeasured", () => {
     const state = createShellStore().getSnapshot();
     expect(state.open).toBe(true);
-    expect(state.peek).toBe(false);
+    expect(state.hotspot).toBe(false);
     expect(state.resizing).toBe(false);
     // Width is a CSS concern until the element exists to be measured.
     expect(state.width).toBeNull();
@@ -121,28 +121,28 @@ describe("hydrate", () => {
   });
 });
 
-describe("peek", () => {
-  test("does nothing while the sidebar is open — there is nothing to peek at", () => {
+describe("hotspot", () => {
+  test("does nothing while the sidebar is open — there is nothing to hotspot at", () => {
     const store = createShellStore();
-    store.getSnapshot().setPeek(true);
-    expect(store.getSnapshot().peek).toBe(false);
+    store.getSnapshot().setHotspot(true);
+    expect(store.getSnapshot().hotspot).toBe(false);
   });
 
   test("engages once collapsed", () => {
     const store = createShellStore();
     store.hydrate({ open: false });
 
-    store.getSnapshot().setPeek(true);
-    expect(store.getSnapshot().peek).toBe(true);
+    store.getSnapshot().setHotspot(true);
+    expect(store.getSnapshot().hotspot).toBe(true);
   });
 
   test("opening ends it", () => {
     const store = createShellStore();
     store.hydrate({ open: false });
-    store.getSnapshot().setPeek(true);
+    store.getSnapshot().setHotspot(true);
 
     store.getSnapshot().setOpen(true);
-    expect(store.getSnapshot().peek).toBe(false);
+    expect(store.getSnapshot().hotspot).toBe(false);
     expect(store.getSnapshot().open).toBe(true);
   });
 
@@ -150,7 +150,7 @@ describe("peek", () => {
     const store = createShellStore();
     const before = store.getSnapshot();
 
-    store.peekSuppressionRef.current = true;
+    store.hotspotSuppressionRef.current = true;
     expect(store.getSnapshot()).toBe(before);
   });
 });
@@ -217,11 +217,11 @@ describe("reporting changes out", () => {
     expect(widths).toEqual([280]);
   });
 
-  test("peek is never reported", () => {
+  test("hotspot is never reported", () => {
     const { store, opens, widths } = reporting();
     store.hydrate({ open: false });
 
-    store.getSnapshot().setPeek(true);
+    store.getSnapshot().setHotspot(true);
 
     expect(opens).toEqual([]);
     expect(widths).toEqual([]);

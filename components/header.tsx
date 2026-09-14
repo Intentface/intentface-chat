@@ -2,9 +2,9 @@
 
 import { Sidebar } from "@/components/ui/sidebar";
 
-// Mouse users expand via the edge-hover peek (trigger lives inside the
+// Mouse users expand via the edge-hover hotspot (trigger lives inside the
 // sidebar); this header trigger stays for the mobile drawer and iPad-class
-// touch screens, where there's no hover to summon the peek.
+// touch screens, where there's no hover to summon the hotspot.
 export const Header = () => {
   return (
     <header

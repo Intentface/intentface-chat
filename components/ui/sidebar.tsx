@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { IconButton } from "./icon-button";
 
 /*
- * Open/collapsed state and the whole hover-peek choreography live in `Shell`
+ * Open/collapsed state and the whole hotspot choreography live in `Shell`
  * from @intentface/chat/shell — this file is the styled layer over it. What
  * stays here is what the package deliberately has no opinion about: every
  * class, the off-canvas/card geometry, the mobile drawer, where the layout is
@@ -54,7 +54,7 @@ const useSidebar = () => {
   }
 
   const open = useShell((shell) => shell.open);
-  const peek = useShell((shell) => shell.peek);
+  const hotspot = useShell((shell) => shell.hotspot);
   const setOpen = useShell((shell) => shell.setOpen);
   const toggle = useShell((shell) => shell.toggle);
 
@@ -62,9 +62,9 @@ const useSidebar = () => {
     state: open ? ("expanded" as const) : ("collapsed" as const),
     open,
     setOpen,
-    peek,
+    hotspot,
     // On mobile the trigger drives the drawer; Shell's own toggle already
-    // expands a peeking sidebar in place rather than closing it.
+    // expands a floated-out sidebar in place rather than closing it.
     toggleSidebar: () => (mobile.isMobile ? mobile.setOpenMobile(!mobile.openMobile) : toggle()),
     ...mobile,
   };
@@ -126,7 +126,7 @@ const SidebarProvider = ({
 /**
  * Cmd/Ctrl+B. The package claims no window-level key — it cannot know which
  * ones this app has spent — so the binding is ours, and `toggle` is all it
- * needs: a peeking sidebar pins open rather than closing.
+ * needs: a floated-out sidebar pins open rather than closing.
  *
  * A component rather than a hook in the provider, so it can read the store
  * through context like every other part.
@@ -157,7 +157,7 @@ const SidebarRoot = ({
   side?: "left" | "right";
   collapsible?: "offcanvas" | "icon" | "none";
 }) => {
-  const { isMobile, state, openMobile, setOpenMobile, peek } = useSidebar();
+  const { isMobile, state, openMobile, setOpenMobile, hotspot } = useSidebar();
 
   if (isMobile) {
     return (
@@ -175,7 +175,7 @@ const SidebarRoot = ({
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-side={side}
-      data-peek={peek ? "" : undefined}
+      data-hotspot={hotspot ? "" : undefined}
     >
       {/* Layout spacer — reserves the sidebar's width in flow and animates to
           zero on collapse while the fixed panel slides off-canvas. */}
@@ -187,17 +187,17 @@ const SidebarRoot = ({
         )}
       />
       {/* Three positions on one element, morphed by CSS transitions:
-          expanded (left-0 inset-y-0, flat), collapsed (off-canvas), peek
+          expanded (left-0 inset-y-0, flat), collapsed (off-canvas), hotspot
           (left-2 floating). The card geometry (inset-y-2, radius, border) is
           baked into the WHOLE collapsed state — hidden off-canvas it's
-          invisible, so the peek slide animates left only: no vertical
+          invisible, so the hotspot slide animates left only: no vertical
           movement, the gap never grows mid-slide. Only expand/collapse morphs
-          card ↔ flat. Shadow is peek-only (an off-canvas panel resting at the
+          card ↔ flat. Shadow is hotspot-only (an off-canvas panel resting at the
           screen edge would bleed its shadow onto the viewport). Border stays
           1px transparent in the flat state so only border-color animates —
-          no width jump. The stacked collapsed+peek variant outranks the
+          no width jump. The stacked collapsed+hotspot variant outranks the
           off-canvas left on specificity, not stylesheet order. */}
-      {/* Shell.Sidebar brings the peek hold/release pointer handlers with it. */}
+      {/* Shell.Sidebar brings the hotspot hold/release pointer handlers with it. */}
       <Shell.Sidebar
         side={side}
         onResize={(next) => writeSidebarLayout({ width: next })}
@@ -208,9 +208,9 @@ const SidebarRoot = ({
             ? cn(
                 "left-0 inset-y-0",
                 "group-data-[state=collapsed]:-left-(--sidebar-width)",
-                "group-data-[state=collapsed]:group-data-peek:left-2",
+                "group-data-[state=collapsed]:group-data-hotspot:left-2",
                 "group-data-[state=collapsed]:inset-y-2 group-data-[state=collapsed]:rounded-xl group-data-[state=collapsed]:border-secondary-border",
-                "group-data-peek:shadow-lg",
+                "group-data-hotspot:shadow-lg",
               )
             : "right-0 inset-y-0 group-data-[state=collapsed]:-right-(--sidebar-width)",
           className,
@@ -226,11 +226,11 @@ const SidebarRoot = ({
           {children}
         </div>
       </Shell.Sidebar>
-      {/* Invisible hover strip that summons the peek. Keyed on collapsed state,
-          so it stays live during peek (state remains "collapsed") and vanishes
-          the instant the sidebar expands. Its overlap with the peeked card
+      {/* Invisible hover strip that summons the hotspot. Keyed on collapsed state,
+          so it stays live during hotspot (state remains "collapsed") and vanishes
+          the instant the sidebar expands. Its overlap with the hotspoted card
           covers only border/padding. */}
-      {/* Not rendering it is how you opt out of peek — there is no prop for that. */}
+      {/* Not rendering it is how you opt out of hotspot — there is no prop for that. */}
       {side === "left" && (
         <Shell.Hotspot
           data-slot="sidebar-hotspot"
@@ -462,7 +462,7 @@ const SidebarMenuButton = ({
   isActive?: boolean;
   tooltip?: string | ComponentProps<typeof Tooltip.Content>;
 } & VariantProps<typeof sidebarMenuButtonVariants>) => {
-  const { isMobile, state, peek } = useSidebar();
+  const { isMobile, state, hotspot } = useSidebar();
 
   const button = useRender({
     render,
@@ -488,9 +488,9 @@ const SidebarMenuButton = ({
       <Tooltip.Content
         side="right"
         align="center"
-        // During peek the state is still "collapsed" but the buttons are fully
-        // visible — without the peek guard every item sprouts a tooltip.
-        hidden={state !== "collapsed" || isMobile || peek}
+        // During hotspot the state is still "collapsed" but the buttons are fully
+        // visible — without the hotspot guard every item sprouts a tooltip.
+        hidden={state !== "collapsed" || isMobile || hotspot}
         {...tooltipProps}
       />
     </Tooltip>

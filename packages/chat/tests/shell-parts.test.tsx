@@ -37,19 +37,19 @@ describe("Shell.Root", () => {
     expect(getByTestId("sidebar").getAttribute("data-state")).toBe("expanded");
   });
 
-  test("`toggle` is all an app shortcut needs — a peeking sidebar pins open", () => {
+  test("`toggle` is all an app shortcut needs — a floated-out sidebar pins open", () => {
     const store = createShellStore();
     const { getByTestId } = render(<Layout store={store} defaultOpen={false} />);
     const sidebar = getByTestId("sidebar");
 
-    act(() => store.getSnapshot().setPeek(true));
-    expect(sidebar.hasAttribute("data-peek")).toBe(true);
+    act(() => store.getSnapshot().setHotspot(true));
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(true);
 
     // What a Cmd/Ctrl+B handler in the app would call.
     act(() => store.getSnapshot().toggle());
 
     expect(sidebar.getAttribute("data-state")).toBe("expanded");
-    expect(sidebar.hasAttribute("data-peek")).toBe(false);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(false);
   });
 
   test("an explicit store handle drives the same tree", () => {
@@ -105,16 +105,16 @@ describe("Shell.Trigger", () => {
   });
 });
 
-describe("peek", () => {
+describe("hotspot", () => {
   test("resting in the zone floats a collapsed sidebar out", async () => {
     const { getByTestId } = render(<Layout defaultOpen={false} />);
     const sidebar = getByTestId("sidebar");
 
     fireEvent.pointerEnter(getByTestId("zone"));
-    expect(sidebar.hasAttribute("data-peek")).toBe(false);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(false);
 
     await act(() => wait(PEEK_OPEN + 40));
-    expect(sidebar.hasAttribute("data-peek")).toBe(true);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(true);
   });
 
   test("darting through the zone never opens it", async () => {
@@ -125,7 +125,7 @@ describe("peek", () => {
     fireEvent.pointerLeave(zone);
 
     await act(() => wait(PEEK_OPEN + 40));
-    expect(getByTestId("sidebar").hasAttribute("data-peek")).toBe(false);
+    expect(getByTestId("sidebar").hasAttribute("data-hotspot")).toBe(false);
   });
 
   test("collapsing under a parked pointer does not bounce straight back", async () => {
@@ -139,7 +139,7 @@ describe("peek", () => {
     fireEvent.pointerEnter(zone);
 
     await act(() => wait(PEEK_OPEN + 40));
-    expect(getByTestId("sidebar").hasAttribute("data-peek")).toBe(false);
+    expect(getByTestId("sidebar").hasAttribute("data-hotspot")).toBe(false);
   });
 
   test("leaving the strip clears the guard, so the next hover works", async () => {
@@ -152,7 +152,7 @@ describe("peek", () => {
 
     fireEvent.pointerEnter(zone);
     await act(() => wait(PEEK_OPEN + 40));
-    expect(getByTestId("sidebar").hasAttribute("data-peek")).toBe(true);
+    expect(getByTestId("sidebar").hasAttribute("data-hotspot")).toBe(true);
   });
 
   test("collapsing away from the strip leaves no guard behind", async () => {
@@ -169,7 +169,7 @@ describe("peek", () => {
 
     fireEvent.pointerEnter(zone);
     await act(() => wait(PEEK_OPEN + 40));
-    expect(getByTestId("sidebar").hasAttribute("data-peek")).toBe(true);
+    expect(getByTestId("sidebar").hasAttribute("data-hotspot")).toBe(true);
   });
 
   test("a pointer move inside the strip does not clear the guard", async () => {
@@ -183,7 +183,7 @@ describe("peek", () => {
     fireEvent.pointerEnter(zone);
 
     await act(() => wait(PEEK_OPEN + 40));
-    expect(getByTestId("sidebar").hasAttribute("data-peek")).toBe(false);
+    expect(getByTestId("sidebar").hasAttribute("data-hotspot")).toBe(false);
   });
 
   test("moving onto the panel keeps it out; leaving it puts it back", async () => {
@@ -197,11 +197,11 @@ describe("peek", () => {
     fireEvent.pointerLeave(zone);
     fireEvent.pointerEnter(sidebar);
     await act(() => wait(PEEK_CLOSE + 40));
-    expect(sidebar.hasAttribute("data-peek")).toBe(true);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(true);
 
     fireEvent.pointerLeave(sidebar);
     await act(() => wait(PEEK_CLOSE + 40));
-    expect(sidebar.hasAttribute("data-peek")).toBe(false);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(false);
   });
 
   test("the trigger inside a floated sidebar pins it open rather than closing it", async () => {
@@ -213,19 +213,19 @@ describe("peek", () => {
 
     act(() => void fireEvent.click(getByTestId("trigger")));
     expect(sidebar.getAttribute("data-state")).toBe("expanded");
-    expect(sidebar.hasAttribute("data-peek")).toBe(false);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(false);
   });
 
-  test("cmd-tabbing away mid-peek dismisses it — no pointerleave ever arrives", async () => {
+  test("cmd-tabbing away mid-hotspot dismisses it — no pointerleave ever arrives", async () => {
     const { getByTestId } = render(<Layout defaultOpen={false} />);
     const sidebar = getByTestId("sidebar");
 
     fireEvent.pointerEnter(getByTestId("zone"));
     await act(() => wait(PEEK_OPEN + 40));
-    expect(sidebar.hasAttribute("data-peek")).toBe(true);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(true);
 
     act(() => void fireEvent.blur(window));
-    expect(sidebar.hasAttribute("data-peek")).toBe(false);
+    expect(sidebar.hasAttribute("data-hotspot")).toBe(false);
   });
 });
 

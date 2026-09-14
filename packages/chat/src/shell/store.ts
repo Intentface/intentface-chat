@@ -40,7 +40,7 @@ import { createContext, use, useSyncExternalStore } from "react";
 export type ShellState = {
   open: boolean;
   /** The collapsed sidebar floating over the content on hover. Never persisted. */
-  peek: boolean;
+  hotspot: boolean;
   /** True for the duration of a resize drag, so parts can suppress transitions. */
   resizing: boolean;
   /** Measured from the sidebar element. Null until it has mounted. */
@@ -48,7 +48,7 @@ export type ShellState = {
 
   setOpen: (open: boolean) => void;
   toggle: () => void;
-  setPeek: (peek: boolean) => void;
+  setHotspot: (hotspot: boolean) => void;
   setResizing: (resizing: boolean) => void;
   /** Reports a measurement. Not a request to resize — CSS decides the size. */
   setWidth: (width: number) => void;
@@ -91,10 +91,10 @@ export type ShellStore = {
   sidebarId: string;
   /**
    * Set while collapsing, so a panel sliding out from under a parked pointer
-   * doesn't bounce straight back as a peek. Cleared once the pointer leaves
+   * doesn't bounce straight back as a hotspot. Cleared once the pointer leaves
    * the edge strip. Imperative, not reactive.
    */
-  peekSuppressionRef: RefObject<boolean>;
+  hotspotSuppressionRef: RefObject<boolean>;
 };
 
 export const createShellStore = (): ShellStore => {
@@ -106,7 +106,7 @@ export const createShellStore = (): ShellStore => {
   const controlledRef: RefObject<boolean> = { current: false };
   const onOpenChangeRef: RefObject<((open: boolean) => void) | null> = { current: null };
   const onResizeRef: RefObject<((width: number) => void) | null> = { current: null };
-  const peekSuppressionRef: RefObject<boolean> = { current: false };
+  const hotspotSuppressionRef: RefObject<boolean> = { current: false };
   const rootRef: RefObject<HTMLElement | null> = { current: null };
   const sidebarRef: RefObject<HTMLElement | null> = { current: null };
 
@@ -123,10 +123,10 @@ export const createShellStore = (): ShellStore => {
   const commitOpen = (open: boolean) => {
     if (snapshot.open === open) return;
     // Collapsing arms the bounce-back guard: a panel sliding out from under a
-    // parked pointer must not immediately float back as a peek.
-    if (!open) peekSuppressionRef.current = true;
-    // Peek only means anything while collapsed, so opening ends it.
-    snapshot = { ...snapshot, open, peek: open ? false : snapshot.peek };
+    // parked pointer must not immediately float back as a hotspot.
+    if (!open) hotspotSuppressionRef.current = true;
+    // Hotspot only means anything while collapsed, so opening ends it.
+    snapshot = { ...snapshot, open, hotspot: open ? false : snapshot.hotspot };
     notify();
   };
 
@@ -139,11 +139,11 @@ export const createShellStore = (): ShellStore => {
 
   const toggle = () => setOpen(!snapshot.open);
 
-  const setPeek = (peek: boolean) => {
-    // There is nothing to peek at while the sidebar is already open.
-    const next = peek && !snapshot.open;
-    if (snapshot.peek === next) return;
-    snapshot = { ...snapshot, peek: next };
+  const setHotspot = (hotspot: boolean) => {
+    // There is nothing to hotspot at while the sidebar is already open.
+    const next = hotspot && !snapshot.open;
+    if (snapshot.hotspot === next) return;
+    snapshot = { ...snapshot, hotspot: next };
     notify();
   };
 
@@ -163,12 +163,12 @@ export const createShellStore = (): ShellStore => {
 
   snapshot = {
     open: true,
-    peek: false,
+    hotspot: false,
     resizing: false,
     width: null,
     setOpen,
     toggle,
-    setPeek,
+    setHotspot,
     setResizing,
     setWidth,
   };
@@ -193,7 +193,7 @@ export const createShellStore = (): ShellStore => {
     onOpenChangeRef,
     onResizeRef,
     commitOpen,
-    peekSuppressionRef,
+    hotspotSuppressionRef,
   };
 };
 

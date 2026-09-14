@@ -1,7 +1,7 @@
 "use client";
 
 import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
-import { IconFileFilled, IconPaperclip, IconX } from "@tabler/icons-react";
+import { IconFile, IconPaperclip, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
@@ -64,7 +64,7 @@ type AttachmentsItemProps = {
 };
 
 const getFileIcon = (mediaType: string) => {
-  if (isPdfAttachment(mediaType)) return IconFileFilled;
+  if (isPdfAttachment(mediaType)) return IconFile;
   return IconPaperclip;
 };
 

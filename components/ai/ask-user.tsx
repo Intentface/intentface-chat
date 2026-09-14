@@ -11,7 +11,7 @@ import {
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
-  IconHelpCircleFilled,
+  IconHelpCircle,
 } from "@tabler/icons-react";
 import { type ComponentProps, type RefObject, useState } from "react";
 import { Collapsible } from "@/components/ui/collapsible";
@@ -219,7 +219,7 @@ const AskUserSummary = ({ questions, answers, className, ...props }: AskUserSumm
         {questions.map((q) => (
           <div key={q.question} className="flex gap-2 leading-tight">
             <div className="flex h-lh shrink-0 items-center justify-center">
-              <IconHelpCircleFilled className="size-4" />
+              <IconHelpCircle className="size-4" />
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium leading-tight">{q.question}</span>

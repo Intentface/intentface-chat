@@ -1,5 +1,5 @@
 "use client";
-import { IconArrowUp, IconPlayerStopFilled } from "@tabler/icons-react";
+import { IconArrowUp, IconPlayerStop } from "@tabler/icons-react";
 
 // Styled composer — thin wrappers over @intentface/chat/composer. Behavior
 // (editor, store, machines, command plumbing) lives in the package; this file
@@ -335,7 +335,7 @@ const ComposerSubmit = ({
           transition={{ duration: 0.15 }}
           className="flex items-center justify-center"
         >
-          {isGenerating ? <IconPlayerStopFilled /> : (children ?? <IconArrowUp />)}
+          {isGenerating ? <IconPlayerStop /> : (children ?? <IconArrowUp />)}
         </motion.span>
       </AnimatePresence>
     </IconButton>

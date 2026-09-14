@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { IconCheck, IconChevronRight, IconCircleFilled } from "@tabler/icons-react";
+import { IconCheck, IconChevronRight, IconCircle } from "@tabler/icons-react";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -217,7 +217,7 @@ function DropdownMenuRadioItem({
     >
       <DropdownMenuIndicator data-slot="dropdown-menu-radio-item-indicator">
         <MenuPrimitive.RadioItemIndicator>
-          <IconCircleFilled className="size-2" />
+          <IconCircle className="size-2" />
         </MenuPrimitive.RadioItemIndicator>
       </DropdownMenuIndicator>
       {children}

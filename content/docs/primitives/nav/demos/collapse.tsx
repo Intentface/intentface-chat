@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "@intentface/chat/nav";
-import type { ComponentProps } from "react";
+import { IconChevronDown } from "@tabler/icons-react";
 
 /*
  * The collapse, slowed to 500ms so the mechanism is visible.
@@ -75,7 +75,7 @@ const rowClass = [
 ].join(" ");
 
 const Chevron = () => (
-  <ChevronIcon className="ml-auto size-3 text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
+  <IconChevronDown className="ml-auto size-3 text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
 );
 
 /*
@@ -97,19 +97,4 @@ const CollapseRecipe = () => (
 .collapse-demo [data-nav-list] > * { flex-shrink: 0; }
 .collapse-demo [data-nav-list][data-indent] { margin-left: 15px; padding-left: 7px; }
 `}</style>
-);
-
-const ChevronIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4 6.5 4 4 4-4" />
-  </svg>
 );

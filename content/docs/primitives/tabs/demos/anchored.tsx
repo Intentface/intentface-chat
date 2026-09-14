@@ -4,7 +4,8 @@ import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Tabs, useTabs } from "@intentface/chat/tabs";
 import { Thread } from "@intentface/chat/thread";
-import { type ComponentProps, useState } from "react";
+import { IconArrowUp, IconMessage, IconMinus, IconSparkles, IconX } from "@tabler/icons-react";
+import { useState } from "react";
 
 /*
  * A chat dock in the corner of a page. The same Root, List and Viewport as the
@@ -159,7 +160,7 @@ export const Anchored = () => {
             {(id) => (
               <Tabs.Trigger value={id} aria-label={title(id)} className={dockTabClass}>
                 <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
-                  <ChatIcon />
+                  <IconMessage className="size-4" />
                 </Tabs.Icon>
                 <span className="min-w-0 truncate">{title(id)}</span>
                 <Tabs.Action
@@ -173,7 +174,7 @@ export const Anchored = () => {
                     aria-label={`Close ${title(id)}`}
                     className="grid size-5 shrink-0 cursor-pointer select-none place-items-center rounded text-[#686868] transition-colors hover:bg-[#e4e4e4] hover:text-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:bg-[#333333] dark:hover:text-[#fcfcfc]"
                   >
-                    <CloseIcon />
+                    <IconX className="size-3.5" />
                   </Tabs.Close>
                 </Tabs.Action>
               </Tabs.Trigger>
@@ -185,7 +186,7 @@ export const Anchored = () => {
               disclosure ARIA a tab does. */}
           <Tabs.Trigger value={DRAFT} className={`${dockTabClass} ml-1 max-w-none`}>
             <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
-              <AgentIcon />
+              <IconSparkles className="size-4" />
             </Tabs.Icon>
             Agent
           </Tabs.Trigger>
@@ -256,7 +257,7 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
         onClick={() => select(null)}
         className={iconButtonClass}
       >
-        <MinusIcon />
+        <IconMinus className="size-3.5" />
       </button>
       <button
         type="button"
@@ -269,7 +270,7 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
         }}
         className={iconButtonClass}
       >
-        <CloseIcon />
+        <IconX className="size-3.5" />
       </button>
     </header>
   );
@@ -326,7 +327,7 @@ const ChatThread = ({
 const NewChat = ({ onStart }: { onStart: (text: string) => void }) => (
   <div className="flex h-full flex-col">
     <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 text-center">
-      <AgentIcon className="size-5 text-[#949494] dark:text-[#6f6f6f]" />
+      <IconSparkles className="size-5 text-[#949494] dark:text-[#6f6f6f]" />
       <p className="font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">Ask the agent</p>
       <p className="text-[#686868] text-sm leading-[1.7] dark:text-[#9b9b9b]">
         This is a draft — it becomes a tab once you send something.
@@ -367,7 +368,7 @@ const DockComposer = ({
             aria-label="Send"
             className="flex size-7 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-30 dark:bg-[#fcfcfc] dark:text-[#111111]"
           >
-            <ArrowUpIcon />
+            <IconArrowUp className="size-4" />
           </Composer.Submit>
         </Composer.Actions>
       </Composer.Container>
@@ -385,80 +386,3 @@ const dockTabClass = [
 
 const iconButtonClass =
   "grid size-6 shrink-0 cursor-pointer select-none place-items-center rounded-md text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc] dark:focus-visible:outline-[#fcfcfc]";
-
-const ChatIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path
-      d="M13.5 8.5a4.5 4.5 0 0 1-4.5 4.5H6l-3 2v-2.6A4.5 4.5 0 0 1 6 4h3a4.5 4.5 0 0 1 4.5 4.5Z"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const AgentIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <rect x="3" y="5" width="10" height="8" rx="2.5" strokeLinejoin="round" />
-    <path d="M8 2.5V5" strokeLinecap="round" />
-    <path d="M6.5 9h.01M9.5 9h.01" strokeLinecap="round" strokeWidth="1.8" />
-  </svg>
-);
-
-const ArrowUpIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="size-4"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
-  </svg>
-);
-
-const MinusIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    className="size-3.5"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M3.5 8h9" />
-  </svg>
-);
-
-const CloseIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    className="size-3.5"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4.5 4.5 7 7M11.5 4.5l-7 7" />
-  </svg>
-);

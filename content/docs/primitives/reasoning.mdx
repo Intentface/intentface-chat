@@ -5,6 +5,7 @@ source: reasoning
 ---
 
 import { Basic } from './reasoning/demos/basic';
+import { Streaming } from './reasoning/demos/streaming';
 
 <Demo component={<Basic />} file="primitives/reasoning/demos/basic.tsx" />
 
@@ -34,25 +35,20 @@ Driven from a streaming message, passing the reasoning parts' text:
 </Reasoning.Root>
 ```
 
-## useReasoning
+## Examples
 
-Read the disclosure state from anywhere inside `<Reasoning.Root>`:
+### Tracking the streaming state
 
-export const hookMembers = [
-  { name: "isStreaming", type: "boolean", description: "Whether reasoning is still streaming in." },
-  { name: "isOpen", type: "boolean", description: "Whether the panel is open." },
-  { name: "setIsOpen", type: "(open: boolean) => void", description: "Toggle the panel." },
-  { name: "duration", type: "number | undefined", description: "Tracked streaming duration in seconds." },
-];
+`isStreaming` is the only input. While it is true the root carries
+`data-streaming` and `aria-busy`; the moment it flips false the elapsed time is
+captured and handed back as `duration`, so the trigger's label changes without
+you timing anything.
 
-<PropsTable rows={hookMembers} />
+<Demo component={<Streaming />} file="primitives/reasoning/demos/streaming.tsx" />
 
-## Accessibility
-
-Built on a disclosure: `Reasoning.Trigger` is a `<button>` with `aria-expanded`
-and `aria-controls` pointing at the panel, so screen readers announce the
-collapsed/expanded state and the relationship. While `isStreaming`, the root
-carries `aria-busy` so assistive tech knows the content is still updating.
+The panel animates through `--panel-height`, which is published only while a
+transition runs and released once it settles open. That release is what lets an
+open panel keep growing as sections stream into it.
 
 ## API reference
 
@@ -61,7 +57,9 @@ Every part accepts `className`, `style`, and `render` (see
 
 ### Reasoning
 
-The disclosure root. Renders `data-reasoning`.
+The disclosure root. Tracks how long `isStreaming` stayed true and hands the
+elapsed seconds back through `useReasoning`, so a label can change without the
+consumer timing anything. Renders a `<div>` element.
 
 export const rootProps = [
   { name: "isStreaming", type: "boolean", default: "false", description: "While true the trigger shimmers; the streamed duration is captured when it flips false." },
@@ -84,9 +82,9 @@ export const rootAttrs = [
 
 ### Reasoning.Trigger
 
-The toggle. Renders a `<button>` with `data-reasoning-trigger`. It ships no
-copy — supply the label as children, and read `isStreaming` and `duration` from
-`useReasoning()` if you want it to change while thinking.
+The toggle. Ships no copy: supply the label as children, and read `isStreaming`
+and `duration` from `useReasoning` if it should change while the model is
+thinking. Renders a `<button>` element.
 
 export const triggerProps = [
   { name: "children", type: "ReactNode", description: "The trigger content — a label, a chevron, whatever you need." },
@@ -104,8 +102,9 @@ export const triggerAttrs = [
 
 ### Reasoning.Content
 
-The collapsible panel. Renders `data-reasoning-content`. Bold `**Header**`
-lines split the text into sections rendered as markdown.
+The collapsible panel. Publishes its measured height while a transition runs
+and releases it once settled open, so a panel that is open keeps growing as text
+streams in. Renders a `<div>` element.
 
 export const contentProps = [
   { name: "children", type: "string | string[]", default: "(required)", description: "Reasoning text; bold headers split it into sections." },
@@ -124,3 +123,16 @@ export const contentAttrs = [
 ];
 
 <AttributesTable rows={contentAttrs} />
+
+## useReasoning
+
+Read the disclosure state from anywhere inside `<Reasoning.Root>`:
+
+export const hookMembers = [
+  { name: "isStreaming", type: "boolean", description: "Whether reasoning is still streaming in." },
+  { name: "isOpen", type: "boolean", description: "Whether the panel is open." },
+  { name: "setIsOpen", type: "(open: boolean) => void", description: "Toggle the panel." },
+  { name: "duration", type: "number | undefined", description: "Tracked streaming duration in seconds." },
+];
+
+<PropsTable rows={hookMembers} />

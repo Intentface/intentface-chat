@@ -1,17 +1,18 @@
 "use client";
-
+import {
+  IconBook,
+  IconBrandGithub,
+  IconBrandNpm,
+  IconDotsVertical,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
-import { PlusMediumIcon } from "@/components/icons/plus-medium";
-import { TrashIcon } from "@/components/icons/trash";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
-import { BookIcon } from "./icons/book";
-import { DotGrid1x3VerticalTightIcon } from "./icons/dot-grid-1x3-vertical-tight";
-import { GitHubIcon } from "./icons/github";
-import { NpmIcon } from "./icons/npm";
 import DropdownMenu from "./ui/dropdown-menu";
 
 export const AppSidebar = () => {
@@ -43,7 +44,7 @@ export const AppSidebar = () => {
                 isActive={pathname === "/playground"}
                 render={
                   <Link href="/playground">
-                    <PlusMediumIcon />
+                    <IconPlus />
                     <span>New Chat</span>
                   </Link>
                 }
@@ -66,7 +67,7 @@ export const AppSidebar = () => {
                           <DropdownMenu.Trigger
                             render={
                               <Sidebar.MenuAction showOnHover>
-                                <DotGrid1x3VerticalTightIcon />
+                                <IconDotsVertical />
                                 <span className="sr-only">Delete</span>
                               </Sidebar.MenuAction>
                             }
@@ -76,7 +77,7 @@ export const AppSidebar = () => {
                               onClick={() => handleDelete(chat.id)}
                               aria-label="Delete"
                             >
-                              <TrashIcon />
+                              <IconTrash />
                               Delete
                               <span className="sr-only">Delete</span>
                             </DropdownMenu.Item>
@@ -97,7 +98,7 @@ export const AppSidebar = () => {
             <Sidebar.MenuButton
               render={
                 <Link href="/">
-                  <BookIcon />
+                  <IconBook />
                   <span>Docs</span>
                 </Link>
               }
@@ -111,7 +112,7 @@ export const AppSidebar = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <GitHubIcon />
+                  <IconBrandGithub />
                   <span>GitHub</span>
                 </a>
               }
@@ -125,7 +126,7 @@ export const AppSidebar = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <NpmIcon />
+                  <IconBrandNpm />
                   <span>npm</span>
                 </a>
               }

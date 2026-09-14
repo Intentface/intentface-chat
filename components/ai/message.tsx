@@ -7,7 +7,14 @@ import {
   useMessageSelection,
   useMessageSelectionScope,
 } from "@intentface/chat/message";
-import { PaperclipIcon } from "lucide-react";
+import {
+  IconCheck,
+  IconCopy,
+  IconFile,
+  IconMessage,
+  IconPaperclip,
+  IconPlayerStop,
+} from "@tabler/icons-react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import { type ComponentProps, useMemo } from "react";
@@ -21,11 +28,6 @@ import { useCopy } from "@/hooks/use-copy";
 import { isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
 import { CHIP_ICONS, isChipIconKey } from "@/lib/ai/chip-icons";
 import { cn } from "@/lib/utils";
-import { Bubble5Icon } from "../icons/bubble-5";
-import { CheckMarkMediumIcon } from "../icons/check-mark-medium";
-import { CopyIcon } from "../icons/copy";
-import { FileBendIcon } from "../icons/file-bend";
-import { StopIcon } from "../icons/stop";
 
 type MessageRootProps = ComponentProps<typeof MessagePrimitive.Root>;
 
@@ -220,7 +222,7 @@ const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
     {...props}
   >
     <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-border bg-primary-bg px-2.5 py-1 text-xs text-ink-secondary">
-      <StopIcon className="size-3 shrink-0" />
+      <IconPlayerStop className="size-3 shrink-0" />
       Stopped
     </span>
   </div>
@@ -256,7 +258,7 @@ const MessageCopy = ({
             className={className}
             {...props}
           >
-            {isCopied ? <CheckMarkMediumIcon /> : <CopyIcon />}
+            {isCopied ? <IconCheck /> : <IconCopy />}
           </IconButton>
         }
       />
@@ -283,7 +285,7 @@ type MessageAttachmentProps = {
 const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmentProps) => {
   const mediaType = attachment.mediaType ?? "";
   const filename = attachment.filename ?? "Attachment";
-  const Icon = isPdfAttachment(mediaType) ? FileBendIcon : PaperclipIcon;
+  const Icon = isPdfAttachment(mediaType) ? IconFile : IconPaperclip;
 
   return (
     <div
@@ -407,7 +409,7 @@ const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
                   window.getSelection()?.removeAllRanges();
                 }}
               >
-                <Bubble5Icon className="size-3.5" />
+                <IconMessage className="size-3.5" />
                 Add to chat
               </Button>
             </PopoverPrimitive.Popup>

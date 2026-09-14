@@ -5,6 +5,8 @@ source: message
 ---
 
 import { Basic } from './message/demos/basic';
+import { Chips } from './message/demos/chips';
+import { Selection } from './message/demos/selection';
 
 <Demo component={<Basic />} file="primitives/message/demos/basic.tsx" />
 
@@ -13,6 +15,7 @@ import { Basic } from './message/demos/basic';
 - **One turn's container** — `Message.Root` reports the role and position as data attributes and renders no layout of its own.
 - **Segmented text** — `Message.Text` reconstructs inline chips from the wire format and takes render callbacks for both runs and chips.
 - **Everything else is yours** — bubbles, avatars, copy buttons, source pills, attachment previews and markdown rendering are composed by you around these parts.
+- **Memoise your row, not ours** — see [Why the memo boundary is yours](#why-the-memo-boundary-is-yours). Getting this wrong re-renders every message on every stream chunk.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
 ## Anatomy
@@ -42,7 +45,27 @@ attributes:
 </Message.Root>
 ```
 
-## Performance
+## Examples
+
+### Reconstructing chips from the text
+
+The wire format is a markdown-shaped link, `[Label](chip:prefix:value)`, with
+everything the chip needs inside the token. A stored message therefore rebuilds
+its own chips from its text alone, with no sidecar metadata to keep in sync.
+`renderChip` decides what one looks like at render time.
+
+<Demo component={<Chips />} file="primitives/message/demos/chips.tsx" />
+
+### Acting on a text selection
+
+Selection is a hook rather than a part, so the toolbar it drives stays yours.
+`useMessageSelection` takes the element to scope to and reports the settled
+selection inside it. Scoping is the point: a drag across two messages, or
+anywhere else on the page, reports nothing.
+
+<Demo component={<Selection />} file="primitives/message/demos/selection.tsx" />
+
+## Why the memo boundary is yours
 
 Message is compositional — you pass its parts as children — which means the
 package cannot memoize rows for you: a parent re-render re-creates the children
@@ -81,20 +104,6 @@ Three rules keep the memo effective while a reply streams:
 Done right, a stream chunk re-renders exactly one row. See
 [Composer performance](/primitives/composer#performance) for the full render model.
 
-## Accessibility
-
-- **Role** drives `data-role`, and error/last state drive `data-error`/`data-last`
-  on the root, so styling and assistive context stay in sync.
-- **Speaker identity is yours to announce.** `role` is an opaque string the
-  package only surfaces as `data-role` — alignment and colour are invisible to
-  assistive tech. Give each message a visually-hidden `{role} said` prefix, or
-  an `aria-label` on the root, so a transcript read top-to-bottom attributes
-  its turns.
-- **Error, stopped and loading markers** are your markup: give an inline failure
-  marker `role="alert"` so it announces immediately, and quieter states
-  ("stopped", "generating…") `role="status"`.
-- **Actions** you add should be real buttons with accessible names.
-
 ## API reference
 
 All three parts accept `className`, `style`, and `render`
@@ -102,7 +111,9 @@ All three parts accept `className`, `style`, and `render`
 
 ### Message.Root
 
-The container. Renders `data-message`.
+One turn's container. Reports the role and position as data attributes and
+renders no layout of its own, so the bubble, avatar and actions around it stay
+yours. Renders a `<div>` element.
 
 export const rootProps = [
   { name: "role", type: "string", default: "(required)", description: "Opaque role string surfaced as data-role; you own the set (commonly system / user / assistant)." },
@@ -123,13 +134,14 @@ export const rootAttrs = [
 
 ### Message.Turn
 
-Groups consecutive messages from one role into a single visual turn. Renders
-`data-message-turn` and takes no props of its own beyond the shared ones.
+Groups consecutive messages from one role into a single visual turn. Renders a
+`<div>` element, and takes no props of its own beyond the shared ones.
 
 ### Message.Text
 
-Plain text with inline chips reconstructed from the wire format. Renders
-`data-message-text`.
+Message text with inline chips reconstructed from the wire format, so a stored
+message rebuilds its own chips with no sidecar metadata. Renders a `<span>`
+element.
 
 export const textProps = [
   { name: "children", type: "string", default: "(required)", description: "The message text; chip tokens are parsed out and rendered." },

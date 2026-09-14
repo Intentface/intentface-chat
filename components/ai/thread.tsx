@@ -7,13 +7,13 @@ import {
   useThread,
   useThreadVisibility,
 } from "@intentface/chat/thread";
+import { IconArrowDown } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentProps } from "react";
 import { memo, useCallback } from "react";
 import Button from "@/components/ui/button";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 import { cn } from "@/lib/utils";
-import { ArrowDownIcon } from "../icons/arrow-down";
 
 export { useThread, useThreadVisibility };
 export type { ThreadAutoScrollMode, ThreadVisibilityState };
@@ -148,7 +148,7 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
                 onClick={handleScrollToBottom}
                 className="rounded-full shadow-xs"
               >
-                <ArrowDownIcon />
+                <IconArrowDown />
                 Latest
               </Button>
             </motion.div>

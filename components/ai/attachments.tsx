@@ -1,7 +1,7 @@
 "use client";
 
 import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
-import { PaperclipIcon } from "lucide-react";
+import { IconFile, IconPaperclip, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
@@ -10,9 +10,6 @@ import { createPortal } from "react-dom";
 import { IconButton } from "@/components/ui/icon-button";
 import { formatFileSize, isImageAttachment, isPdfAttachment } from "@/lib/ai/attachments";
 import { cn } from "@/lib/utils";
-import { CrossMediumIcon } from "../icons/cross-medium";
-import { FileBendIcon } from "../icons/file-bend";
-import { PaperClipIcon } from "../icons/paperclip";
 
 // Re-export the attachment surface so consumers import everything from this
 // module: the generic mechanics from the headless package, and this app's
@@ -67,8 +64,8 @@ type AttachmentsItemProps = {
 };
 
 const getFileIcon = (mediaType: string) => {
-  if (isPdfAttachment(mediaType)) return FileBendIcon;
-  return PaperclipIcon;
+  if (isPdfAttachment(mediaType)) return IconFile;
+  return IconPaperclip;
 };
 
 const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) => {
@@ -138,7 +135,7 @@ const AttachmentsRemove = ({ onRemove, filename, className }: AttachmentsRemoveP
     size="2xs"
     type="button"
   >
-    <CrossMediumIcon className="size-3" />
+    <IconX className="size-3" />
   </IconButton>
 );
 
@@ -224,7 +221,7 @@ type AttachmentsTriggerProps = ComponentProps<typeof IconButton>;
 const AttachmentsTrigger = ({ children, className, ...props }: AttachmentsTriggerProps) => {
   return (
     <IconButton type="button" variant="ghost" aria-label="Add attachment" {...props}>
-      {children ?? <PaperClipIcon />}
+      {children ?? <IconPaperclip />}
     </IconButton>
   );
 };

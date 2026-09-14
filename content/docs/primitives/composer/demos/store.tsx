@@ -1,7 +1,7 @@
 "use client";
 
 import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
-import type { ComponentProps } from "react";
+import { IconArrowUp } from "@tabler/icons-react";
 
 // A store handle created outside the tree. The button drives the composer
 // through store.controller — no context, no hook, no ref threading.
@@ -26,7 +26,7 @@ export const Store = () => {
           </Composer.Textarea>
           <Composer.Actions className="flex justify-end gap-2 p-2">
             <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-              <SendIcon />
+              <IconArrowUp className="size-4" />
             </Composer.Submit>
           </Composer.Actions>
         </Composer.Container>
@@ -41,20 +41,3 @@ export const Store = () => {
     </div>
   );
 };
-
-const SendIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
-  </svg>
-);

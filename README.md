@@ -6,7 +6,8 @@ primitives for React — and the documentation site and playground at
 
 The package ships behavior, state, and wire formats with no styling of its own: a contenteditable
 composer with commands and chips, a thread with scroll auto-follow, message part segmentation, tool-call
-timelines. This is the Base UI model applied to chat — the package owns behavior, you own every class.
+timelines, and the app-shell parts around them — a collapsible sidebar, a nav tree, a closable tab
+collection. This is the Base UI model applied to chat — the package owns behavior, you own every class.
 
 ## Layout
 

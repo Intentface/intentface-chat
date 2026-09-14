@@ -1,10 +1,8 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
+import { IconCheck, IconChevronRight, IconCircle } from "@tabler/icons-react";
 import type { ComponentProps, ReactNode } from "react";
-import { ArrowTriangleRightIcon } from "@/components/icons/arrow-triangle-right";
-import { CheckMarkMediumIcon } from "@/components/icons/check-mark-medium";
-import { CircleIcon } from "@/components/icons/circle";
 import { cn } from "@/lib/utils";
 
 function DropdownMenuRoot({ ...props }: MenuPrimitive.Root.Props) {
@@ -128,7 +126,7 @@ function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ArrowTriangleRightIcon className="cn-rtl-flip ml-auto size-2 text-ink-tertiary group-data-highlighted/dropdown-menu-sub-trigger:text-ink-primary" />
+      <IconChevronRight className="cn-rtl-flip ml-auto size-2 text-ink-tertiary group-data-highlighted/dropdown-menu-sub-trigger:text-ink-primary" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }
@@ -187,7 +185,7 @@ function DropdownMenuCheckboxItem({
     >
       <DropdownMenuIndicator data-slot="dropdown-menu-checkbox-item-indicator">
         <MenuPrimitive.CheckboxItemIndicator>
-          <CheckMarkMediumIcon />
+          <IconCheck />
         </MenuPrimitive.CheckboxItemIndicator>
       </DropdownMenuIndicator>
       {children}
@@ -219,7 +217,7 @@ function DropdownMenuRadioItem({
     >
       <DropdownMenuIndicator data-slot="dropdown-menu-radio-item-indicator">
         <MenuPrimitive.RadioItemIndicator>
-          <CircleIcon className="size-2" />
+          <IconCircle className="size-2" />
         </MenuPrimitive.RadioItemIndicator>
       </DropdownMenuIndicator>
       {children}

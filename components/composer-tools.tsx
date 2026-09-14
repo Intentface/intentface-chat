@@ -1,11 +1,7 @@
 "use client";
+import { IconBrain, IconPaperclip, IconPlus, IconWorld, IconX } from "@tabler/icons-react";
 
 import { useComposer } from "@/components/ai/composer";
-import { BrainIcon } from "@/components/icons/brain";
-import { CrossMediumIcon } from "@/components/icons/cross-medium";
-import { GlobeIcon } from "@/components/icons/globe";
-import { PaperClipIcon } from "@/components/icons/paperclip";
-import { PlusMediumIcon } from "@/components/icons/plus-medium";
 import Button from "@/components/ui/button";
 import DropdownMenu from "@/components/ui/dropdown-menu";
 import { IconButton } from "@/components/ui/icon-button";
@@ -28,8 +24,8 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
           onClick={() => onToolsChange({ ...tools, webSearch: false })}
         >
           <span className="relative size-4">
-            <GlobeIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <CrossMediumIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+            <IconWorld className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
+            <IconX className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
           </span>
           Web Search
         </Button>
@@ -43,8 +39,8 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
           onClick={() => onToolsChange({ ...tools, thinking: false })}
         >
           <span className="relative size-4">
-            <BrainIcon className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <CrossMediumIcon className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+            <IconBrain className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
+            <IconX className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
           </span>
           Thinking
         </Button>
@@ -61,13 +57,13 @@ export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
       <DropdownMenu.Trigger
         render={
           <IconButton variant="ghost" type="button" className="rounded-full">
-            <PlusMediumIcon />
+            <IconPlus />
           </IconButton>
         }
       />
       <DropdownMenu.Content side="top" align="start" sideOffset={8} className="w-auto">
         <DropdownMenu.Item onClick={() => attachments.openFileDialog()}>
-          <PaperClipIcon />
+          <IconPaperclip />
           <span className="flex-1">Attach files</span>
         </DropdownMenu.Item>
         <DropdownMenu.Separator />
@@ -75,13 +71,13 @@ export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
           checked={tools.webSearch ?? false}
           onCheckedChange={(checked) => onToolsChange({ ...tools, webSearch: checked })}
         >
-          <GlobeIcon /> <span className="flex-1">Web Search</span>
+          <IconWorld /> <span className="flex-1">Web Search</span>
         </DropdownMenu.SwitchItem>
         <DropdownMenu.SwitchItem
           checked={tools.thinking ?? false}
           onCheckedChange={(checked) => onToolsChange({ ...tools, thinking: checked })}
         >
-          <BrainIcon /> <span className="flex-1">Thinking</span>
+          <IconBrain /> <span className="flex-1">Thinking</span>
         </DropdownMenu.SwitchItem>
       </DropdownMenu.Content>
     </DropdownMenu>

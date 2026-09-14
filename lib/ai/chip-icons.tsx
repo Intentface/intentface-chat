@@ -1,24 +1,33 @@
+import {
+  IconBrain,
+  IconBug,
+  IconChartBar,
+  IconCode,
+  IconFileText,
+  IconMap2,
+  IconMessageChatbot,
+  IconPhoto,
+  IconTable,
+  IconWorld,
+} from "@tabler/icons-react";
 import type { ReactNode } from "react";
-import { BrainIcon } from "@/components/icons/brain";
-import { BubbleWideSparkleIcon } from "@/components/icons/bubble-wide-sparkle";
-import { BugIcon } from "@/components/icons/bug";
-import { CodeIcon } from "@/components/icons/code";
-import { FileChartIcon } from "@/components/icons/file-chart";
-import { FileTextIcon } from "@/components/icons/file-text";
-import { GlobeIcon } from "@/components/icons/globe";
-import { ImageAltIcon } from "@/components/icons/image-alt";
-import { SpreadsheetIcon } from "@/components/icons/spreadsheet";
 
+/*
+ * Outlined throughout. Brain, code and chart have no filled variant in Tabler,
+ * and a set where three of ten are hollow reads as a mistake rather than a
+ * choice — so the whole set stays outlined.
+ */
 export const CHIP_ICONS = {
-  brain: <BrainIcon />,
-  bug: <BugIcon />,
-  bubbleWideSparkle: <BubbleWideSparkleIcon />,
-  code: <CodeIcon />,
-  fileChart: <FileChartIcon />,
-  fileText: <FileTextIcon />,
-  globe: <GlobeIcon />,
-  imageAlt: <ImageAltIcon />,
-  spreadsheet: <SpreadsheetIcon />,
+  brain: <IconBrain />,
+  bug: <IconBug />,
+  bubbleWideSparkle: <IconMessageChatbot />,
+  code: <IconCode />,
+  fileChart: <IconChartBar />,
+  fileText: <IconFileText />,
+  globe: <IconWorld />,
+  imageAlt: <IconPhoto />,
+  map: <IconMap2 />,
+  spreadsheet: <IconTable />,
 } satisfies Record<string, ReactNode>;
 
 export type ChipIconKey = keyof typeof CHIP_ICONS;

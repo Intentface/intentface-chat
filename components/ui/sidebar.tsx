@@ -2,6 +2,7 @@
 
 import { useRender } from "@base-ui/react/use-render";
 import { SHELL_SIDEBAR_WIDTH_VAR, Shell, useShell } from "@intentface/chat/shell";
+import { IconLayoutSidebar } from "@tabler/icons-react";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
   type ComponentProps,
@@ -12,7 +13,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { SidebarIcon } from "@/components/icons/sidebar";
 import Drawer from "@/components/ui/drawer";
 import Input from "@/components/ui/input";
 import Separator from "@/components/ui/separator";
@@ -221,12 +221,11 @@ const SidebarRoot = ({
         )}
         {...props}
       >
-        <div
-          className={cn(
-            "flex h-full w-full flex-col py-2 pl-2",
-            "group-data-[state=collapsed]:p-2 group-data-[state=collapsed]:gap-2",
-          )}
-        >
+        {/* No right padding while flush: the viewport's own p-2 already supplies
+            the seam, and padding both sides of it would make that gap twice the
+            one at every screen edge. The floating card pads all four sides,
+            because then it has edges of its own. */}
+        <div className="flex h-full w-full flex-col gap-2 py-2 pl-2 group-data-[state=collapsed]:p-2">
           {children}
         </div>
       </Shell.Sidebar>
@@ -255,7 +254,7 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
       className={cn("hover:bg-base-bg-hover", className)}
       {...props}
     >
-      <SidebarIcon />
+      <IconLayoutSidebar />
       <span className="sr-only">Toggle Sidebar</span>
     </IconButton>
   );
@@ -274,7 +273,7 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
       className={cn("hover:bg-base-bg-hover", className)}
       {...props}
     >
-      <SidebarIcon />
+      <IconLayoutSidebar />
       <span className="sr-only">Toggle Sidebar</span>
     </IconButton>
   ) : (
@@ -332,7 +331,8 @@ const SidebarHeader = ({ className, ...props }: ComponentProps<"div">) => {
   return (
     <div
       data-slot="sidebar-header"
-      className={cn("flex flex-col p-2 gap-2", className)}
+      // No padding of its own; the panel wrapper supplies it, as for the footer.
+      className={cn("flex flex-col gap-2", className)}
       {...props}
     />
   );

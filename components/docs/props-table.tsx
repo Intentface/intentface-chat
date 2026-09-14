@@ -29,7 +29,7 @@ export const PropsTable = ({ rows }: PropsTableProps) => (
         <col className="w-[28%]" />
       </colgroup>
       <thead>
-        <tr className="border-secondary-border border-b bg-tertiary-bg">
+        <tr className="border-secondary-border border-b bg-secondary-bg">
           <th className="px-4 py-2.5 font-medium text-ink-primary">Prop</th>
           <th className="px-4 py-2.5 font-medium text-ink-primary">Type</th>
           <th className="px-4 py-2.5 font-medium text-ink-primary">Default</th>
@@ -97,15 +97,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
             }}
             className="overflow-hidden"
           >
-            <motion.dl
-              initial={false}
-              animate={{ opacity: open ? 1 : 0 }}
-              transition={{
-                duration: 0.15,
-                ease: "easeOut",
-              }}
-              className="flex flex-col gap-3 py-4"
-            >
+            <dl className="flex flex-col gap-3 py-4">
               <DetailRow label="Name">
                 <code className="font-mono text-ink-primary text-xs">{row.name}</code>
               </DetailRow>
@@ -124,7 +116,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
                   <span className="text-ink-tertiary">—</span>
                 )}
               </DetailRow>
-            </motion.dl>
+            </dl>
           </motion.div>
         </td>
       </tr>

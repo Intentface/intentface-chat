@@ -22,7 +22,7 @@ export const KeysTable = ({ rows }: KeysTableProps) => (
         <col className="w-[72%]" />
       </colgroup>
       <thead>
-        <tr className="border-secondary-border border-b bg-tertiary-bg">
+        <tr className="border-secondary-border border-b bg-secondary-bg">
           <th className="px-4 py-2.5 font-medium text-ink-primary">Key</th>
           <th className="px-4 py-2.5 font-medium text-ink-primary">Description</th>
         </tr>
@@ -31,7 +31,7 @@ export const KeysTable = ({ rows }: KeysTableProps) => (
         {rows.map((row) => (
           <tr key={row.keys} className="border-secondary-border/60 border-b last:border-0">
             <td className="px-4 py-2.5 align-top">
-              <kbd className="rounded border border-secondary-border bg-tertiary-bg px-1.5 py-0.5 font-sans text-ink-primary text-xs">
+              <kbd className="rounded border border-secondary-border bg-secondary-bg px-1.5 py-0.5 font-sans text-ink-primary text-xs">
                 {row.keys}
               </kbd>
             </td>

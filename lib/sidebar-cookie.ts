@@ -48,7 +48,17 @@ const scan = (cookies: string) => {
   const prefix = `${KEY}=`;
   for (const part of cookies.split(";")) {
     const entry = part.trim();
-    if (entry.startsWith(prefix)) return decodeURIComponent(entry.slice(prefix.length));
+    if (entry.startsWith(prefix)) {
+      try {
+        return decodeURIComponent(entry.slice(prefix.length));
+      } catch {
+        // `decodeURIComponent` throws on a value like `%`. Treat a malformed
+        // entry as absent: the write path runs inside Shell's `onOpenChange`,
+        // which the store calls *before* committing, so a throw here would
+        // stop the sidebar toggling at all rather than merely fail to persist.
+        return null;
+      }
+    }
   }
   return null;
 };

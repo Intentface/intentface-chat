@@ -1,12 +1,12 @@
 "use client";
 import {
-  IconAdjustmentsHorizontalFilled,
-  IconDeviceDesktopFilled,
+  IconAdjustmentsHorizontal,
+  IconDeviceDesktop,
   IconForms,
-  IconLayoutListFilled,
-  IconMoonFilled,
-  IconSettingsFilled,
-  IconSunFilled,
+  IconLayoutList,
+  IconMoon,
+  IconSettings,
+  IconSun,
 } from "@tabler/icons-react";
 
 // Playground settings — a Linear-style display-options popover behind a single
@@ -122,11 +122,11 @@ const CUSTOM_PRESET_VALUE = "__custom__";
 const MODE_OPTIONS: ReadonlyArray<{
   value: InterfaceThemeMode;
   label: string;
-  Icon: typeof IconSunFilled;
+  Icon: typeof IconSun;
 }> = [
-  { value: "light", label: "Light", Icon: IconSunFilled },
-  { value: "dark", label: "Dark", Icon: IconMoonFilled },
-  { value: "system", label: "System", Icon: IconDeviceDesktopFilled },
+  { value: "light", label: "Light", Icon: IconSun },
+  { value: "dark", label: "Dark", Icon: IconMoon },
+  { value: "system", label: "System", Icon: IconDeviceDesktop },
 ];
 
 const ThemeTab = () => {
@@ -518,8 +518,8 @@ const KeyTab = () => {
 };
 
 const PLAYGROUND_TABS = [
-  { value: "theme", label: "Theme", Icon: IconAdjustmentsHorizontalFilled, content: <ThemeTab /> },
-  { value: "thread", label: "Thread", Icon: IconLayoutListFilled, content: <ThreadTab /> },
+  { value: "theme", label: "Theme", Icon: IconAdjustmentsHorizontal, content: <ThemeTab /> },
+  { value: "thread", label: "Thread", Icon: IconLayoutList, content: <ThreadTab /> },
   { value: "composer", label: "Composer", Icon: IconForms, content: <ComposerTab /> },
   { value: "key", label: "Key", Icon: OpenAIIcon, content: <KeyTab /> },
 ] as const;
@@ -572,7 +572,7 @@ export const PlaygroundSettings = () => {
             />
           }
         >
-          <IconSettingsFilled className="size-4" />
+          <IconSettings className="size-4" />
         </Popover.Trigger>
         <Popover.Content
           align="end"

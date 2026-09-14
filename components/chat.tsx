@@ -10,13 +10,13 @@ import {
 } from "@intentface/chat/message-utils";
 import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
 import {
-  IconAlertTriangleFilled,
+  IconAlertTriangle,
   IconBrain,
   IconCheck,
   IconChevronDown,
-  IconCircleFilled,
-  IconHelpCircleFilled,
-  IconQuoteFilled,
+  IconCircle,
+  IconHelpCircle,
+  IconQuote,
   IconRefresh,
   IconSandbox,
   IconX,
@@ -131,9 +131,9 @@ type IconComponent = React.ComponentType<{ className?: string }>;
 
 const statusIcons: Record<StepStatus, IconComponent> = {
   complete: IconCheck,
-  active: IconCircleFilled,
-  pending: IconCircleFilled,
-  error: IconAlertTriangleFilled,
+  active: IconCircle,
+  pending: IconCircle,
+  error: IconAlertTriangle,
 };
 
 // A timeline row: static when it has no detail, collapsible (icon morphs to a
@@ -224,7 +224,7 @@ const TimelineAskUser = ({ part }: { part: ToolPart }) => {
   const { label, status, questions, answers, isComplete } = getAskUserStepInfo(part);
 
   return (
-    <TimelineStep label={label} status={status} icon={IconHelpCircleFilled}>
+    <TimelineStep label={label} status={status} icon={IconHelpCircle}>
       <div className="flex flex-col gap-1.5">
         {questions.map((q) => (
           <div key={q.question} className="flex flex-col gap-0.5">
@@ -612,7 +612,7 @@ const MENTION_ITEMS: CommandItemData[] = [
   {
     value: "quarterly-report",
     label: "Q4 Quarterly Report",
-    icon: "fileText",
+    icon: "fileChart",
   },
   {
     value: "meeting-notes",
@@ -622,7 +622,7 @@ const MENTION_ITEMS: CommandItemData[] = [
   {
     value: "product-roadmap",
     label: "Product Roadmap",
-    icon: "spreadsheet",
+    icon: "map",
   },
   {
     value: "brand-guidelines",
@@ -632,7 +632,7 @@ const MENTION_ITEMS: CommandItemData[] = [
   {
     value: "api-documentation",
     label: "API Documentation",
-    icon: "fileChart",
+    icon: "code",
   },
   {
     value: "screenshot-dashboard",
@@ -974,7 +974,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
         )}
         {selections.length > 0 && (
           <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
-            <IconQuoteFilled className="size-3.5" />
+            <IconQuote className="size-3.5" />
             <span>
               {selections.length} selection{selections.length === 1 ? "" : "s"}
             </span>

@@ -1,5 +1,5 @@
 "use client";
-import { IconBrain, IconPaperclip, IconPlus, IconWorldFilled, IconX } from "@tabler/icons-react";
+import { IconBrain, IconPaperclip, IconPlus, IconWorld, IconX } from "@tabler/icons-react";
 
 import { useComposer } from "@/components/ai/composer";
 import Button from "@/components/ui/button";
@@ -24,7 +24,7 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
           onClick={() => onToolsChange({ ...tools, webSearch: false })}
         >
           <span className="relative size-4">
-            <IconWorldFilled className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
+            <IconWorld className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
             <IconX className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
           </span>
           Web Search
@@ -71,7 +71,7 @@ export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
           checked={tools.webSearch ?? false}
           onCheckedChange={(checked) => onToolsChange({ ...tools, webSearch: checked })}
         >
-          <IconWorldFilled /> <span className="flex-1">Web Search</span>
+          <IconWorld /> <span className="flex-1">Web Search</span>
         </DropdownMenu.SwitchItem>
         <DropdownMenu.SwitchItem
           checked={tools.thinking ?? false}

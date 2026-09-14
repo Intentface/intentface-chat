@@ -1,26 +1,33 @@
 import {
   IconBrain,
-  IconBugFilled,
+  IconBug,
   IconChartBar,
   IconCode,
-  IconFileTextFilled,
-  IconMessageChatbotFilled,
-  IconPhotoFilled,
-  IconTableFilled,
-  IconWorldFilled,
+  IconFileText,
+  IconMap2,
+  IconMessageChatbot,
+  IconPhoto,
+  IconTable,
+  IconWorld,
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
+/*
+ * Outlined throughout. Brain, code and chart have no filled variant in Tabler,
+ * and a set where three of ten are hollow reads as a mistake rather than a
+ * choice — so the whole set stays outlined.
+ */
 export const CHIP_ICONS = {
   brain: <IconBrain />,
-  bug: <IconBugFilled />,
-  bubbleWideSparkle: <IconMessageChatbotFilled />,
+  bug: <IconBug />,
+  bubbleWideSparkle: <IconMessageChatbot />,
   code: <IconCode />,
   fileChart: <IconChartBar />,
-  fileText: <IconFileTextFilled />,
-  globe: <IconWorldFilled />,
-  imageAlt: <IconPhotoFilled />,
-  spreadsheet: <IconTableFilled />,
+  fileText: <IconFileText />,
+  globe: <IconWorld />,
+  imageAlt: <IconPhoto />,
+  map: <IconMap2 />,
+  spreadsheet: <IconTable />,
 } satisfies Record<string, ReactNode>;
 
 export type ChipIconKey = keyof typeof CHIP_ICONS;

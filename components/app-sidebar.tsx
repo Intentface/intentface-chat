@@ -1,15 +1,15 @@
 "use client";
 import {
-  IconBookFilled,
-  IconDotsVerticalFilled,
+  IconBook,
+  IconBrandGithub,
+  IconBrandNpm,
+  IconDotsVertical,
   IconPlus,
-  IconTrashFilled,
+  IconTrash,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { GitHubIcon } from "@/components/icons/github";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
-import { NpmIcon } from "@/components/icons/npm";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
@@ -67,7 +67,7 @@ export const AppSidebar = () => {
                           <DropdownMenu.Trigger
                             render={
                               <Sidebar.MenuAction showOnHover>
-                                <IconDotsVerticalFilled />
+                                <IconDotsVertical />
                                 <span className="sr-only">Delete</span>
                               </Sidebar.MenuAction>
                             }
@@ -77,7 +77,7 @@ export const AppSidebar = () => {
                               onClick={() => handleDelete(chat.id)}
                               aria-label="Delete"
                             >
-                              <IconTrashFilled />
+                              <IconTrash />
                               Delete
                               <span className="sr-only">Delete</span>
                             </DropdownMenu.Item>
@@ -98,7 +98,7 @@ export const AppSidebar = () => {
             <Sidebar.MenuButton
               render={
                 <Link href="/">
-                  <IconBookFilled />
+                  <IconBook />
                   <span>Docs</span>
                 </Link>
               }
@@ -112,7 +112,7 @@ export const AppSidebar = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <GitHubIcon />
+                  <IconBrandGithub />
                   <span>GitHub</span>
                 </a>
               }
@@ -126,7 +126,7 @@ export const AppSidebar = () => {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <NpmIcon />
+                  <IconBrandNpm />
                   <span>npm</span>
                 </a>
               }

@@ -2,7 +2,7 @@
 
 import { useRender } from "@base-ui/react/use-render";
 import { SHELL_SIDEBAR_WIDTH_VAR, Shell, useShell } from "@intentface/chat/shell";
-import { IconLayoutSidebarFilled } from "@tabler/icons-react";
+import { IconLayoutSidebar } from "@tabler/icons-react";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
   type ComponentProps,
@@ -254,7 +254,7 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
       className={cn("hover:bg-base-bg-hover", className)}
       {...props}
     >
-      <IconLayoutSidebarFilled />
+      <IconLayoutSidebar />
       <span className="sr-only">Toggle Sidebar</span>
     </IconButton>
   );
@@ -273,7 +273,7 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
       className={cn("hover:bg-base-bg-hover", className)}
       {...props}
     >
-      <IconLayoutSidebarFilled />
+      <IconLayoutSidebar />
       <span className="sr-only">Toggle Sidebar</span>
     </IconButton>
   ) : (

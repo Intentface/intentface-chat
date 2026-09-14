@@ -29,7 +29,7 @@ export const Basic = () => (
     <Shell.PeekZone className="absolute inset-y-0 left-0 z-20 hidden w-5 data-[state=collapsed]:block" />
 
     {/* The gutter. Not a part of the package: a div reading the property the
-        resize handle writes, animating to zero while the panel slides away. */}
+        grip writes, animating to zero while the panel slides away. */}
     <div
       data-slot="shell-gutter"
       className="w-(--shell-sidebar-width) shrink-0 transition-[width] duration-150 ease-linear group-data-resizing/shell:transition-none group-data-[state=collapsed]/shell:w-0 motion-reduce:transition-none"
@@ -113,20 +113,30 @@ export const Basic = () => (
           </Nav.Group>
         </Nav.List>
       </Nav.Root>
-
-      {/* A 6px hit area with a hairline inside, so the target is comfortable
-          while the divider stays thin. */}
-      <Shell.ResizeHandle
-        aria-label="Resize sidebar"
-        className={[
-          "-right-[3px] absolute inset-y-0 w-1.5 cursor-col-resize select-none",
-          "before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-transparent before:transition-colors before:duration-100",
-          "hover:before:bg-[#1a1a1a] data-[resizing]:before:bg-[#1a1a1a] dark:hover:before:bg-[#fcfcfc] dark:data-[resizing]:before:bg-[#fcfcfc]",
-          "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
-          "data-[state=collapsed]:hidden",
-        ].join(" ")}
-      />
     </Shell.Sidebar>
+
+    {/* A sibling of the sidebar, not a child: the sidebar clips its overflow
+        for the collapsed card, so a handle hung off its edge would be cut in
+        half. Positioned instead against the viewport's left edge — the 6px hit
+        area straddles the content card's border, so the hairline it reveals
+        lands exactly on the line already drawn there. */}
+    <Shell.ResizeHandle
+      aria-label="Resize sidebar"
+      className={[
+        "absolute inset-y-0 left-[calc(var(--shell-sidebar-width)+8px)] z-20 w-1.5 -translate-x-1/2 cursor-col-resize select-none",
+        "before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-transparent before:transition-colors before:duration-100",
+        // Masked rather than gradient-filled, so the hairline keeps a single
+        // background-color to transition while both ends fall away. The stops
+        // are pixels, not percentages: the fade has to land fully transparent
+        // 20px in — the card's 8px inset plus its 12px radius, where the corner
+        // arc leaves the straight edge — and that distance is fixed, not a
+        // share of the height.
+        "before:[mask-image:linear-gradient(to_bottom,transparent_20px,black_76px,black_calc(100%-76px),transparent_calc(100%-20px))]",
+        "hover:before:bg-[#1a1a1a] data-[resizing]:before:bg-[#1a1a1a] dark:hover:before:bg-[#fcfcfc] dark:data-[resizing]:before:bg-[#fcfcfc]",
+        "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
+        "data-[state=collapsed]:hidden",
+      ].join(" ")}
+    />
 
     {/* The gutter only exists while the sidebar does: collapsed, the card runs
         edge to edge. */}

@@ -37,6 +37,12 @@ export type MessageRootProps = Omit<PrimitiveProps<"div", MessageState>, "role">
   isError?: boolean;
 };
 
+/**
+ * One turn's container. Reports the role and position as data attributes and
+ * renders no layout of its own, so the bubble, avatar and actions around it
+ * stay yours.
+ * Renders a `<div>` element.
+ */
 export const MessageRoot = ({
   role,
   isLast = false,
@@ -64,6 +70,10 @@ export const MessageRoot = ({
 
 export type MessageTurnProps = PrimitiveProps<"div">;
 
+/**
+ * Groups consecutive messages from one role into a single visual turn.
+ * Renders a `<div>` element.
+ */
 export const MessageTurn = ({ className, render, style, ...elementProps }: MessageTurnProps) =>
   useRenderElement(
     "div",
@@ -90,6 +100,11 @@ export type MessageTextProps = Omit<PrimitiveProps<"span">, "children"> & {
   renderChip?: (chip: MessageChipSegment, index: number) => ReactNode;
 };
 
+/**
+ * Message text with inline chips reconstructed from the wire format, so a
+ * stored message rebuilds its own chips with no sidecar metadata.
+ * Renders a `<span>` element.
+ */
 export const MessageText = ({
   children,
   className,

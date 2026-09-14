@@ -5,6 +5,7 @@ source: steps
 ---
 
 import { Basic } from './steps/demos/basic';
+import { Status } from './steps/demos/status';
 
 <Demo component={<Basic />} file="primitives/steps/demos/basic.tsx" />
 
@@ -12,8 +13,10 @@ import { Basic } from './steps/demos/basic';
 
 - **Recursive disclosure tree** — every node is a `Steps.Item` with a `Trigger` and a `Panel`, and panels can hold further items, so timelines nest arbitrarily.
 - **Status-driven** — each item's `status` (`complete` / `active` / `pending`) flows to its `Icon` and `Label` via context; active items open by default.
-- **Nesting** — a nested item surfaces `data-nested` for the indent rail; a static row is just an `Icon` + `Label` in a `<div>`.
+- **Nesting** — a nested item surfaces `data-nested` for the indent rail; a static row is an `Icon` and a `Label` in a `<div>`.
 - **You compose the rows** — the primitive ships the disclosure + status plumbing; row content (icons, tool-call summaries) is yours to render.
+- **No composite keyboard model** — each trigger is a real button, so the tree is plain sequential tab order with no roving focus to learn.
+- **Panels animate from a published height** — see [Why the panel releases its height](#why-the-panel-releases-its-height), which is also why an open panel keeps growing.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
 ## Anatomy
@@ -53,16 +56,18 @@ A timeline is a top-level item whose panel holds rows; a row is an `Icon` +
 </Steps.Root>
 ```
 
-## Status
+## Examples
 
-`status` is an opaque `string` — you own the set (commonly `"complete"`,
-`"active"`, `"pending"`, but add `"error"`/`"skipped"`/anything). `Steps.Item`
-takes a `status` and publishes it through context; `Steps.Icon` and
-`Steps.Label` inherit it, or override with their own `status`. Resolution is
-*own prop → inherited → `"complete"`*. Every status-aware part reflects it as
-`data-status` for styling.
+### Driving rows from status
 
-## Height transitions
+`status` is an opaque string. The package resolves it — own prop, then inherited
+from the enclosing item, then `"complete"` — and reflects it as `data-status`.
+It never decides what the set is, so the `"error"` below is a string this demo
+invented and then styled.
+
+<Demo component={<Status />} file="primitives/steps/demos/status.tsx" />
+
+## Why the panel releases its height
 
 The panel publishes its measured height as `--panel-height` while an open or
 close transition runs, and **releases it once the panel settles open**. So
@@ -71,9 +76,9 @@ variable no longer written — becomes invalid at computed-value time and falls
 back to `auto`. That is what lets an open panel track content appearing inside
 it, rather than staying pinned to the height it had when it opened.
 
-The demo at the top of this page uses it. Collapse and expand the timeline to
-see the transition, then expand **Searched the web** while the timeline is
-already open — the outer panel grows to fit the detail instead of clipping it.
+The demo at the top of this page uses it. Collapse and expand the timeline,
+then expand **Searched the web** while the timeline is already open — the outer
+panel grows to fit the detail instead of clipping it.
 
 Two details in that demo are load-bearing. `data-starting-style` and
 `data-ending-style` clamp the height to `0` on the transitional frames, and they
@@ -82,34 +87,6 @@ And `[&>*]:shrink-0` guards the measurement: a flex column clamped to `height: 0
 puts every child under shrink pressure, and a child that collapses to nothing
 makes the panel measure itself as `0px`.
 
-## Keyboard
-
-Each item is a standard disclosure: `Steps.Trigger` is a real button, so
-`Tab` moves between triggers and `Enter`/`Space` toggle the nearest item.
-Nested items nest their own triggers — there is no roving focus or composite
-widget; the tree is plain sequential tab order.
-
-## Accessibility
-
-Disclosure semantics are inherited from the underlying Collapsible:
-`aria-expanded`/`aria-controls` on the trigger, an id-linked, `hidden`-managed
-panel. The item whose `status` is `"active"` additionally carries
-`aria-current="step"` — the same "active" convention `defaultOpen` already
-keys off.
-
-Status itself is invisible to assistive tech by default: `Steps.Icon` is
-`aria-hidden` and color never announces. Mount `Steps.Status` inside rows
-whose status matters — it renders a visually-hidden span speaking the resolved
-status string, and takes `children` for localized copy:
-
-```tsx
-<Steps.Trigger>
-  <Steps.Icon />
-  <Steps.Label>Searching the web</Steps.Label>
-  <Steps.Status />
-</Steps.Trigger>
-```
-
 ## API reference
 
 Every part accepts `className`, `style`, and `render` (see
@@ -117,11 +94,14 @@ Every part accepts `className`, `style`, and `render` (see
 
 ### Steps
 
-The timeline root. Renders `data-steps`. No part-specific props.
+The timeline container. Ships the disclosure and status plumbing and no row
+content: what a tool call or a reasoning step looks like is yours. Renders a
+`<div>` element.
 
 ### Steps.Item
 
-One node of the tree (a disclosure). Renders `data-steps-item`, plus
+One node of the tree, and the unit that nests: an item's panel may hold further
+items, so a timeline goes as deep as the run did. Renders a `<div>` element, plus
 `aria-current="step"` while `status` is `"active"`.
 
 export const itemProps = [
@@ -145,14 +125,18 @@ export const itemAttrs = [
 
 ### Steps.Trigger
 
-Toggles the nearest item. Renders a `<button data-steps-trigger>`
+The row that expands an item. A real button, so the tree is plain sequential tab
+order rather than a composite widget with its own keyboard model. Renders a
+`<button>` element
 (`aria-expanded`, `aria-controls`). Carries `data-open`/`data-closed` for the
 chevron. The styled layer groups it as `group/steps-trigger` so children read
 `group-data-open/steps-trigger:…`.
 
 ### Steps.Panel
 
-The nearest item's disclosure area — lays out the timeline column. Renders
+The collapsible body. Publishes its measured height while a transition runs and
+releases it once settled open, so an open panel grows with content that arrives
+inside it. Renders
 `data-steps-panel`.
 
 export const panelProps = [
@@ -174,7 +158,9 @@ export const panelAttrs = [
 
 ### Steps.Icon
 
-Status indicator. Renders `<span data-steps-icon aria-hidden>`.
+The row's status glyph, `aria-hidden` because colour and shape announce
+nothing. Resolves `status` from its own prop, then the enclosing item. Renders a
+`<span>` element.
 
 export const iconProps = [
   { name: "status", type: "string", description: "Overrides the inherited status for this icon." },
@@ -191,7 +177,8 @@ export const iconAttrs = [
 
 ### Steps.Label
 
-Row text. Renders `<span data-steps-label>`.
+The row's text. Resolves `status` the same way the icon does, so one attribute
+drives both. Renders a `<span>` element.
 
 export const labelProps = [
   { name: "status", type: "string", description: "Overrides the inherited status for this label." },
@@ -208,7 +195,8 @@ export const labelAttrs = [
 
 ### Steps.Status
 
-Visually-hidden status announcement. Renders `<span data-steps-status>` with
+The only part that speaks the status. Renders a visually hidden `<span>` saying
+the resolved status string; pass `children` to localise the wording. Carries
 screen-reader-only styling (overridable via `style`/`className`), containing
 the resolved status string unless `children` provide localized copy.
 

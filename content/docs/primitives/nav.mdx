@@ -250,7 +250,7 @@ These are the widget's own keys, not global ones: the handler sits on
 `Nav.Root`, so nothing fires unless focus is already inside the tree.
 
 export const keys = [
-  { keys: "Arrow up / down", description: "Move focus to the previous or next visible row. Collapsed lists are unmounted, so their rows are simply not there to land on." },
+  { keys: "Arrow up / down", description: "Move focus to the previous or next visible row. Collapsed lists are unmounted, so their rows are not there to land on." },
   { keys: "Arrow right", description: "On a closed group, open it; on an open one, step into it. On a leaf, nothing." },
   { keys: "Arrow left", description: "On an open group, close it; otherwise step out to the parent group's trigger — which is where the row came from." },
   { keys: "Enter / Space", description: "Activate the focused row." },

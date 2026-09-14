@@ -1,6 +1,7 @@
 "use client";
 
 import { Nav } from "@intentface/chat/nav";
+import { IconBox, IconChevronDown, IconHome, IconInbox, IconMessage } from "@tabler/icons-react";
 import { type ComponentProps, useState } from "react";
 
 /*
@@ -45,7 +46,7 @@ export const Basic = () => {
             render={link("/overview", () => setCurrent("overview"))}
           >
             <Nav.Icon>
-              <HomeIcon />
+              <IconHome className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Overview</Nav.Label>
           </Nav.Item>
@@ -57,7 +58,7 @@ export const Basic = () => {
             render={link("/inbox", () => setCurrent("inbox"))}
           >
             <Nav.Icon>
-              <InboxIcon />
+              <IconInbox className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Inbox</Nav.Label>
           </Nav.Item>
@@ -75,7 +76,7 @@ export const Basic = () => {
               <Nav.Group value="intentface">
                 <Nav.Trigger className={rowClass}>
                   <Nav.Icon>
-                    <BoxIcon />
+                    <IconBox className="size-4" />
                   </Nav.Icon>
                   <Nav.Label className="min-w-0 truncate">Intentface</Nav.Label>
                   <Chevron />
@@ -91,7 +92,7 @@ export const Basic = () => {
                     render={link("/intentface/home", () => setCurrent("team-home"))}
                   >
                     <Nav.Icon>
-                      <HomeIcon />
+                      <IconHome className="size-4" />
                     </Nav.Icon>
                     <Nav.Label className="min-w-0 truncate">Home</Nav.Label>
                   </Nav.Item>
@@ -103,7 +104,7 @@ export const Basic = () => {
                     render={link("/intentface/issues", () => setCurrent("team-issues"))}
                   >
                     <Nav.Icon>
-                      <InboxIcon />
+                      <IconInbox className="size-4" />
                     </Nav.Icon>
                     <Nav.Label className="min-w-0 truncate">Issues</Nav.Label>
                   </Nav.Item>
@@ -114,7 +115,7 @@ export const Basic = () => {
                   <Nav.Group value="chat">
                     <Nav.Trigger className={rowClass}>
                       <Nav.Icon>
-                        <ChatIcon />
+                        <IconMessage className="size-4" />
                       </Nav.Icon>
                       <Nav.Label className="min-w-0 truncate">Chat</Nav.Label>
                       <Chevron />
@@ -145,7 +146,7 @@ export const Basic = () => {
                   <Nav.Group value="website">
                     <Nav.Trigger className={rowClass}>
                       <Nav.Icon>
-                        <BoxIcon />
+                        <IconBox className="size-4" />
                       </Nav.Icon>
                       <Nav.Label className="min-w-0 truncate">Website</Nav.Label>
                       <Chevron />
@@ -220,7 +221,7 @@ const rowClass = [
  * reading `data-closed` off the enclosing trigger, so nothing is threaded down.
  */
 const Chevron = () => (
-  <ChevronIcon className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90 dark:text-[#6f6f6f]" />
+  <IconChevronDown className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90 dark:text-[#6f6f6f]" />
 );
 
 /*
@@ -281,78 +282,4 @@ const RailRecipe = () => (
   .nav-demo [data-nav-group] > [data-nav-list] { transition: none; }
 }
 `}</style>
-);
-
-const HomeIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M2.5 6.5 8 2.5l5.5 4v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-6Z" strokeLinejoin="round" />
-  </svg>
-);
-
-const InboxIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M2.5 8.5h3l1 2h3l1-2h3v3a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-3Z" strokeLinejoin="round" />
-    <path
-      d="M2.5 8.5l1.6-4.2a1 1 0 0 1 .94-.65h5.92a1 1 0 0 1 .94.65l1.6 4.2"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const BoxIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <rect x="2.5" y="2.5" width="11" height="11" rx="2.5" strokeLinejoin="round" />
-  </svg>
-);
-
-const ChatIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path
-      d="M13.5 8.5a4.5 4.5 0 0 1-4.5 4.5H6l-3 2v-2.6A4.5 4.5 0 0 1 6 4h3a4.5 4.5 0 0 1 4.5 4.5Z"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const ChevronIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4 6.5 4 4 4-4" />
-  </svg>
 );

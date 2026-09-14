@@ -1,7 +1,8 @@
 "use client";
 
 import { Tabs, type TabsStore, useTabsStore } from "@intentface/chat/tabs";
-import { type ComponentProps, createElement, type ReactElement, useState } from "react";
+import { IconArchive, IconInbox, IconPencil, IconSend, IconX } from "@tabler/icons-react";
+import { createElement, useState } from "react";
 
 /*
  * Opening a tab from somewhere else in the app.
@@ -30,7 +31,7 @@ export const ExternalTabs = () => {
           {(id) => (
             <Tabs.Trigger value={id} aria-label={id} className={tabClass}>
               <Tabs.Icon className="shrink-0 text-[#949494] dark:text-[#6f6f6f] [&>svg]:size-3.5">
-                {createElement(TAB_ICONS[id] ?? InboxIcon)}
+                {createElement(TAB_ICONS[id] ?? IconInbox)}
               </Tabs.Icon>
               <span className="min-w-0 truncate">{id}</span>
               <Tabs.Action className="absolute inset-y-0 right-1.5 flex items-center opacity-0 transition-opacity group-hover/tab:opacity-100 group-data-[selected]/tab:opacity-100">
@@ -38,7 +39,7 @@ export const ExternalTabs = () => {
                   aria-label={`Close ${id}`}
                   className="grid size-5 shrink-0 cursor-pointer place-items-center rounded text-[#949494] transition-colors hover:bg-[#dcdcdc] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#3d3d3d] dark:hover:text-[#fcfcfc]"
                 >
-                  <CloseIcon />
+                  <IconX className="size-3.5" />
                 </Tabs.Close>
               </Tabs.Action>
             </Tabs.Trigger>
@@ -62,7 +63,7 @@ const Launcher = ({ store }: { store: TabsStore }) => {
   const items = useTabsStore(store, (tabs) => tabs.items);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center justify-center gap-2">
       {DOCUMENTS.map((id) => (
         <button
           key={id}
@@ -92,98 +93,12 @@ const tabClass = [
   "dark:data-[selected]:bg-[#2d2d2d] dark:data-[selected]:text-[#fcfcfc]",
 ].join(" ");
 
-const CloseIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    className="size-3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4.5 4.5 7 7m0-7-7 7" />
-  </svg>
-);
-
 /* Per-tab icons rather than one generic page glyph — a strip of identical
    icons carries no information, and the whole point of a tab icon is telling
    the tabs apart at a glance. */
-const TAB_ICONS: Record<string, (props: ComponentProps<"svg">) => ReactElement> = {
-  Inbox: InboxIcon,
-  Drafts: PencilIcon,
-  Sent: SendIcon,
-  Archive: ArchiveIcon,
+const TAB_ICONS: Record<string, typeof IconInbox> = {
+  Inbox: IconInbox,
+  Drafts: IconPencil,
+  Sent: IconSend,
+  Archive: IconArchive,
 };
-
-function InboxIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <path
-        d="M2.5 8.5h3l1 2h3l1-2h3v3a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-3Z"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2.5 8.5 4.1 4.3a1 1 0 0 1 .94-.65h5.92a1 1 0 0 1 .94.65l1.6 4.2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PencilIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="m10.6 3.1 2.3 2.3-7.2 7.2-3 .7.7-3 7.2-7.2Z" strokeLinejoin="round" />
-      <path d="m9.4 4.3 2.3 2.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SendIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M13.4 2.6 2.6 6.4l4.4 2.6 2.6 4.4 3.8-10.8Z" strokeLinejoin="round" />
-      <path d="M13.4 2.6 7 9" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ArchiveIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <rect x="2.5" y="2.6" width="11" height="3" rx="1" strokeLinejoin="round" />
-      <path d="M3.6 5.6v6.8a1 1 0 0 0 1 1h6.8a1 1 0 0 0 1-1V5.6" strokeLinejoin="round" />
-      <path d="M6.6 8.4h2.8" strokeLinecap="round" />
-    </svg>
-  );
-}

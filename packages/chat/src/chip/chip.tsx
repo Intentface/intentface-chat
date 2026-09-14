@@ -12,8 +12,11 @@ import { useRenderElement } from "../internal/render/useRenderElement";
 
 type ChipPreviewProps = { children: ReactNode };
 
-// Marker component — never renders directly. ChipRoot inspects its children
-// and routes ChipPreview's content into `renderWithPreview`.
+/**
+ * Marker child whose content becomes the preview body. Renders nothing inline:
+ * `Chip.Root` inspects its children and routes this through
+ * `renderWithPreview`, so the package never owns a popup.
+ */
 export const ChipPreview = (_props: ChipPreviewProps): ReactNode => null;
 
 export type ChipState = {
@@ -31,6 +34,12 @@ export type ChipRootProps = PrimitiveProps<"span", ChipState> & {
   renderWithPreview?: (badge: ReactElement, preview: ReactNode) => ReactNode;
 };
 
+/**
+ * The inline token surface. Flows with the surrounding text rather than
+ * breaking the line box, and lifts a `Chip.Preview` child into whatever
+ * surface `renderWithPreview` builds.
+ * Renders a `<span>` element.
+ */
 export const ChipRoot = ({
   variant,
   renderWithPreview,
@@ -64,6 +73,11 @@ export const ChipRoot = ({
 
 export type ChipIconProps = PrimitiveProps<"span">;
 
+/**
+ * Leading inline icon, baseline-aligned to the label and `aria-hidden`, so
+ * decoration stays out of the chip's accessible name.
+ * Renders a `<span>` element.
+ */
 export const ChipIcon = ({ className, render, style, ...elementProps }: ChipIconProps) =>
   useRenderElement(
     "span",
@@ -73,6 +87,10 @@ export const ChipIcon = ({ className, render, style, ...elementProps }: ChipIcon
 
 export type ChipLabelProps = PrimitiveProps<"span">;
 
+/**
+ * The chip's text, which reads as part of the sentence around it.
+ * Renders a `<span>` element.
+ */
 export const ChipLabel = ({ className, render, style, ...elementProps }: ChipLabelProps) =>
   useRenderElement(
     "span",

@@ -2,7 +2,13 @@
 
 import { Nav } from "@intentface/chat/nav";
 import { Shell } from "@intentface/chat/shell";
-import type { ComponentProps } from "react";
+import {
+  IconBox,
+  IconChevronDown,
+  IconHome,
+  IconInbox,
+  IconLayoutSidebar,
+} from "@tabler/icons-react";
 
 /*
  * A shell the way it is meant to be used: a sidebar that collapses, floats out
@@ -68,7 +74,7 @@ export const Basic = () => (
           @intentface/chat
         </span>
         <Shell.Trigger aria-label="Collapse sidebar" className={iconButtonClass}>
-          <PanelLeftIcon />
+          <IconLayoutSidebar className="size-4" />
         </Shell.Trigger>
       </div>
 
@@ -84,13 +90,13 @@ export const Basic = () => (
         <Nav.List className="flex flex-col gap-0.5">
           <Nav.Item value="overview" active className={rowClass}>
             <Nav.Icon>
-              <HomeIcon />
+              <IconHome className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Overview</Nav.Label>
           </Nav.Item>
           <Nav.Item value="inbox" className={rowClass}>
             <Nav.Icon>
-              <InboxIcon />
+              <IconInbox className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Inbox</Nav.Label>
           </Nav.Item>
@@ -98,13 +104,13 @@ export const Basic = () => (
           <Nav.Group value="workspace" className="mt-3">
             <Nav.Trigger className={rowClass}>
               <Nav.Label className="min-w-0 truncate">Workspace</Nav.Label>
-              <ChevronIcon className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90" />
+              <IconChevronDown className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90" />
             </Nav.Trigger>
             <Nav.List className="flex flex-col gap-0.5">
               {["Initiatives", "Projects", "Views", "Loops"].map((label) => (
                 <Nav.Item key={label} value={label.toLowerCase()} className={rowClass}>
                   <Nav.Icon>
-                    <BoxIcon />
+                    <IconBox className="size-4" />
                   </Nav.Icon>
                   <Nav.Label className="min-w-0 truncate">{label}</Nav.Label>
                 </Nav.Item>
@@ -144,7 +150,7 @@ export const Basic = () => (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#f0f0f0] bg-white dark:border-[#262626] dark:bg-[#181818]">
         <div className="flex h-11 shrink-0 items-center gap-1 border-[#f0f0f0] border-b px-3 dark:border-[#262626]">
           <span className="px-1 text-[#949494] text-sm dark:text-[#6f6f6f]">Docs</span>
-          <ChevronIcon className="size-3 -rotate-90 text-[#949494] dark:text-[#6f6f6f]" />
+          <IconChevronDown className="size-3 -rotate-90 text-[#949494] dark:text-[#6f6f6f]" />
           <span className="px-1 font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">
             Overview
           </span>
@@ -180,77 +186,3 @@ const rowClass = [
   "data-[active]:bg-[#ececec] data-[active]:text-[#1a1a1a] dark:data-[active]:bg-[#2d2d2d] dark:data-[active]:text-[#fcfcfc]",
   "[&_svg]:size-4 [&_svg]:shrink-0",
 ].join(" ");
-
-const PanelLeftIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    strokeLinejoin="round"
-    className="size-4"
-    aria-hidden="true"
-    {...props}
-  >
-    <rect x="2" y="3" width="12" height="10" rx="2" />
-    <path d="M6.5 3v10" />
-  </svg>
-);
-
-const HomeIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M2.5 6.5 8 2.5l5.5 4v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-6Z" strokeLinejoin="round" />
-  </svg>
-);
-
-const InboxIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M2.5 8.5h3l1 2h3l1-2h3v3a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-3Z" strokeLinejoin="round" />
-    <path
-      d="M2.5 8.5l1.6-4.2a1 1 0 0 1 .94-.65h5.92a1 1 0 0 1 .94.65l1.6 4.2"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const BoxIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <rect x="2.5" y="2.5" width="11" height="11" rx="2.5" strokeLinejoin="round" />
-  </svg>
-);
-
-const ChevronIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4 6.5 4 4 4-4" />
-  </svg>
-);

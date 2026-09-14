@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "@intentface/chat/nav";
-import type { ComponentProps } from "react";
+import { IconBox, IconChevronDown, IconHome } from "@tabler/icons-react";
 
 /*
  * The same tree four times, once per `guide` value, so the rungs can be
@@ -44,7 +44,7 @@ const GuideTree = ({ guide, caption }: { guide: GuideValue; caption: string }) =
         <Nav.List guide="none" className={listClass}>
           <Nav.Item value="overview" active className={rowClass}>
             <Nav.Icon>
-              <HomeIcon />
+              <IconHome className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Overview</Nav.Label>
           </Nav.Item>
@@ -52,7 +52,7 @@ const GuideTree = ({ guide, caption }: { guide: GuideValue; caption: string }) =
           <Nav.Group value="chat">
             <Nav.Trigger className={rowClass}>
               <Nav.Icon>
-                <BoxIcon />
+                <IconBox className="size-4" />
               </Nav.Icon>
               <Nav.Label className="min-w-0 truncate">Chat</Nav.Label>
               <Chevron />
@@ -101,7 +101,7 @@ const rowClass = [
 ].join(" ");
 
 const Chevron = () => (
-  <ChevronIcon className="ml-auto size-3! text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
+  <IconChevronDown className="ml-auto size-3! text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
 );
 
 /*
@@ -150,45 +150,4 @@ const RailRecipe = () => (
   border-bottom-left-radius: 6px;
 }
 `}</style>
-);
-
-const HomeIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M2.5 6.5 8 2.5l5.5 4v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-6Z" strokeLinejoin="round" />
-  </svg>
-);
-
-const BoxIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <rect x="2.5" y="2.5" width="11" height="11" rx="2.5" strokeLinejoin="round" />
-  </svg>
-);
-
-const ChevronIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4 6.5 4 4 4-4" />
-  </svg>
 );

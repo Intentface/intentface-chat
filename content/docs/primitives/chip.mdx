@@ -5,6 +5,7 @@ source: chip
 ---
 
 import { Basic } from './chip/demos/basic';
+import { Preview } from './chip/demos/preview';
 
 <Demo component={<Basic />} file="primitives/chip/demos/basic.tsx" />
 
@@ -37,18 +38,19 @@ never rendered inline:
 </Chip.Root>
 ```
 
-## Accessibility
+## Examples
 
-The chip is inline text: in messages the label reads as part of the sentence,
-and `Chip.Icon` is `aria-hidden` so decoration never announces. In the
-composer's editor, committed chips carry an `aria-label` of
-`{label}, {prefix} mention` so they announce as atomic tokens rather than
-bare words.
+### Building the preview surface
 
-The package never renders the hover preview — `renderWithPreview` is the seam.
-Whatever surface the styled layer lifts it into must honor the hover-card
-contract: open on keyboard focus as well as hover, and dismiss with Escape
-(a Base UI Hover Card, for instance, does both).
+`Chip.Preview` renders nothing itself. `renderWithPreview` hands you the badge
+and the preview content and lets you decide what surface they go in, which is
+what keeps a floating-UI dependency out of the package.
+
+Whatever you build there inherits the hover-card obligations: it opens on
+keyboard focus as well as hover, and Escape dismisses it. A CSS-only `:hover`
+panel looks right and cannot be reached without a pointer.
+
+<Demo component={<Preview />} file="primitives/chip/demos/preview.tsx" />
 
 ## API reference
 
@@ -57,11 +59,13 @@ Every part accepts `className`, `style`, and `render` (see
 
 ### Chip
 
-The inline token surface. Renders `data-chip`. A `Chip.Preview` child
-wraps it in a hover card.
+The inline token surface. Flows with the surrounding text rather than breaking
+the line box, and lifts a `Chip.Preview` child into whatever surface
+`renderWithPreview` builds. Renders a `<span>` element.
 
 export const rootProps = [
-  { name: "variant", type: '"primary" | "accent" | "warning"', default: '"primary"', description: "Tints the chip surface." },
+  { name: "variant", type: "string", default: "undefined", description: "An opaque styling hook, surfaced as data-variant. The package takes no view on the values; the demo uses primary, accent and warning." },
+  { name: "renderWithPreview", type: "(badge: ReactElement, preview: ReactNode) => ReactNode", description: "Called when a Chip.Preview child is present. Receives the rendered badge and the preview content; compose your own popup around them. Without it the preview content is ignored." },
 ];
 
 <PropsTable rows={rootProps} />
@@ -75,17 +79,19 @@ export const rootAttrs = [
 
 ### Chip.Icon
 
-Leading inline icon, baseline-aligned to the label and `aria-hidden`. Renders
-`data-chip-icon`.
+Leading inline icon, baseline-aligned to the label and `aria-hidden`, so
+decoration stays out of the chip's accessible name. Renders a `<span>` element.
 
 ### Chip.Label
 
-The chip text. Renders `data-chip-label`.
+The chip's text, which reads as part of the sentence around it. Renders a
+`<span>` element.
 
 ### Chip.Preview
 
-Marker child — its content becomes the hover-card body. **Renders nothing
-inline** (logic-only); the root lifts it into the preview surface.
+Marker child whose content becomes the preview body. Renders nothing inline:
+`Chip.Root` inspects its children and routes this through `renderWithPreview`,
+so the package never owns a popup.
 
 export const previewProps = [
   { name: "children", type: "ReactNode", default: "(required)", description: "The hover-card body." },

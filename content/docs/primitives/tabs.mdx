@@ -18,6 +18,7 @@ import { ExternalTabs } from './tabs/demos/external';
 - **Order is data** — `items` is an ordered array on the store, not something derived from the DOM. Drag it with whatever library you like through `render`; the result is a state change like any other.
 - **One viewport, not a panel per tab** — switching re-renders the same box, which is what lets a floating surface move rather than tear itself down.
 - **In the layout or anchored** — wrapping the viewport in `Portal` › `Positioner` › `Popup` is the entire difference between the two.
+- **A toolbar, not a tablist** — see [Why a toolbar and not a tablist](#why-a-toolbar-and-not-a-tablist). ARIA's tablist cannot describe a closable, open-ended strip.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
 ## Anatomy

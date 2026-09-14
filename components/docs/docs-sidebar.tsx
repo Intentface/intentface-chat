@@ -11,6 +11,7 @@ import { PlaygroundIcon } from "@/components/icons/playground";
 import { Collapsible } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { DocsSearch } from "./docs-search";
+import { DocsThemeToggle } from "./docs-theme-toggle";
 
 // Structural mirror of fumadocs' page-tree nodes (typeof source.pageTree). We
 // only render the two node shapes our docs use: pages and one level of folder.
@@ -136,15 +137,18 @@ const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; la
 
 export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
   <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-3 md:flex">
-    <Link
-      href="/"
-      className="flex h-8 items-center px-3 text-ink-primary"
-      aria-label="@intentface/chat"
-    >
-      <IntentfaceLogo className="size-6" />
-    </Link>
-    <div className="shrink-0">
-      <DocsSearch />
+    <div className="flex h-9 shrink-0 items-center justify-between gap-2 px-1">
+      <Link
+        href="/"
+        className="flex items-center px-2 text-ink-primary"
+        aria-label="@intentface/chat"
+      >
+        <IntentfaceLogo className="size-6" />
+      </Link>
+      <div className="flex shrink-0 items-center gap-1">
+        <DocsThemeToggle />
+        <DocsSearch />
+      </div>
     </div>
     <nav className="flex-1">
       <TreeNodes nodes={tree.children} />

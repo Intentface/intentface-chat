@@ -1,5 +1,4 @@
-import { GitHubIcon } from "@/components/icons/github";
-import { MarkdownIcon } from "@/components/icons/markdown";
+import { IconBrandGithub, IconMarkdown } from "@tabler/icons-react";
 import Button from "@/components/ui/button";
 
 const REPO = "https://github.com/Intentface/intentface-chat";
@@ -27,7 +26,7 @@ export const PageActions = ({ slug, source }: PageActionsProps) => (
       className={actionButtonClass}
       render={
         <a href={`/${slug.join("/")}.md`} target="_blank" rel="noreferrer">
-          <MarkdownIcon />
+          <IconMarkdown />
           View as Markdown
         </a>
       }
@@ -43,7 +42,7 @@ export const PageActions = ({ slug, source }: PageActionsProps) => (
             target="_blank"
             rel="noreferrer"
           >
-            <GitHubIcon />
+            <IconBrandGithub />
             Primitive source
           </a>
         }

@@ -1,7 +1,6 @@
 "use client";
 
-import { MoonIcon } from "@/components/icons/moon";
-import { SunIcon } from "@/components/icons/sun";
+import { IconMoon, IconSun } from "@tabler/icons-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { useInterfaceTheme } from "@/hooks/use-interface-theme";
 
@@ -23,7 +22,7 @@ export const DocsThemeToggle = () => {
       onClick={() => setMode(next)}
       className="rounded-full"
     >
-      {resolvedMode === "dark" ? <MoonIcon /> : <SunIcon />}
+      {resolvedMode === "dark" ? <IconMoon /> : <IconSun />}
     </IconButton>
   );
 };

@@ -4,9 +4,44 @@ Headless chat UI primitives for React — the behavior, state, and wire formats
 for building AI chat interfaces, with no styling of their own.
 
 This is the Base UI model applied to chat: **the package owns behavior, you own
-every class.** There is no pre-styled `@intentface/chat` package. The demos on
-each [docs](https://ui.intentface.com) page show how the parts fit together
-and are meant to be copied and restyled.
+every class.** There is no styled companion package and no theme to opt out of.
+The demos on each [docs](https://ui.intentface.com) page are self-contained
+Tailwind, meant to be copied and restyled.
+
+```tsx
+"use client";
+import { Composer } from "@intentface/chat/composer";
+import { Message } from "@intentface/chat/message";
+import { Thread } from "@intentface/chat/thread";
+
+export const Chat = ({ messages, send }: ChatProps) => (
+  <Thread.Root autoScroll="follow" className="relative flex h-dvh flex-col">
+    <Thread.Viewport className="flex-1 overflow-y-auto">
+      <Thread.Content className="mx-auto flex max-w-2xl flex-col gap-4 p-4">
+        {messages.map((message) => (
+          <Message.Root key={message.id} role={message.role}>
+            <Message.Text>{message.text}</Message.Text>
+          </Message.Root>
+        ))}
+      </Thread.Content>
+    </Thread.Viewport>
+
+    <Thread.Composer className="p-4">
+      <Composer.Root onSubmit={send}>
+        <Composer.Container className="rounded-xl border p-2">
+          <Composer.Textarea placeholder="Ask anything" />
+          <Composer.Actions>
+            <Composer.Submit>Send</Composer.Submit>
+          </Composer.Actions>
+        </Composer.Container>
+      </Composer.Root>
+    </Thread.Composer>
+  </Thread.Root>
+);
+```
+
+Every class above is yours; delete them and the chat still works, it just looks
+like unstyled HTML.
 
 ## Status
 
@@ -30,14 +65,18 @@ it beyond two small runtime deps (`@floating-ui/dom` for anchored positioning,
 
 Each primitive is a separate entry point, exporting an unstyled compound
 component that renders semantic DOM with `data-*` state attributes, context
-hooks, and a `render` prop for swapping the underlying element:
+hooks, and a `render` prop for swapping the underlying element. The last three
+are app-shell parts rather than chat parts, and are useful on their own:
 
 | Import | What it is |
 | --- | --- |
 | `@intentface/chat/composer` | Rich-text input over a purpose-built contenteditable engine: `/` and `@` command palette, inline chips, attachments, ask-user flow. One store per `<Composer>`, or bring your own via `Composer.createStore()`. |
-| `@intentface/chat/thread` | Scroll container with at-bottom detection and auto-follow. |
-| `@intentface/chat/message` | Message parts, turns, chip-segmented text, sources, actions. |
+| `@intentface/chat/thread` | Scroll container with at-bottom detection, auto-follow, and docked-composer measurement. |
+| `@intentface/chat/message` | Message parts, turns, chip-segmented text, selection hooks. |
 | `@intentface/chat/steps`, `/reasoning` | Tool-call timelines and reasoning disclosure. |
+| `@intentface/chat/shell` | A collapsible, resizable sidebar beside the viewport it shares the screen with, with an edge hotspot. |
+| `@intentface/chat/nav` | A nav tree with roving focus, typeahead, collapsible groups, and a guide ladder down the left edge. |
+| `@intentface/chat/tabs` | An open-ended, closable tab collection whose panel renders in the layout or anchored to its own tab. |
 | `@intentface/chat/chip`, `/attachments`, `/ask-user` | The remaining building blocks. |
 | `@intentface/chat/types` | The structural message contract + part type guards. |
 | `@intentface/chat/message-utils` | Part segmentation, turn grouping, reasoning/source derivation. |

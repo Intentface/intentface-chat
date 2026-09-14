@@ -25,18 +25,18 @@ export const InstallationBlockTabs = ({ entries }: InstallationBlockTabsProps) =
   const current = entries.find((entry) => entry.manager === manager) ?? entries[0];
 
   return (
-    <div className="not-prose my-6 overflow-hidden rounded-lg border border-primary-border">
-      <div className="flex items-center gap-1 border-primary-border border-b bg-primary-bg p-1.5">
+    <div className="not-prose my-6 overflow-hidden rounded-xl border border-secondary-border">
+      <div className="flex items-center gap-1 border-secondary-border border-b bg-secondary-bg p-2">
         {entries.map((entry) => (
           <button
             key={entry.manager}
             type="button"
             onClick={() => setManager(entry.manager)}
             className={cn(
-              "cursor-pointer rounded-full border px-3 py-1 font-mono text-sm transition-colors",
+              "cursor-pointer rounded-full border px-3 py-1.5 font-medium text-sm transition-colors",
               entry.manager === manager
-                ? "border-secondary-border bg-secondary-bg text-ink-primary shadow-xs"
-                : "border-transparent text-ink-tertiary hover:bg-primary-bg-hover hover:text-ink-secondary",
+                ? "border-primary-border bg-primary-bg text-ink-primary shadow-xs"
+                : "border-transparent text-ink-tertiary hover:bg-primary-bg hover:text-ink-secondary",
             )}
           >
             {entry.manager}
@@ -46,9 +46,13 @@ export const InstallationBlockTabs = ({ entries }: InstallationBlockTabsProps) =
           type="button"
           onClick={() => copy(current.command)}
           aria-label={`Copy: ${current.command}`}
-          className="ml-auto cursor-pointer rounded-md p-1.5 text-ink-tertiary transition-colors hover:bg-primary-bg-hover hover:text-ink-secondary"
+          className="ml-auto grid size-8 cursor-pointer place-items-center rounded-full text-ink-tertiary transition-colors hover:bg-primary-bg hover:text-ink-secondary"
         >
-          {copied === current.command ? <IconCheck /> : <IconCopy />}
+          {copied === current.command ? (
+            <IconCheck className="size-4" />
+          ) : (
+            <IconCopy className="size-4" />
+          )}
         </button>
       </div>
       <div className="[&_pre]:rounded-none [&_pre]:border-0">{current.code}</div>

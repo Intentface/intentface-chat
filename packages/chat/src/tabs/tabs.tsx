@@ -210,6 +210,11 @@ export type TabsRootProps<Value extends string = string> = Omit<
   children?: ReactNode;
 };
 
+/**
+ * The provider and container. Owns the item order, the selection and the
+ * roving focus, so every other part reads rather than holds state.
+ * Renders a `<div>` element.
+ */
 export const TabsRoot = <Value extends string = string>({
   defaultValue,
   value,
@@ -303,6 +308,11 @@ export type TabsListProps = Omit<PrimitiveProps<"div", TabsPartState>, "children
   children?: ReactNode | ((value: string, index: number) => ReactNode);
 };
 
+/**
+ * The strip. A `toolbar` of disclosures rather than a `tablist`, because a
+ * tablist may hold only tabs and must always have one selected.
+ * Renders a `<div>` element.
+ */
 export const TabsList = ({
   children,
   className,

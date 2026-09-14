@@ -168,6 +168,11 @@ const ownsTheKeys = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
+/**
+ * The provider and container. Owns the keyboard handling for the whole tree,
+ * so roving focus and typeahead work without any row registering itself.
+ * Renders a `<div>` element.
+ */
 export const NavRoot = ({
   defaultExpanded,
   expanded,
@@ -389,6 +394,11 @@ const measure = (element: HTMLElement) => {
   return size;
 };
 
+/**
+ * A level of the tree. A list inside a group is that group's collapsible
+ * panel; a top-level list is not collapsible, having no trigger above it.
+ * Renders a `<div>` element.
+ */
 export const NavList = ({
   guide,
   keepMounted = false,

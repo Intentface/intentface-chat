@@ -17,10 +17,14 @@ import { useEffect, useState } from "react";
  */
 export const External = () => {
   const [store] = useState(() => Shell.createStore());
+  // The element the shortcut is scoped to. A real app binds the key for the
+  // whole window and needs no such ref; this one shares a page with other
+  // demos and with the docs' own search field.
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
 
   return (
-    <div className="flex w-full flex-col gap-3">
-      <Shortcut store={store} />
+    <div ref={setHost} className="flex w-full flex-col gap-3">
+      <Shortcut store={store} host={host} />
 
       <Shell.Root
         store={store}
@@ -87,17 +91,25 @@ const ExternalTrigger = ({ store }: { store: ShellStore }) => {
  * the surrounding app has already spent. Binding one is a few lines, and
  * `toggle` is all it needs — a floated-out sidebar is pinned open rather than
  * closed. Press Cmd/Ctrl + B with the pointer over this demo.
+ *
+ * The `host` test is this page's problem, not yours: a docs page carries many
+ * demos and a search field, so a bare window listener here would swallow
+ * Cmd/Ctrl + B everywhere on it. An app binding its own shortcut drops the
+ * check and keeps the rest.
  */
-const Shortcut = ({ store }: { store: ShellStore }) => {
+const Shortcut = ({ store, host }: { store: ShellStore; host: HTMLElement | null }) => {
   useEffect(() => {
+    if (!host) return;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "b" || !(event.metaKey || event.ctrlKey)) return;
+      if (!host.matches(":hover") && !host.contains(document.activeElement)) return;
       event.preventDefault();
       store.getSnapshot().toggle();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [store]);
+  }, [store, host]);
 
   return null;
 };

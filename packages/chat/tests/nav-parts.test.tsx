@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { act, fireEvent, render } from "@testing-library/react";
+import { memo } from "react";
 import { Nav } from "../src/nav";
 
 const wait = (ms = 20) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -439,5 +440,110 @@ describe("a railless group holding a railed one", () => {
     // …and out of it again, to the collapsed sibling.
     fireEvent.keyDown(document.activeElement as Element, { key: "ArrowDown" });
     expect(document.activeElement).toBe(getByTestId("website"));
+  });
+});
+
+describe("keepMounted", () => {
+  /** The tree above, but the inner list is kept in the DOM when collapsed. */
+  const Kept = (root: Partial<Parameters<typeof Nav.Root>[0]> = {}) => (
+    <Nav.Root data-testid="root" {...root}>
+      <Nav.List data-testid="list-0">
+        <Nav.Item value="inbox" data-testid="inbox">
+          <Nav.Label>Inbox</Nav.Label>
+        </Nav.Item>
+
+        <Nav.Group value="workspace" data-testid="group-workspace">
+          <Nav.Trigger data-testid="trigger-workspace">
+            <Nav.Label>Workspace</Nav.Label>
+          </Nav.Trigger>
+          <Nav.List data-testid="list-1" keepMounted>
+            <Nav.Item value="projects" data-testid="projects">
+              <Nav.Label>Projects</Nav.Label>
+            </Nav.Item>
+          </Nav.List>
+        </Nav.Group>
+
+        <Nav.Item value="settings" data-testid="settings">
+          <Nav.Label>Settings</Nav.Label>
+        </Nav.Item>
+      </Nav.List>
+    </Nav.Root>
+  );
+
+  test("a collapsed kept list stays in the DOM behind hidden=until-found", async () => {
+    const { getByTestId } = render(Kept({ defaultExpanded: ["workspace"] }));
+
+    expect(getByTestId("list-1").hasAttribute("hidden")).toBe(false);
+
+    fireEvent.click(getByTestId("trigger-workspace"));
+    await settle();
+
+    // Still rendered — that is the whole point of the prop — but marked so the
+    // browser's find-in-page can reveal it.
+    expect(getByTestId("list-1")).toBeTruthy();
+    expect(getByTestId("list-1").getAttribute("hidden")).toBe("until-found");
+  });
+
+  test("its rows leave the roving order while it is collapsed", async () => {
+    const { getByTestId } = render(Kept({ defaultExpanded: ["workspace"] }));
+
+    fireEvent.click(getByTestId("trigger-workspace"));
+    await settle();
+
+    const trigger = getByTestId("trigger-workspace");
+    act(() => trigger.focus());
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+
+    // Not `projects`, which is inside the collapsed list the visitor just closed.
+    expect(document.activeElement).toBe(getByTestId("settings"));
+  });
+
+  test("reopening clears the attribute", async () => {
+    const { getByTestId } = render(Kept({ defaultExpanded: ["workspace"] }));
+
+    fireEvent.click(getByTestId("trigger-workspace"));
+    await settle();
+    fireEvent.click(getByTestId("trigger-workspace"));
+    await settle();
+
+    expect(getByTestId("list-1").hasAttribute("hidden")).toBe(false);
+  });
+});
+
+describe("controlled expanded", () => {
+  /**
+   * Memoised on purpose. Without it React's store-consistency check papers over
+   * a silent snapshot swap, so the bug this covers is invisible.
+   */
+  const Group = memo(() => (
+    <Nav.Group value="workspace" data-testid="group-workspace">
+      <Nav.Trigger data-testid="trigger-workspace">
+        <Nav.Label>Workspace</Nav.Label>
+      </Nav.Trigger>
+      <Nav.List data-testid="list-1">
+        <Nav.Item value="projects" data-testid="projects">
+          <Nav.Label>Projects</Nav.Label>
+        </Nav.Item>
+      </Nav.List>
+    </Nav.Group>
+  ));
+
+  const Controlled = ({ expanded }: { expanded: string[] }) => (
+    <Nav.Root data-testid="root" expanded={expanded} onExpandedChange={() => {}}>
+      <Nav.List data-testid="list-0">
+        <Group />
+      </Nav.List>
+    </Nav.Root>
+  );
+
+  test("a memoised group follows the prop", async () => {
+    const { getByTestId, rerender } = render(<Controlled expanded={[]} />);
+
+    expect(getByTestId("group-workspace").hasAttribute("data-open")).toBe(false);
+
+    rerender(<Controlled expanded={["workspace"]} />);
+    await settle();
+
+    expect(getByTestId("group-workspace").hasAttribute("data-open")).toBe(true);
   });
 });

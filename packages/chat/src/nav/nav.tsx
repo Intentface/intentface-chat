@@ -205,9 +205,11 @@ export const NavRoot = ({
   }
 
   // A controlled Root's prop is the state, so keep the snapshot following it.
+  // `notify` here and nowhere else: this is the one hydrate that runs after
+  // mount, where a memoised subtree would otherwise never learn of the change.
   useIsomorphicLayoutEffect(() => {
     if (expanded === undefined) return;
-    store.hydrate({ expanded });
+    store.hydrate({ expanded }, { notify: true });
   }, [expanded, store]);
 
   const move = useCallback((rows: HTMLElement[], index: number) => {
@@ -541,13 +543,24 @@ export const NavList = ({
   // Waits on `closing` rather than on `transitionStatus`, because at the moment the
   // transitionStatus flips there is no animation running yet to wait for.
   useIsomorphicLayoutEffect(() => {
-    if (!closing || keepMounted) return;
+    if (!closing) return;
     const controller = new AbortController();
     runWhenAnimationsFinish(() => setMounted(false), controller.signal);
     return () => controller.abort();
-  }, [closing, keepMounted, runWhenAnimationsFinish, setMounted]);
+  }, [closing, runWhenAnimationsFinish, setMounted]);
 
   const hidden = !open && !mounted;
+
+  // `until-found` is a string the DOM understands and React's boolean `hidden`
+  // cannot express, so a kept list gets the attribute imperatively. Without it
+  // the list stays navigable while collapsed and roving focus walks into rows
+  // the visitor just closed.
+  useIsomorphicLayoutEffect(() => {
+    const element = listRef.current;
+    if (!element || !keepMounted) return;
+    if (hidden) element.setAttribute("hidden", "until-found");
+    else element.removeAttribute("hidden");
+  }, [keepMounted, hidden]);
   // `ending` is withheld until the pinned height has had a frame to paint.
   const published = transitionStatus === "ending" && !closing ? undefined : transitionStatus;
 
@@ -568,8 +581,8 @@ export const NavList = ({
         {
           "data-nav-list": "",
           id: group?.listId,
-          // `until-found` is a string the DOM understands and React's boolean
-          // `hidden` cannot express, so it goes on after mount.
+          // A kept list gets `hidden="until-found"` from the effect above; React
+          // can only express the boolean form, so it must not fight over it.
           hidden: keepMounted ? undefined : hidden,
           style: {
             "--nav-depth": depth,

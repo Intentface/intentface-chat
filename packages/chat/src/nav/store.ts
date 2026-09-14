@@ -14,8 +14,16 @@ export type NavState = {
 export type NavStore = {
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => NavState;
-  /** Apply server-known state without notifying — the first render must match. */
-  hydrate: (state: { expanded?: string[] }) => void;
+  /**
+   * Adopt state the Root owns rather than the store.
+   *
+   * Silent by default, because the seeding call happens *during render* and a
+   * handle you created yourself may already have subscribers — notifying there
+   * would update a mounted component mid-render. Pass `notify` from a layout
+   * effect, where it is safe and necessary: without it a memoised subtree never
+   * re-renders and so never learns a controlled value changed.
+   */
+  hydrate: (state: { expanded?: string[] }, options?: { notify?: boolean }) => void;
   controlledRef: RefObject<boolean>;
   onExpandedChangeRef: RefObject<((expanded: string[]) => void) | null>;
   /** Route a change through the controlled/uncontrolled decision and persistence. */
@@ -80,9 +88,12 @@ export const createNavStore = (): NavStore => {
       };
     },
     getSnapshot: () => snapshot,
-    hydrate: ({ expanded }) => {
+    hydrate: ({ expanded }, { notify: shouldNotify = false } = {}) => {
       if (!expanded) return;
-      snapshot = { ...snapshot, expanded: new Set(expanded) };
+      const next = new Set(expanded);
+      if (shouldNotify && sameSet(snapshot.expanded, next)) return;
+      snapshot = { ...snapshot, expanded: next };
+      if (shouldNotify) notify();
     },
     controlledRef,
     onExpandedChangeRef,

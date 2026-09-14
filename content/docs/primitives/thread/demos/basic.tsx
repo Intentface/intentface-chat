@@ -3,7 +3,8 @@
 import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Thread, useThread } from "@intentface/chat/thread";
-import { type ComponentProps, useState } from "react";
+import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
+import { useState } from "react";
 
 type DemoMessage = { id: string; role: "user" | "assistant"; text: string };
 
@@ -73,7 +74,7 @@ export const Basic = () => {
                 </Composer.Textarea>
                 <Composer.Actions className="flex justify-end gap-2 p-2">
                   <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-                    <SendIcon />
+                    <IconArrowUp className="size-4" />
                   </Composer.Submit>
                 </Composer.Actions>
               </Composer.Container>
@@ -98,41 +99,7 @@ const ScrollButton = () => {
       aria-label="Scroll to latest"
       className="absolute -top-10 z-10 flex size-8 cursor-pointer items-center justify-center rounded-full border border-[#f0f0f0] bg-white text-[#686868] shadow-xs transition-colors hover:text-[#1a1a1a] dark:border-[#262626] dark:bg-[#181818] dark:text-[#9b9b9b] dark:hover:text-[#fcfcfc]"
     >
-      <ArrowDownIcon />
+      <IconArrowDown className="size-4" />
     </button>
   );
 };
-
-const ArrowDownIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M8 3v10m0 0 4.5-4.5M8 13l-4.5-4.5" />
-  </svg>
-);
-
-const SendIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
-  </svg>
-);

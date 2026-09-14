@@ -5,6 +5,7 @@ source: attachments
 ---
 
 import { Basic } from './attachments/demos/basic';
+import { Dropzone } from './attachments/demos/dropzone';
 
 <Demo component={<Basic />} file="primitives/attachments/demos/basic.tsx" />
 
@@ -48,14 +49,18 @@ With a drop zone and a picker trigger:
 </>
 ```
 
-## Accessibility
+## Examples
 
-`Attachments.Remove` and `Attachments.Trigger` are real buttons with default
-overridable names ("Remove attachment" / "Add attachment"). Pass `filename` to
-`Remove` so each chip announces distinctly ("Remove report.pdf") — without it,
-N remove buttons all read the same. `Attachments.Error` is a `role="alert"`
-live region: content appearing inside it announces immediately (the copy is
-still yours).
+### Dropping, picking and rejecting files
+
+The whole intake path in one tray. The package ships the mechanics —
+`matchesAccept` and `toAttachmentItem` are plain functions — and none of the
+policy: what counts as too large, and what the message says, are yours.
+
+Validation emits a code rather than copy, which is why the wording lives in one
+map in the demo and can be localised there.
+
+<Demo component={<Dropzone />} file="primitives/attachments/demos/dropzone.tsx" />
 
 ## API reference
 
@@ -64,14 +69,14 @@ Every part accepts `className`, `style`, and `render` (see
 
 ### Attachments
 
-The tray container. Renders `data-attachments` and takes no props of its own —
-mount it conditionally when there are items to show.
+The tray container. Mount it only when there are items to show; it renders no
+layout of its own. Renders a `<div>` element.
 
 ### Attachments.Item
 
-One attachment chip — a structural slot with no props of its own. Render the
-filename, size, thumbnail or icon inside it however you like. Renders
-`data-attachments-item`.
+One attachment, as a structural slot with no media taxonomy of its own. Read
+the item's `mediaType` and decide what an image or a PDF looks like. Renders a
+`<div>` element.
 
 export const itemAttrs = [
   { attribute: "data-attachments-item", description: "The chip." },
@@ -81,8 +86,9 @@ export const itemAttrs = [
 
 ### Attachments.Remove
 
-Removal affordance, shown on hover. Renders `<button data-attachments-remove>`
-named "Remove attachment", or `Remove {filename}` when `filename` is set.
+The removal affordance. Named "Remove attachment" by default, or
+`Remove {filename}` when `filename` is set, so a row of them does not announce
+identically. Renders a `<button>` element.
 
 export const removeProps = [
   { name: "onRemove", type: "() => void", default: "(required)", description: "Called when the button is clicked." },
@@ -93,9 +99,9 @@ export const removeProps = [
 
 ### Attachments.Dropzone
 
-Drop overlay. Renders `data-attachments-dropzone`. Pass `portalSelector` to
-portal it elsewhere — into the app shell, for instance, so files can be dropped
-anywhere.
+The drop overlay. `portalSelector` moves it elsewhere in the document, so files
+can be dropped anywhere rather than only over the tray. Renders a `<div>`
+element.
 
 export const dropzoneProps = [
   { name: "visible", type: "boolean", default: "false", description: "Show the overlay (while files are dragged over the scope)." },
@@ -114,16 +120,15 @@ export const dropzoneAttrs = [
 
 ### Attachments.Error
 
-Validation message slot. Renders `<span role="alert" data-attachments-error>`,
-so content appearing inside it announces immediately. Validation emits a
-structured `AttachmentErrorCode` (`"accept"`, `"max_file_size"`, `"max_files"`)
-on the composer's attachments state — you map codes to your own (localized)
-copy; the package ships no messages.
+The validation slot, as a live region: whatever appears inside announces
+immediately. Validation emits an `AttachmentErrorCode` — `"accept"`,
+`"max_file_size"` or `"max_files"` — never copy, so the message is yours to
+write and localise. Renders a `<span>` element with `role="alert"`.
 
 ### Attachments.Trigger
 
-The file-picker button. Renders `<button data-attachments-trigger>` named
-"Add attachment" by default.
+The file-picker button, named "Add attachment" by default. The package owns no
+file input; wire this to your own. Renders a `<button>` element.
 
 ## Utilities
 

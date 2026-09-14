@@ -4,7 +4,9 @@ description: The scroll container — at-bottom detection, auto-follow, docked-c
 source: thread
 ---
 
+import { AutoScroll } from './thread/demos/autoscroll';
 import { Basic } from './thread/demos/basic';
+import { Jump } from './thread/demos/jump';
 
 <Demo component={<Basic />} file="primitives/thread/demos/basic.tsx" />
 
@@ -14,6 +16,7 @@ import { Basic } from './thread/demos/basic';
 - **Auto-scroll modes** — `off` / `bottom` / `jump` / `follow` via the `autoScroll` prop (see below).
 - **Composer inset** — measures the docked composer to reserve space; the overlays fade the top and bottom edges.
 - **Owns no data** — you map your messages in; rows are addressable by a `data-message-id` attribute.
+- **Costs nothing while streaming** — see [Why the scroll subsystem is free](#why-the-scroll-subsystem-is-free). There is nothing here to optimise around.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
 ## Anatomy
@@ -22,9 +25,11 @@ The bare nesting — `Thread` provides the scroll context its parts read:
 
 ```tsx
 <Thread.Root>
-  <Thread.Viewport>{/* messages */}</Thread.Viewport>
-  <Thread.Composer>{/* composer */}</Thread.Composer>
-  <Thread.ScrollButton />
+  <Thread.Overlay />
+  <Thread.Viewport>
+    <Thread.Content />
+  </Thread.Viewport>
+  <Thread.Composer />
 </Thread.Root>
 ```
 
@@ -41,16 +46,21 @@ A realistic surface with overlays and a message list:
   <Thread.Composer>
     <Composer.Root onSubmit={sendMessage}>{/* … */}</Composer.Root>
   </Thread.Composer>
-  <Thread.ScrollButton />
+  {/* Not a part: a scroll-to-bottom control is yours, built from
+      `useThread()`'s `isAtBottom` and `scrollToBottom`. */}
+  <ScrollToBottomButton />
   <Thread.Overlay direction="bottom" />
 </Thread.Root>
 ```
 
-## Auto-scroll
+## Examples
 
-`autoScroll` controls how the newest turn lands and whether the view follows a
-stream. `Thread.Viewport` maps `--thread-turn-min-height` onto its last child,
-so the reserve that lets the newest turn land at the top is wired for you.
+### Choosing an auto-scroll mode
+
+`autoScroll` decides two things at once: where a new turn lands, and whether the
+view keeps following while text streams into it. `Thread.Viewport` maps
+`--thread-turn-min-height` onto its last child, so the reserve that lets a turn
+land at the top is wired for you.
 
 export const autoScrollModes = [
   { value: '"follow"', default: true, description: "Newest lands at the top; the view follows the stream (ChatGPT-style)." },
@@ -60,6 +70,8 @@ export const autoScrollModes = [
 ];
 
 <ValuesTable rows={autoScrollModes} />
+
+<Demo component={<AutoScroll />} file="primitives/thread/demos/autoscroll.tsx" />
 
 ### Opening position
 
@@ -76,45 +88,17 @@ releases it: a large code block landing at once won't drop the follow
 mid-stream. Once you scroll up, the follow can't scroll again until you return
 to the bottom.
 
-## useThread
+### Jumping to a message
 
-Read the scroll state and issue commands from anywhere inside `<Thread.Root>`:
+`scrollToMessage` finds a row by the `data-message-id` attribute you put on it.
+There is no wrapper part and no registry: rows resolve lazily at call time, so a
+transcript of ten thousand turns costs the same as this one.
+`useThreadVisibility` reads the same attribute to report which rows are on
+screen, and creates its observers only once something subscribes.
 
-export const useThreadMembers = [
-  { name: "isAtTop", type: "boolean", description: "Whether the top sentinel is in view (start of the transcript) — pairs with load-older-history. Subscribes the caller; independent of isAtBottom." },
-  { name: "isAtBottom", type: "boolean", description: "Whether the bottom sentinel is in view. Subscribes the caller — only components that read it re-render on flips." },
-  { name: "scrollToBottom", type: "(behavior?) => void", description: "Scroll to the live end." },
-  { name: "scrollToTop", type: "(behavior?) => void", description: "Scroll to the start; releases the follow." },
-  { name: "scrollToMessage", type: "(id, options?) => boolean", description: "Scroll to a row carrying data-message-id={id}. Options: align (\"start\" | \"center\" | \"end\" | \"nearest\"), behavior. Called before the transcript loads (a deep link), the jump is queued and runs when the row mounts. Returns false only when the id is absent from a loaded transcript." },
-];
+<Demo component={<Jump />} file="primitives/thread/demos/jump.tsx" />
 
-<PropsTable rows={useThreadMembers} />
-
-`scrollToMessage` resolves rows lazily by the `data-message-id` attribute — put
-it on each row you want addressable; there is no wrapper component and no
-per-row cost:
-
-```tsx
-{turns.map((turn) => (
-  <Message.Turn key={turn.key} data-message-id={turn.id}>{/* … */}</Message.Turn>
-))}
-```
-
-## useThreadVisibility
-
-Track which rows are in view — e.g. to highlight the active turn in an outline.
-Subscribing lazily creates the tracking observers; when the last subscriber
-unmounts they are torn down, so threads that never call it pay nothing. Rows
-are identified by the same `data-message-id` attribute `scrollToMessage` uses.
-
-export const visibilityMembers = [
-  { name: "visibleMessageIds", type: "string[]", description: "Rows intersecting the viewport, in document order." },
-  { name: "currentMessageId", type: "string | null", description: "The topmost visible row — the one being read." },
-];
-
-<PropsTable rows={visibilityMembers} />
-
-## Performance
+## Why the scroll subsystem is free
 
 Thread's scroll subsystem is built to cost nothing while a reply streams — you
 don't need to optimize around it:
@@ -146,21 +130,6 @@ unfollowed while pinned there.
 
 An upward wheel or a downward touch-drag releases follow the same way; a
 scrollbar drag away from the bottom releases it via the sentinel.
-
-## Accessibility
-
-- **Viewport** is a focusable `role="region"` with a default
-  `aria-label="Messages"` (overridable), so it's reachable and scrollable by
-  keyboard.
-- **Content column** is a `role="log"` with `aria-relevant="additions"`: a turn
-  announces when its row is **added**. In-place text mutation — tokens
-  streaming into an existing row — deliberately does not re-announce
-  (token-by-token narration would be noise). If you want end-of-response
-  announcements, add a consumer-owned `role="status"` region that flips on
-  completion.
-- **Reduced motion.** Programmatic scrolls requested as `"smooth"`
-  (`scrollToBottom`, `scrollToTop`, `scrollToMessage`, and the auto-follow)
-  downgrade to instant when the OS has `prefers-reduced-motion` set.
 
 ## API reference
 
@@ -264,3 +233,41 @@ export const cssVars = [
 ];
 
 <AttributesTable rows={cssVars} />
+
+## useThread
+
+Read the scroll state and issue commands from anywhere inside `<Thread.Root>`:
+
+export const useThreadMembers = [
+  { name: "isAtTop", type: "boolean", description: "Whether the top sentinel is in view (start of the transcript) — pairs with load-older-history. Subscribes the caller; independent of isAtBottom." },
+  { name: "isAtBottom", type: "boolean", description: "Whether the bottom sentinel is in view. Subscribes the caller — only components that read it re-render on flips." },
+  { name: "scrollToBottom", type: "(behavior?) => void", description: "Scroll to the live end." },
+  { name: "scrollToTop", type: "(behavior?) => void", description: "Scroll to the start; releases the follow." },
+  { name: "scrollToMessage", type: "(id, options?) => boolean", description: "Scroll to a row carrying data-message-id={id}. Options: align (\"start\" | \"center\" | \"end\" | \"nearest\"), behavior. Called before the transcript loads (a deep link), the jump is queued and runs when the row mounts. Returns false only when the id is absent from a loaded transcript." },
+];
+
+<PropsTable rows={useThreadMembers} />
+
+`scrollToMessage` resolves rows lazily by the `data-message-id` attribute — put
+it on each row you want addressable; there is no wrapper component and no
+per-row cost:
+
+```tsx
+{turns.map((turn) => (
+  <Message.Turn key={turn.key} data-message-id={turn.id}>{/* … */}</Message.Turn>
+))}
+```
+
+## useThreadVisibility
+
+Track which rows are in view — e.g. to highlight the active turn in an outline.
+Subscribing lazily creates the tracking observers; when the last subscriber
+unmounts they are torn down, so threads that never call it pay nothing. Rows
+are identified by the same `data-message-id` attribute `scrollToMessage` uses.
+
+export const visibilityMembers = [
+  { name: "visibleMessageIds", type: "string[]", description: "Rows intersecting the viewport, in document order." },
+  { name: "currentMessageId", type: "string | null", description: "The topmost visible row — the one being read." },
+];
+
+<PropsTable rows={visibilityMembers} />

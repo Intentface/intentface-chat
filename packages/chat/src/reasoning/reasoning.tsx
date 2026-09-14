@@ -42,6 +42,12 @@ export type ReasoningRootProps = Omit<ComponentProps<typeof Collapsible>, "onOpe
   onOpenChange?: (open: boolean) => void;
 };
 
+/**
+ * The disclosure root. Tracks how long `isStreaming` stayed true and hands the
+ * elapsed seconds back through `useReasoning`, so a label can change without
+ * the consumer timing anything.
+ * Renders a `<div>` element.
+ */
 export const ReasoningRoot = memo(
   ({
     isStreaming = false,
@@ -111,12 +117,24 @@ ReasoningRoot.displayName = "Reasoning";
 
 export type ReasoningTriggerProps = ComponentProps<typeof Collapsible.Trigger>;
 
+/**
+ * The toggle. Ships no copy: supply the label as children, and read
+ * `isStreaming` and `duration` from `useReasoning` if it should change while
+ * the model is thinking.
+ * Renders a `<button>` element.
+ */
 export const ReasoningTrigger = (props: ReasoningTriggerProps) => (
   <Collapsible.Trigger data-reasoning-trigger="" {...props} />
 );
 
 export type ReasoningContentProps = ComponentProps<typeof Collapsible.Panel>;
 
+/**
+ * The collapsible panel. Publishes its measured height while a transition runs
+ * and releases it once settled open, so a panel that is open keeps growing as
+ * text streams in.
+ * Renders a `<div>` element.
+ */
 export const ReasoningContent = (props: ReasoningContentProps) => (
   <Collapsible.Panel data-reasoning-content="" {...props} />
 );

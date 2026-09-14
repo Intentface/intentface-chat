@@ -28,6 +28,23 @@ active row carries the tab stop, which keeps a row rendered as a real anchor
 reachable without JavaScript. A field inside the tree keeps its own arrow keys,
 or its caret could never move.
 
+A scroll surface has to be reachable before it can be scrolled. The thread's
+viewport is a focusable `role="region"` named "Messages" by default, so a
+keyboard user can Tab to it and use the usual keys. Only the upward keys —
+`ArrowUp`, `PageUp` and `Home` — are intercepted, to release auto-follow;
+scrolling down never does, because releasing it at the bottom would leave the
+view unfollowed while pinned there.
+
+Announce additions, not mutations. The thread's content column is a `role="log"`
+with `aria-relevant="additions"`, so a turn announces when its row is added and
+tokens streaming into an existing row deliberately do not re-announce.
+Token-by-token narration is noise. If an end-of-response announcement is wanted,
+add your own `role="status"` region that flips on completion.
+
+Motion preferences are honoured for programmatic scrolls. Anything the thread
+requests as smooth, including auto-follow, downgrades to instant when the
+operating system asks for reduced motion.
+
 Command lists and ask-user options move a highlight rather than DOM focus, so the
 caret stays in the editor while you navigate. Arrowing past the end of a list
 keeps focus in place; arrowing up past the first ask-user option returns to the
@@ -45,14 +62,42 @@ removes the focus indicator rather than softening a hover effect.
 
 ## Roles and relationships
 
-The composer's editor is wired to its command list as a combobox: `aria-expanded`,
-`aria-controls`, and `aria-activedescendant` reference a `listbox`, and the active
-row carries `aria-selected`. Ask-user renders a labelled `radiogroup`, or
-checkboxes with `aria-checked` for multi-select questions. Disabled options are
-announced but skipped by highlight and selection.
+The composer's editor is wired to its command list as a combobox:
+`aria-autocomplete="list"` and `aria-haspopup="listbox"`, plus `aria-controls`
+and `aria-activedescendant` while a popup is open. The popup is a `listbox`
+named "Suggestions" whose rows carry stable ids and `aria-selected`; selection
+stays in the editor, so rows are never tab stops. Grouped lists wrap in
+`role="group"` named by their label, async resolution sets `aria-busy`, and the
+empty state is a `role="status"` region.
 
-`Steps` marks the active item with `aria-current="step"`. `Reasoning.Root` carries
-`aria-busy` while streaming.
+That pattern deviates from the APG combobox in one place, deliberately.
+`aria-expanded` is omitted because ARIA 1.2 forbids it on `textbox`, and moving
+to `role="combobox"` would forbid `aria-multiline`, which matters more for a
+chat field that wraps. The popup announces through `aria-haspopup` and live
+`aria-activedescendant` narration instead, and Tab selects the highlighted
+option rather than moving focus.
+
+Ask-user renders a labelled `radiogroup`, or `role="group"` with checkboxes for
+multi-select. Each option is the real control, holding the group's single tab
+stop through roving `tabindex`, so never nest an interactive control inside one:
+the option *is* the control, and the composer's question mode treats native
+inputs as foreign editables. Disabled options are announced but skipped by
+highlight and selection.
+
+A placeholder overlay is decoration. The composer's is `aria-hidden`, and the
+string reaches assistive technology through `aria-placeholder` instead — so when
+rich `children` replace the string visually, keep the `placeholder` string
+alongside or the hint stops announcing.
+
+Clicking chrome should not create a tab stop. The composer's container is a
+mouse-only focus passthrough: clicking it focuses the editor, clicks on nested
+buttons and links pass through, and it carries no role, so keyboard users tab
+straight to the editor.
+
+`Steps` marks the active item with `aria-current="step"`. A disclosure built for
+streaming says so while it runs: `Reasoning.Root` carries `aria-busy` until
+`isStreaming` flips false, so assistive technology knows the text underneath is
+still arriving rather than finished.
 
 Disclosure controls announce both their state and what they govern: the shell's
 trigger is a `<button>` with `aria-expanded` and an `aria-controls` pointing at
@@ -61,6 +106,16 @@ the sidebar it opens. Its grip is a focusable `role="separator"` carrying
 trio, and it always carries a value, falling back to the minimum before the first
 measurement lands — a focusable separator without one is an invalid widget.
 
+Inline tokens announce as part of the sentence they sit in. A chip's label
+reads as ordinary text, its icon is `aria-hidden` so decoration never announces,
+and a chip committed in the composer's editor carries an `aria-label` naming it
+as a mention so it reads as one token rather than a stray word.
+
+Where the package hands you a surface to build, the obligations come with it.
+`Chip` never renders its own hover preview — `renderWithPreview` is the seam —
+so whatever you lift it into has to honour the hover-card contract: open on
+keyboard focus as well as hover, and dismiss on Escape.
+
 A part that exists only for the pointer is hidden from everything else. The
 shell's hotspot, the strip that floats a collapsed sidebar back out on hover, is
 `aria-hidden`, because the trigger already covers the same state change for
@@ -68,7 +123,13 @@ keyboard and screen-reader users.
 
 The nav's trigger carries the same `aria-expanded` and `aria-controls` pair,
 pointing at the list it governs. Disabled rows get `aria-disabled` rather than
-leaving the focus ring, so they stay discoverable. `Nav.Action` sits outside the
+leaving the focus ring, so they stay discoverable.
+
+Status that only exists in colour reaches nobody. `Steps.Icon` is `aria-hidden`
+and a tint announces nothing, so a row whose state matters needs `Steps.Status`
+mounted inside it — a visually hidden span speaking the resolved status, which
+takes `children` when the wording should be localised. The item whose status is
+`"active"` also carries `aria-current="step"`. `Nav.Action` sits outside the
 roving order and stops every event it handles, or activating it would also
 activate the row wrapped around it.
 
@@ -93,10 +154,34 @@ close control — `Escape` then duplicates it rather than being the only way out
 
 ## Accessible labels
 
+A visual role is not an announced one. A message's `role` is an opaque string
+the package only surfaces as `data-role`, so alignment and colour carry it to
+sighted readers and nothing carries it to anyone else. Give each message a
+visually hidden `{role} said` prefix, or an `aria-label` on the root, or a
+transcript read top to bottom will not attribute its turns.
+
+Status markers around a message are your markup, so their roles are too. An
+inline failure marker wants `role="alert"` so it announces immediately; quieter
+states such as "stopped" or "generating…" want `role="status"`. Anything you add
+beside a message — copy, regenerate, quote — should be a real button with an
+accessible name.
+
 Interactive parts carry default accessible names; containers do not, since they
 are not controls. `Composer.Submit` announces as "Stop generating" while
-generating rather than "Send message". `Attachments.Remove` takes a `filename` so
+generating rather than "Send message", so a control that morphs still names what
+it does. Submitting is exposed as `data-submitting` and nothing else: the
+package emits no live-region copy, so add your own `role="status"` region if
+in-flight announcements beyond the button state are wanted. `Attachments.Remove` takes a `filename` so
 each remove button announces its own item.
+
+Where a name would otherwise repeat, the package takes the distinguishing part
+as a prop. `Attachments.Remove` defaults to "Remove attachment", which is useless
+when five of them sit in a row, so pass `filename` and each announces its own
+item. `Attachments.Trigger` defaults to "Add attachment".
+
+A validation slot is a live region. `Attachments.Error` renders `role="alert"`,
+so whatever appears inside it announces immediately — the copy stays yours,
+because validation emits a code rather than a message.
 
 All defaults are overridable via `aria-label` or `aria-labelledby`. Anything
 announced as content rather than as a name — status text, validation messages —

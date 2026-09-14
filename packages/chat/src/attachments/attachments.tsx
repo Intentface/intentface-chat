@@ -86,6 +86,11 @@ export const matchesAccept = (file: File, accept: string): boolean => {
 
 export type AttachmentsRootProps = PrimitiveProps<"div">;
 
+/**
+ * The tray container. Mount it only when there are items to show; it renders
+ * no layout of its own.
+ * Renders a `<div>` element.
+ */
 export const AttachmentsRoot = ({
   className,
   render,
@@ -103,6 +108,11 @@ export type AttachmentsItemProps = PrimitiveProps<"div">;
 // Generic structural slot for one attachment. It carries no media taxonomy —
 // categorization (image/pdf/file, icons, thumbnails) belongs to the styled
 // layer, which reads the item's raw mediaType however it wants.
+/**
+ * One attachment, as a structural slot with no media taxonomy of its own.
+ * Read the item's `mediaType` and decide what an image or a PDF looks like.
+ * Renders a `<div>` element.
+ */
 export const AttachmentsItem = ({
   className,
   render,
@@ -121,6 +131,12 @@ export type AttachmentsRemoveProps = PrimitiveProps<"button"> & {
   filename?: string;
 };
 
+/**
+ * The removal affordance. Named "Remove attachment" by default, or
+ * "Remove {filename}" when `filename` is set, so a row of them does not
+ * announce identically.
+ * Renders a `<button>` element.
+ */
 export const AttachmentsRemove = ({
   onRemove,
   filename,
@@ -158,6 +174,11 @@ export type AttachmentsDropzoneProps = PrimitiveProps<"div", AttachmentsDropzone
   children?: ReactNode;
 };
 
+/**
+ * The drop overlay. `portalSelector` moves it elsewhere in the document, so
+ * files can be dropped anywhere rather than only over the tray.
+ * Renders a `<div>` element.
+ */
 export const AttachmentsDropzone = ({
   visible = false,
   keepMounted = false,
@@ -194,6 +215,11 @@ export type AttachmentsErrorProps = PrimitiveProps<"span">;
 
 // role="alert" (assertive): a rejected pick/drop is a user-action failure that
 // should announce immediately. The copy inside stays the consumer's.
+/**
+ * The validation slot, as a live region: whatever appears inside announces
+ * immediately. Validation emits a code, never copy, so the message is yours.
+ * Renders a `<span>` element with `role="alert"`.
+ */
 export const AttachmentsError = ({
   className,
   render,
@@ -208,6 +234,11 @@ export const AttachmentsError = ({
 
 export type AttachmentsTriggerProps = PrimitiveProps<"button">;
 
+/**
+ * The file-picker button, named "Add attachment" by default. The package owns
+ * no file input; wire this to your own.
+ * Renders a `<button>` element.
+ */
 export const AttachmentsTrigger = ({
   className,
   render,

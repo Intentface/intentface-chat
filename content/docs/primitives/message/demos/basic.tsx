@@ -1,7 +1,8 @@
 "use client";
 
 import { Message } from "@intentface/chat/message";
-import { type ComponentProps, useState } from "react";
+import { IconCheck, IconCopy } from "@tabler/icons-react";
+import { useState } from "react";
 
 // Message.Root stamps data-role / data-last / data-error and imposes no layout;
 // the bubble, alignment, and actions are all yours.
@@ -49,41 +50,7 @@ const CopyButton = ({ value }: { value: string }) => {
       aria-label="Copy message"
       className="flex size-7 cursor-pointer items-center justify-center rounded-md text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
     >
-      {copied ? <CheckIcon /> : <CopyIcon />}
+      {copied ? <IconCheck className="size-3.5" /> : <IconCopy className="size-4" />}
     </button>
   );
 };
-
-const CopyIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
-    <path d="M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H3a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 3 10.5h.5" />
-  </svg>
-);
-
-const CheckIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m2.5 8.5 4 4 7-9" />
-  </svg>
-);

@@ -1,7 +1,8 @@
 "use client";
 
 import { Chip } from "@intentface/chat/chip";
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { IconWorld } from "@tabler/icons-react";
+import type { ReactElement, ReactNode } from "react";
 
 // Chips flow inline with text. `variant` is an opaque string surfaced as
 // data-variant, so the tinting rules are entirely yours.
@@ -10,7 +11,7 @@ export const Basic = () => (
     Pulled results from{" "}
     <Chip.Root variant="accent" className={CHIP_CLASS}>
       <Chip.Icon className="flex items-center">
-        <GlobeIcon />
+        <IconWorld className="size-4" />
       </Chip.Icon>
       <Chip.Label>web-search</Chip.Label>
     </Chip.Root>{" "}
@@ -40,20 +41,4 @@ const renderWithPreview = (badge: ReactElement, preview: ReactNode) => (
       {preview}
     </span>
   </span>
-);
-
-const GlobeIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    aria-hidden="true"
-    {...props}
-  >
-    <circle cx="8" cy="8" r="6" />
-    <path d="M2 8h12M8 2c1.7 1.8 2.5 3.8 2.5 6S9.7 12.2 8 14C6.3 12.2 5.5 10.2 5.5 8S6.3 3.8 8 2Z" />
-  </svg>
 );

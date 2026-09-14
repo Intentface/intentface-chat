@@ -384,8 +384,10 @@ export const closeAttrs = [
 
 ### Tabs.Viewport
 
-The one box that shows a tab's content. Renders `data-tabs-viewport`, named by
-whichever tab is open via `aria-labelledby`.
+The one box that shows a tab's content. Renders `data-tabs-viewport` as a
+`role="group"` named by whichever tab is open, through `aria-labelledby`. The
+role is what makes the name stick: a bare `div` maps to `generic`, whose name
+assistive technology discards.
 
 Nothing off-screen exists, and that is deliberate: a tab you are not looking at
 has no component, so anything that must keep running while you are elsewhere —

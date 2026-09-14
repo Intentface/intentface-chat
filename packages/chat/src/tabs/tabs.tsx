@@ -328,7 +328,12 @@ export const TabsList = ({
   // Which tab the roving tabindex sits on. Follows the open tab until the
   // arrows move it somewhere else, which is what manual activation means.
   const [highlighted, setHighlighted] = useState<string | null>(null);
-  const current = highlighted ?? value ?? items[0] ?? null;
+  // Validated against `items`, not trusted: closing the focused tab with no
+  // `selectOnClose` policy leaves nothing to focus, so no `onFocus` fires to
+  // re-seed this. A stale id would leave every trigger at `tabIndex: -1` and
+  // the strip unreachable from the keyboard.
+  const live = highlighted !== null && items.includes(highlighted) ? highlighted : null;
+  const current = live ?? value ?? items[0] ?? null;
 
   const listContext = useMemo<TabsListContextValue>(
     () => ({ highlighted: current, setHighlighted }),
@@ -722,6 +727,11 @@ export const TabsViewport = ({
         {
           "data-tabs-viewport": "",
           id: viewportId(store),
+          // A bare div maps to the `generic` role, whose name is prohibited, so
+          // `aria-labelledby` on one is discarded. `group` is the lightest role
+          // that accepts a name without claiming the tabpanel semantics this
+          // widget deliberately does not have.
+          role: value === null ? undefined : "group",
           // Named by whichever tab is open, so the box is not anonymous.
           "aria-labelledby": value === null ? undefined : tabId(store, value),
         },

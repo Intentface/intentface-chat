@@ -649,3 +649,53 @@ describe("Tabs.Action", () => {
     expect(getByTestId("tab-b").getAttribute("aria-expanded")).toBe("true");
   });
 });
+
+describe("closing the focused tab", () => {
+  /** No `selectOnClose`, so closing what was open selects nothing. */
+  const Strip = () => (
+    <Tabs.Root defaultItems={["a", "b", "c"]} defaultValue="b" data-testid="root">
+      <Tabs.List data-testid="list">
+        {(id) => (
+          <Tabs.Trigger key={id} value={id} data-testid={`tab-${id}`}>
+            {id}
+            <Tabs.Action>
+              <Tabs.Close data-testid={`close-${id}`} aria-label={`Close ${id}`} />
+            </Tabs.Action>
+          </Tabs.Trigger>
+        )}
+      </Tabs.List>
+      <Tabs.Viewport data-testid="viewport">{(id) => <span>{id}</span>}</Tabs.Viewport>
+    </Tabs.Root>
+  );
+
+  test("leaves a tab stop in the strip", () => {
+    const { getByTestId, queryByTestId } = render(<Strip />);
+
+    const open = getByTestId("tab-b");
+    act(() => open.focus());
+    fireEvent.keyDown(open, { key: "Delete" });
+
+    expect(queryByTestId("tab-b")).toBeNull();
+    // The removed id must not keep the roving tabindex, or the strip becomes
+    // unreachable from the keyboard entirely.
+    const stops = ["a", "c"].map((id) => getByTestId(`tab-${id}`).getAttribute("tabindex"));
+    expect(stops).toContain("0");
+  });
+});
+
+describe("viewport naming", () => {
+  test("carries a role that can hold the name", () => {
+    const { getByTestId } = render(
+      <Tabs.Root defaultItems={["a"]} defaultValue="a">
+        <Tabs.List>
+          {(id) => <Tabs.Trigger key={id} value={id} data-testid={`tab-${id}`} />}
+        </Tabs.List>
+        <Tabs.Viewport data-testid="viewport">{(id) => <span>{id}</span>}</Tabs.Viewport>
+      </Tabs.Root>,
+    );
+
+    const viewport = getByTestId("viewport");
+    expect(viewport.getAttribute("role")).toBe("group");
+    expect(viewport.getAttribute("aria-labelledby")).toBe(getByTestId("tab-a").id);
+  });
+});

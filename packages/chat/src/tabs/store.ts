@@ -19,6 +19,14 @@ import { adjacentTo, insertAt, moveTo, step } from "../internal/collection";
  * `move` — drag it with whatever library you like through the `render` prop,
  * and the result is a state change like any other.
  *
+ * **Peek is a second, smaller channel.** A tab can be *peeked* — its content
+ * shown in a floating surface anchored to it — without being selected. That is
+ * the one thing open-ness-as-selection cannot express: a strip whose selection
+ * is never `null`, holding a page in the layout, while another tab floats over
+ * it. `peek` sits beside `value` rather than replacing it, and the two never
+ * name the same tab: selecting the peeked tab is how you open it for real, so
+ * it ends the peek.
+ *
  * The instance model matches the shell's: `useTabs` resolves the nearest
  * `Tabs.Root` through context, `useTabsStore(handle, selector)` takes an
  * explicit handle for anywhere else, and there is no global fallback.
@@ -37,6 +45,24 @@ export type TabsSelectOnClose =
   /** The tab you were in before this one, falling back to adjacent. */
   | "recent";
 
+/**
+ * Why a close was asked for. Only the gestures the primitive owns ask — a
+ * `close()` you call yourself is already a decision, so it never does.
+ */
+export type TabsCloseReason =
+  /** A press on `Tabs.Close`. */
+  | "close-button"
+  /** Delete or Backspace on a focused tab. */
+  | "delete-key";
+
+export type TabsCloseRequestDetails = {
+  reason: TabsCloseReason;
+  /** Keep the tab open. Call `close()` yourself later, once whatever made you
+   *  hesitate — a "discard changes?" prompt — has been answered. */
+  cancel: () => void;
+  readonly canceled: boolean;
+};
+
 /** Which way the selection just moved, for panels that slide rather than fade. */
 export type TabsDirection = "left" | "right" | "up" | "down" | "none";
 
@@ -51,6 +77,11 @@ export type TabsState = {
   hasViewport: boolean;
   /** Ids that cannot be selected. They stay in the arrow-key ring regardless. */
   disabled: ReadonlySet<string>;
+  /**
+   * The tab shown in a peek surface without being selected, or `null`. Never
+   * the selected tab, and never a disabled one.
+   */
+  peek: string | null;
 
   /** Add a tab (or move it, if already open) and select it. */
   open: (value: string, options?: { at?: number }) => void;
@@ -60,6 +91,8 @@ export type TabsState = {
   selectRelative: (direction: 1 | -1, options?: { loop?: boolean }) => void;
   move: (value: string, toIndex: number) => void;
   setItems: (items: string[]) => void;
+  /** Peek a tab, or pass `null` to end the peek. Ignored for the selected tab. */
+  setPeek: (value: string | null) => void;
 };
 
 export type TabsStore = {
@@ -68,16 +101,20 @@ export type TabsStore = {
 
   // --- Bridges the Root wires up. Not consumer API.
   /** Seed state before the first render commits: no notify, no write-back. */
-  hydrate: (state: { items?: string[]; value?: string | null }) => void;
+  hydrate: (state: { items?: string[]; value?: string | null; peek?: string | null }) => void;
   selectOnCloseRef: RefObject<TabsSelectOnClose | undefined>;
   orientationRef: RefObject<"horizontal" | "vertical">;
   valueControlledRef: RefObject<boolean>;
   itemsControlledRef: RefObject<boolean>;
   onValueChangeRef: RefObject<((value: string | null) => void) | null>;
   onItemsChangeRef: RefObject<((items: string[]) => void) | null>;
+  peekControlledRef: RefObject<boolean>;
+  onPeekChangeRef: RefObject<((peek: string | null) => void) | null>;
+  onCloseRequestRef: RefObject<((value: string, details: TabsCloseRequestDetails) => void) | null>;
   /** Commit past the controlled guard — how the owner pushes its decision in. */
   commitValue: (value: string | null) => void;
   commitItems: (items: string[]) => void;
+  commitPeek: (peek: string | null) => void;
   registerViewport: (present: boolean) => void;
   registerDisabled: (value: string, disabled: boolean) => void;
   /**
@@ -117,6 +154,11 @@ export const createTabsStore = (): TabsStore => {
   const itemsControlledRef: RefObject<boolean> = { current: false };
   const onValueChangeRef: RefObject<((value: string | null) => void) | null> = { current: null };
   const onItemsChangeRef: RefObject<((items: string[]) => void) | null> = { current: null };
+  const peekControlledRef: RefObject<boolean> = { current: false };
+  const onPeekChangeRef: RefObject<((peek: string | null) => void) | null> = { current: null };
+  const onCloseRequestRef: RefObject<
+    ((value: string, details: TabsCloseRequestDetails) => void) | null
+  > = { current: null };
   const elements = new Map<string, HTMLElement>();
   const anchors = new Map<string, HTMLElement>();
 
@@ -177,10 +219,31 @@ export const createTabsStore = (): TabsStore => {
     notify();
   };
 
+  const commitPeek = (peek: string | null) => {
+    if (snapshot.peek === peek) return;
+    snapshot = { ...snapshot, peek };
+    notify();
+  };
+
+  const setPeek = (peek: string | null) => {
+    if (peek !== null) {
+      // The selected tab is already showing, so there is nothing to peek at;
+      // a disabled one cannot be opened, and a peek is a way of opening it.
+      if (peek === snapshot.value || snapshot.disabled.has(peek)) return;
+    }
+    if (snapshot.peek === peek) return;
+    onPeekChangeRef.current?.(peek);
+    if (!peekControlledRef.current) commitPeek(peek);
+  };
+
   const select = (value: string | null) => {
     // A disabled tab is still reachable by keyboard — that is the point — but
     // arrowing onto one must not open it.
     if (value !== null && snapshot.disabled.has(value)) return;
+    // Selecting the peeked tab is opening it for real — the peek has done its
+    // job, and the two channels never name the same tab. Ended first, so a
+    // listener never sees the tab in both at once.
+    if (value !== null && value === snapshot.peek) setPeek(null);
     onValueChangeRef.current?.(value);
     if (!valueControlledRef.current) commitValue(value);
   };
@@ -219,6 +282,8 @@ export const createTabsStore = (): TabsStore => {
     // Computed first: once the item is gone there is no neighbour to find.
     const successor = wasOpen ? successorTo(value) : snapshot.value;
 
+    // A closed tab has nothing left to float.
+    if (snapshot.peek === value) setPeek(null);
     setItems(snapshot.items.filter((item) => item !== value));
     if (wasOpen) select(successor);
   };
@@ -251,12 +316,14 @@ export const createTabsStore = (): TabsStore => {
     recent: [],
     hasViewport: false,
     disabled: new Set(),
+    peek: null,
     open,
     close,
     select,
     selectRelative,
     move,
     setItems,
+    setPeek,
   };
 
   return {
@@ -267,15 +334,19 @@ export const createTabsStore = (): TabsStore => {
       };
     },
     getSnapshot: () => snapshot,
-    hydrate: ({ items, value }) => {
+    hydrate: ({ items, value, peek }) => {
       const nextItems = items ?? snapshot.items;
       const nextValue = value === undefined ? snapshot.value : value;
+      const selected = nextValue !== null && nextItems.includes(nextValue) ? nextValue : null;
+      const nextPeek = peek === undefined ? snapshot.peek : peek;
       snapshot = {
         ...snapshot,
         items: nextItems,
         // A restored selection whose tab is gone is not a selection.
-        value: nextValue !== null && nextItems.includes(nextValue) ? nextValue : null,
-        recent: nextValue !== null && nextItems.includes(nextValue) ? [nextValue] : snapshot.recent,
+        value: selected,
+        recent: selected !== null ? [selected] : snapshot.recent,
+        // Nor is a peek at the tab that is already showing.
+        peek: nextPeek === selected ? null : nextPeek,
       };
     },
     selectOnCloseRef,
@@ -284,8 +355,12 @@ export const createTabsStore = (): TabsStore => {
     itemsControlledRef,
     onValueChangeRef,
     onItemsChangeRef,
+    peekControlledRef,
+    onPeekChangeRef,
+    onCloseRequestRef,
     commitValue,
     commitItems,
+    commitPeek,
     registerViewport,
     registerDisabled,
     elements,

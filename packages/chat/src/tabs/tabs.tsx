@@ -1,13 +1,28 @@
 "use client";
 
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
 import { createContext, Fragment, use, useCallback, useId, useMemo, useState } from "react";
 import { step } from "../internal/collection";
 import { useIsomorphicLayoutEffect } from "../internal/iso-layout-effect";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import type { StateAttributesMapping } from "../internal/render/getStateAttributesProps";
 import { useRenderElement } from "../internal/render/useRenderElement";
-import type { TabsDirection, TabsSelectOnClose, TabsState, TabsStore } from "./store";
+import {
+  PEEK_CLOSE_DELAY_MS,
+  PEEK_OPEN_DELAY_MS,
+  TabsPeekContext,
+  usePeekChoreography,
+  usePeekControls,
+  useSurfaceChannel,
+} from "./peek";
+import type {
+  TabsCloseReason,
+  TabsCloseRequestDetails,
+  TabsDirection,
+  TabsSelectOnClose,
+  TabsState,
+  TabsStore,
+} from "./store";
 import { createTabsStore, TabsStoreContext, useTabsContextStore, useTabsStore } from "./store";
 
 /**
@@ -58,6 +73,23 @@ import { createTabsStore, TabsStoreContext, useTabsContextStore, useTabsStore } 
  *
  * Static, always-one-selected tabs are a different widget, and a `tablist` is
  * the right role for those.
+ *
+ * ## Peek
+ *
+ * A third arrangement, alongside the two above: the selection stays in the
+ * layout, and a *different* tab floats over it.
+ *
+ *   List + Viewport + Portal peek > Positioner > Popup > Viewport
+ *
+ * The selection cannot do this alone — open-ness is the selection, so one
+ * Root can show one tab. `peek` is a second channel beside it (see store.ts),
+ * and `<Tabs.Portal peek>` points the floating parts at it. Opting a tab in is
+ * `peekOnHover` on its trigger; the hover choreography is in peek.ts.
+ *
+ * A peek does not change any tab's `aria-expanded`: nothing about the
+ * selection moved. It is a pointer convenience over content a press opens for
+ * real, and a keyboard route to it — a shortcut that calls `setPeek` — is the
+ * app's to bind.
  */
 
 export type TabsOrientation = "horizontal" | "vertical";
@@ -80,12 +112,17 @@ const PART_ATTRIBUTES = {
     value === "none" ? null : { "data-activation-direction": value },
 } satisfies StateAttributesMapping<TabsPartState>;
 
-export type TabsTriggerState = TabsPartState & { selected: boolean };
+export type TabsTriggerState = TabsPartState & {
+  selected: boolean;
+  /** Showing in a peek surface — floating, not selected. */
+  peeked: boolean;
+};
 
 const selectValue = (tabs: TabsState) => tabs.value;
 const selectDirection = (tabs: TabsState) => tabs.direction;
 const selectHasViewport = (tabs: TabsState) => tabs.hasViewport;
 const selectItems = (tabs: TabsState) => tabs.items;
+const selectPeek = (tabs: TabsState) => tabs.peek;
 
 // ---------------------------------------------------------------------------
 // Per-instance context
@@ -175,6 +212,7 @@ const ownsTheArrowKeys = (event: KeyboardEvent<HTMLElement>, forward: string, ba
 
 const tabId = (store: TabsStore, value: string) => `${store.baseId}-tab-${value}`;
 const viewportId = (store: TabsStore) => `${store.baseId}-viewport`;
+const peekViewportId = (store: TabsStore) => `${store.baseId}-peek`;
 
 // ---------------------------------------------------------------------------
 // Root
@@ -205,8 +243,27 @@ export type TabsRootProps<Value extends string = string> = Omit<
    * Escape closes whatever is open. The only dismissal the primitive takes on:
    * a non-modal surface is one you work behind, so an outside press belongs to
    * the page, not to us.
+   *
+   * A peek is different, and is not governed by this: Escape always ends a
+   * peek first, before it would touch the selection.
    */
   dismissOnEscape?: boolean;
+  /**
+   * Asked before a tab is closed by a gesture the primitive owns — a press on
+   * `Tabs.Close`, or Delete on a focused tab — and before anything changes.
+   * Call `details.cancel()` to keep the tab, then `close()` yourself once the
+   * user has answered whatever made you hesitate.
+   */
+  onCloseRequest?: (value: Value, details: TabsCloseRequestDetails) => void;
+  /** The tab peeked when nothing controls it. */
+  defaultPeek?: Value | null;
+  /** The tab showing in a peek surface, or `null`. */
+  peek?: Value | null;
+  onPeekChange?: (peek: Value | null) => void;
+  /** How long the pointer rests on a `peekOnHover` tab before it peeks. */
+  peekDelay?: number;
+  /** How long a peek nobody is using survives the pointer leaving it. */
+  peekCloseDelay?: number;
   children?: ReactNode;
 };
 
@@ -229,6 +286,12 @@ export const TabsRoot = <Value extends string = string>({
   activateOnFocus = false,
   disabled = false,
   dismissOnEscape = true,
+  onCloseRequest,
+  defaultPeek,
+  peek,
+  onPeekChange,
+  peekDelay = PEEK_OPEN_DELAY_MS,
+  peekCloseDelay = PEEK_CLOSE_DELAY_MS,
   className,
   render,
   style,
@@ -239,7 +302,11 @@ export const TabsRoot = <Value extends string = string>({
   const [store] = useState(() => {
     const created = storeProp ?? createTabsStore();
     // Before anything has subscribed, so no notify and no write-back.
-    created.hydrate({ items: items ?? defaultItems, value: value ?? defaultValue });
+    created.hydrate({
+      items: items ?? defaultItems,
+      value: value ?? defaultValue,
+      peek: peek ?? defaultPeek,
+    });
     created.baseId = baseId;
     return created;
   });
@@ -252,6 +319,11 @@ export const TabsRoot = <Value extends string = string>({
   store.itemsControlledRef.current = items !== undefined;
   store.onValueChangeRef.current = onValueChange as ((next: string | null) => void) | null;
   store.onItemsChangeRef.current = onItemsChange as ((next: string[]) => void) | null;
+  store.peekControlledRef.current = peek !== undefined;
+  store.onPeekChangeRef.current = onPeekChange as ((next: string | null) => void) | null;
+  store.onCloseRequestRef.current = onCloseRequest as
+    | ((value: string, details: TabsCloseRequestDetails) => void)
+    | null;
 
   // Before paint, so a controlled change never shows the old state first.
   useIsomorphicLayoutEffect(() => {
@@ -263,15 +335,34 @@ export const TabsRoot = <Value extends string = string>({
   }, [items, store]);
 
   useIsomorphicLayoutEffect(() => {
-    if (!dismissOnEscape) return;
+    if (peek !== undefined) store.commitPeek(peek);
+  }, [peek, store]);
+
+  useIsomorphicLayoutEffect(() => {
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || store.getSnapshot().value === null) return;
+      if (event.key !== "Escape") return;
+      const { peek: peeked, value: selected } = store.getSnapshot();
+
+      // A peek is the most transient thing on screen, so it goes first — and
+      // only it, so the page underneath keeps its selection. A field inside
+      // the peek that spent the key on itself (closing its own menu) has
+      // already answered it, and the peek stays.
+      if (peeked !== null) {
+        if (event.defaultPrevented) return;
+        event.preventDefault();
+        store.getSnapshot().setPeek(null);
+        return;
+      }
+
+      if (!dismissOnEscape || selected === null) return;
       event.preventDefault();
       store.getSnapshot().select(null);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [dismissOnEscape, store]);
+
+  const peekControls = usePeekChoreography(store, { open: peekDelay, close: peekCloseDelay });
 
   const config = useMemo<TabsConfig>(
     () => ({ orientation, loop, activateOnFocus, disabled }),
@@ -290,7 +381,9 @@ export const TabsRoot = <Value extends string = string>({
 
   return (
     <TabsStoreContext value={store}>
-      <TabsConfigContext value={config}>{element}</TabsConfigContext>
+      <TabsConfigContext value={config}>
+        <TabsPeekContext value={peekControls}>{element}</TabsPeekContext>
+      </TabsConfigContext>
     </TabsStoreContext>
   );
 };
@@ -407,6 +500,12 @@ export type TabsTriggerProps = PrimitiveProps<"div", TabsTriggerState> & {
   /** Required outside a `Tabs.List`; inside one it comes from the collection. */
   value?: string;
   disabled?: boolean;
+  /**
+   * Resting the mouse on this tab peeks it: its content floats in a
+   * `<Tabs.Portal peek>` surface while the selection stays where it is.
+   * Pressing it still selects. See the Root's `peekDelay` / `peekCloseDelay`.
+   */
+  peekOnHover?: boolean;
 };
 
 /**
@@ -435,6 +534,7 @@ export type TabsTriggerProps = PrimitiveProps<"div", TabsTriggerState> & {
 export const TabsTrigger = ({
   value: explicitValue,
   disabled: ownDisabled,
+  peekOnHover = false,
   className,
   render,
   style,
@@ -449,7 +549,10 @@ export const TabsTrigger = ({
   const disabled = rootDisabled || (ownDisabled ?? false);
 
   const selected = useTabsStore(store, selectValue) === value;
+  const peeked = useTabsStore(store, selectPeek) === value;
   const hasViewport = useTabsStore(store, selectHasViewport);
+  const peekControls = usePeekControls();
+  const peeks = peekOnHover && !disabled && peekControls !== null;
 
   const context = useMemo(() => ({ value, disabled }), [value, disabled]);
 
@@ -488,14 +591,14 @@ export const TabsTrigger = ({
     if (!inList || disabled) return;
     if (event.key !== "Delete" && event.key !== "Backspace") return;
     event.preventDefault();
-    closeAndRefocus(store, value);
+    requestClose(store, value, "delete-key");
   };
 
   const element = useRenderElement(
     "div",
     { className, render, style },
     {
-      state: { ...usePartState(store, orientation, disabled), selected },
+      state: { ...usePartState(store, orientation, disabled), selected, peeked },
       stateAttributesMapping: PART_ATTRIBUTES,
       ref,
       props: [
@@ -511,6 +614,11 @@ export const TabsTrigger = ({
           onClick: activate,
           onFocus: inList ? () => list.setHighlighted(value) : undefined,
           onKeyDown: handleKeyDown,
+          onPointerEnter: peeks
+            ? (event: PointerEvent<HTMLDivElement>) =>
+                peekControls.triggerEnter(value, event.pointerType)
+            : undefined,
+          onPointerLeave: peeks ? () => peekControls.triggerLeave() : undefined,
         },
         elementProps,
       ],
@@ -521,13 +629,33 @@ export const TabsTrigger = ({
 };
 
 /**
- * Close, then put focus somewhere deliberate.
+ * Ask, then close, then put focus somewhere deliberate.
+ *
+ * Asking comes first and changes nothing, because an editor with unsaved work
+ * has to be able to say "not yet" — and from outside, a close is two separate
+ * writes (items, then value) with nothing marking them as one gesture, so a
+ * veto through controlled props cannot tell a close from a switch. The
+ * request is the one place both gestures pass through. `store.close()` itself
+ * never asks: calling it is already the decision.
  *
  * The store commits synchronously, so the tab that takes over is already known
  * by the time this reads it back — and focus moves there before React unmounts
  * the tab that was closed. Left alone, focus would fall to the body.
  */
-const closeAndRefocus = (store: TabsStore, value: string) => {
+const requestClose = (store: TabsStore, value: string, reason: TabsCloseReason) => {
+  let canceled = false;
+  const details: TabsCloseRequestDetails = {
+    reason,
+    cancel: () => {
+      canceled = true;
+    },
+    get canceled() {
+      return canceled;
+    },
+  };
+  store.onCloseRequestRef.current?.(value, details);
+  if (canceled) return;
+
   store.getSnapshot().close(value);
   const successor = store.getSnapshot().value;
   if (successor) store.elements.get(successor)?.focus();
@@ -555,12 +683,13 @@ export const TabsIcon = ({
   const value = useOptionalItemValue(explicitValue);
   const disabled = useDisabled();
   const selected = useTabsStore(store, selectValue) === value && value !== null;
+  const peeked = useTabsStore(store, selectPeek) === value && value !== null;
 
   return useRenderElement(
     "span",
     { className, render, style },
     {
-      state: { ...usePartState(store, orientation, disabled), selected },
+      state: { ...usePartState(store, orientation, disabled), selected, peeked },
       stateAttributesMapping: PART_ATTRIBUTES,
       props: [{ "data-tabs-icon": "", "aria-hidden": true }, elementProps],
     },
@@ -597,12 +726,13 @@ export const TabsAction = ({
   const value = useOptionalItemValue(explicitValue);
   const disabled = useDisabled();
   const selected = useTabsStore(store, selectValue) === value && value !== null;
+  const peeked = useTabsStore(store, selectPeek) === value && value !== null;
 
   return useRenderElement(
     "div",
     { className, render, style },
     {
-      state: { ...usePartState(store, orientation, disabled), selected },
+      state: { ...usePartState(store, orientation, disabled), selected, peeked },
       stateAttributesMapping: PART_ATTRIBUTES,
       props: [{ "data-tabs-action": "" }, elementProps],
     },
@@ -637,19 +767,20 @@ export const TabsClose = ({
   const disabled = useDisabled(ownDisabled);
   const value = useItemValue(explicitValue);
   const selected = useTabsStore(store, selectValue) === value;
+  const peeked = useTabsStore(store, selectPeek) === value;
 
   const close = (event: { stopPropagation: () => void; preventDefault: () => void }) => {
     event.stopPropagation();
     event.preventDefault();
     if (disabled) return;
-    closeAndRefocus(store, value);
+    requestClose(store, value, "close-button");
   };
 
   return useRenderElement(
     "div",
     { className, render, style },
     {
-      state: { ...usePartState(store, orientation, disabled), selected },
+      state: { ...usePartState(store, orientation, disabled), selected, peeked },
       stateAttributesMapping: PART_ATTRIBUTES,
       props: [
         {
@@ -695,6 +826,11 @@ export type TabsViewportProps = Omit<PrimitiveProps<"div", TabsViewportState>, "
  * are not looking at has no component, so anything that must keep running
  * while you are elsewhere — a reply still streaming — belongs in a store
  * rather than in the panel's own state.
+ *
+ * Inside `<Tabs.Portal peek>` the same part renders the peeked tab instead. It
+ * then stays out of `aria-controls` — the triggers' disclosure is the
+ * selection, and this box is not what pressing them shows — but it is still
+ * named by the tab it is showing.
  */
 export const TabsViewport = ({
   children,
@@ -705,13 +841,17 @@ export const TabsViewport = ({
 }: TabsViewportProps) => {
   const store = useTabsContextStore();
   const { orientation } = useTabsConfig();
-  const value = useTabsStore(store, selectValue);
+  const channel = useSurfaceChannel();
+  const isPeek = channel === "peek";
+  const value = useTabsStore(store, isPeek ? selectPeek : selectValue);
 
-  // A trigger only claims a viewport that is really in the document.
+  // A trigger only claims a viewport that is really in the document — and only
+  // the selection's, since that is the one its press shows.
   useIsomorphicLayoutEffect(() => {
+    if (isPeek) return;
     store.registerViewport(true);
     return () => store.registerViewport(false);
-  }, [store]);
+  }, [store, isPeek]);
 
   return useRenderElement(
     "div",
@@ -726,7 +866,8 @@ export const TabsViewport = ({
       props: [
         {
           "data-tabs-viewport": "",
-          id: viewportId(store),
+          "data-tabs-peek": isPeek ? "" : undefined,
+          id: isPeek ? peekViewportId(store) : viewportId(store),
           // A bare div maps to the `generic` role, whose name is prohibited, so
           // `aria-labelledby` on one is discarded. `group` is the lightest role
           // that accepts a name without claiming the tabpanel semantics this

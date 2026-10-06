@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { render } from "@testing-library/react";
+import { act, render } from "@testing-library/react";
 import axe from "axe-core";
 import { Tabs, useTabs } from "../../src/tabs";
 
@@ -53,6 +53,28 @@ const Collection = ({ value }: { value?: string | null }) => (
 );
 
 describe("Tabs accessibility", () => {
+  test("a page with another tab peeked over it raises nothing", async () => {
+    // Two viewports in one Root — the selection's in the layout, the peek's in
+    // the portal — must not collide on an id or leave either one unnamed.
+    const { baseElement } = render(
+      <Tabs.Root defaultItems={["a", "b"]} defaultValue="a" defaultPeek="b">
+        <Strip />
+        <Tabs.Viewport>{(id) => <p>{`Panel ${id}`}</p>}</Tabs.Viewport>
+        <Tabs.Portal peek>
+          <Tabs.Positioner>
+            <Tabs.Popup>
+              <Tabs.Viewport>{(id) => <p>{`Peek ${id}`}</p>}</Tabs.Viewport>
+            </Tabs.Popup>
+          </Tabs.Positioner>
+        </Tabs.Portal>
+      </Tabs.Root>,
+    );
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+
+    expect(baseElement.textContent).toContain("Peek b");
+    expect(await audit(baseElement)).toEqual([]);
+  });
+
   test("with a tab open, it raises nothing", async () => {
     const { container } = render(<Collection />);
     expect(await audit(container)).toEqual([]);

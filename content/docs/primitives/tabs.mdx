@@ -8,6 +8,7 @@ import { Basic } from './tabs/demos/basic';
 import { Anchored } from './tabs/demos/anchored';
 import { Closing } from './tabs/demos/closing';
 import { ExternalTabs } from './tabs/demos/external';
+import { Peek } from './tabs/demos/peek';
 
 <Demo component={<Basic />} file="primitives/tabs/demos/basic.tsx" />
 
@@ -18,6 +19,8 @@ import { ExternalTabs } from './tabs/demos/external';
 - **Order is data** — `items` is an ordered array on the store, not something derived from the DOM. Drag it with whatever library you like through `render`; the result is a state change like any other.
 - **One viewport, not a panel per tab** — switching re-renders the same box, which is what lets a floating surface move rather than tear itself down.
 - **In the layout or anchored** — wrapping the viewport in `Portal` › `Positioner` › `Popup` is the entire difference between the two.
+- **Peek without selecting** — `peek` is a second, smaller channel beside the selection: a tab floating over the page while another stays selected beneath it. See [Peeking without selecting](#peeking-without-selecting).
+- **Closing can be asked first** — `onCloseRequest` runs before × or Delete changes anything, so unsaved work can say "not yet". See [Asking before a tab closes](#asking-before-a-tab-closes).
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
 ## Anatomy
@@ -48,7 +51,22 @@ import { ExternalTabs } from './tabs/demos/external';
 ```
 
 One viewport per collection, in one of those two places — the three wrapping
-parts are the only difference between them.
+parts are the only difference between them. The exception is a peek, which
+adds a second viewport for the tab floating over the selected one:
+
+```tsx
+<Tabs.Root>
+  <Tabs.List />
+  <Tabs.Viewport />          {/* the selection, in the layout */}
+  <Tabs.Portal peek>         {/* the peek, floating over it */}
+    <Tabs.Positioner>
+      <Tabs.Popup>
+        <Tabs.Viewport />
+      </Tabs.Popup>
+    </Tabs.Positioner>
+  </Tabs.Portal>
+</Tabs.Root>
+```
 
 Both the strip and the viewport take a function, so neither needs a loop, a
 key, or a subscription of its own:
@@ -123,6 +141,98 @@ lands the surface withholds paint rather than showing at 0,0 — otherwise the
 first real position would arrive as `auto` → a length, which CSS cannot
 interpolate, and the surface would slide in from the corner.
 
+### Peeking without selecting
+
+Open-ness is the selection, so one Root shows one tab — which is exactly right
+until you want to *glance* at a tab without leaving the page you are on. That
+is what a peek is: a tab's content floating over the page, anchored to its tab,
+while the selection stays where it was.
+
+<Demo component={<Peek />} file="primitives/tabs/demos/peek.tsx" />
+
+`peek` sits beside `value` as a second, smaller channel, and
+`<Tabs.Portal peek>` points the floating parts at it. Opt a tab in with
+`peekOnHover`:
+
+```tsx
+<Tabs.Root value={page} onValueChange={setPage} dismissOnEscape={false}>
+  <Tabs.List>
+    {(id) => <Tabs.Trigger value={id} peekOnHover={isConversation(id)}>…</Tabs.Trigger>}
+  </Tabs.List>
+
+  <Tabs.Viewport>{(id) => <Page id={id} />}</Tabs.Viewport>
+
+  <Tabs.Portal peek>
+    <Tabs.Positioner side="bottom" align="start">
+      <Tabs.Popup>
+        <Tabs.Viewport>{(id) => <Conversation id={id} />}</Tabs.Viewport>
+      </Tabs.Popup>
+    </Tabs.Positioner>
+  </Tabs.Portal>
+</Tabs.Root>
+```
+
+The two channels never name the same tab. The selected tab is already showing,
+so it does not peek; pressing a peeked tab selects it — opening it for real —
+and that ends the peek.
+
+The hover choreography is [Shell](/primitives/shell)'s hover-peek applied to a
+strip, and nearly all of it is about telling intent from a pointer passing by:
+
+- **Opening waits** `peekDelay` (300ms). A pointer sweeps along a strip all the
+  time on its way somewhere else, so this is longer than Shell's edge.
+- **Closing waits** `peekCloseDelay` (250ms) — long enough to cross the gap
+  into the surface, where arriving cancels it.
+- **Once open, it follows.** Resting on another peekable tab switches straight
+  away; the intent was proven on the first.
+- **Engaged means kept.** A press or focus inside the surface means someone is
+  using it, and from then on the pointer wandering off cannot close it. Escape,
+  a press outside, or pressing the tab can. A half-typed reply must never vanish
+  because the cursor drifted.
+- **Only a mouse hovers.** Touch has no hover and a pen's is too incidental, so
+  for both a tap is simply a press, and a press selects.
+
+Two consequences worth designing around. Focus is the engagement signal, so do
+not move focus into a hover-opened peek yourself — it would never close on its
+own. And unlike the anchored dock, a peek *is* dismissed by a press outside it:
+a dock is somewhere you went, a peek is something you glanced at, and the page
+under it is still where you are working. A press inside something the peek
+portaled elsewhere — a menu — still counts as inside.
+
+A peek changes no tab's `aria-expanded`, because nothing about the selection
+moved. It is a pointer convenience over content a press opens anyway; if you
+want a keyboard route to it, bind a shortcut that calls `setPeek` and move
+focus in yourself.
+
+### Asking before a tab closes
+
+`Tabs.Close` and `Delete` both close a tab outright. An editor holding unsaved
+work needs to ask first, and `onCloseRequest` is where it does: it runs before
+anything changes, for both gestures, and `details.cancel()` keeps the tab.
+
+```tsx
+const tabs = Tabs.createStore();
+
+<Tabs.Root
+  store={tabs}
+  onCloseRequest={(id, details) => {
+    if (!hasUnsavedChanges(id)) return;
+    details.cancel();
+    confirmDiscard(id).then((discard) => discard && tabs.getSnapshot().close(id));
+  }}
+>
+```
+
+`details.reason` says which gesture it was — `"close-button"` or
+`"delete-key"`. `close()` itself never asks: calling it is already the
+decision, which is what makes it the right call once the answer comes back.
+
+This has to live in the primitive rather than in your controlled props. From
+outside, a close arrives as two separate writes — the items, then the
+selection — with nothing marking them as one gesture, so vetoing there cannot
+tell a close from an ordinary switch. And swapping in your own × leaves
+`Delete` going around it.
+
 ### Choosing where the selection lands
 
 Where the selection goes when the open tab is closed is a behaviour, and the
@@ -192,7 +302,7 @@ export const keys = [
   { keys: "Arrow keys", description: "Move focus along the strip, following its orientation." },
   { keys: "Enter / Space", description: "Open the focused tab." },
   { keys: "Delete / Backspace", description: "Close the focused tab — only inside a Tabs.List, and the keyboard equivalent of the × beside it." },
-  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape." },
+  { keys: "Escape", description: "End a peek if there is one — and only that, so the page underneath keeps its selection. Otherwise close the open panel. Bound on the window rather than the strip, since the panel may be portaled away from it; dismissOnEscape turns off the second half, never the first." },
 ];
 
 <KeysTable rows={keys} />
@@ -225,7 +335,13 @@ export const rootProps = [
   { name: "loop", type: "boolean", default: "true", description: "Wrap at the ends of the strip." },
   { name: "activateOnFocus", type: "boolean", default: "false", description: "Select as focus moves, instead of on activation." },
   { name: "disabled", type: "boolean", default: "false", description: "Disable the whole collection." },
-  { name: "dismissOnEscape", type: "boolean", default: "true", description: "Escape closes the open panel." },
+  { name: "dismissOnEscape", type: "boolean", default: "true", description: "Escape closes the open panel. A peek is always ended by Escape first, whatever this says." },
+  { name: "onCloseRequest", type: "(value: string, details: TabsCloseRequestDetails) => void", description: "Asked before × or Delete closes a tab, and before anything changes. details.cancel() keeps it; details.reason is \"close-button\" or \"delete-key\". close() called in code never asks." },
+  { name: "defaultPeek", type: "string | null", description: "The tab peeked on first render." },
+  { name: "peek", type: "string | null", description: "Controlled peek: the tab floating in a <Tabs.Portal peek> surface, or null." },
+  { name: "onPeekChange", type: "(peek: string | null) => void", description: "Fires whenever a peek starts, switches or ends." },
+  { name: "peekDelay", type: "number", default: "300", description: "Milliseconds the mouse rests on a peekOnHover tab before it peeks." },
+  { name: "peekCloseDelay", type: "number", default: "250", description: "Milliseconds a peek nobody is using survives the pointer leaving it." },
   { name: "store", type: "TabsStore", description: "An explicit Tabs.createStore() handle. Must be stable for the Root's lifetime." },
 ];
 
@@ -275,6 +391,7 @@ toggles — a panel with no tab behind it, anchored to the button that owns it.
 export const triggerProps = [
   { name: "value", type: "string", description: "The tab's id. Required outside a List; inherited from the enclosing tab inside one." },
   { name: "disabled", type: "boolean", description: "Disable this tab. It stays in the arrow-key ring." },
+  { name: "peekOnHover", type: "boolean", default: "false", description: "Resting the mouse on this tab peeks it into a <Tabs.Portal peek> surface. Pressing it still selects." },
 ];
 
 <PropsTable rows={triggerProps} />
@@ -282,6 +399,7 @@ export const triggerProps = [
 export const triggerAttrs = [
   { attribute: "data-tabs-trigger", values: "the tab's value", description: "The tab, and its identity — the strip's roving focus finds tabs by this attribute and reads the value back off it. Select it without the value for styling." },
   { attribute: "data-selected", description: "Present while this tab's panel is showing." },
+  { attribute: "data-peeked", description: "Present while this tab is floating in a peek. Icon, Action and Close carry it too." },
   { attribute: "data-disabled", description: "Present while disabled." },
   { attribute: "data-orientation", values: '"horizontal" | "vertical"', description: "The strip's orientation." },
 ];
@@ -393,6 +511,10 @@ Nothing off-screen exists, and that is deliberate: a tab you are not looking at
 has no component, so anything that must keep running while you are elsewhere —
 a reply still streaming — belongs in a store rather than in the panel's state.
 
+Inside `<Tabs.Portal peek>` the same part renders the peeked tab. It stays out
+of the triggers' `aria-controls` — their disclosure is the selection, and this
+is not what pressing them shows — but it is still named by the tab it shows.
+
 export const viewportProps = [
   { name: "children", type: "(value: string) => ReactNode", description: "Renders the content for whatever is open. Not called when nothing is." },
 ];
@@ -401,6 +523,7 @@ export const viewportProps = [
 
 export const viewportAttrs = [
   { attribute: "data-tabs-viewport", description: "The content box. Carries an id, and `aria-labelledby` naming whichever tab is open." },
+  { attribute: "data-tabs-peek", description: "Present on the viewport inside a peek surface." },
   { attribute: "data-empty", description: "Present while nothing is open — the children function is not called, so the box is empty." },
   { attribute: "data-orientation", values: '"horizontal" | "vertical"', description: "The collection's orientation." },
   { attribute: "data-activation-direction", values: '"left" | "right" | "up" | "down"', description: "Which way the selection last moved, so the panel can slide the right way." },
@@ -420,6 +543,7 @@ exit animation, which `Tabs.Popup` reports as finished.
 export const portalProps = [
   { name: "container", type: "HTMLElement | null", default: "document.body", description: "Where the surface is portaled." },
   { name: "keepMounted", type: "boolean", default: "false", description: "Keep the surface mounted while nothing is open. Costs a live positioning loop." },
+  { name: "peek", type: "boolean", default: "false", description: "Follow the peek rather than the selection, so the surface shows a tab floating over the page without selecting it. Positioner, Popup and Viewport inside it follow along." },
 ];
 
 <PropsTable rows={portalProps} />
@@ -464,6 +588,7 @@ to unmount.
 
 export const popupAttrs = [
   { attribute: "data-tabs-popup", description: "The surface." },
+  { attribute: "data-tabs-peek", description: "Present when the surface is a peek." },
   { attribute: "data-open", description: "Present while a tab is open." },
   { attribute: "data-closed", description: "Present while nothing is." },
   { attribute: "data-starting-style", description: "Present on the first open frame." },
@@ -491,6 +616,8 @@ export const hookMembers = [
   { name: "selectRelative", type: "(direction, options?) => void", description: "Step the selection — what the arrow keys drive." },
   { name: "move", type: "(value: string, toIndex: number) => void", description: "Reorder; the target index is clamped into range." },
   { name: "setItems", type: "(items: string[]) => void", description: "Replace the whole collection." },
+  { name: "peek", type: "string | null", description: "The tab floating in a peek surface, or null." },
+  { name: "setPeek", type: "(value: string | null) => void", description: "Peek a tab, or null to end the peek — how a keyboard shortcut opens one. Ignored for the selected tab and for disabled ones." },
 ];
 
 <PropsTable rows={hookMembers} />

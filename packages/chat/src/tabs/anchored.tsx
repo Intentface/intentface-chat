@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, use, useCallback, useRef, useState } from "react";
+import { createContext, use, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useIsomorphicLayoutEffect } from "../internal/iso-layout-effect";
 import type { PrimitiveProps } from "../internal/primitive-props";
@@ -14,6 +14,7 @@ import {
 } from "../internal/render/transition";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping, transitionStatusMapping } from "../internal/state-mappings";
+import { TabsSurfaceChannelContext, usePeekControls, useSurfaceChannel } from "./peek";
 import type { TabsState } from "./store";
 import { useTabsContextStore, useTabsStore } from "./store";
 
@@ -35,12 +36,26 @@ import { useTabsContextStore, useTabsStore } from "./store";
  *
  * Non-modal throughout: no backdrop, no scroll lock, no focus trap, and no
  * dismissal on outside press. A chat dock is something you work *behind*.
+ *
+ * `<Tabs.Portal peek>` points the same three parts at the peek instead of the
+ * selection — a tab floating over the page without being selected. One rule
+ * changes with it: a peek *is* dismissed by a press outside it. A dock is
+ * somewhere you went; a peek is something you glanced at, and the page under
+ * it is still the thing you are working in.
  */
 
 export type TabsSide = AnchorSide;
 export type TabsAlign = AnchorAlign;
 
 const selectValue = (tabs: TabsState) => tabs.value;
+const selectPeek = (tabs: TabsState) => tabs.peek;
+
+/** The tab the surface is showing, on whichever channel it follows. */
+const useSurfaceValue = () => {
+  const store = useTabsContextStore();
+  const channel = useSurfaceChannel();
+  return useTabsStore(store, channel === "peek" ? selectPeek : selectValue);
+};
 
 export type TabsPositionerState = {
   side: TabsSide;
@@ -75,11 +90,30 @@ export type TabsPortalProps = {
    * being closed.
    */
   keepMounted?: boolean;
+  /**
+   * Follow the peek rather than the selection: show the tab that is floating
+   * without being selected, anchored to it. Use one of each in the same Root
+   * to keep a page in the layout and peek at another tab over it.
+   */
+  peek?: boolean;
 };
 
-export const TabsPortal = ({ children, container, keepMounted = false }: TabsPortalProps) => {
-  const store = useTabsContextStore();
-  const open = useTabsStore(store, selectValue) !== null;
+export const TabsPortal = ({
+  children,
+  container,
+  keepMounted = false,
+  peek = false,
+}: TabsPortalProps) => (
+  <TabsSurfaceChannelContext value={peek ? "peek" : "selection"}>
+    <SurfacePortal container={container} keepMounted={keepMounted}>
+      {children}
+    </SurfacePortal>
+  </TabsSurfaceChannelContext>
+);
+
+/** Split from the Portal so the channel is in context before anything reads it. */
+const SurfacePortal = ({ children, container, keepMounted = false }: TabsPortalProps) => {
+  const open = useSurfaceValue() !== null;
 
   // There is no document to portal into during a server render, and reaching
   // for one during the first client render would not match it.
@@ -128,7 +162,7 @@ export const TabsPositioner = ({
   ...elementProps
 }: TabsPositionerProps) => {
   const store = useTabsContextStore();
-  const value = useTabsStore(store, selectValue);
+  const value = useSurfaceValue();
   const open = value !== null;
 
   const positionerRef = useRef<HTMLDivElement | null>(null);
@@ -209,14 +243,40 @@ export type TabsPopupState = {
 
 export type TabsPopupProps = PrimitiveProps<"div", TabsPopupState>;
 
+/**
+ * Pointer events that began inside the surface's React tree. Read by the
+ * outside-press listener, which runs on the document after React has
+ * dispatched — so it can tell a press inside a menu the surface portaled
+ * elsewhere (still inside, as far as React is concerned) from a press on the
+ * page. A DOM `contains` would call the first one outside and close the peek
+ * out from under the menu you were choosing from.
+ */
+const pressedInside = new WeakSet<Event>();
+
 /** The surface itself: yours to style and animate. */
 export const TabsPopup = ({ className, render, style, ...elementProps }: TabsPopupProps) => {
   const store = useTabsContextStore();
-  const open = useTabsStore(store, selectValue) !== null;
+  const channel = useSurfaceChannel();
+  const isPeek = channel === "peek";
+  const open = useSurfaceValue() !== null;
   const transition = use(SurfaceTransitionContext);
+  const peekControls = usePeekControls();
 
   const popupRef = useRef<HTMLDivElement | null>(null);
   const runWhenAnimationsFinish = useAnimationsFinished(popupRef);
+
+  // A peek ends on a press anywhere else. Registered only while one is open,
+  // and in the bubble phase so React's own dispatch — which marks presses that
+  // began inside — has already run.
+  useEffect(() => {
+    if (!isPeek || !open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (pressedInside.has(event)) return;
+      store.getSnapshot().setPeek(null);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [isPeek, open, store]);
 
   useIsomorphicLayoutEffect(() => {
     if (!transition || transition.open) return;
@@ -232,7 +292,26 @@ export const TabsPopup = ({ className, render, style, ...elementProps }: TabsPop
       state: { open, transitionStatus: transition?.transitionStatus },
       stateAttributesMapping: { ...openStateMapping, ...transitionStatusMapping },
       ref: popupRef,
-      props: [{ "data-tabs-popup": "" }, elementProps],
+      props: [
+        {
+          "data-tabs-popup": "",
+          "data-tabs-peek": isPeek ? "" : undefined,
+          ...(isPeek && peekControls
+            ? {
+                onPointerEnter: () => peekControls.surfaceEnter(),
+                onPointerLeave: () => peekControls.surfaceLeave(),
+                // A press or focus inside means someone is using it, and from
+                // then on the pointer wandering off is not a reason to close.
+                onPointerDown: (event: { nativeEvent: Event }) => {
+                  pressedInside.add(event.nativeEvent);
+                  peekControls.engage();
+                },
+                onFocus: () => peekControls.engage(),
+              }
+            : {}),
+        },
+        elementProps,
+      ],
     },
   );
 };

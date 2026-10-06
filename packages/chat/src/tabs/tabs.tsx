@@ -350,7 +350,13 @@ export const TabsRoot = <Value extends string = string>({
       if (peeked !== null) {
         if (event.defaultPrevented) return;
         event.preventDefault();
+        // Escape from inside the peek — out of the reply you were typing —
+        // would otherwise drop focus on the body when the surface unmounts.
+        // It goes back to the tab that was peeked instead.
+        const from = document.activeElement;
+        const wasInside = from instanceof Element && from.closest("[data-tabs-peek]") !== null;
         store.getSnapshot().setPeek(null);
+        if (wasInside) store.elements.get(peeked)?.focus();
         return;
       }
 

@@ -302,7 +302,7 @@ export const keys = [
   { keys: "Arrow keys", description: "Move focus along the strip, following its orientation." },
   { keys: "Enter / Space", description: "Open the focused tab." },
   { keys: "Delete / Backspace", description: "Close the focused tab — only inside a Tabs.List, and the keyboard equivalent of the × beside it." },
-  { keys: "Escape", description: "End a peek if there is one — and only that, so the page underneath keeps its selection. Otherwise close the open panel. Bound on the window rather than the strip, since the panel may be portaled away from it; dismissOnEscape turns off the second half, never the first." },
+  { keys: "Escape", description: "End a peek if there is one — and only that, so the page underneath keeps its selection. Pressed from inside the peek, focus returns to the tab that was peeked. Otherwise close the open panel. Bound on the window rather than the strip, since the panel may be portaled away from it; dismissOnEscape turns off the second half, never the first." },
 ];
 
 <KeysTable rows={keys} />

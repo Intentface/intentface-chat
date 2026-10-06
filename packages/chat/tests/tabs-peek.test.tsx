@@ -291,6 +291,19 @@ describe("ending a peek", () => {
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
+  test("Escape from inside hands focus back to the tab that was peeked", async () => {
+    const { baseElement } = render(<Page />);
+    await peekAt(baseElement, "chat");
+    const input = q(baseElement, "peek-input") as HTMLElement;
+    act(() => input.focus());
+
+    act(() => void fireEvent.keyDown(input, { key: "Escape" }));
+    await settle();
+
+    expect(q(baseElement, "peek")).toBeNull();
+    expect(document.activeElement).toBe(q(baseElement, "tab-chat"));
+  });
+
   test("an Escape something inside already spent is left alone", async () => {
     const { baseElement } = render(<Page />);
     await peekAt(baseElement, "chat");

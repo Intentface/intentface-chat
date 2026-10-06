@@ -273,8 +273,13 @@ export const createTabsStore = (): TabsStore => {
     );
     if (eventDetails.isCanceled || !wasOpen) return;
     // The tab is gone, so the selection must follow it: reported, but not cancellable.
-    onValueChangeRef.current?.(successor, eventDetails);
-    landValue(successor, eventDetails);
+    const followUp = createChangeEventDetails(
+      eventDetails.reason,
+      eventDetails.event,
+      eventDetails.trigger,
+    );
+    onValueChangeRef.current?.(successor, followUp);
+    landValue(successor, followUp);
   };
 
   const selectRelative = (direction: 1 | -1, options?: { loop?: boolean }) =>

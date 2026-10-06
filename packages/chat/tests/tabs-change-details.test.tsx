@@ -156,4 +156,13 @@ describe("the parts", () => {
     expect(onValueChange.mock.calls[0]?.[0]).toBe("c");
     expect(onValueChange.mock.calls[0]?.[1].reason).toBe("list-navigation");
   });
+
+  test("cancelling the selection that follows a close still moves focus to the next tab", () => {
+    const onValueChange = mock<ValueChange>((_, eventDetails) => eventDetails.cancel());
+    const { getByTestId } = render(<Strip onValueChange={onValueChange} />);
+
+    fireEvent.click(getByTestId("close-b"));
+
+    expect(document.activeElement).toBe(getByTestId("tab-c"));
+  });
 });

@@ -12,9 +12,9 @@ export type {
 } from "./anchored";
 export * as Tabs from "./index.parts";
 export type {
-  TabsCloseReason,
-  TabsCloseRequestDetails,
   TabsDirection,
+  TabsRootChangeEventDetails,
+  TabsRootChangeEventReason,
   TabsSelectOnClose,
   TabsState,
   TabsStore,

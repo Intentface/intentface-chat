@@ -10,13 +10,6 @@ A disabled `Nav.Trigger` now also prevents the click's default action, as a disa
 
 **`Nav`: `aria-current="page"` on active rows.** `active` on `Nav.Item` and `Nav.Trigger` previously produced only `data-active`, which assistive tech cannot see. Your own `aria-current` still wins.
 
-**`Tabs`: peek.** A tab can now float over the page without being selected. `peek` / `defaultPeek` / `onPeekChange` on `Tabs.Root` and `peek` / `setPeek` on the store form a second channel beside the selection, and `<Tabs.Portal peek>` points its Positioner, Popup and Viewport at it. `peekOnHover` on a trigger opts it into Shell-style hover intent:
+**`Tabs`: `openOnHover`.** `Tabs.Trigger` gains `openOnHover`, `openDelay` (50ms) and `closeDelay` (50ms). Resting the mouse on a tab opens it, and leaving closes it again unless the mouse heads into the popup, which a prediction cone tracks. A press on the tab, or a press or focus inside the popup, keeps it open. Hover never takes over a tab someone opened with a press, and only a mouse hovers.
 
-- `peekDelay` (300ms) before it opens, and `peekCloseDelay` (250ms) after the pointer leaves, so the pointer can cross into the surface.
-- Hovering another tab switches the peek straight away.
-- A press or focus inside holds the peek open until Escape, an outside press, or selecting the tab.
-- Only a mouse hovers.
-
-The selected tab never peeks, and selecting the peeked tab ends the peek. Escape now ends a peek before it would touch the selection, whatever `dismissOnEscape` says. A Portal without `peek` behaves exactly as before.
-
-**`Tabs`: `onCloseRequest`.** It runs before `Tabs.Close` or Delete/Backspace closes a tab, and before anything changes. `details.cancel()` keeps the tab, and `details.reason` is `"close-button"` or `"delete-key"`. `close()` called in code never asks. It exists for editors with unsaved work, which previously had no way to veto a close: controlled `items`/`value` see it as two unrelated writes, and Delete bypassed a custom ×.
+**`Tabs`: change event details.** `onValueChange` and `onItemsChange` receive a second argument, `eventDetails`, with `reason`, `event`, `trigger`, `cancel()` and `isCanceled`. Cancelling stops the change landing, so an editor can cancel a close in `onItemsChange` and ask about unsaved work first. The selection that follows a close is reported but cannot be cancelled, since its tab is already gone. The reasons are `"trigger-press"`, `"trigger-hover"`, `"list-navigation"`, `"close-press"`, `"keyboard"`, `"escape-key"` and `"imperative-action"`. Callbacks that take one argument keep working.

@@ -6,17 +6,13 @@ import { type ComponentProps, useState } from "react";
 /*
  * Branches that are also pages.
  *
- * "Guides" has an index of its own, so pressing the row shows it, and the
- * caret is what opens the branch. With `toggleOnClick={false}` the trigger
- * stops being the disclosure and becomes a destination — click, Enter and
- * Space all go to `onClick` — while `Nav.Toggle` takes the disclosure over.
+ * "Guides" has an index of its own. The `Nav.Toggle` inside its trigger is what
+ * makes it a destination: pressing the row (click, Enter or Space) shows the
+ * page, and the caret opens the branch. ArrowRight and ArrowLeft still open and
+ * close it from the row, which is why the caret can be pointer-only.
  *
- * The keyboard loses nothing: ArrowRight and ArrowLeft open and close the
- * group from the row exactly as they do for an ordinary trigger, which is why
- * the toggle can be pointer-only.
- *
- * "Reference" is an ordinary trigger beside it, for comparison: its whole row
- * is the disclosure, and it never becomes the page being shown.
+ * "Reference" is an ordinary trigger beside it, for comparison: no toggle, so
+ * its whole row is the disclosure and its chevron is only decoration.
  */
 export const Destination = () => {
   const [page, setPage] = useState("guides");
@@ -33,7 +29,6 @@ export const Destination = () => {
           <Nav.List className={listClass}>
             <Nav.Group value="guides">
               <Nav.Trigger
-                toggleOnClick={false}
                 active={page === "guides"}
                 onClick={() => setPage("guides")}
                 className={rowClass}
@@ -61,9 +56,9 @@ export const Destination = () => {
 
             <Nav.Group value="reference">
               <Nav.Trigger className={rowClass}>
-                <Nav.Toggle className={toggleClass}>
+                <span aria-hidden="true" className={chevronClass}>
                   <ChevronIcon className="size-3" />
-                </Nav.Toggle>
+                </span>
                 <Nav.Label className="min-w-0 truncate">Reference</Nav.Label>
               </Nav.Trigger>
 
@@ -110,6 +105,10 @@ const toggleClass = [
   "transition-transform data-closed:-rotate-90",
   "hover:bg-[#e8e8e8] hover:text-[#1a1a1a] dark:hover:bg-[#2e2e2e] dark:hover:text-[#fcfcfc]",
 ].join(" ");
+
+/* Decoration only: it turns with the row it sits in, through the row's data-closed. */
+const chevronClass =
+  "-ml-1 flex size-5 shrink-0 items-center justify-center text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]";
 
 const ChevronIcon = (props: ComponentProps<"svg">) => (
   <svg

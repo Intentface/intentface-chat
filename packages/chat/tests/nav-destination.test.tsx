@@ -13,8 +13,9 @@ const focus = (element: HTMLElement) => {
 type Handlers = {
   onActivate?: () => void;
   onDoubleClick?: () => void;
-  toggleOnClick?: boolean;
+  withToggle?: boolean;
   disabled?: boolean;
+  triggerDisabled?: boolean;
   active?: boolean;
 };
 
@@ -25,8 +26,9 @@ type Handlers = {
 const Tree = ({
   onActivate,
   onDoubleClick,
-  toggleOnClick = false,
+  withToggle = true,
   disabled,
+  triggerDisabled,
   active,
   ...root
 }: Handlers & Partial<Parameters<typeof Nav.Root>[0]>) => (
@@ -38,13 +40,13 @@ const Tree = ({
 
       <Nav.Group value="guides" disabled={disabled} data-testid="group-guides">
         <Nav.Trigger
-          toggleOnClick={toggleOnClick}
           active={active}
+          disabled={triggerDisabled}
           onClick={onActivate}
           onDoubleClick={onDoubleClick}
           data-testid="trigger-guides"
         >
-          <Nav.Toggle data-testid="toggle-guides" />
+          {withToggle ? <Nav.Toggle data-testid="toggle-guides" /> : null}
           <Nav.Label>Guides</Nav.Label>
         </Nav.Trigger>
         <Nav.List>
@@ -138,18 +140,41 @@ describe("a branch that is also a destination", () => {
     expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("false");
   });
 
-  test("beside a row that toggles on its own, one press is still one toggle", () => {
-    // The toggle stops its click, so the row's own toggle never runs on top of
-    // it and undoes the open.
-    const { getByTestId } = render(<Tree toggleOnClick />);
+  test("a disabled trigger's toggle does nothing, even in an enabled group", () => {
+    const { getByTestId } = render(<Tree triggerDisabled />);
+    const toggle = getByTestId("toggle-guides");
 
-    fireEvent.click(getByTestId("toggle-guides"));
+    fireEvent.click(toggle);
 
+    expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.hasAttribute("data-disabled")).toBe(true);
+  });
+
+  test("inside a link row, a press on the toggle does not follow the link", () => {
+    const { getByTestId } = render(
+      <Nav.Root>
+        <Nav.List>
+          <Nav.Group value="guides">
+            <Nav.Trigger
+              render={(props) => <a href="#guides" {...props} />}
+              data-testid="trigger-guides"
+            >
+              <Nav.Toggle data-testid="toggle-guides" />
+              <Nav.Label>Guides</Nav.Label>
+            </Nav.Trigger>
+            <Nav.List />
+          </Nav.Group>
+        </Nav.List>
+      </Nav.Root>,
+    );
+
+    // fireEvent returns false once the default action is prevented.
+    expect(fireEvent.click(getByTestId("toggle-guides"))).toBe(false);
     expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("true");
   });
 
-  test("by default the row is the disclosure, as before", () => {
-    const { getByTestId } = render(<Tree toggleOnClick />);
+  test("without a toggle the row is the disclosure, as before", () => {
+    const { getByTestId } = render(<Tree withToggle={false} />);
 
     fireEvent.click(getByTestId("trigger-guides"));
 

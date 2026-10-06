@@ -136,7 +136,7 @@ describe("Nav accessibility", () => {
       <Nav.Root aria-label="Main" defaultExpanded={["guides"]} render={<nav />}>
         <Nav.List>
           <Nav.Group value="guides">
-            <Nav.Trigger toggleOnClick={false} active>
+            <Nav.Trigger active>
               <Nav.Toggle />
               <Nav.Label>Guides</Nav.Label>
             </Nav.Trigger>

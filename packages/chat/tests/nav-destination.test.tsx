@@ -46,7 +46,9 @@ const Tree = ({
           onDoubleClick={onDoubleClick}
           data-testid="trigger-guides"
         >
-          {withToggle ? <Nav.Toggle data-testid="toggle-guides" /> : null}
+          {withToggle ? (
+            <Nav.Toggle aria-label="More Guides pages" data-testid="toggle-guides" />
+          ) : null}
           <Nav.Label>Guides</Nav.Label>
         </Nav.Trigger>
         <Nav.List>
@@ -59,6 +61,8 @@ const Tree = ({
   </Nav.Root>
 );
 
+const expanded = (element: HTMLElement) => element.getAttribute("aria-expanded");
+
 describe("a branch that is also a destination", () => {
   test("pressing the row activates it and leaves the group alone", () => {
     const onActivate = mock();
@@ -67,7 +71,7 @@ describe("a branch that is also a destination", () => {
     fireEvent.click(getByTestId("trigger-guides"));
 
     expect(onActivate).toHaveBeenCalledTimes(1);
-    expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("false");
+    expect(expanded(getByTestId("toggle-guides"))).toBe("false");
     expect(queryByTestId("install")).toBeNull();
   });
 
@@ -80,7 +84,7 @@ describe("a branch that is also a destination", () => {
     fireEvent.keyDown(trigger, { key: " " });
 
     expect(onActivate).toHaveBeenCalledTimes(2);
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(expanded(getByTestId("toggle-guides"))).toBe("false");
   });
 
   test("the toggle opens and closes the group without activating the row", async () => {
@@ -89,7 +93,7 @@ describe("a branch that is also a destination", () => {
     const toggle = getByTestId("toggle-guides");
 
     fireEvent.click(toggle);
-    expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("true");
+    expect(expanded(toggle)).toBe("true");
     expect(getByTestId("install")).toBeTruthy();
 
     fireEvent.click(toggle);
@@ -97,6 +101,17 @@ describe("a branch that is also a destination", () => {
     expect(queryByTestId("install")).toBeNull();
 
     expect(onActivate).not.toHaveBeenCalled();
+  });
+
+  test("Enter and Space on the toggle open and close it too", () => {
+    const { getByTestId } = render(<Tree />);
+    const toggle = getByTestId("toggle-guides");
+
+    fireEvent.keyDown(toggle, { key: "Enter" });
+    expect(expanded(toggle)).toBe("true");
+
+    fireEvent.keyDown(toggle, { key: " " });
+    expect(expanded(toggle)).toBe("false");
   });
 
   test("two quick presses on the toggle are two toggles, not a double-click on the row", () => {
@@ -108,28 +123,32 @@ describe("a branch that is also a destination", () => {
     expect(onDoubleClick).not.toHaveBeenCalled();
   });
 
-  test("the arrow keys still open and close it, so the keyboard needs no toggle", () => {
+  test("the arrow keys still open and close it from the row", () => {
     const { getByTestId } = render(<Tree />);
     const trigger = focus(getByTestId("trigger-guides"));
+    const toggle = getByTestId("toggle-guides");
 
     fireEvent.keyDown(trigger, { key: "ArrowRight" });
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(expanded(toggle)).toBe("true");
 
     fireEvent.keyDown(trigger, { key: "ArrowRight" });
     expect(document.activeElement).toBe(getByTestId("install"));
 
     fireEvent.keyDown(document.activeElement as Element, { key: "ArrowLeft" });
     fireEvent.keyDown(document.activeElement as Element, { key: "ArrowLeft" });
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(expanded(toggle)).toBe("false");
   });
 
-  test("the toggle is decoration to assistive tech and publishes the group's state", () => {
+  test("the toggle is the disclosure to assistive tech, and the row only the page", () => {
     const { getByTestId } = render(<Tree defaultExpanded={["guides"]} />);
     const toggle = getByTestId("toggle-guides");
 
-    expect(toggle.getAttribute("aria-hidden")).toBe("true");
-    expect(toggle.hasAttribute("tabindex")).toBe(false);
-    expect(toggle.hasAttribute("data-open")).toBe(true);
+    expect(toggle.getAttribute("role")).toBe("button");
+    expect(toggle.getAttribute("tabindex")).toBe("-1");
+    expect(toggle.hasAttribute("aria-hidden")).toBe(false);
+    expect(expanded(toggle)).toBe("true");
+    expect(document.getElementById(toggle.getAttribute("aria-controls") ?? "")).toBeTruthy();
+    expect(getByTestId("trigger-guides").hasAttribute("aria-expanded")).toBe(false);
   });
 
   test("a disabled group's toggle does nothing", () => {
@@ -137,7 +156,7 @@ describe("a branch that is also a destination", () => {
 
     fireEvent.click(getByTestId("toggle-guides"));
 
-    expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("false");
+    expect(expanded(getByTestId("toggle-guides"))).toBe("false");
   });
 
   test("a disabled trigger's toggle does nothing, even in an enabled group", () => {
@@ -146,7 +165,8 @@ describe("a branch that is also a destination", () => {
 
     fireEvent.click(toggle);
 
-    expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("false");
+    expect(expanded(toggle)).toBe("false");
+    expect(toggle.getAttribute("aria-disabled")).toBe("true");
     expect(toggle.hasAttribute("data-disabled")).toBe(true);
   });
 
@@ -159,7 +179,7 @@ describe("a branch that is also a destination", () => {
               render={(props) => <a href="#guides" {...props} />}
               data-testid="trigger-guides"
             >
-              <Nav.Toggle data-testid="toggle-guides" />
+              <Nav.Toggle aria-label="More Guides pages" data-testid="toggle-guides" />
               <Nav.Label>Guides</Nav.Label>
             </Nav.Trigger>
             <Nav.List />
@@ -170,7 +190,30 @@ describe("a branch that is also a destination", () => {
 
     // fireEvent returns false once the default action is prevented.
     expect(fireEvent.click(getByTestId("toggle-guides"))).toBe(false);
-    expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("true");
+    expect(expanded(getByTestId("toggle-guides"))).toBe("true");
+  });
+
+  test("Space on a link row follows the link, as Enter already does", () => {
+    const onClick = mock();
+    const { getByTestId } = render(
+      <Nav.Root>
+        <Nav.List>
+          <Nav.Item
+            value="install"
+            render={(props) => <a href="#install" {...props} />}
+            onClick={onClick}
+            data-testid="install"
+          >
+            <Nav.Label>Install</Nav.Label>
+          </Nav.Item>
+        </Nav.List>
+      </Nav.Root>,
+    );
+    const link = focus(getByTestId("install"));
+
+    fireEvent.keyDown(link, { key: " " });
+
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 
   test("without a toggle the row is the disclosure, as before", () => {
@@ -178,7 +221,7 @@ describe("a branch that is also a destination", () => {
 
     fireEvent.click(getByTestId("trigger-guides"));
 
-    expect(getByTestId("trigger-guides").getAttribute("aria-expanded")).toBe("true");
+    expect(expanded(getByTestId("trigger-guides"))).toBe("true");
   });
 });
 

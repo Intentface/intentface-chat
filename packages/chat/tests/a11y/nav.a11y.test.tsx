@@ -129,15 +129,15 @@ describe("Nav accessibility", () => {
     }
   });
 
-  test("a toggle beside a destination row adds no violation, nested-interactive included", async () => {
-    // The toggle is aria-hidden and unfocusable, so it is not a nested control
-    // at all — unlike an action, it needs no share of the suppression.
+  test("a toggle on a page row is a named disclosure, with nested-interactive its only finding", async () => {
+    // Like an action, the toggle is a real button inside the row, so it shares
+    // the one suppressed rule and nothing else.
     const { container, getByRole } = render(
       <Nav.Root aria-label="Main" defaultExpanded={["guides"]} render={<nav />}>
         <Nav.List>
           <Nav.Group value="guides">
             <Nav.Trigger active>
-              <Nav.Toggle />
+              <Nav.Toggle aria-label="More Guides pages" />
               <Nav.Label>Guides</Nav.Label>
             </Nav.Trigger>
             <Nav.List>
@@ -150,9 +150,11 @@ describe("Nav accessibility", () => {
       </Nav.Root>,
     );
 
-    expect(await audit(container, PAGE_LEVEL_RULES)).toEqual([]);
-    const row = getByRole("button", { name: "Guides", current: "page" });
-    expect(row.getAttribute("aria-expanded")).toBe("true");
+    expect(await audit(container)).toEqual([]);
+    const results = await axe.run(container, { rules: PAGE_LEVEL_RULES });
+    expect(results.violations.map((violation) => violation.id)).toEqual(["nested-interactive"]);
+    expect(getByRole("button", { name: "More Guides pages", expanded: true })).toBeTruthy();
+    expect(getByRole("button", { name: "Guides", current: "page" })).toBeTruthy();
   });
 
   test("an action is reachable by name, not just by pointer", () => {

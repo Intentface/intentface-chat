@@ -8,8 +8,8 @@ import { type ComponentProps, useState } from "react";
  *
  * "Guides" has an index of its own. The `Nav.Toggle` inside its trigger is what
  * makes it a destination: pressing the row (click, Enter or Space) shows the
- * page, and the caret opens the branch. ArrowRight and ArrowLeft still open and
- * close it from the row, which is why the caret can be pointer-only.
+ * page, and the caret opens the branch. The caret is a named button that says
+ * whether the branch is open; ArrowRight and ArrowLeft still work from the row.
  *
  * "Reference" is an ordinary trigger beside it, for comparison: no toggle, so
  * its whole row is the disclosure and its chevron is only decoration.
@@ -33,7 +33,7 @@ export const Destination = () => {
                 onClick={() => setPage("guides")}
                 className={rowClass}
               >
-                <Nav.Toggle className={toggleClass}>
+                <Nav.Toggle aria-label="More Guides pages" className={toggleClass}>
                   <ChevronIcon className="size-3" />
                 </Nav.Toggle>
                 <Nav.Label className="min-w-0 truncate">Guides</Nav.Label>

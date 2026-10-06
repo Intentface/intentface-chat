@@ -4,7 +4,7 @@
 
 Four additions to `Nav` and `Tabs`, found by building a real app's file tree and page tabs on them. All are additive; nothing changes unless you opt in, apart from the new `aria-current` attribute, a disabled-trigger fix, and one rename (last below).
 
-**`Nav`: a branch that is also a page.** The new `Nav.Toggle` part is a caret for inside `Nav.Trigger`. Mounting it makes pressing the row (click, Enter or Space) activate it like `Nav.Item`, so its `onClick` or link routes, while the caret opens and closes the group. It is pointer-only and `aria-hidden`, because the row keeps `aria-expanded` and ArrowRight/ArrowLeft open and close the group as before. A press on the caret never follows a link row, and the caret respects a disabled trigger.
+**`Nav`: a branch that is also a page.** The new `Nav.Toggle` part is a caret for inside `Nav.Trigger`. Mounting it makes pressing the row (click, Enter or Space) activate it like `Nav.Item`, so its `onClick` or link routes, while the caret opens and closes the group. The caret is a real button that carries `aria-expanded` for the group, so name it with `aria-label`; like `Nav.Action` it stays out of the arrow-key order, where ArrowRight and ArrowLeft still open and close the group from the row. A press on the caret never follows a link row, and the caret respects a disabled trigger. Space now follows a link row as Enter does, on `Nav.Item` too.
 
 A disabled `Nav.Trigger` now also prevents the click's default action, as a disabled `Nav.Item` always has — so one rendered as a link no longer navigates while disabled.
 

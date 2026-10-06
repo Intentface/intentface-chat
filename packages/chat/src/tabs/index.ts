@@ -11,7 +11,14 @@ export type {
   TabsSide,
 } from "./anchored";
 export * as Tabs from "./index.parts";
-export type { TabsDirection, TabsSelectOnClose, TabsState, TabsStore } from "./store";
+export type {
+  TabsDirection,
+  TabsRootChangeEventDetails,
+  TabsRootChangeEventReason,
+  TabsSelectOnClose,
+  TabsState,
+  TabsStore,
+} from "./store";
 export { useTabs, useTabsStore } from "./store";
 export type {
   TabsActionProps,

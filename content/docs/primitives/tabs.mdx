@@ -8,6 +8,8 @@ import { Basic } from './tabs/demos/basic';
 import { Anchored } from './tabs/demos/anchored';
 import { Closing } from './tabs/demos/closing';
 import { ExternalTabs } from './tabs/demos/external';
+import { Hover } from './tabs/demos/hover';
+import { ConfirmClose } from './tabs/demos/confirm-close';
 
 <Demo component={<Basic />} file="primitives/tabs/demos/basic.tsx" />
 
@@ -123,6 +125,15 @@ lands the surface withholds paint rather than showing at 0,0 — otherwise the
 first real position would arrive as `auto` → a length, which CSS cannot
 interpolate, and the surface would slide in from the corner.
 
+### Opening a tab on hover
+
+Use the `openOnHover` prop to open a tab once the mouse rests on it. Leaving
+closes it again unless the mouse heads into the popup, and a press on the tab or
+inside the popup keeps it. Here the page is the demo's own state, so presses go
+to the page and only hover floats a conversation.
+
+<Demo component={<Hover />} file="primitives/tabs/demos/hover.tsx" />
+
 ### Choosing where the selection lands
 
 Where the selection goes when the open tab is closed is a behaviour, and the
@@ -138,6 +149,26 @@ export const closePolicies = [
 <ValuesTable rows={closePolicies} />
 
 <Demo component={<Closing />} file="primitives/tabs/demos/closing.tsx" />
+
+### Confirming before a tab closes
+
+Every change reaches `onValueChange` and `onItemsChange` with `eventDetails`,
+whose `reason` says what caused it. Call `eventDetails.cancel()` to stop the
+change landing, as this strip does for a tab with unsaved changes.
+
+export const changeReasons = [
+  { value: '"trigger-press"', description: "A click, Enter or Space on a tab." },
+  { value: '"trigger-hover"', description: "The mouse resting on, or leaving, an openOnHover tab." },
+  { value: '"list-navigation"', description: "Arrowing onto a tab with activateOnFocus." },
+  { value: '"close-press"', description: "A press on Tabs.Close." },
+  { value: '"keyboard"', description: "Delete or Backspace on a focused tab." },
+  { value: '"escape-key"', description: "Escape closing the open panel." },
+  { value: '"imperative-action"', description: "A store action called from your own code." },
+];
+
+<ValuesTable rows={changeReasons} />
+
+<Demo component={<ConfirmClose />} file="primitives/tabs/demos/confirm-close.tsx" />
 
 ### Persisting the collection
 
@@ -192,7 +223,7 @@ export const keys = [
   { keys: "Arrow keys", description: "Move focus along the strip, following its orientation." },
   { keys: "Enter / Space", description: "Open the focused tab." },
   { keys: "Delete / Backspace", description: "Close the focused tab — only inside a Tabs.List, and the keyboard equivalent of the × beside it." },
-  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape." },
+  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape. From inside the panel, focus returns to its tab." },
 ];
 
 <KeysTable rows={keys} />
@@ -216,10 +247,10 @@ The provider and container. Renders `data-tabs`.
 export const rootProps = [
   { name: "defaultItems", type: "string[]", description: "The starting tabs when nothing controls them." },
   { name: "items", type: "string[]", description: "Controlled collection." },
-  { name: "onItemsChange", type: "(items: string[]) => void", description: "Fires whenever a tab is added, removed or moved." },
+  { name: "onItemsChange", type: "(items: string[], eventDetails: TabsRootChangeEventDetails) => void", description: "Called before a tab is added, removed or moved. Cancelling a close keeps the tab." },
   { name: "defaultValue", type: "string | null", description: "The tab open on first render." },
   { name: "value", type: "string | null", description: "Controlled selection; null shows nothing." },
-  { name: "onValueChange", type: "(value: string | null) => void", description: "Fires on every selection change." },
+  { name: "onValueChange", type: "(value: string | null, eventDetails: TabsRootChangeEventDetails) => void", description: "Called before the selection changes. eventDetails.cancel() keeps it, except after a close." },
   { name: "selectOnClose", type: '"adjacent" | "recent"', description: "Where the selection lands when the open tab is closed. Unset means nowhere." },
   { name: "orientation", type: '"horizontal" | "vertical"', default: '"horizontal"', description: "Which arrow keys walk the strip." },
   { name: "loop", type: "boolean", default: "true", description: "Wrap at the ends of the strip." },
@@ -272,9 +303,15 @@ inside a `Tabs.List` it joins the collection and the roving focus, and `Delete`
 closes it. Outside one it takes an explicit value, keeps its own tab stop, and
 toggles — a panel with no tab behind it, anchored to the button that owns it.
 
+With `openOnHover`, leaving closes the tab again unless the mouse heads into the
+popup. A press on the tab, or a press or focus inside the popup, keeps it.
+
 export const triggerProps = [
   { name: "value", type: "string", description: "The tab's id. Required outside a List; inherited from the enclosing tab inside one." },
   { name: "disabled", type: "boolean", description: "Disable this tab. It stays in the arrow-key ring." },
+  { name: "openOnHover", type: "boolean", default: "false", description: "Open the tab when the mouse rests on it. Touch has no hover, so a tap still presses." },
+  { name: "openDelay", type: "number", default: "50", description: "How long the mouse rests on the tab before it opens, in ms. Needs openOnHover." },
+  { name: "closeDelay", type: "number", default: "50", description: "How long a hover-opened tab stays open after the mouse leaves, in ms. Needs openOnHover." },
 ];
 
 <PropsTable rows={triggerProps} />

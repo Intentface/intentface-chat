@@ -1,5 +1,5 @@
 // Vendored from @base-ui/utils v1.6.0 (MIT) — packages/utils/src/warn.ts
-// https://github.com/mui/base-ui — exact copy.
+// https://github.com/mui/base-ui — exact copy apart from the message prefix.
 
 let set: Set<string>;
 if (process.env.NODE_ENV !== 'production') {
@@ -11,7 +11,7 @@ export function warn(...messages: string[]) {
     const messageKey = messages.join(' ');
     if (!set.has(messageKey)) {
       set.add(messageKey);
-      console.warn(`Base UI: ${messageKey}`);
+      console.warn(`@intentface/chat: ${messageKey}`);
     }
   }
 }

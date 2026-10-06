@@ -249,7 +249,8 @@ export const NavRoot = ({
     if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
       const forward = event.key === "ArrowRight";
       const trigger = current.getAttribute("data-nav-trigger");
-      const isOpen = current.getAttribute("aria-expanded") === "true";
+      // From the store, not aria-expanded: a page row hands that to its Nav.Toggle.
+      const isOpen = trigger !== null && store.getSnapshot().expanded.has(trigger);
       event.preventDefault();
 
       // On a group: open it, then step into it. On a leaf, or a group already
@@ -672,8 +673,10 @@ export const NavGroup = ({
 // ---------------------------------------------------------------------------
 
 /** Elements the browser already activates on Enter or Space. */
-const activatesItself = (element: HTMLElement) =>
-  element.tagName === "BUTTON" || (element.tagName === "A" && element.hasAttribute("href"));
+/** A button handles Enter and Space itself; a link handles only Enter. */
+const activatesItself = (element: HTMLElement, key: string) =>
+  element.tagName === "BUTTON" ||
+  (key === "Enter" && element.tagName === "A" && element.hasAttribute("href"));
 
 /**
  * What `Item` and `Trigger` have in common: one tab stop for the whole nav,
@@ -691,12 +694,14 @@ const useRow = (value: string, disabled: boolean, active: boolean, activate: () 
     // rendered as a real anchor reachable without JavaScript.
     tabIndex: disabled ? -1 : (highlighted === null ? active : highlighted === value) ? 0 : -1,
     "aria-disabled": disabled || undefined,
+    // `active` is the route being shown; your own `aria-current` still overrides it.
+    "aria-current": active ? ("page" as const) : undefined,
     onFocus: () => setHighlighted(value),
     onClick: disabled ? (event: MouseEvent<HTMLElement>) => event.preventDefault() : undefined,
     onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       if (event.target !== event.currentTarget) return;
-      if (activatesItself(event.currentTarget)) return;
+      if (activatesItself(event.currentTarget, event.key)) return;
       // Space scrolls the page otherwise, and the row is the thing being
       // pressed — not the document behind it.
       event.preventDefault();
@@ -754,10 +759,20 @@ export type NavTriggerProps = PrimitiveProps<"div", NavTriggerState> & {
   children?: ReactNode;
 };
 
+/** The trigger a `Nav.Toggle` sits in: its disabled state, and how the caret announces itself. */
+const NavTriggerContext = createContext<{
+  disabled: boolean;
+  setHasToggle: (present: boolean) => void;
+} | null>(null);
+
 /**
  * The row that opens a group — its heading and its disclosure in one, because
  * in a sidebar they are the same thing you click. Takes no `value`: it belongs
  * to the group it is written inside.
+ *
+ * Put a `Nav.Toggle` inside it and the two come apart: pressing the row
+ * activates it like `Nav.Item`, and the caret opens the group and carries
+ * `aria-expanded`. The arrow keys open and close it from the row either way.
  */
 export const NavTrigger = ({
   active = false,
@@ -772,11 +787,18 @@ export const NavTrigger = ({
   const group = use(NavGroupContext);
   if (!group) throw new Error("<Nav.Trigger> must be used within <Nav.Group>");
 
+  const ref = useRef<HTMLElement | null>(null);
   const isDisabled = disabled ?? group.disabled;
   const toggle = () => store.getSnapshot().toggle(group.value);
-  const row = useRow(group.value, isDisabled, active, toggle);
+  // A row holding a Nav.Toggle is a page: a press activates it, and the caret is the disclosure.
+  const [hasToggle, setHasToggle] = useState(false);
+  // Enter and Space activate a page row as a click would, reaching your onClick or the link.
+  const row = useRow(group.value, isDisabled, active, () =>
+    hasToggle ? ref.current?.click() : toggle(),
+  );
+  const context = useMemo(() => ({ disabled: isDisabled, setHasToggle }), [isDisabled]);
 
-  return useRenderElement(
+  const element = useRenderElement(
     "div",
     { className, render, style },
     {
@@ -788,13 +810,87 @@ export const NavTrigger = ({
         disabled: isDisabled,
       },
       stateAttributesMapping: { ...DEPTH_ATTRIBUTES, ...openStateMapping },
+      ref,
       props: [
         {
           ...row,
           "data-nav-trigger": group.value,
+          // On a page row the caret announces the open state, not the row.
+          "aria-expanded": hasToggle ? undefined : group.open,
+          "aria-controls": hasToggle ? undefined : group.listId,
+          onClick: (event: MouseEvent<HTMLElement>) => {
+            if (isDisabled) event.preventDefault();
+            else if (!hasToggle) toggle();
+          },
+        },
+        elementProps,
+      ],
+    },
+  );
+
+  return <NavTriggerContext value={context}>{element}</NavTriggerContext>;
+};
+
+export type NavToggleState = NavPartState & { open: boolean; disabled: boolean };
+
+export type NavToggleProps = PrimitiveProps<"div", NavToggleState> & { children?: ReactNode };
+
+/**
+ * The caret inside a row — the control that opens a branch whose row is also a
+ * page. Mounting it makes pressing the row activate the page. Out of the roving
+ * order, like `Nav.Action`, since the arrow keys already open the group from
+ * the row, and it stops every event it handles: anything that escaped would
+ * activate the row, or follow its link, on its way out of opening the group.
+ */
+export const NavToggle = ({ className, render, style, ...elementProps }: NavToggleProps) => {
+  const store = useNavContextStore();
+  const depth = use(NavDepthContext);
+  const group = use(NavGroupContext);
+  const trigger = use(NavTriggerContext);
+  if (!group || !trigger) throw new Error("<Nav.Toggle> must be used within <Nav.Trigger>");
+
+  // Mounting it is what makes its row a page.
+  const { setHasToggle } = trigger;
+  const ref = useCallback(
+    (element: HTMLElement | null) => {
+      if (!element) return;
+      setHasToggle(true);
+      return () => setHasToggle(false);
+    },
+    [setHasToggle],
+  );
+
+  const stop = (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => {
+    event.stopPropagation();
+  };
+
+  const toggle = (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>) => {
+    stop(event);
+    event.preventDefault();
+    if (!trigger.disabled) store.getSnapshot().toggle(group.value);
+  };
+
+  return useRenderElement(
+    "div",
+    { className, render, style },
+    {
+      state: { depth, nested: depth > 0, open: group.open, disabled: trigger.disabled },
+      stateAttributesMapping: { ...DEPTH_ATTRIBUTES, ...openStateMapping },
+      ref,
+      props: [
+        {
+          "data-nav-toggle": "",
+          role: "button",
+          tabIndex: -1,
           "aria-expanded": group.open,
           "aria-controls": group.listId,
-          onClick: isDisabled ? undefined : toggle,
+          "aria-disabled": trigger.disabled || undefined,
+          onClick: toggle,
+          onPointerDown: stop,
+          onDoubleClick: stop,
+          onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+            if (event.key === "Enter" || event.key === " ") toggle(event);
+          },
         },
         elementProps,
       ],

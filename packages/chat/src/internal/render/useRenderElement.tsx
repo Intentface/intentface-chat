@@ -1,5 +1,5 @@
 // Vendored from @base-ui/react v1.6.0 (MIT) — packages/react/src/internals/useRenderElement.tsx
-// https://github.com/mui/base-ui — import specifiers rewired; one local departure:
+// https://github.com/mui/base-ui — import specifiers rewired, names and messages made neutral; one local departure:
 // the `props` config accepts bespoke data-* part attributes (WithDataAttributes).
 
 import * as React from 'react';
@@ -8,7 +8,7 @@ import { getReactElementRef } from './getReactElementRef';
 import { mergeObjects } from './mergeObjects';
 import { warn } from './warn';
 import { EMPTY_OBJECT } from './empty';
-import type { BaseUIComponentProps, ComponentRenderFn, HTMLProps } from './types';
+import type { RenderComponentProps, ComponentRenderFn, HTMLProps } from './types';
 import type { WithDataAttributes } from './baseTypes';
 import { getStateAttributesProps, type StateAttributesMapping } from './getStateAttributesProps';
 import { resolveClassName } from './resolveClassName';
@@ -18,7 +18,7 @@ import { mergeProps, mergePropsN, mergeClassNames } from './mergeProps';
 type IntrinsicTagName = keyof React.JSX.IntrinsicElements;
 
 /**
- * Renders a Base UI element.
+ * Renders a primitive part's element.
  *
  * @param element The default HTML element to render. Can be overridden by the `render` prop.
  * @param componentProps An object containing the `render` and `className` props to be used for element customization. Other props are ignored.
@@ -135,7 +135,7 @@ const LOWERCASE_CHARACTER_PATTERN = /[a-z]/;
 
 function evaluateRenderProp<T extends React.ElementType, S>(
   element: IntrinsicTagName | undefined,
-  render: BaseUIComponentProps<T, S>['render'],
+  render: RenderComponentProps<T, S>['render'],
   props: React.HTMLAttributes<any> & React.RefAttributes<any>,
   state: S,
 ): React.ReactElement {
@@ -158,7 +158,7 @@ function evaluateRenderProp<T extends React.ElementType, S>(
     // https://github.com/facebook/react/blob/a0566250b210499b4c5677f5ac2eedbd71d51a1b/packages/react/src/ReactChildren.js#L186
     if (newElement?.$$typeof === REACT_LAZY_TYPE) {
       const children = React.Children.toArray(render);
-      newElement = children[0] as BaseUIComponentProps<T, S>['render'];
+      newElement = children[0] as RenderComponentProps<T, S>['render'];
     }
 
     // There is a high number of indirections, the error message thrown by React.cloneElement() is
@@ -173,9 +173,9 @@ function evaluateRenderProp<T extends React.ElementType, S>(
         // eslint-disable-next-line mui/no-guarded-throw
         throw new Error(
           [
-            'Base UI: The `render` prop was provided an invalid React element as `React.isValidElement(render)` is `false`.',
+            '@intentface/chat: The `render` prop was provided an invalid React element as `React.isValidElement(render)` is `false`.',
             'A valid React element must be provided to the `render` prop because it is cloned with props to replace the default element.',
-            'https://base-ui.com/r/invalid-render-prop',
+            'https://ui.intentface.com/handbook/composition',
           ].join('\n'),
         );
       }
@@ -190,7 +190,7 @@ function evaluateRenderProp<T extends React.ElementType, S>(
   }
   // Unreachable, but the typings on `useRenderElement` need to be reworked
   // to annotate it correctly.
-  throw new Error('Base UI: Render element or function are not defined.');
+  throw new Error('@intentface/chat: Render element or function are not defined.');
 }
 
 function warnIfRenderPropLooksLikeComponent(renderFn: { name: string }) {
@@ -210,10 +210,10 @@ function warnIfRenderPropLooksLikeComponent(renderFn: { name: string }) {
   warn(
     `The \`render\` prop received a function named \`${functionName}\` that starts with an uppercase letter.`,
     'This usually means a React component was passed directly as `render={Component}`.',
-    'Base UI calls `render` as a plain function, which can break the Rules of Hooks during reconciliation.',
+    'The part calls `render` as a plain function, which can break the Rules of Hooks during reconciliation.',
     'If this is an intentional render callback, rename it to start with a lowercase letter.',
     'Use `render={<Component />}` or `render={(props) => <Component {...props} />}` instead.',
-    'https://base-ui.com/r/invalid-render-prop',
+    'https://ui.intentface.com/handbook/composition',
   );
 }
 

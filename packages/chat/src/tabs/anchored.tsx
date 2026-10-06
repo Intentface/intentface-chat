@@ -231,8 +231,18 @@ export const TabsPopup = ({ className, render, style, ...elementProps }: TabsPop
     {
       state: { open, transitionStatus: transition?.transitionStatus },
       stateAttributesMapping: { ...openStateMapping, ...transitionStatusMapping },
-      ref: popupRef,
-      props: [{ "data-tabs-popup": "" }, elementProps],
+      ref: [popupRef, store.popupRef],
+      props: [
+        {
+          "data-tabs-popup": "",
+          onPointerEnter: store.hover.enterPopup,
+          onPointerLeave: store.hover.leavePopup,
+          // A press or focus inside means it is in use, so the mouse leaving no longer closes it.
+          onPointerDown: store.hover.claim,
+          onFocus: store.hover.claim,
+        },
+        elementProps,
+      ],
     },
   );
 };

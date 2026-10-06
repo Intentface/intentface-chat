@@ -262,4 +262,28 @@ describe("dismissal", () => {
     act(() => void fireEvent.keyDown(window, { key: "Escape" }));
     expect(getByTestId("tab-a").getAttribute("aria-expanded")).toBe("true");
   });
+
+  test("Escape from inside the surface hands focus back to its tab", async () => {
+    const { getByTestId, getByLabelText } = render(
+      <Tabs.Root defaultItems={["a"]} defaultValue="a">
+        <Strip />
+        <Tabs.Portal>
+          <Tabs.Positioner>
+            <Tabs.Popup>
+              <Tabs.Viewport>{(id) => <input aria-label={`Reply in ${id}`} />}</Tabs.Viewport>
+            </Tabs.Popup>
+          </Tabs.Positioner>
+        </Tabs.Portal>
+      </Tabs.Root>,
+    );
+    await settle();
+    const reply = getByLabelText("Reply in a");
+    act(() => reply.focus());
+
+    act(() => void fireEvent.keyDown(reply, { key: "Escape" }));
+    await settle();
+
+    expect(getByTestId("tab-a").getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(getByTestId("tab-a"));
+  });
 });

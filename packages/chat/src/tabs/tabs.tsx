@@ -1,13 +1,20 @@
 "use client";
 
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, PointerEvent, ReactNode } from "react";
 import { createContext, Fragment, use, useCallback, useId, useMemo, useState } from "react";
+import { createChangeEventDetails } from "../internal/change-event-details";
 import { step } from "../internal/collection";
 import { useIsomorphicLayoutEffect } from "../internal/iso-layout-effect";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import type { StateAttributesMapping } from "../internal/render/getStateAttributesProps";
 import { useRenderElement } from "../internal/render/useRenderElement";
-import type { TabsDirection, TabsSelectOnClose, TabsState, TabsStore } from "./store";
+import type {
+  TabsDirection,
+  TabsRootChangeEventDetails,
+  TabsSelectOnClose,
+  TabsState,
+  TabsStore,
+} from "./store";
 import { createTabsStore, TabsStoreContext, useTabsContextStore, useTabsStore } from "./store";
 
 /**
@@ -186,10 +193,12 @@ export type TabsRootProps<Value extends string = string> = Omit<
 > & {
   defaultValue?: Value | null;
   value?: Value | null;
-  onValueChange?: (value: Value | null) => void;
+  /** Called before the selection changes. `eventDetails.cancel()` keeps it, except after a close. */
+  onValueChange?: (value: Value | null, eventDetails: TabsRootChangeEventDetails) => void;
   defaultItems?: Value[];
   items?: Value[];
-  onItemsChange?: (items: Value[]) => void;
+  /** Called before a tab is added, removed or moved. Cancelling a close keeps the tab. */
+  onItemsChange?: (items: Value[], eventDetails: TabsRootChangeEventDetails) => void;
   /** Where the selection lands when a tab is closed. Unset means nowhere. */
   selectOnClose?: TabsSelectOnClose;
   /** An explicit `Tabs.createStore()` handle. Must be stable for the Root's life. */
@@ -250,8 +259,8 @@ export const TabsRoot = <Value extends string = string>({
   store.orientationRef.current = orientation;
   store.valueControlledRef.current = value !== undefined;
   store.itemsControlledRef.current = items !== undefined;
-  store.onValueChangeRef.current = onValueChange as ((next: string | null) => void) | null;
-  store.onItemsChangeRef.current = onItemsChange as ((next: string[]) => void) | null;
+  store.onValueChangeRef.current = onValueChange as TabsStore["onValueChangeRef"]["current"];
+  store.onItemsChangeRef.current = onItemsChange as TabsStore["onItemsChangeRef"]["current"];
 
   // Before paint, so a controlled change never shows the old state first.
   useIsomorphicLayoutEffect(() => {
@@ -265,9 +274,13 @@ export const TabsRoot = <Value extends string = string>({
   useIsomorphicLayoutEffect(() => {
     if (!dismissOnEscape) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || store.getSnapshot().value === null) return;
+      const { value } = store.getSnapshot();
+      if (event.key !== "Escape" || value === null) return;
       event.preventDefault();
-      store.getSnapshot().select(null);
+      // From inside the popup, focus would drop to the body as it closes; it goes back to the tab.
+      const fromPopup = store.popupRef.current?.contains(document.activeElement) ?? false;
+      store.selectWithDetails(null, createChangeEventDetails("escape-key", event));
+      if (fromPopup) store.elements.get(value)?.focus();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
@@ -278,12 +291,16 @@ export const TabsRoot = <Value extends string = string>({
     [orientation, loop, activateOnFocus, disabled],
   );
 
+  // Nothing hover started outlives the strip.
+  const releaseHoverOnUnmount = useCallback(() => () => store.hover.release(), [store]);
+
   const element = useRenderElement(
     "div",
     { className, render, style },
     {
       state: usePartState(store, orientation),
       stateAttributesMapping: PART_ATTRIBUTES,
+      ref: releaseHoverOnUnmount,
       props: [{ "data-tabs": "" }, elementProps],
     },
   );
@@ -303,7 +320,7 @@ export type TabsListProps = Omit<PrimitiveProps<"div", TabsPartState>, "children
   /**
    * Plain children when you are laying the strip out yourself. A function
    * renders one call per tab, in order, and saves you the map, the keys and a
-   * subscription of your own — same shape as Base UI's `Combobox.List`.
+   * subscription of your own.
    */
   children?: ReactNode | ((value: string, index: number) => ReactNode);
 };
@@ -346,8 +363,7 @@ export const TabsList = ({
 
     // A text field inside the strip — renaming a tab in place — owns its own
     // arrow keys until the caret reaches the end it is heading for. Without
-    // this the roving focus steals them and the caret never moves. Lifted from
-    // Base UI's Composite, which needs it for Toolbar.Input.
+    // this the roving focus steals them and the caret never moves.
     if (ownsTheArrowKeys(event, forward, backward)) return;
 
     const next =
@@ -366,8 +382,13 @@ export const TabsList = ({
     if (next === null) return;
 
     setHighlighted(next);
-    store.elements.get(next)?.focus();
-    if (activateOnFocus) store.getSnapshot().select(next);
+    const element = store.elements.get(next);
+    element?.focus();
+    if (!activateOnFocus) return;
+    store.selectWithDetails(
+      next,
+      createChangeEventDetails("list-navigation", event.nativeEvent, element),
+    );
   };
 
   const element = useRenderElement(
@@ -407,6 +428,12 @@ export type TabsTriggerProps = PrimitiveProps<"div", TabsTriggerState> & {
   /** Required outside a `Tabs.List`; inside one it comes from the collection. */
   value?: string;
   disabled?: boolean;
+  /** Open the tab when the mouse rests on it. Touch has no hover, so a tap still presses. */
+  openOnHover?: boolean;
+  /** How long the mouse rests on the tab before it opens, in ms. Needs `openOnHover`. */
+  openDelay?: number;
+  /** How long a hover-opened tab stays open after the mouse leaves, in ms. Needs `openOnHover`. */
+  closeDelay?: number;
 };
 
 /**
@@ -431,10 +458,16 @@ export type TabsTriggerProps = PrimitiveProps<"div", TabsTriggerState> & {
  * - **Outside one** it takes an explicit value, keeps its own tab stop, and
  *   toggles — a panel with no tab behind it, opened anchored to the button
  *   that owns it and promoted to a real tab only when you call `open()`.
+ *
+ * With `openOnHover`, leaving closes the tab again unless the mouse heads into
+ * the popup. A press on the tab, or a press or focus inside the popup, keeps it.
  */
 export const TabsTrigger = ({
   value: explicitValue,
   disabled: ownDisabled,
+  openOnHover = false,
+  openDelay = 50,
+  closeDelay = 50,
   className,
   render,
   style,
@@ -453,18 +486,22 @@ export const TabsTrigger = ({
 
   const context = useMemo(() => ({ value, disabled }), [value, disabled]);
 
+  const hovers = openOnHover && !disabled;
+
   const ref = useCallback(
     (element: HTMLDivElement | null) => {
       // The same element is both the focus target and what a floating surface
       // lines up with, now that the pill and the button are one thing.
       store.registerElement(value, element);
       store.registerAnchor(value, element);
+      const unregisterHover = element && hovers ? store.hover.register(element) : undefined;
       return () => {
         store.registerElement(value, null);
         store.registerAnchor(value, null);
+        unregisterHover?.();
       };
     },
-    [store, value],
+    [store, value, hovers],
   );
 
   useIsomorphicLayoutEffect(() => {
@@ -472,23 +509,33 @@ export const TabsTrigger = ({
     return () => store.registerDisabled(value, false);
   }, [store, value, disabled]);
 
-  const activate = () => {
+  const activate = (event: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return;
-    store.getSnapshot().select(!inList && selected ? null : value);
+    // A press on a tab the mouse opened keeps it open, rather than toggling it shut.
+    const hoverOpened = store.hover.owns(value);
+    store.hover.claim();
+    store.selectWithDetails(
+      !inList && selected && !hoverOpened ? null : value,
+      createChangeEventDetails("trigger-press", event.nativeEvent, event.currentTarget),
+    );
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       // A div does not do this for us.
       event.preventDefault();
-      activate();
+      activate(event);
       return;
     }
     // Delete closes a tab — the keyboard equivalent of the × beside it.
     if (!inList || disabled) return;
     if (event.key !== "Delete" && event.key !== "Backspace") return;
     event.preventDefault();
-    closeAndRefocus(store, value);
+    closeAndRefocus(
+      store,
+      value,
+      createChangeEventDetails("keyboard", event.nativeEvent, event.currentTarget),
+    );
   };
 
   const element = useRenderElement(
@@ -511,6 +558,12 @@ export const TabsTrigger = ({
           onClick: activate,
           onFocus: inList ? () => list.setHighlighted(value) : undefined,
           onKeyDown: handleKeyDown,
+          ...(hovers && {
+            onPointerEnter: (event: PointerEvent<HTMLDivElement>) =>
+              store.hover.enterTab({ value, openDelay, closeDelay }, event),
+            onPointerMove: store.hover.moveOnTab,
+            onPointerLeave: store.hover.leaveTab,
+          }),
         },
         elementProps,
       ],
@@ -527,8 +580,13 @@ export const TabsTrigger = ({
  * by the time this reads it back — and focus moves there before React unmounts
  * the tab that was closed. Left alone, focus would fall to the body.
  */
-const closeAndRefocus = (store: TabsStore, value: string) => {
-  store.getSnapshot().close(value);
+const closeAndRefocus = (
+  store: TabsStore,
+  value: string,
+  eventDetails: TabsRootChangeEventDetails,
+) => {
+  store.closeWithDetails(value, eventDetails);
+  if (eventDetails.isCanceled) return;
   const successor = store.getSnapshot().value;
   if (successor) store.elements.get(successor)?.focus();
 };
@@ -638,11 +696,15 @@ export const TabsClose = ({
   const value = useItemValue(explicitValue);
   const selected = useTabsStore(store, selectValue) === value;
 
-  const close = (event: { stopPropagation: () => void; preventDefault: () => void }) => {
+  const close = (event: MouseEvent<HTMLDivElement> | KeyboardEvent<HTMLDivElement>) => {
     event.stopPropagation();
     event.preventDefault();
     if (disabled) return;
-    closeAndRefocus(store, value);
+    closeAndRefocus(
+      store,
+      value,
+      createChangeEventDetails("close-press", event.nativeEvent, event.currentTarget),
+    );
   };
 
   return useRenderElement(

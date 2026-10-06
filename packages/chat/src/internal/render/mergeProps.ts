@@ -1,12 +1,12 @@
 // Vendored from @base-ui/react v1.6.0 (MIT) — packages/react/src/merge-props/mergeProps.ts
-// https://github.com/mui/base-ui — exact copy; only import specifiers rewired.
+// https://github.com/mui/base-ui — import specifiers rewired and names made neutral; otherwise an exact copy.
 
 import * as React from 'react';
 import { mergeObjects } from './mergeObjects';
-import type { BaseUIEvent, WithBaseUIEvent } from './types';
+import type { PreventableEvent, WithPreventableEvents } from './types';
 
 type ElementType = React.ElementType;
-type PropsOf<T extends React.ElementType> = WithBaseUIEvent<React.ComponentPropsWithRef<T>>;
+type PropsOf<T extends React.ElementType> = WithPreventableEvents<React.ComponentPropsWithRef<T>>;
 type InputProps<T extends React.ElementType> =
   | PropsOf<T>
   | ((otherProps: PropsOf<T>) => PropsOf<T>)
@@ -21,7 +21,7 @@ const EMPTY_PROPS = {};
  *
  * Event handlers are merged and called in right-to-left order (rightmost handler executes first, leftmost last).
  * For React synthetic events, the rightmost handler can prevent prior (left-positioned) handlers from executing
- * by calling `event.preventBaseUIHandler()`. For non-synthetic events (custom events with primitive/object values),
+ * by calling `event.preventPrimitiveHandler()`. For non-synthetic events (custom events with primitive/object values),
  * all handlers always execute without prevention capability.
  *
  * The `className` prop is merged by concatenating classes in right-to-left order (rightmost class appears first in the string).
@@ -32,8 +32,8 @@ const EMPTY_PROPS = {};
  * so in the case of `(obj1, obj2, fn, obj3)`, `fn` will receive the merged props of `obj1` and `obj2`.
  * The function is responsible for chaining event handlers if needed (that is, we don't run the merge logic).
  *
- * Event handlers returned by the functions are not automatically prevented when `preventBaseUIHandler` is called.
- * They must check `event.baseUIHandlerPrevented` themselves and bail out if it's true.
+ * Event handlers returned by the functions are not automatically prevented when `preventPrimitiveHandler` is called.
+ * They must check `event.primitiveHandlerPrevented` themselves and bail out if it's true.
  *
  * @important **`ref` is not merged.**
  * @param a Props object to merge.
@@ -235,13 +235,13 @@ function mergeEventHandlers(ourHandler: Function | undefined, theirHandler: Func
     const event = args[0];
 
     if (isSyntheticEvent(event)) {
-      const baseUIEvent = event as BaseUIEvent<typeof event>;
+      const preventableEvent = event as PreventableEvent<typeof event>;
 
-      makeEventPreventable(baseUIEvent);
+      makeEventPreventable(preventableEvent);
 
       const result = theirHandler(...args);
 
-      if (!baseUIEvent.baseUIHandlerPrevented) {
+      if (!preventableEvent.primitiveHandlerPrevented) {
         ourHandler?.(...args);
       }
 
@@ -263,16 +263,16 @@ function wrapEventHandler(handler: Function | undefined) {
     const event = args[0];
 
     if (isSyntheticEvent(event)) {
-      makeEventPreventable(event as BaseUIEvent<typeof event>);
+      makeEventPreventable(event as PreventableEvent<typeof event>);
     }
 
     return handler(...args);
   };
 }
 
-export function makeEventPreventable<T extends React.SyntheticEvent>(event: BaseUIEvent<T>) {
-  event.preventBaseUIHandler = () => {
-    (event.baseUIHandlerPrevented as boolean) = true;
+export function makeEventPreventable<T extends React.SyntheticEvent>(event: PreventableEvent<T>) {
+  event.preventPrimitiveHandler = () => {
+    (event.primitiveHandlerPrevented as boolean) = true;
   };
 
   return event;

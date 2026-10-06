@@ -2,7 +2,12 @@
 
 import type { RefObject } from "react";
 import { createContext, use, useSyncExternalStore } from "react";
+import {
+  type ChangeEventDetails,
+  createChangeEventDetails,
+} from "../internal/change-event-details";
 import { adjacentTo, insertAt, moveTo, step } from "../internal/collection";
+import { createTabsHover, type TabsHover } from "./hover";
 
 /**
  * Tabs store — an open-ended, closable collection with at most one tab open.
@@ -36,6 +41,24 @@ export type TabsSelectOnClose =
   | "adjacent"
   /** The tab you were in before this one, falling back to adjacent. */
   | "recent";
+
+/** Why the selection or the collection changed. */
+export type TabsRootChangeEventReason =
+  /** A click, Enter or Space on a tab. */
+  | "trigger-press"
+  /** The pointer resting on, or leaving, an `openOnHover` tab. */
+  | "trigger-hover"
+  /** Arrowing onto a tab with `activateOnFocus`. */
+  | "list-navigation"
+  /** A press on `Tabs.Close`. */
+  | "close-press"
+  /** Delete or Backspace on a focused tab. */
+  | "keyboard"
+  | "escape-key"
+  /** A store action called from your own code. */
+  | "imperative-action";
+
+export type TabsRootChangeEventDetails = ChangeEventDetails<TabsRootChangeEventReason>;
 
 /** Which way the selection just moved, for panels that slide rather than fade. */
 export type TabsDirection = "left" | "right" | "up" | "down" | "none";
@@ -73,11 +96,20 @@ export type TabsStore = {
   orientationRef: RefObject<"horizontal" | "vertical">;
   valueControlledRef: RefObject<boolean>;
   itemsControlledRef: RefObject<boolean>;
-  onValueChangeRef: RefObject<((value: string | null) => void) | null>;
-  onItemsChangeRef: RefObject<((items: string[]) => void) | null>;
+  onValueChangeRef: RefObject<
+    ((value: string | null, eventDetails: TabsRootChangeEventDetails) => void) | null
+  >;
+  onItemsChangeRef: RefObject<
+    ((items: string[], eventDetails: TabsRootChangeEventDetails) => void) | null
+  >;
   /** Commit past the controlled guard — how the owner pushes its decision in. */
   commitValue: (value: string | null) => void;
   commitItems: (items: string[]) => void;
+  /** `select` and `close` as the parts call them, with the reason behind the change. */
+  selectWithDetails: (value: string | null, eventDetails: TabsRootChangeEventDetails) => void;
+  closeWithDetails: (value: string, eventDetails: TabsRootChangeEventDetails) => void;
+  /** Hover for every `openOnHover` tab and the popup, decided in one place. */
+  hover: TabsHover;
   registerViewport: (present: boolean) => void;
   registerDisabled: (value: string, disabled: boolean) => void;
   /**
@@ -95,6 +127,8 @@ export type TabsStore = {
    */
   anchors: Map<string, HTMLElement>;
   registerAnchor: (value: string, element: HTMLElement | null) => void;
+  /** The floating surface while it is mounted: where the hover cone aims, and what Escape returns focus from. */
+  popupRef: RefObject<HTMLElement | null>;
   /** Stable per-instance id, assigned by the mounting Tabs.Root from useId. */
   baseId: string;
 };
@@ -115,8 +149,9 @@ export const createTabsStore = (): TabsStore => {
   const orientationRef: RefObject<"horizontal" | "vertical"> = { current: "horizontal" };
   const valueControlledRef: RefObject<boolean> = { current: false };
   const itemsControlledRef: RefObject<boolean> = { current: false };
-  const onValueChangeRef: RefObject<((value: string | null) => void) | null> = { current: null };
-  const onItemsChangeRef: RefObject<((items: string[]) => void) | null> = { current: null };
+  const onValueChangeRef: TabsStore["onValueChangeRef"] = { current: null };
+  const onItemsChangeRef: TabsStore["onItemsChangeRef"] = { current: null };
+  const popupRef: RefObject<HTMLElement | null> = { current: null };
   const elements = new Map<string, HTMLElement>();
   const anchors = new Map<string, HTMLElement>();
 
@@ -129,9 +164,9 @@ export const createTabsStore = (): TabsStore => {
    * so a reordered strip still reports the truth.
    *
    * When either element is missing — a tab opened and selected in the same
-   * commit has not rendered yet — fall back to list order. Base UI compares
-   * the *values* here, which only works when they happen to sort meaningfully;
-   * we own the ordered array, so we can just look.
+   * commit has not rendered yet — fall back to list order. Comparing the
+   * *values* would only work when they happen to sort meaningfully; we own the
+   * ordered array, so we can just look.
    */
   const directionBetween = (from: string | null, to: string | null): TabsDirection => {
     if (from === null || to === null || from === to) return "none";
@@ -177,16 +212,26 @@ export const createTabsStore = (): TabsStore => {
     notify();
   };
 
-  const select = (value: string | null) => {
-    // A disabled tab is still reachable by keyboard — that is the point — but
-    // arrowing onto one must not open it.
-    if (value !== null && snapshot.disabled.has(value)) return;
-    onValueChangeRef.current?.(value);
+  const imperative = () => createChangeEventDetails("imperative-action");
+
+  /** The selection after it has been asked about: hover hears of it, then it commits. */
+  const landValue = (value: string | null, eventDetails: TabsRootChangeEventDetails) => {
+    hover.changed(value, eventDetails.reason);
     if (!valueControlledRef.current) commitValue(value);
   };
 
-  const setItems = (items: string[]) => {
-    onItemsChangeRef.current?.(items);
+  const select = (value: string | null, eventDetails: TabsRootChangeEventDetails) => {
+    // A disabled tab is still reachable by keyboard — that is the point — but
+    // arrowing onto one must not open it.
+    if (value !== null && snapshot.disabled.has(value)) return;
+    onValueChangeRef.current?.(value, eventDetails);
+    if (eventDetails.isCanceled) return;
+    landValue(value, eventDetails);
+  };
+
+  const setItems = (items: string[], eventDetails: TabsRootChangeEventDetails) => {
+    onItemsChangeRef.current?.(items, eventDetails);
+    if (eventDetails.isCanceled) return;
     if (!itemsControlledRef.current) commitItems(items);
   };
 
@@ -210,23 +255,38 @@ export const createTabsStore = (): TabsStore => {
   };
 
   const open = (value: string, options?: { at?: number }) => {
-    setItems(insertAt(snapshot.items, value, options?.at));
-    select(value);
+    const eventDetails = imperative();
+    setItems(insertAt(snapshot.items, value, options?.at), eventDetails);
+    if (eventDetails.isCanceled) return;
+    select(value, imperative());
   };
 
-  const close = (value: string) => {
+  const close = (value: string, eventDetails: TabsRootChangeEventDetails) => {
     const wasOpen = snapshot.value === value;
     // Computed first: once the item is gone there is no neighbour to find.
     const successor = wasOpen ? successorTo(value) : snapshot.value;
 
-    setItems(snapshot.items.filter((item) => item !== value));
-    if (wasOpen) select(successor);
+    // Cancelling the items change keeps the tab, and the selection with it.
+    setItems(
+      snapshot.items.filter((item) => item !== value),
+      eventDetails,
+    );
+    if (eventDetails.isCanceled || !wasOpen) return;
+    // The tab is gone, so the selection must follow it: reported, but not cancellable.
+    const followUp = createChangeEventDetails(
+      eventDetails.reason,
+      eventDetails.event,
+      eventDetails.trigger,
+    );
+    onValueChangeRef.current?.(successor, followUp);
+    landValue(successor, followUp);
   };
 
   const selectRelative = (direction: 1 | -1, options?: { loop?: boolean }) =>
-    select(step(snapshot.items, snapshot.value, direction, options));
+    select(step(snapshot.items, snapshot.value, direction, options), imperative());
 
-  const move = (value: string, toIndex: number) => setItems(moveTo(snapshot.items, value, toIndex));
+  const move = (value: string, toIndex: number) =>
+    setItems(moveTo(snapshot.items, value, toIndex), imperative());
 
   const registerDisabled = (value: string, disabled: boolean) => {
     if (snapshot.disabled.has(value) === disabled) return;
@@ -244,6 +304,12 @@ export const createTabsStore = (): TabsStore => {
     notify();
   };
 
+  const hover = createTabsHover({
+    getSnapshot: () => snapshot,
+    selectWithDetails: select,
+    popupRef,
+  });
+
   snapshot = {
     value: null,
     direction: "none",
@@ -252,11 +318,11 @@ export const createTabsStore = (): TabsStore => {
     hasViewport: false,
     disabled: new Set(),
     open,
-    close,
-    select,
+    close: (value) => close(value, imperative()),
+    select: (value) => select(value, imperative()),
     selectRelative,
     move,
-    setItems,
+    setItems: (items) => setItems(items, imperative()),
   };
 
   return {
@@ -286,6 +352,9 @@ export const createTabsStore = (): TabsStore => {
     onItemsChangeRef,
     commitValue,
     commitItems,
+    selectWithDetails: select,
+    closeWithDetails: close,
+    hover,
     registerViewport,
     registerDisabled,
     elements,
@@ -298,6 +367,7 @@ export const createTabsStore = (): TabsStore => {
       if (element) anchors.set(value, element);
       else anchors.delete(value);
     },
+    popupRef,
     baseId: "",
   };
 };

@@ -129,6 +129,32 @@ describe("Nav accessibility", () => {
     }
   });
 
+  test("a toggle beside a destination row adds no violation, nested-interactive included", async () => {
+    // The toggle is aria-hidden and unfocusable, so it is not a nested control
+    // at all — unlike an action, it needs no share of the suppression.
+    const { container, getByRole } = render(
+      <Nav.Root aria-label="Main" defaultExpanded={["guides"]} render={<nav />}>
+        <Nav.List>
+          <Nav.Group value="guides">
+            <Nav.Trigger toggleOnClick={false} active>
+              <Nav.Toggle />
+              <Nav.Label>Guides</Nav.Label>
+            </Nav.Trigger>
+            <Nav.List>
+              <Nav.Item value="install">
+                <Nav.Label>Install</Nav.Label>
+              </Nav.Item>
+            </Nav.List>
+          </Nav.Group>
+        </Nav.List>
+      </Nav.Root>,
+    );
+
+    expect(await audit(container, PAGE_LEVEL_RULES)).toEqual([]);
+    const row = getByRole("button", { name: "Guides", current: "page" });
+    expect(row.getAttribute("aria-expanded")).toBe("true");
+  });
+
   test("an action is reachable by name, not just by pointer", () => {
     const { getByRole } = render(
       <Nav.Root>

@@ -16,6 +16,8 @@ export type {
   NavListState,
   NavPartState,
   NavRootProps,
+  NavToggleProps,
+  NavToggleState,
   NavTriggerProps,
   NavTriggerState,
 } from "./nav";

@@ -691,6 +691,12 @@ const useRow = (value: string, disabled: boolean, active: boolean, activate: () 
     // rendered as a real anchor reachable without JavaScript.
     tabIndex: disabled ? -1 : (highlighted === null ? active : highlighted === value) ? 0 : -1,
     "aria-disabled": disabled || undefined,
+    // `data-active` is a styling hook and nothing more; this is what tells a
+    // screen reader which row is the page being shown. `page` because `active`
+    // already means "the route this row points at" — a tree that marks
+    // something else can say `aria-current="true"` itself, since consumer props
+    // merge after these.
+    "aria-current": active ? ("page" as const) : undefined,
     onFocus: () => setHighlighted(value),
     onClick: disabled ? (event: MouseEvent<HTMLElement>) => event.preventDefault() : undefined,
     onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
@@ -751,6 +757,18 @@ export const NavItem = ({
 export type NavTriggerProps = PrimitiveProps<"div", NavTriggerState> & {
   active?: boolean;
   disabled?: boolean;
+  /**
+   * Whether pressing the row — a click, Enter or Space — opens and closes its
+   * group. On by default, because in most sidebars the heading *is* the
+   * disclosure.
+   *
+   * Turn it off for a branch that is also a destination: a section with its
+   * own index page, a document with attachments beneath it. Pressing the row
+   * then behaves like `Nav.Item` — your `onClick` routes — and the group opens
+   * from a `Nav.Toggle` inside the row, or from the arrow keys, which work the
+   * same either way.
+   */
+  toggleOnClick?: boolean;
   children?: ReactNode;
 };
 
@@ -758,10 +776,17 @@ export type NavTriggerProps = PrimitiveProps<"div", NavTriggerState> & {
  * The row that opens a group — its heading and its disclosure in one, because
  * in a sidebar they are the same thing you click. Takes no `value`: it belongs
  * to the group it is written inside.
+ *
+ * With `toggleOnClick={false}` the two come apart: the row is something you
+ * activate, and the disclosure moves to a `Nav.Toggle`. It keeps
+ * `aria-expanded` and `aria-controls` regardless — the group still opens and
+ * closes from this row, by ArrowRight and ArrowLeft, so this is still the
+ * element whose state a screen reader should hear.
  */
 export const NavTrigger = ({
   active = false,
   disabled,
+  toggleOnClick = true,
   className,
   render,
   style,
@@ -772,9 +797,15 @@ export const NavTrigger = ({
   const group = use(NavGroupContext);
   if (!group) throw new Error("<Nav.Trigger> must be used within <Nav.Group>");
 
+  const ref = useRef<HTMLElement | null>(null);
   const isDisabled = disabled ?? group.disabled;
   const toggle = () => store.getSnapshot().toggle(group.value);
-  const row = useRow(group.value, isDisabled, active, toggle);
+  // Activating a destination row is a click, so Enter reaches the consumer's
+  // `onClick` — or the anchor's own navigation under `render={<Link />}` —
+  // exactly as a click from the pointer would.
+  const row = useRow(group.value, isDisabled, active, () =>
+    toggleOnClick ? toggle() : ref.current?.click(),
+  );
 
   return useRenderElement(
     "div",
@@ -788,13 +819,63 @@ export const NavTrigger = ({
         disabled: isDisabled,
       },
       stateAttributesMapping: { ...DEPTH_ATTRIBUTES, ...openStateMapping },
+      ref,
       props: [
         {
           ...row,
           "data-nav-trigger": group.value,
           "aria-expanded": group.open,
           "aria-controls": group.listId,
-          onClick: isDisabled ? undefined : toggle,
+          onClick: isDisabled || !toggleOnClick ? row.onClick : toggle,
+        },
+        elementProps,
+      ],
+    },
+  );
+};
+
+export type NavToggleState = NavPartState & { open: boolean; disabled: boolean };
+
+export type NavToggleProps = PrimitiveProps<"span", NavToggleState> & { children?: ReactNode };
+
+/**
+ * The disclosure on its own — the caret — for a row whose click means
+ * something else. See `toggleOnClick` on `Nav.Trigger`.
+ *
+ * Pointer-only and `aria-hidden`, deliberately. Everything it does, the row
+ * already does for the keyboard and already announces: ArrowRight and
+ * ArrowLeft open and close the group, and the trigger carries
+ * `aria-expanded`. A focusable second control would put an unnamed stop in
+ * the middle of the roving order and announce the same state twice.
+ *
+ * It stops every event it handles, as `Nav.Action` does — a press that reached
+ * the row would activate it on the way out — and `dblclick` too, since two
+ * quick presses on the caret are two toggles, not a double-click on the row.
+ */
+export const NavToggle = ({ className, render, style, ...elementProps }: NavToggleProps) => {
+  const store = useNavContextStore();
+  const depth = use(NavDepthContext);
+  const group = use(NavGroupContext);
+  if (!group) throw new Error("<Nav.Toggle> must be used within <Nav.Group>");
+
+  const stop = (event: MouseEvent<HTMLElement>) => event.stopPropagation();
+
+  return useRenderElement(
+    "span",
+    { className, render, style },
+    {
+      state: { depth, nested: depth > 0, open: group.open, disabled: group.disabled },
+      stateAttributesMapping: { ...DEPTH_ATTRIBUTES, ...openStateMapping },
+      props: [
+        {
+          "data-nav-toggle": "",
+          "aria-hidden": true,
+          onClick: (event: MouseEvent<HTMLElement>) => {
+            event.stopPropagation();
+            if (!group.disabled) store.getSnapshot().toggle(group.value);
+          },
+          onDoubleClick: stop,
+          onPointerDown: stop,
         },
         elementProps,
       ],

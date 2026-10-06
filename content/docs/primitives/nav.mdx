@@ -6,6 +6,7 @@ source: nav
 
 import { Basic } from './nav/demos/basic';
 import { Collapse } from './nav/demos/collapse';
+import { Destination } from './nav/demos/destination';
 import { ExternalNav } from './nav/demos/external';
 import { Guides } from './nav/demos/guides';
 
@@ -16,6 +17,7 @@ import { Guides } from './nav/demos/guides';
 - **Recursive by construction** — a group's list may hold further groups, to any depth, with no second set of parts for the nesting.
 - **One tab stop** — the whole tree is a single tab stop; arrow keys move focus between rows, and typing seeks a row by its label.
 - **Rows hold actions** — `Nav.Item` is a `div` with `role="button"` rather than an anchor, so a menu affordance can sit inside it. Swap in a real link with `render`.
+- **A branch can be a destination** — by default a trigger *is* its group's disclosure. With `toggleOnClick={false}` pressing the row activates it instead, and a `Nav.Toggle` opens the group. See [A branch that is also a page](#a-branch-that-is-also-a-page).
 - **Depth is a variable** — each list publishes its own `--nav-depth`, so one indent rule covers every level.
 - **The guide is cumulative** — `rail` implies `indent`, and `branches` implies both. See [Why the guide is a ladder](#why-the-guide-is-a-ladder).
 - **Persists nothing itself** — the open set goes out through `onExpandedChange` and comes back as `defaultExpanded`, so where it is kept is yours.
@@ -33,6 +35,7 @@ import { Guides } from './nav/demos/guides';
     </Nav.Item>
     <Nav.Group>
       <Nav.Trigger>
+        <Nav.Toggle /> {/* only where the row is also a destination */}
         <Nav.Label />
       </Nav.Trigger>
       <Nav.List />
@@ -202,6 +205,44 @@ With the variable released, `height: var(--nav-list-height)` is invalid at
 computed-value time and `height` lands back on `auto`, which is what a settled
 list wants without inheriting anything from an ancestor.
 
+### A branch that is also a page
+
+In most sidebars the heading of a group *is* its disclosure: there is nothing
+to see at "Settings" itself, only beneath it. Some branches are destinations as
+well — a docs section with its own index page, a document with attachments
+filed under it. Pressing the row should show the page, and something smaller
+should open the branch.
+
+`toggleOnClick={false}` splits the two. The row then behaves like `Nav.Item`:
+click, Enter and Space all go to your `onClick` (or to the anchor, under
+`render={<Link />}`). The disclosure moves to `Nav.Toggle`, a caret you put
+inside the row.
+
+<Demo component={<Destination />} file="primitives/nav/demos/destination.tsx" />
+
+```tsx
+<Nav.Group value="guides">
+  <Nav.Trigger toggleOnClick={false} active={page === "guides"} onClick={() => go("/guides")}>
+    <Nav.Toggle>
+      <Chevron />
+    </Nav.Toggle>
+    <Nav.Label>Guides</Nav.Label>
+  </Nav.Trigger>
+  <Nav.List>…</Nav.List>
+</Nav.Group>
+```
+
+The toggle is pointer-only and `aria-hidden`, and that is deliberate rather
+than an omission. Everything it does, the row already does for the keyboard:
+ArrowRight and ArrowLeft open and close the group from the row, whichever way
+`toggleOnClick` is set. And the row keeps `aria-expanded`, so a screen reader
+already hears whether the branch is open. A focusable caret would put an
+unnamed stop in the middle of the roving order and announce the same state a
+second time.
+
+The toggle stops every press it handles — including `dblclick`, so two quick
+presses on the caret are two toggles, not a double-click on the row.
+
 ### Persisting the open set
 
 `onExpandedChange` reports the open set out and `defaultExpanded` takes it back
@@ -253,7 +294,7 @@ export const keys = [
   { keys: "Arrow up / down", description: "Move focus to the previous or next visible row. Collapsed lists are unmounted, so their rows are simply not there to land on." },
   { keys: "Arrow right", description: "On a closed group, open it; on an open one, step into it. On a leaf, nothing." },
   { keys: "Arrow left", description: "On an open group, close it; otherwise step out to the parent group's trigger — which is where the row came from." },
-  { keys: "Enter / Space", description: "Activate the focused row." },
+  { keys: "Enter / Space", description: "Activate the focused row. On a trigger that is the same as a click: it toggles the group, or, with toggleOnClick={false}, it goes to the row's onClick." },
   { keys: "Any letter", description: "Seek to the row whose label starts with what you typed. The query resets after half a second of no typing; turn the whole thing off with the typeahead prop." },
 ];
 
@@ -354,6 +395,7 @@ inside.
 export const triggerProps = [
   { name: "active", type: "boolean", default: "false", description: "This branch is the one being shown." },
   { name: "disabled", type: "boolean", description: "Defaults to the group's own disabled state." },
+  { name: "toggleOnClick", type: "boolean", default: "true", description: "Whether pressing the row (click, Enter, Space) opens and closes the group. Turn it off for a branch that is also a destination; the group then opens from a Nav.Toggle, or from the arrow keys." },
 ];
 
 <PropsTable rows={triggerProps} />
@@ -363,6 +405,7 @@ export const triggerAttrs = [
   { attribute: "data-open", description: "Present while the group is open." },
   { attribute: "data-closed", description: "Present while it is closed." },
   { attribute: "data-active", description: "Present while active." },
+  { attribute: "aria-current", values: '"page"', description: "Set while active, so assistive tech hears which row is being shown. Your own aria-current overrides it." },
   { attribute: "data-disabled", description: "Present while disabled." },
 ];
 
@@ -383,10 +426,28 @@ export const itemProps = [
 export const itemAttrs = [
   { attribute: "data-nav-item", values: "the row's value", description: "The row, and its identity. Root's keyboard handling finds rows by this attribute and reads the value straight back off it — so the DOM is the row order, and no row has to register itself. Select it without the value for styling." },
   { attribute: "data-active", description: "Present while active." },
+  { attribute: "aria-current", values: '"page"', description: "Set while active. `page` because `active` means the route this row points at; a tree marking something else can pass aria-current=\"true\" itself, since your props merge last." },
   { attribute: "data-disabled", description: "Present while disabled." },
 ];
 
 <AttributesTable rows={itemAttrs} />
+
+### Nav.Toggle
+
+The disclosure on its own, for a trigger whose press means something else (see
+`toggleOnClick`). Renders a `<span>` with `data-nav-toggle` and `aria-hidden`.
+It is pointer-only: the row's arrow keys and `aria-expanded` already cover the
+keyboard and the announcement. It stops click, `dblclick` and pointerdown, so
+none of them reach the row. Must sit inside a `Nav.Group`.
+
+export const toggleAttrs = [
+  { attribute: "data-nav-toggle", description: "The caret." },
+  { attribute: "data-open", description: "Present while the group is open — rotate the caret off this." },
+  { attribute: "data-closed", description: "Present while it is closed." },
+  { attribute: "data-depth", values: "number", description: "The enclosing list's depth." },
+];
+
+<AttributesTable rows={toggleAttrs} />
 
 ### Nav.Label
 

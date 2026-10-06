@@ -10,6 +10,7 @@ export {
   NavLabel as Label,
   NavList as List,
   NavRoot as Root,
+  NavToggle as Toggle,
   NavTrigger as Trigger,
 } from "./nav";
 /** Create a standalone store handle: `<Nav.Root store={…}>` plus `useNavStore(store, selector)` for reading it from outside the tree. */

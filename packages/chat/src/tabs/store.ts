@@ -201,6 +201,10 @@ export const createTabsStore = (): TabsStore => {
     return toRect.top > fromRect.top ? "down" : "up";
   };
 
+  /** Whether `peek` may stand: the selected tab and disabled tabs never can. */
+  const canPeek = (peek: string, value: string | null, disabled: ReadonlySet<string>) =>
+    peek !== value && !disabled.has(peek);
+
   const commitValue = (value: string | null) => {
     if (snapshot.value === value) return;
     const direction = directionBetween(snapshot.value, value);
@@ -209,7 +213,12 @@ export const createTabsStore = (): TabsStore => {
         ? snapshot.recent
         : [value, ...snapshot.recent.filter((id) => id !== value)].slice(0, RECENT_LIMIT);
 
-    snapshot = { ...snapshot, value, direction, recent };
+    // A selection that lands on the peeked tab ends the peek. `select()` does
+    // this for presses; this is the path a controlled `value` takes — a link
+    // straight to the tab — which never passes through `select()`.
+    const endsPeek = value !== null && snapshot.peek === value;
+    snapshot = { ...snapshot, value, direction, recent, peek: endsPeek ? null : snapshot.peek };
+    if (endsPeek) onPeekChangeRef.current?.(null);
     notify();
   };
 
@@ -220,8 +229,12 @@ export const createTabsStore = (): TabsStore => {
   };
 
   const commitPeek = (peek: string | null) => {
-    if (snapshot.peek === peek) return;
-    snapshot = { ...snapshot, peek };
+    // The same rule `setPeek` applies, for a peek pushed in as a controlled
+    // prop. Not a membership check: a trigger outside `Tabs.List` has a value
+    // that is never in `items`, and may still be peeked.
+    const next = peek !== null && !canPeek(peek, snapshot.value, snapshot.disabled) ? null : peek;
+    if (snapshot.peek === next) return;
+    snapshot = { ...snapshot, peek: next };
     notify();
   };
 
@@ -229,7 +242,7 @@ export const createTabsStore = (): TabsStore => {
     if (peek !== null) {
       // The selected tab is already showing, so there is nothing to peek at;
       // a disabled one cannot be opened, and a peek is a way of opening it.
-      if (peek === snapshot.value || snapshot.disabled.has(peek)) return;
+      if (!canPeek(peek, snapshot.value, snapshot.disabled)) return;
     }
     if (snapshot.peek === peek) return;
     onPeekChangeRef.current?.(peek);
@@ -299,7 +312,11 @@ export const createTabsStore = (): TabsStore => {
     if (disabled) next.add(value);
     else next.delete(value);
 
-    snapshot = { ...snapshot, disabled: next };
+    // A disabled tab cannot be opened, and a peek is a way of opening it — so
+    // one that becomes disabled while floating stops floating.
+    const endsPeek = disabled && snapshot.peek === value;
+    snapshot = { ...snapshot, disabled: next, peek: endsPeek ? null : snapshot.peek };
+    if (endsPeek) onPeekChangeRef.current?.(null);
     notify();
   };
 

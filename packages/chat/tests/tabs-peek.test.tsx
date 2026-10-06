@@ -85,6 +85,60 @@ describe("the peek channel", () => {
     expect(store.getSnapshot().peek).toBeNull();
   });
 
+  test("a tab that becomes disabled while peeked stops being peeked, and says so", () => {
+    const store = seeded();
+    const seen: (string | null)[] = [];
+    store.onPeekChangeRef.current = (peek) => void seen.push(peek);
+    store.getSnapshot().setPeek("chat");
+
+    store.registerDisabled("chat", true);
+
+    expect(store.getSnapshot().peek).toBeNull();
+    expect(seen).toEqual(["chat", null]);
+  });
+
+  test("disabling some other tab leaves the peek alone", () => {
+    const store = seeded();
+    store.getSnapshot().setPeek("chat");
+    store.registerDisabled("other", true);
+    expect(store.getSnapshot().peek).toBe("chat");
+  });
+
+  test("a controlled peek naming the selected tab is not committed", () => {
+    const store = seeded();
+    store.commitPeek("page");
+    expect(store.getSnapshot().peek).toBeNull();
+  });
+
+  test("a controlled peek naming a disabled tab is not committed", () => {
+    const store = seeded();
+    store.registerDisabled("chat", true);
+    store.commitPeek("chat");
+    expect(store.getSnapshot().peek).toBeNull();
+  });
+
+  test("a peek at a tab outside the collection is allowed", () => {
+    // A trigger outside Tabs.List has a value that is never in items.
+    const store = seeded();
+    store.commitPeek("draft");
+    expect(store.getSnapshot().peek).toBe("draft");
+  });
+
+  test("a selection committed onto the peeked tab ends the peek", () => {
+    // The controlled path: the parent moves `value` itself — a link to the
+    // tab — without going through select().
+    const store = seeded();
+    const seen: (string | null)[] = [];
+    store.getSnapshot().setPeek("chat");
+    store.onPeekChangeRef.current = (peek) => void seen.push(peek);
+
+    store.commitValue("chat");
+
+    expect(store.getSnapshot().value).toBe("chat");
+    expect(store.getSnapshot().peek).toBeNull();
+    expect(seen).toEqual([null]);
+  });
+
   test("a restored peek at the selected tab is dropped", () => {
     const store = createTabsStore();
     store.hydrate({ items: ["page", "chat"], value: "chat", peek: "chat" });
@@ -239,6 +293,39 @@ describe("hovering to peek", () => {
     expect(q(baseElement, "peek-content")?.textContent).toBe("peek:other");
     // Let the positioner re-anchor to the new tab before the test ends.
     await settle();
+  });
+});
+
+/** The same page with the peek owned by the parent, as a controlled prop. */
+const ControlledPage = () => {
+  const [peek, setPeek] = useState<string | null>(null);
+  return <Page peek={peek} onPeekChange={setPeek} />;
+};
+
+describe("hovering to peek, controlled", () => {
+  test("a hover-opened controlled peek still closes when the pointer leaves", async () => {
+    // The parent commits a render after the request, so the hover has to keep
+    // its claim on the peek until then — or the peek reads as opened in code
+    // and the pointer can never close it.
+    const { baseElement } = render(<ControlledPage />);
+    await peekAt(baseElement, "chat");
+    expect(q(baseElement, "peek-content")?.textContent).toBe("peek:chat");
+
+    unhover(q(baseElement, "tab-chat") as HTMLElement);
+    await settle(CLOSE + 40);
+
+    expect(q(baseElement, "peek")).toBeNull();
+  });
+
+  test("it switches between tabs like an uncontrolled one", async () => {
+    const { baseElement } = render(<ControlledPage />);
+    await peekAt(baseElement, "chat");
+
+    unhover(q(baseElement, "tab-chat") as HTMLElement);
+    hover(q(baseElement, "tab-other") as HTMLElement);
+    await settle();
+
+    expect(q(baseElement, "peek-content")?.textContent).toBe("peek:other");
   });
 });
 

@@ -63,6 +63,12 @@ export const useSurfaceChannel = () => use(TabsSurfaceChannelContext);
  * Who opened the current peek, and whether it has been engaged. Kept against
  * the value it describes, so a peek changed from outside — a controlled prop,
  * a `setPeek` from a shortcut — is recognised as not ours and left alone.
+ *
+ * A hover's claim is recorded as a *request* first, and becomes ownership only
+ * when the store actually shows that peek. Uncontrolled, that is the same
+ * instant. Controlled, the parent commits a render later — and a claim taken
+ * eagerly would be wiped by the first `sync()` in between, leaving a peek the
+ * pointer opened but can never close.
  */
 type Ownership = { value: string | null; byHover: boolean; engaged: boolean };
 
@@ -73,10 +79,12 @@ export const usePeekChoreography = (
   const openTimer = useRef<number | undefined>(undefined);
   const closeTimer = useRef<number | undefined>(undefined);
   const owner = useRef<Ownership>({ value: null, byHover: false, engaged: false });
+  /** The peek a hover asked for and the store has not shown yet. */
+  const requested = useRef<string | null>(null);
   const delaysRef = useRef(delays);
   delaysRef.current = delays;
 
-  const controls = useMemo<PeekControls>(() => {
+  const { controls, onBlur } = useMemo((): { controls: PeekControls; onBlur: () => void } => {
     const clear = (timer: { current: number | undefined }) => {
       if (timer.current !== undefined) window.clearTimeout(timer.current);
       timer.current = undefined;
@@ -86,16 +94,23 @@ export const usePeekChoreography = (
     const sync = () => {
       const peek = store.getSnapshot().peek;
       if (owner.current.value !== peek) {
-        owner.current = { value: peek, byHover: false, engaged: false };
+        // Ours only if it is the one a hover asked for.
+        const byHover = peek !== null && peek === requested.current;
+        if (peek !== null) requested.current = null;
+        owner.current = { value: peek, byHover, engaged: false };
       }
       return owner.current;
     };
 
     const peekByHover = (value: string) => {
-      owner.current = { value, byHover: true, engaged: false };
+      const { value: selected, disabled, peek } = store.getSnapshot();
+      // The store refuses these, so there is nothing to ask for — and nothing
+      // to claim. Checked here rather than inferred from the snapshot after
+      // asking, which a controlled parent has not updated yet.
+      if (value === peek || value === selected || disabled.has(value)) return;
+      requested.current = value;
       store.getSnapshot().setPeek(value);
-      // Refused — the tab is selected or disabled — so this is not a peek.
-      if (store.getSnapshot().peek !== value) sync();
+      sync();
     };
 
     const scheduleClose = () => {
@@ -111,7 +126,7 @@ export const usePeekChoreography = (
       }, delaysRef.current.close);
     };
 
-    return {
+    const controls: PeekControls = {
       triggerEnter: (value, pointerType) => {
         if (pointerType !== "mouse") return;
         clear(closeTimer);
@@ -145,28 +160,29 @@ export const usePeekChoreography = (
         clear(closeTimer);
       },
     };
-  }, [store]);
 
-  // Cmd-Tab away mid-peek fires no pointerleave, so without this a peek nobody
-  // engaged would still be floating when the window comes back. Shell does the
-  // same for its hotspot. Timers go too: nothing should open into a window you
-  // have just left.
-  useEffect(() => {
+    // Cmd-Tab away mid-peek fires no pointerleave, so without this a peek
+    // nobody engaged would still be floating when the window comes back. Shell
+    // does the same for its hotspot. Timers go too: nothing should open into a
+    // window you have just left.
     const onBlur = () => {
-      window.clearTimeout(openTimer.current);
-      openTimer.current = undefined;
-      const peek = store.getSnapshot().peek;
-      const current = owner.current;
-      if (peek === null || current.value !== peek || !current.byHover || current.engaged) return;
+      clear(openTimer);
+      const current = sync();
+      if (current.value === null || !current.byHover || current.engaged) return;
       store.getSnapshot().setPeek(null);
     };
+
+    return { controls, onBlur };
+  }, [store]);
+
+  useEffect(() => {
     window.addEventListener("blur", onBlur);
     return () => {
       window.removeEventListener("blur", onBlur);
       window.clearTimeout(openTimer.current);
       window.clearTimeout(closeTimer.current);
     };
-  }, [store]);
+  }, [onBlur]);
 
   return controls;
 };

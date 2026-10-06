@@ -231,7 +231,7 @@ export const TabsPopup = ({ className, render, style, ...elementProps }: TabsPop
     {
       state: { open, transitionStatus: transition?.transitionStatus },
       stateAttributesMapping: { ...openStateMapping, ...transitionStatusMapping },
-      ref: [popupRef, store.hover.setPopup],
+      ref: [popupRef, store.popupRef],
       props: [
         {
           "data-tabs-popup": "",

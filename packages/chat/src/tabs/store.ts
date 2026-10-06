@@ -127,6 +127,8 @@ export type TabsStore = {
    */
   anchors: Map<string, HTMLElement>;
   registerAnchor: (value: string, element: HTMLElement | null) => void;
+  /** The floating surface while it is mounted: where the hover cone aims, and what Escape returns focus from. */
+  popupRef: RefObject<HTMLElement | null>;
   /** Stable per-instance id, assigned by the mounting Tabs.Root from useId. */
   baseId: string;
 };
@@ -149,6 +151,7 @@ export const createTabsStore = (): TabsStore => {
   const itemsControlledRef: RefObject<boolean> = { current: false };
   const onValueChangeRef: TabsStore["onValueChangeRef"] = { current: null };
   const onItemsChangeRef: TabsStore["onItemsChangeRef"] = { current: null };
+  const popupRef: RefObject<HTMLElement | null> = { current: null };
   const elements = new Map<string, HTMLElement>();
   const anchors = new Map<string, HTMLElement>();
 
@@ -296,7 +299,11 @@ export const createTabsStore = (): TabsStore => {
     notify();
   };
 
-  const hover = createTabsHover({ getSnapshot: () => snapshot, selectWithDetails: select });
+  const hover = createTabsHover({
+    getSnapshot: () => snapshot,
+    selectWithDetails: select,
+    popupRef,
+  });
 
   snapshot = {
     value: null,
@@ -355,6 +362,7 @@ export const createTabsStore = (): TabsStore => {
       if (element) anchors.set(value, element);
       else anchors.delete(value);
     },
+    popupRef,
     baseId: "",
   };
 };

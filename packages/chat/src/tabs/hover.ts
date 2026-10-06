@@ -13,7 +13,7 @@ import type { TabsRootChangeEventReason, TabsStore } from "./store";
 /** A tab the mouse is over, with its own timing. */
 export type TabsHoverTarget = { value: string; openDelay: number; closeDelay: number };
 
-type HoverStore = Pick<TabsStore, "getSnapshot" | "selectWithDetails">;
+type HoverStore = Pick<TabsStore, "getSnapshot" | "selectWithDetails" | "popupRef">;
 
 const isMouse = (event: PointerEvent) => event.pointerType === "mouse";
 
@@ -37,7 +37,6 @@ const sideOf = (tab: DOMRect, popup: DOMRect): Side => {
  */
 export const createTabsHover = (store: HoverStore) => {
   const tabs = new Set<Element>();
-  let popup: HTMLElement | null = null;
   /** The tab hover opened, until anything else changes the selection or a press claims it. */
   let owner: string | null = null;
   let target: TabsHoverTarget | null = null;
@@ -54,9 +53,13 @@ export const createTabsHover = (store: HoverStore) => {
   };
 
   /** The popup is open or still fading out, so the next tab takes it over at once. */
-  const onScreen = () =>
-    popup !== null &&
-    (!popup.hasAttribute("data-closed") || popup.hasAttribute("data-ending-style"));
+  const onScreen = () => {
+    const popup = store.popupRef.current;
+    return (
+      popup !== null &&
+      (!popup.hasAttribute("data-closed") || popup.hasAttribute("data-ending-style"))
+    );
+  };
 
   /** Redrawn at once, so a controlled parent is current before the mouse moves again. */
   const change = (value: string | null, event: Event, tab?: Element) =>
@@ -96,6 +99,7 @@ export const createTabsHover = (store: HoverStore) => {
   /** Keeps the popup open while the mouse travels from the tab towards it. */
   const armCone = (tab: Element, event: MouseEvent) => {
     stopCone();
+    const popup = store.popupRef.current;
     if (!popup) return close(event);
     const cone = createSafePolygon({
       x: event.clientX,
@@ -125,10 +129,6 @@ export const createTabsHover = (store: HoverStore) => {
 
     /** Drops anything pending, for when the strip unmounts. */
     release,
-
-    setPopup: (element: HTMLElement | null) => {
-      popup = element;
-    },
 
     owns: (value: string) => owner === value,
 
@@ -162,6 +162,7 @@ export const createTabsHover = (store: HoverStore) => {
       if (owner === null) return;
       // Onto another hover tab, whose arrival hands over, or straight into the popup.
       if (isInside(tabs, event.relatedTarget)) return;
+      const popup = store.popupRef.current;
       if (popup && isInside([popup], event.relatedTarget)) return;
       armCone(event.currentTarget, event.nativeEvent);
     },

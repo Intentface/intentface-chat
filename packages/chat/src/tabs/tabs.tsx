@@ -274,9 +274,13 @@ export const TabsRoot = <Value extends string = string>({
   useIsomorphicLayoutEffect(() => {
     if (!dismissOnEscape) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape" || store.getSnapshot().value === null) return;
+      const { value } = store.getSnapshot();
+      if (event.key !== "Escape" || value === null) return;
       event.preventDefault();
+      // From inside the popup, focus would drop to the body as it closes; it goes back to the tab.
+      const fromPopup = store.popupRef.current?.contains(document.activeElement) ?? false;
       store.selectWithDetails(null, createChangeEventDetails("escape-key", event));
+      if (fromPopup) store.elements.get(value)?.focus();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);

@@ -223,7 +223,7 @@ export const keys = [
   { keys: "Arrow keys", description: "Move focus along the strip, following its orientation." },
   { keys: "Enter / Space", description: "Open the focused tab." },
   { keys: "Delete / Backspace", description: "Close the focused tab — only inside a Tabs.List, and the keyboard equivalent of the × beside it." },
-  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape." },
+  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape. From inside the panel, focus returns to its tab." },
 ];
 
 <KeysTable rows={keys} />

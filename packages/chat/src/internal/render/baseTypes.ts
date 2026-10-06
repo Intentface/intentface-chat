@@ -1,6 +1,6 @@
 // Vendored from @base-ui/react v1.6.0 (MIT) — packages/react/src/types/index.ts
-// https://github.com/mui/base-ui — subset: the createBaseUIEventDetails re-export
-// is dropped (unused by the render machinery); otherwise an exact copy.
+// https://github.com/mui/base-ui — subset: the upstream event-details re-export is
+// dropped (unused by the render machinery) and names made neutral; otherwise an exact copy.
 
 import type * as React from 'react';
 
@@ -29,7 +29,7 @@ export type ComponentRenderFn<Props, State> = (
   state: State,
 ) => React.ReactElement<unknown>;
 
-export type BaseUIEvent<E extends React.SyntheticEvent<Element, Event>> = E & {
-  preventBaseUIHandler: () => void;
-  readonly baseUIHandlerPrevented?: boolean | undefined;
+export type PreventableEvent<E extends React.SyntheticEvent<Element, Event>> = E & {
+  preventPrimitiveHandler: () => void;
+  readonly primitiveHandlerPrevented?: boolean | undefined;
 };

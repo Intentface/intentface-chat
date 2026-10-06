@@ -55,14 +55,14 @@ describe("mergeProps", () => {
   // The escape hatch is only installed on a React synthetic event, which is detected by the
   // presence of `nativeEvent` — so a plain object argument never gets it, and both handlers
   // run. That is what makes the suppression safe to rely on from a real DOM handler only.
-  test("preventBaseUIHandler stops the handlers to the left", () => {
+  test("preventPrimitiveHandler stops the handlers to the left", () => {
     const order: string[] = [];
     const merged = mergeProps(
       { onClick: () => order.push("ours") },
       {
-        onClick: (event: { preventBaseUIHandler: () => void }) => {
+        onClick: (event: { preventPrimitiveHandler: () => void }) => {
           order.push("theirs");
-          event.preventBaseUIHandler();
+          event.preventPrimitiveHandler();
         },
       },
     );

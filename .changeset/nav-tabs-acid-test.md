@@ -2,7 +2,7 @@
 "@intentface/chat": minor
 ---
 
-Four additions to `Nav` and `Tabs`, found by building a real app's file tree and page tabs on them. All are additive; nothing changes unless you opt in, apart from the new `aria-current` attribute and a disabled-trigger fix.
+Four additions to `Nav` and `Tabs`, found by building a real app's file tree and page tabs on them. All are additive; nothing changes unless you opt in, apart from the new `aria-current` attribute, a disabled-trigger fix, and one rename (last below).
 
 **`Nav`: a branch that is also a page.** The new `Nav.Toggle` part is a caret for inside `Nav.Trigger`. Mounting it makes pressing the row (click, Enter or Space) activate it like `Nav.Item`, so its `onClick` or link routes, while the caret opens and closes the group. It is pointer-only and `aria-hidden`, because the row keeps `aria-expanded` and ArrowRight/ArrowLeft open and close the group as before. A press on the caret never follows a link row, and the caret respects a disabled trigger.
 
@@ -15,3 +15,5 @@ A disabled `Nav.Trigger` now also prevents the click's default action, as a disa
 **`Tabs`: change event details.** `onValueChange` and `onItemsChange` receive a second argument, `eventDetails`, with `reason`, `event`, `trigger`, `cancel()` and `isCanceled`. Cancelling stops the change landing, so an editor can cancel a close in `onItemsChange` and ask about unsaved work first. The selection that follows a close is reported but cannot be cancelled, since its tab is already gone. The reasons are `"trigger-press"`, `"trigger-hover"`, `"list-navigation"`, `"close-press"`, `"keyboard"`, `"escape-key"` and `"imperative-action"`. Callbacks that take one argument keep working.
 
 Escape from inside a floating `Tabs.Popup` now hands focus back to its tab, instead of dropping it on the page as the popup closes.
+
+**Breaking:** `event.preventBaseUIHandler()` is now `event.preventPrimitiveHandler()`, and `event.baseUIHandlerPrevented` is now `event.primitiveHandlerPrevented`. Call it from your own handler on a part to skip the part's built-in handler. Development warnings now start with `@intentface/chat:` and link to the composition guide.

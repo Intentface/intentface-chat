@@ -1,5 +1,5 @@
 // Vendored from @base-ui/react v1.6.0 (MIT) — packages/react/src/use-render/useRender.ts
-// https://github.com/mui/base-ui — exact copy; only import specifiers rewired.
+// https://github.com/mui/base-ui — import specifiers rewired and comments made neutral; otherwise an exact copy.
 
 import * as React from 'react';
 import type { ComponentRenderFn } from './types';
@@ -8,7 +8,7 @@ import { useRenderElement } from './useRenderElement';
 import type { StateAttributesMapping } from './getStateAttributesProps';
 
 /**
- * Renders a Base UI element.
+ * Renders a primitive part's element.
  *
  * @public
  */

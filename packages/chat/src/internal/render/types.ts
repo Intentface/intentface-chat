@@ -1,13 +1,13 @@
 // Vendored from @base-ui/react v1.6.0 (MIT) — packages/react/src/internals/types.ts
-// https://github.com/mui/base-ui — exact copy; only import specifiers rewired.
+// https://github.com/mui/base-ui — import specifiers rewired and names made neutral; otherwise an exact copy.
 
 import type * as React from 'react';
-import type { BaseUIEvent, ComponentRenderFn, HTMLProps } from './baseTypes';
+import type { PreventableEvent, ComponentRenderFn, HTMLProps } from './baseTypes';
 
-export type { HTMLProps, BaseUIEvent, ComponentRenderFn };
+export type { HTMLProps, PreventableEvent, ComponentRenderFn };
 
-export type MaybeBaseUIEvent<E extends React.SyntheticEvent<Element, Event>> = E &
-  Partial<Pick<BaseUIEvent<E>, 'preventBaseUIHandler' | 'baseUIHandlerPrevented'>>;
+export type MaybePreventableEvent<E extends React.SyntheticEvent<Element, Event>> = E &
+  Partial<Pick<PreventableEvent<E>, 'preventPrimitiveHandler' | 'primitiveHandlerPrevented'>>;
 
 export interface FloatingUIOpenChangeDetails {
   open: boolean;
@@ -17,31 +17,31 @@ export interface FloatingUIOpenChangeDetails {
   triggerElement?: Element | undefined;
 }
 
-type WithPreventBaseUIHandler<T> = T extends (event: infer E) => any
+type WithPreventableHandler<T> = T extends (event: infer E) => any
   ? E extends React.SyntheticEvent<Element, Event>
-    ? (event: BaseUIEvent<E>) => ReturnType<T>
+    ? (event: PreventableEvent<E>) => ReturnType<T>
     : T
   : T extends undefined
     ? undefined
     : T;
 
 /**
- * Adds a `preventBaseUIHandler` method to all event handlers.
+ * Adds a `preventPrimitiveHandler` method to all event handlers.
  */
-export type WithBaseUIEvent<T> = {
-  [K in keyof T]: WithPreventBaseUIHandler<T[K]>;
+export type WithPreventableEvents<T> = {
+  [K in keyof T]: WithPreventableHandler<T[K]>;
 };
 
 /**
- * Props shared by all Base UI components.
+ * Props shared by all primitive parts.
  * Contains `className` (string or callback taking the component's state as an argument) and `render` (function to customize rendering).
  */
-export type BaseUIComponentProps<
+export type RenderComponentProps<
   ElementType extends React.ElementType,
   State,
   RenderFunctionProps = HTMLProps,
 > = Omit<
-  WithBaseUIEvent<React.ComponentPropsWithRef<ElementType>>,
+  WithPreventableEvents<React.ComponentPropsWithRef<ElementType>>,
   'className' | 'color' | 'defaultValue' | 'defaultChecked' | 'style'
 > & {
   /**

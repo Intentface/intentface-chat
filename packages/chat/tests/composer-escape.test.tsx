@@ -2,7 +2,10 @@ import { describe, expect, mock, test } from "bun:test";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { AskUser } from "../src/ask-user";
 import { Composer } from "../src/composer";
+import { useComposer } from "../src/composer/store";
+import type { AskUserQuestion, ComposerSubmitData } from "../src/composer/types";
 import { Tabs } from "../src/tabs";
 
 // Escape stops a generating composer only when pressed inside that composer.
@@ -24,6 +27,38 @@ const ChatComposer = ({
 
 const pressEscape = (target: Element | Document) =>
   act(() => void fireEvent.keyDown(target, { key: "Escape" }));
+
+const QUESTIONS: AskUserQuestion[] = [
+  { question: "Which database?", options: [{ label: "PostgreSQL" }, { label: "SQLite" }] },
+];
+
+const AskUserOptions = () => {
+  const askUser = useComposer((composer) => composer.askUser);
+  const question = askUser.questions?.[askUser.step];
+  if (!question) return null;
+  return (
+    <AskUser.Options ref={askUser.optionsRef}>
+      {question.options.map((option) => (
+        <AskUser.Option
+          key={option.label}
+          value={option.label}
+          onSelect={() => askUser.toggleOption(option.label)}
+        >
+          {option.label}
+        </AskUser.Option>
+      ))}
+    </AskUser.Options>
+  );
+};
+
+// activateAskUser moves focus into the options one frame past the commit.
+const flushFrames = () =>
+  act(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
 
 describe("Escape stops generation", () => {
   test("typed into the composer", () => {
@@ -74,6 +109,32 @@ describe("Escape stops generation", () => {
     pressEscape(textbox);
     textbox.removeEventListener("keydown", claim);
     expect(onStop).not.toHaveBeenCalled();
+  });
+
+  test("not without an onStop, so the key stays free", () => {
+    render(<ChatComposer name="Message" generating />);
+
+    const notPrevented = fireEvent.keyDown(screen.getByRole("textbox", { name: "Message" }), {
+      key: "Escape",
+    });
+    expect(notPrevented).toBe(true);
+  });
+
+  test("not while an ask-user question is open; Escape dismisses its step", async () => {
+    const onStop = mock();
+    const submitted: ComposerSubmitData[] = [];
+    render(
+      <Composer.Root questions={QUESTIONS} onSubmit={(data) => void submitted.push(data)}>
+        <Composer.Textarea aria-label="Message" />
+        <AskUserOptions />
+        <Composer.Submit isGenerating onStop={onStop} />
+      </Composer.Root>,
+    );
+    await flushFrames();
+
+    pressEscape(screen.getByRole("radio", { name: "PostgreSQL" }));
+    expect(onStop).not.toHaveBeenCalled();
+    expect(submitted.at(-1)?.kind).toBe("answers");
   });
 
   test("not when the consumer's onKeyDown skips it", () => {

@@ -103,15 +103,17 @@ export const useComposerSubmit = ({
   // While generating, hand the stop to Composer.Root, which calls it on Escape.
   const store = useComposerContextStore();
   const onStopRef = useAsRef(onStop);
+  // Without an onStop there is nothing to stop, so Escape stays free for surfaces around it.
+  const hasOnStop = onStop !== undefined;
   useEffect(() => {
-    if (!isGenerating) return;
+    if (!isGenerating || !hasOnStop) return;
     const stopGenerating = () => onStopRef.current?.();
     store.stopGeneratingRef.current = stopGenerating;
     return () => {
       if (store.stopGeneratingRef.current !== stopGenerating) return;
       store.stopGeneratingRef.current = null;
     };
-  }, [isGenerating, store]);
+  }, [isGenerating, hasOnStop, store]);
 
   const autoDisabled =
     disabled ?? ((!hasContent && attachments.items.length === 0) || isSubmitting);

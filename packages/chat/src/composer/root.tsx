@@ -163,6 +163,8 @@ export const ComposerRoot = ({
   const handleKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
     const stopGenerating = store.stopGeneratingRef.current;
     if (event.key !== "Escape" || event.defaultPrevented || !stopGenerating) return;
+    // While a question is open, Escape dismisses its step instead.
+    if (store.getSnapshot().askUser.questions?.length) return;
     event.preventDefault();
     stopGenerating();
   };

@@ -7,11 +7,11 @@ import type { ReactElement, ReactNode } from "react";
 // Chips flow inline with text. `variant` is an opaque string surfaced as
 // data-variant, so the tinting rules are entirely yours.
 export const Basic = () => (
-  <p className="max-w-md text-sm leading-8 text-[#1a1a1a] dark:text-[#fcfcfc]">
+  <p className="max-w-md text-sm text-zinc-700 leading-8 dark:text-zinc-300">
     Pulled results from{" "}
     <Chip.Root variant="accent" className={CHIP_CLASS}>
       <Chip.Icon className="flex items-center">
-        <Globe className="size-4" />
+        <Globe className="size-3.5" />
       </Chip.Icon>
       <Chip.Label>web-search</Chip.Label>
     </Chip.Root>{" "}
@@ -29,7 +29,7 @@ export const Basic = () => (
 );
 
 const CHIP_CLASS =
-  "mx-0.5 inline-flex items-center gap-1 rounded-md border border-[#f0f0f0] bg-[#f4f4f4] px-1.5 py-0.5 align-baseline text-xs font-medium data-[variant=accent]:border-blue-200 data-[variant=accent]:bg-blue-50 data-[variant=accent]:text-blue-700 data-[variant=warning]:border-amber-200 data-[variant=warning]:bg-amber-50 data-[variant=warning]:text-amber-700 dark:border-[#2d2d2d] dark:bg-[#232323] dark:data-[variant=accent]:border-blue-900 dark:data-[variant=accent]:bg-blue-950 dark:data-[variant=accent]:text-blue-300 dark:data-[variant=warning]:border-amber-900 dark:data-[variant=warning]:bg-amber-950 dark:data-[variant=warning]:text-amber-300";
+  "mx-0.5 inline-flex h-6 items-center gap-1 rounded-full bg-white bg-linear-to-b from-white to-[#fdfdfd] px-2 align-middle font-medium text-xs text-zinc-900 shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] data-[variant=accent]:bg-[#0169cc]/10 data-[variant=accent]:bg-none data-[variant=accent]:text-[#0169cc] data-[variant=accent]:shadow-none data-[variant=warning]:bg-amber-500/12 data-[variant=warning]:bg-none data-[variant=warning]:text-amber-700 data-[variant=warning]:shadow-none dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:text-zinc-100 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:data-[variant=accent]:bg-[#4c9bea]/15 dark:data-[variant=accent]:text-[#4c9bea] dark:data-[variant=accent]:shadow-none dark:data-[variant=warning]:bg-amber-500/12 dark:data-[variant=warning]:text-amber-300 dark:data-[variant=warning]:shadow-none";
 
 // Chip.Preview renders nothing on its own — Root hands you the badge and the
 // preview content, and you compose whatever popup you want. This one is pure
@@ -37,7 +37,7 @@ const CHIP_CLASS =
 const renderWithPreview = (badge: ReactElement, preview: ReactNode) => (
   <span className="group relative inline-block">
     {badge}
-    <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 w-52 -translate-x-1/2 rounded-lg border border-[#f0f0f0] bg-white p-2 text-xs leading-snug text-[#686868] opacity-0 shadow-md transition-opacity group-hover:opacity-100 dark:border-[#2d2d2d] dark:bg-[#181818] dark:text-[#9b9b9b]">
+    <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1.5 w-52 -translate-x-1/2 rounded-xl bg-white p-2.5 text-xs text-zinc-500 leading-snug opacity-0 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.16)] transition-opacity group-hover:opacity-100 dark:bg-zinc-800 dark:text-zinc-400 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.16),0_12px_32px_-8px_rgb(0_0_0/0.4)]">
       {preview}
     </span>
   </span>

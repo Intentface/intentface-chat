@@ -15,7 +15,8 @@ const toggleGroupRootVariants = cva("inline-flex items-center", {
   variants: {
     variant: {
       default: "gap-1",
-      segmented: "w-fit gap-0 rounded-full border border-primary-border bg-primary-bg p-0.5",
+      // A sunken track; the pressed item rises out of it.
+      segmented: "w-fit gap-0.5 rounded-full bg-base-bg p-0.5",
     },
   },
   defaultVariants: {
@@ -25,9 +26,9 @@ const toggleGroupRootVariants = cva("inline-flex items-center", {
 
 const toggleGroupItemVariants = cva(
   [
-    "inline-flex items-center border border-transparent justify-center gap-1.5 whitespace-nowrap",
-    "transition-colors outline-none cursor-pointer select-none",
-    "focus-visible:ring-2 focus-visible:ring-accent-bg/50",
+    "inline-flex items-center justify-center gap-1.5 whitespace-nowrap",
+    "transition-[color,background-color,box-shadow] cursor-pointer select-none",
+    "focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-1",
     "disabled:cursor-not-allowed disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
   ],
@@ -35,12 +36,12 @@ const toggleGroupItemVariants = cva(
     variants: {
       variant: {
         default: [
-          "rounded-full text-ink-secondary hover:text-ink-primary",
-          "data-pressed:bg-tertiary-bg data-pressed:text-ink-primary",
+          "rounded-full text-ink-secondary hover:bg-ink-primary/5 hover:text-ink-primary",
+          "data-pressed:bg-ink-primary/6 data-pressed:text-ink-primary",
         ],
         segmented: [
-          "rounded-full text-ink-tertiary shadow-none hover:text-ink-secondary",
-          "data-pressed:bg-quaternary-bg data-pressed:text-ink-primary data-pressed:border-tertiary-border",
+          "rounded-full text-ink-secondary hover:text-ink-primary",
+          "data-pressed:bg-raised data-pressed:text-ink-primary data-pressed:shadow-raised",
         ],
       },
       size: {
@@ -50,9 +51,9 @@ const toggleGroupItemVariants = cva(
       },
     },
     compoundVariants: [
-      { variant: "segmented", size: "xs", class: "size-7 px-0" },
-      { variant: "segmented", size: "sm", class: "size-8 px-0" },
-      { variant: "segmented", size: "md", class: "size-9 px-0" },
+      { variant: "segmented", size: "xs", class: "h-6 w-7 px-0" },
+      { variant: "segmented", size: "sm", class: "h-7 w-8 px-0" },
+      { variant: "segmented", size: "md", class: "h-8 w-9 px-0" },
     ],
     defaultVariants: {
       variant: "default",

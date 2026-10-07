@@ -1,0 +1,56 @@
+/*
+ * One stylesheet for all four trees. Because the attributes are cumulative,
+ * the `[data-indent]` rule sizes the lane for indent, rail and branches alike,
+ * and `[data-rail]` draws for rail and branches alike.
+ */
+
+.guides-demo [data-nav-group] > [data-nav-list] {
+  height: var(--nav-list-height);
+  overflow: hidden;
+  opacity: 1;
+  transition:
+    height 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease-out;
+}
+.guides-demo [data-nav-list][data-starting-style],
+.guides-demo [data-nav-list][data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+.guides-demo [data-nav-list] > * {
+  flex-shrink: 0;
+}
+.guides-demo [data-nav-list][data-indent] {
+  --nav-row: 30px;
+  margin-top: 2px;
+  margin-left: 15px;
+  padding-left: 7px;
+}
+.guides-demo [data-nav-list][data-rail] > * {
+  position: relative;
+  overflow: visible;
+}
+.guides-demo [data-nav-list][data-rail] > *::before,
+.guides-demo [data-nav-list][data-rail] > *::after {
+  content: "";
+  position: absolute;
+  left: -7px;
+  border-color: var(--rail);
+  border-left-width: 1px;
+}
+.guides-demo [data-nav-list][data-rail] > *::before {
+  top: -2px;
+  width: 6px;
+  height: calc(var(--nav-row) / 2 + 2px);
+}
+.guides-demo [data-nav-list][data-rail] > *::after {
+  top: calc(var(--nav-row) / 2 - 6px);
+  bottom: -2px;
+}
+.guides-demo [data-nav-list][data-rail] > *:last-child::after {
+  display: none;
+}
+.guides-demo [data-nav-list][data-branches] > [data-nav-group]::before {
+  border-bottom-width: 1px;
+  border-bottom-left-radius: 6px;
+}

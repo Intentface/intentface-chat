@@ -1,0 +1,72 @@
+/*
+ * The rail, its branches and the collapse. The package publishes the signal
+ * (`data-rail`, `data-branches`, `data-open`); the geometry is yours. Copy it
+ * and change the numbers:
+ *
+ *   15px  hangs the rail under the centre of a size-4 icon at px-2, so it drops
+ *         out of the parent's icon rather than beside it.
+ *   7px   the rail's lane. It is the list's padding rather than the row's,
+ *         because an active row paints a background and would cover a line
+ *         drawn inside its own box.
+ *   6px   the elbow's corner radius. The curve pulls the vertical away 6px
+ *         early, so the continuation starts 6px above the row's centre.
+ *   2px   the gap between rows, bridged so the line reads as unbroken. The
+ *         bridges overlap, so --rail must be an opaque colour: a translucent
+ *         one would double up into visible dashes.
+ */
+
+.nav-demo [data-nav-group] > [data-nav-list] {
+  height: var(--nav-list-height);
+  overflow: hidden;
+  opacity: 1;
+  transition:
+    height 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease-out;
+}
+.nav-demo [data-nav-list][data-starting-style],
+.nav-demo [data-nav-list][data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+.nav-demo [data-nav-list] > * {
+  flex-shrink: 0;
+}
+.nav-demo [data-nav-list][data-indent] {
+  --nav-row: 30px;
+  margin-top: 2px;
+  margin-left: 15px;
+  padding-left: 7px;
+}
+.nav-demo [data-nav-list][data-rail] > * {
+  position: relative;
+  overflow: visible;
+}
+.nav-demo [data-nav-list][data-rail] > *::before,
+.nav-demo [data-nav-list][data-rail] > *::after {
+  content: "";
+  position: absolute;
+  left: -7px;
+  border-color: var(--rail);
+  border-left-width: 1px;
+}
+.nav-demo [data-nav-list][data-rail] > *::before {
+  top: -2px;
+  width: 6px;
+  height: calc(var(--nav-row) / 2 + 2px);
+}
+.nav-demo [data-nav-list][data-rail] > *::after {
+  top: calc(var(--nav-row) / 2 - 6px);
+  bottom: -2px;
+}
+.nav-demo [data-nav-list][data-rail] > *:last-child::after {
+  display: none;
+}
+.nav-demo [data-nav-list][data-branches] > [data-nav-group]::before {
+  border-bottom-width: 1px;
+  border-bottom-left-radius: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-demo [data-nav-group] > [data-nav-list] {
+    transition: none;
+  }
+}

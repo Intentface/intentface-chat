@@ -1,11 +1,9 @@
 "use client";
 
-import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
-import { Message } from "@intentface/chat/message";
 import { Tabs, useTabs } from "@intentface/chat/tabs";
-import { Thread } from "@intentface/chat/thread";
-import { ArrowUp, MessageSquare, Minus, Sparkles, Stop, X } from "@keyline-icons/react";
-import { type KeyboardEvent, useRef, useState } from "react";
+import { MessageSquare, Minus, Sparkles, X } from "@keyline-icons/react";
+import { useRef, useState } from "react";
+import { ChatThread, NewChat, REPLIES, SEEDED, type Turn } from "./chat";
 
 /*
  * A chat dock in the corner of a page. The same Root, List and Viewport as the
@@ -31,55 +29,6 @@ const dockStore = Tabs.createStore();
 
 /** The draft's value. It is never in `items` — that is the whole point. */
 const DRAFT = "new-chat";
-
-type Turn = { id: string; role: "user" | "assistant"; text: string };
-type Chat = { name: string; turns: Turn[] };
-
-const REPLIES = [
-  "Right — and the reason is that a function is compared by identity, so a fresh one each render reads as a change.",
-  "In this case, nothing: the parent only re-renders when its own state moves, and none of it does here.",
-  "It depends what is downstream of it. A memo-wrapped child cares; a plain one doesn't.",
-];
-
-// Different lengths on purpose: switching tabs has to visibly change the
-// panel, since that is what the dock is here to demonstrate.
-const SEEDED: Record<string, Chat> = {
-  "chat-1": {
-    name: "Notes",
-    turns: [
-      { id: "1", role: "user", text: "What's the difference between useMemo and useCallback?" },
-      {
-        id: "2",
-        role: "assistant",
-        text: "useMemo caches a computed value; useCallback caches a function reference. useCallback(fn, deps) is just useMemo(() => fn, deps).",
-      },
-      { id: "3", role: "user", text: "So when do I actually need useCallback?" },
-      { id: "4", role: "assistant", text: REPLIES[2] as string },
-    ],
-  },
-  "chat-2": {
-    name: "Follow-up",
-    turns: [
-      { id: "1", role: "user", text: "Does the parent re-render when I pass a new callback?" },
-      { id: "2", role: "assistant", text: REPLIES[1] as string },
-    ],
-  },
-  "chat-3": {
-    name: "Summary",
-    turns: [
-      { id: "1", role: "user", text: "Summarise the thread so far." },
-      {
-        id: "2",
-        role: "assistant",
-        text: "Cache values with useMemo, cache functions with useCallback, and reach for either only when something downstream is memoised.",
-      },
-      { id: "3", role: "user", text: "Why does identity matter for the function case?" },
-      { id: "4", role: "assistant", text: REPLIES[0] as string },
-      { id: "5", role: "user", text: "Got it." },
-      { id: "6", role: "assistant", text: "That's the whole of it." },
-    ],
-  },
-};
 
 let created = 0;
 
@@ -157,19 +106,19 @@ export const Anchored = () => {
   return (
     <div
       ref={setFrame}
-      className="relative flex h-[36rem] w-full flex-col overflow-hidden rounded-xl border border-[#f0f0f0] bg-white dark:border-[#262626] dark:bg-[#181818]"
+      className="relative flex h-[36rem] w-full flex-col overflow-hidden rounded-xl bg-[#f5f5f6] shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]"
     >
       {/* The page the dock sits over. */}
-      <article className="min-h-0 flex-1 overflow-hidden px-10 py-8">
-        <h1 className="mb-6 font-semibold text-[#1a1a1a] text-2xl tracking-tight dark:text-[#fcfcfc]">
+      <article className="mx-2 mt-2 min-h-0 flex-1 overflow-hidden rounded-lg bg-white px-10 py-8 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]">
+        <h1 className="mb-5 font-semibold text-base text-zinc-900 tracking-tight dark:text-zinc-100">
           Getting started
         </h1>
-        <p className="mb-4 max-w-2xl text-[#686868] text-sm leading-[1.7] dark:text-[#9b9b9b]">
+        <p className="mb-4 max-w-2xl text-sm text-zinc-700 leading-[1.7] dark:text-zinc-300">
           A chat dock is something you work <em>behind</em>: non-modal throughout, with no backdrop,
           no scroll lock, no focus trap, and no dismissal on outside press. Open a chat below, then
           keep reading — the page stays yours.
         </p>
-        <p className="max-w-2xl text-[#686868] text-sm leading-[1.7] dark:text-[#9b9b9b]">
+        <p className="max-w-2xl text-sm text-zinc-700 leading-[1.7] dark:text-zinc-300">
           The Agent button is a trigger written outside the list. Its value is never in the
           collection, so it anchors a draft to itself without creating a tab — send something and a
           tab appears, titled by what you typed.
@@ -178,7 +127,7 @@ export const Anchored = () => {
 
       {/* A row in the layout rather than a fixed overlay, so it sits beside the
           content instead of on top of it. */}
-      <div className="flex shrink-0 items-center justify-end gap-0.5 overflow-x-auto px-2 pb-2">
+      <div className="flex shrink-0 items-center justify-end gap-0.5 overflow-x-auto p-2">
         <Tabs.Root
           store={dockStore}
           defaultItems={Object.keys(SEEDED)}
@@ -187,20 +136,23 @@ export const Anchored = () => {
           <Tabs.List aria-label="Chats" className="flex items-center gap-0.5">
             {(id) => (
               <Tabs.Trigger value={id} aria-label={title(id)} className={dockTabClass}>
-                <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
-                  <MessageSquare className="size-4" />
+                <Tabs.Icon className="text-zinc-500 dark:text-zinc-400 [&>svg]:size-[15px] [&>svg]:shrink-0">
+                  <MessageSquare className="size-[15px]" />
                 </Tabs.Icon>
                 <span className="min-w-0 truncate">{title(id)}</span>
                 <Tabs.Action
                   className={[
-                    "absolute inset-y-0 right-0 flex items-center bg-inherit pr-1 pl-3",
+                    // Inset 1px with a matching corner, so the cover never paints over the
+                    // tab's ring and top highlight; it inherits the face's gradient too,
+                    // not just its colour, so it doesn't read as a flat block.
+                    "absolute inset-y-px right-px flex items-center rounded-r-[5px] bg-inherit [background-image:inherit] pr-1 pl-3",
                     "[mask-image:linear-gradient(to_right,transparent,#000_0.5rem)]",
                     "opacity-0 transition-opacity group-hover/tab:opacity-100 group-data-[selected]/tab:opacity-100",
                   ].join(" ")}
                 >
                   <Tabs.Close
                     aria-label={`Close ${title(id)}`}
-                    className="grid size-5 shrink-0 cursor-pointer select-none place-items-center rounded text-[#686868] transition-colors hover:bg-[#e4e4e4] hover:text-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:bg-[#333333] dark:hover:text-[#fcfcfc]"
+                    className="grid size-5 shrink-0 cursor-pointer select-none place-items-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-100"
                   >
                     <X className="size-3.5" />
                   </Tabs.Close>
@@ -213,8 +165,8 @@ export const Anchored = () => {
               stop rather than joining the roving focus — but it carries the same
               disclosure ARIA a tab does. */}
           <Tabs.Trigger value={DRAFT} className={`${dockTabClass} ml-1 max-w-none`}>
-            <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
-              <Sparkles className="size-4" />
+            <Tabs.Icon className="text-zinc-500 dark:text-zinc-400 [&>svg]:size-[15px] [&>svg]:shrink-0">
+              <Sparkles className="size-[15px]" />
             </Tabs.Icon>
             Agent
           </Tabs.Trigger>
@@ -233,7 +185,10 @@ export const Anchored = () => {
                   className={[
                     "flex h-[min(30rem,var(--anchor-available-height,30rem))] w-[min(24rem,var(--anchor-available-width,24rem))] flex-col overflow-hidden",
                     // The ring is baked into the shadow — no border on top.
-                    "rounded-xl bg-white smooth-shadow-ring-lg dark:bg-[#181818]",
+                    "rounded-xl bg-white p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.16)]",
+                    // A chat window, so it takes the panel colour; its bubble and
+                    // composer lift off it, as in a full-size chat.
+                    "dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.16),0_12px_32px_-8px_rgb(0_0_0/0.4)]",
                     // Anchored top/end, so it grows from its bottom-right corner — the tab.
                     "origin-bottom-right transition-[opacity,scale,translate] duration-150 ease-out",
                     "data-[starting-style]:translate-y-1 data-[ending-style]:translate-y-1",
@@ -281,8 +236,8 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
   const isDraft = open === DRAFT;
 
   return (
-    <header className="flex h-10 shrink-0 items-center gap-1 px-2.5">
-      <span className="min-w-0 flex-1 truncate font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">
+    <header className="flex h-10 shrink-0 items-center gap-0.5 pr-1 pl-2.5">
+      <span className="min-w-0 flex-1 truncate font-medium text-[13px] text-zinc-900 dark:text-zinc-100">
         {open === null || isDraft ? null : title(open)}
       </span>
       <button
@@ -291,7 +246,7 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
         onClick={() => select(null)}
         className={iconButtonClass}
       >
-        <Minus className="size-3.5" />
+        <Minus className="size-[15px]" />
       </button>
       <button
         type="button"
@@ -304,143 +259,27 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
         }}
         className={iconButtonClass}
       >
-        <X className="size-3.5" />
+        <X className="size-[15px]" />
       </button>
     </header>
   );
 };
 
-// Thread measures its docked composer and publishes the reserve as
-// --thread-overlay-bottom-height, so the last message never hides behind it.
-const ChatThread = ({
-  chat,
-  onSend,
-  generating,
-  onStop,
-}: {
-  chat: Chat | undefined;
-  onSend: (text: string) => void;
-  generating: boolean;
-  onStop: () => void;
-}) => {
-  if (!chat) return null;
-
-  // `bottom` rather than the default `follow`: it is the one mode that reserves
-  // no viewport for the last turn. In a dock this small the reserve would push
-  // every earlier turn out of sight, so each chat would look like one exchange.
-  // Escape in the transcript stops the reply too; the composer handles its own first.
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "Escape" || event.defaultPrevented || !generating) return;
-    event.preventDefault();
-    onStop();
-  };
-
-  return (
-    <Thread.Root
-      autoScroll="bottom"
-      onKeyDown={handleKeyDown}
-      className="relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:0.75rem]"
-    >
-      <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto]">
-        <div className="relative flex min-h-full w-full flex-col pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
-          <Thread.Content className="flex w-full flex-col justify-end gap-3 px-3">
-            {chat.turns.map((turn, index) => (
-              <Message.Root
-                key={turn.id}
-                role={turn.role}
-                isLast={index === chat.turns.length - 1}
-                className="group flex w-full flex-col data-[role=user]:items-end"
-              >
-                <Message.Text className="text-[#1a1a1a] text-sm leading-[1.7] group-data-[role=user]:max-w-[85%] group-data-[role=user]:rounded-2xl group-data-[role=user]:rounded-br-md group-data-[role=user]:bg-[#f4f4f4] group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 dark:text-[#fcfcfc] dark:group-data-[role=user]:bg-[#262626]">
-                  {turn.text}
-                </Message.Text>
-              </Message.Root>
-            ))}
-          </Thread.Content>
-        </div>
-      </Thread.Viewport>
-      <Thread.Composer className="absolute inset-x-0 bottom-0 z-2 w-full p-2 pt-0">
-        <DockComposer
-          placeholder="Reply…"
-          onSubmit={onSend}
-          generating={generating}
-          onStop={onStop}
-        />
-      </Thread.Composer>
-    </Thread.Root>
-  );
-};
-
-/**
- * A chat that does not exist yet. The one place real words survive: a draft
- * that looks like an empty chat gives no hint that sending it creates a tab.
- */
-const NewChat = ({ onStart }: { onStart: (text: string) => void }) => (
-  <div className="flex h-full flex-col">
-    <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 text-center">
-      <Sparkles className="size-5 text-[#949494] dark:text-[#6f6f6f]" />
-      <p className="font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">Ask the agent</p>
-      <p className="text-[#686868] text-sm leading-[1.7] dark:text-[#9b9b9b]">
-        This is a draft — it becomes a tab once you send something.
-      </p>
-    </div>
-    <div className="shrink-0 p-2 pt-0">
-      <DockComposer placeholder="Ask anything…" onSubmit={onStart} />
-    </div>
-  </div>
-);
-
-// The composer clears itself on submit, so the handler only has to act on the
-// text. Every Composer.Root owns an isolated store — no setup beyond onSubmit.
-const DockComposer = ({
-  placeholder,
-  onSubmit,
-  generating = false,
-  onStop,
-}: {
-  placeholder: string;
-  onSubmit: (text: string) => void;
-  generating?: boolean;
-  onStop?: () => void;
-}) => {
-  const handleSubmit = (data: ComposerSubmitData) => {
-    if (data.kind !== "message") return;
-    const text = data.text.trim();
-    if (text) onSubmit(text);
-  };
-
-  return (
-    <Composer.Root onSubmit={handleSubmit} className="flex w-full flex-col">
-      <Composer.Container className="cursor-text rounded-xl border border-[#f0f0f0] bg-white shadow-xs transition-colors focus-within:border-[#ececec] dark:border-[#262626] dark:bg-[#111111] dark:focus-within:border-[#2d2d2d]">
-        <Composer.Textarea className="max-h-32 min-h-10 overflow-y-auto px-3 pt-2.5 text-sm **:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:leading-[1.7] [&_[data-composer-editor]:focus]:outline-none">
-          <Composer.Placeholder
-            placeholder={placeholder}
-            className="leading-[1.7] text-[#949494] dark:text-[#6f6f6f]"
-          />
-        </Composer.Textarea>
-        <Composer.Actions className="flex justify-end p-1.5 pt-0">
-          {/* While a reply is coming, the button and Escape in the composer stop it. */}
-          <Composer.Submit
-            isGenerating={generating}
-            onStop={onStop}
-            aria-label={generating ? "Stop" : "Send"}
-            className="flex size-7 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-30 dark:bg-[#fcfcfc] dark:text-[#111111]"
-          >
-            {generating ? <Stop className="size-4" /> : <ArrowUp className="size-4" />}
-          </Composer.Submit>
-        </Composer.Actions>
-      </Composer.Container>
-    </Composer.Root>
-  );
-};
-
 const dockTabClass = [
-  "group/tab relative flex h-7 max-w-40 shrink-0 cursor-pointer select-none items-center gap-1.5 overflow-hidden",
-  "rounded-md px-2.5 text-[#686868] text-sm transition-colors dark:text-[#9b9b9b]",
-  "hover:bg-[#f4f4f4] dark:hover:bg-[#232323]",
-  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
-  "data-[selected]:bg-[#ececec] data-[selected]:text-[#1a1a1a] dark:data-[selected]:bg-[#2d2d2d] dark:data-[selected]:text-[#fcfcfc]",
+  "group/tab relative flex h-[30px] max-w-40 shrink-0 cursor-pointer select-none items-center gap-1.5 overflow-hidden",
+  "rounded-md px-2.5 font-medium text-[13px] text-zinc-700 transition-colors dark:text-zinc-300",
+  // Opaque rather than a translucent wash: the action inherits this colour, and
+  // a wash painted twice would show as a darker band behind the ×.
+  "hover:bg-[#e9e9ea] dark:hover:bg-[#262628]",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60",
+  "data-[selected]:bg-white data-[selected]:bg-linear-to-b data-[selected]:from-white data-[selected]:to-[#fdfdfd] data-[selected]:text-zinc-900",
+  "data-[selected]:shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)]",
+  "dark:data-[selected]:bg-[#2d2d30] dark:data-[selected]:from-[#313134] dark:data-[selected]:to-[#2a2a2d] dark:data-[selected]:text-zinc-100",
+  "dark:data-[selected]:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]",
+  // The inset ring and top highlight go on an overlay above the content, so the
+  // close button's fading cover can't paint over them.
+  "dark:data-[selected]:after:pointer-events-none dark:data-[selected]:after:absolute dark:data-[selected]:after:inset-0 dark:data-[selected]:after:rounded-[inherit] dark:data-[selected]:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05)]",
 ].join(" ");
 
 const iconButtonClass =
-  "grid size-6 shrink-0 cursor-pointer select-none place-items-center rounded-md text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc] dark:focus-visible:outline-[#fcfcfc]";
+  "grid size-7 shrink-0 cursor-pointer select-none place-items-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-100";

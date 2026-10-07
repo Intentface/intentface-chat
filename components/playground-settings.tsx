@@ -1,38 +1,28 @@
 "use client";
-import {
-  IconAdjustmentsHorizontal,
-  IconDeviceDesktop,
-  IconForms,
-  IconLayoutList,
-  IconMoon,
-  IconSettings,
-  IconSun,
-} from "@tabler/icons-react";
+import { Monitor, Moon, Settings as SettingsIcon, Sun, X } from "@keyline-icons/react";
 
-// Playground settings — a Linear-style display-options popover behind a single
-// icon trigger in the chat area's top-right corner, on every chat page. The
-// panel is split into four tabs (Theme / Thread / Composer / Key), mirroring
-// Linear's List/Board/Timeline switcher. Configuration persists via the
-// settings store; demo triggers (ask-user questions, the context strip) are
-// ephemeral playground-store state. The visitor's OpenAI key deliberately
-// persists nowhere client-side — see KeyTab. Desktop-only — hidden below md.
+// Playground settings — a Linear-style floating sidebar docked in the chat
+// area's top-right corner, on every chat page. Opening it pushes the chat over
+// rather than covering it. Three tabs: Theme / Chat / Key. Configuration
+// persists via the settings store; demo triggers (ask-user questions, the
+// context strip) are ephemeral playground-store state. The visitor's OpenAI key
+// deliberately persists nowhere client-side — see KeyTab. Desktop-only.
 
 import { Tabs } from "@base-ui/react/tabs";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { ComposerSubmitOn } from "@/components/ai/composer";
 import type { ThreadAutoScrollMode } from "@/components/ai/thread";
-import { OpenAIIcon } from "@/components/icons/openai";
 import Button from "@/components/ui/button";
 import { ColorPill } from "@/components/ui/color-pill";
 import { IconButton } from "@/components/ui/icon-button";
 import Input from "@/components/ui/input";
 import { Kbd } from "@/components/ui/kbd";
-import { Popover } from "@/components/ui/popover";
 import { PresetSwatch } from "@/components/ui/preset-swatch";
-import { Scaler } from "@/components/ui/scaler";
 import Select from "@/components/ui/select";
 import { Settings } from "@/components/ui/settings";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup } from "@/components/ui/toggle-group";
 import { useApiKey } from "@/hooks/use-api-key";
@@ -49,10 +39,10 @@ import { usePlaygroundStore } from "@/lib/store/playground";
 import { type CommandSurface, useSettingsStore } from "@/lib/store/settings";
 import { cn } from "@/lib/utils";
 
-// Right-aligned compact controls share one footprint across the rows.
-const COMPACT_CONTROL_CLASS = "h-8 w-28 shrink-0";
+// Right-aligned compact selects share one footprint across the rows.
+const COMPACT_CONTROL_CLASS = "h-7 w-[8.5rem] shrink-0";
 
-const PLAYGROUND_ROW_CLASS = "min-h-11 border-0 px-3 py-2";
+const PLAYGROUND_ROW_CLASS = "min-h-14 border-0 px-3.5 py-2.5";
 
 // Label (with optional description) and control on one row.
 const LabeledRow = ({
@@ -75,7 +65,7 @@ const LabeledRow = ({
 
 // Divider-separated group inside a tab panel.
 const SettingsSection = ({ children }: { children: ReactNode }) => (
-  <div className="border-b border-primary-border py-1 last:border-0">{children}</div>
+  <div className="border-ink-primary/6 border-b py-1 last:border-0">{children}</div>
 );
 
 // Inline boolean row. The Settings.Label span carries no id, so the switch
@@ -122,11 +112,11 @@ const CUSTOM_PRESET_VALUE = "__custom__";
 const MODE_OPTIONS: ReadonlyArray<{
   value: InterfaceThemeMode;
   label: string;
-  Icon: typeof IconSun;
+  Icon: typeof Sun;
 }> = [
-  { value: "light", label: "Light", Icon: IconSun },
-  { value: "dark", label: "Dark", Icon: IconMoon },
-  { value: "system", label: "System", Icon: IconDeviceDesktop },
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "dark", label: "Dark", Icon: Moon },
+  { value: "system", label: "System", Icon: Monitor },
 ];
 
 const ThemeTab = () => {
@@ -147,7 +137,7 @@ const ThemeTab = () => {
 
   return (
     <div className="py-1">
-      <LabeledRow label="Mode" description="Light, dark, or follow the system">
+      <LabeledRow label="Mode" description="Light, dark or system.">
         <ToggleGroup
           variant="segmented"
           value={mode}
@@ -162,11 +152,11 @@ const ThemeTab = () => {
         </ToggleGroup>
       </LabeledRow>
 
-      <LabeledRow label="Preset" description="Pick a starter palette">
+      <LabeledRow label="Preset" description="A starting palette.">
         <Select value={selectedPresetValue} onValueChange={handlePresetChange}>
-          <Select.Trigger className={cn(COMPACT_CONTROL_CLASS, "rounded-md px-1")} size="sm">
+          <Select.Trigger className={cn(COMPACT_CONTROL_CLASS, "pr-1.5 pl-[5px]")} size="sm">
             <Select.Value>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <PresetSwatch seeds={seeds} />
                 <span>{preset?.label ?? "Custom"}</span>
               </div>
@@ -189,44 +179,49 @@ const ThemeTab = () => {
         </Select>
       </LabeledRow>
 
-      <LabeledRow label="Accent" description="Buttons, links, and focus rings">
+      <LabeledRow label="Accent" description="Buttons, links and focus.">
         <ColorPill
           size="compact"
-          className={COMPACT_CONTROL_CLASS}
           value={seeds.acc}
           onValueChange={(value) => setSeed("acc", value)}
         />
       </LabeledRow>
 
-      <LabeledRow label="Background" description="Workspace base color">
+      <LabeledRow label="Background" description="Surfaces derive from it.">
         <ColorPill
           size="compact"
-          className={COMPACT_CONTROL_CLASS}
           value={seeds.bg}
           onValueChange={(value) => setSeed("bg", value)}
         />
       </LabeledRow>
 
-      <LabeledRow label="Foreground" description="Workspace text color">
+      <LabeledRow label="Foreground" description="Text and icons.">
         <ColorPill
           size="compact"
-          className={COMPACT_CONTROL_CLASS}
           value={seeds.fg}
           onValueChange={(value) => setSeed("fg", value)}
         />
       </LabeledRow>
 
-      <LabeledRow label="Contrast" description="Surface elevation strength">
-        <Scaler
-          size="compact"
-          className={COMPACT_CONTROL_CLASS}
+      <LabeledRow label="Contrast" description="Surface separation.">
+        <Slider
+          aria-label="Contrast"
+          className="w-[6.5rem]"
           value={seeds.con}
-          onValueChange={(value) => setSeed("con", value)}
+          onValueChange={(value) => {
+            if (typeof value === "number") setSeed("con", value);
+          }}
           min={CONTRAST_MIN}
           max={CONTRAST_MAX}
           step={CONTRAST_STEP}
-          tickStep={0.05}
-        />
+        >
+          <Slider.Control>
+            <Slider.Track>
+              <Slider.Indicator />
+              <Slider.Thumb aria-label="Contrast" />
+            </Slider.Track>
+          </Slider.Control>
+        </Slider>
       </LabeledRow>
     </div>
   );
@@ -260,7 +255,7 @@ const ThreadTab = () => {
             if (value) setScrollMode(value);
           }}
         >
-          <Select.Trigger className={cn(COMPACT_CONTROL_CLASS, "rounded-md")} size="sm">
+          <Select.Trigger className={COMPACT_CONTROL_CLASS} size="sm">
             <Select.Value>
               {SCROLL_MODE_OPTIONS.find((option) => option.value === scrollMode)?.label}
             </Select.Value>
@@ -329,7 +324,7 @@ const ComposerTab = () => {
               if (value) setCommandSurface(value);
             }}
           >
-            <Select.Trigger className={cn(COMPACT_CONTROL_CLASS, "rounded-md")} size="sm">
+            <Select.Trigger className={COMPACT_CONTROL_CLASS} size="sm">
               <Select.Value>
                 {COMMAND_SURFACE_OPTIONS.find((option) => option.value === commandSurface)?.label}
               </Select.Value>
@@ -350,7 +345,7 @@ const ComposerTab = () => {
               if (value) setSubmitOn(value);
             }}
           >
-            <Select.Trigger className={cn(COMPACT_CONTROL_CLASS, "rounded-md")} size="sm">
+            <Select.Trigger className={COMPACT_CONTROL_CLASS} size="sm">
               <Select.Value>
                 {SUBMIT_OPTIONS.find((option) => option.value === submitOn)?.label}
               </Select.Value>
@@ -413,14 +408,10 @@ const ComposerTab = () => {
             <Settings.Description>Fire a demo question flow</Settings.Description>
           </Settings.LabelGroup>
           <Settings.Control className="w-auto gap-1.5">
-            <Button size="xs" variant="secondary" onClick={() => setDemoQuestions(singleQuestion)}>
+            <Button size="xs" variant="primary" onClick={() => setDemoQuestions(singleQuestion)}>
               Single
             </Button>
-            <Button
-              size="xs"
-              variant="secondary"
-              onClick={() => setDemoQuestions(multipleQuestions)}
-            >
+            <Button size="xs" variant="primary" onClick={() => setDemoQuestions(multipleQuestions)}>
               Multi
             </Button>
           </Settings.Control>
@@ -457,7 +448,7 @@ const KeyTab = () => {
         {isSet ? (
           <LabeledRow label="OpenAI API key" description="Set on this device.">
             <Button
-              variant="secondary"
+              variant="primary"
               onClick={clear}
               disabled={isSubmitting}
               aria-label="Clear the stored OpenAI API key"
@@ -466,7 +457,7 @@ const KeyTab = () => {
             </Button>
           </LabeledRow>
         ) : (
-          <div className="flex flex-col gap-2 px-3 py-2">
+          <div className="flex flex-col gap-2 px-3.5 py-2.5">
             <Settings.LabelGroup>
               <Settings.Label>OpenAI API key</Settings.Label>
               <Settings.Description>
@@ -497,9 +488,9 @@ const KeyTab = () => {
         )}
         {/* Outside the branches on purpose: clear() runs from the is-set side, so
             an error rendered only in the not-set branch could never be seen. */}
-        {error && <p className="px-3 pb-2 text-destructive text-xs">{error}</p>}
+        {error && <p className="px-3.5 pb-2 text-red-600 text-xs dark:text-red-400">{error}</p>}
       </SettingsSection>
-      <p className="px-3 py-2 text-xs text-ink-tertiary">
+      <p className="px-3.5 py-2.5 text-ink-secondary text-xs leading-[18px]">
         Your key is sent to this site's server to forward each request to OpenAI, and is kept only
         for the length of that request — never written to disk or logged. It is stored in your
         browser in a cookie that scripts cannot read.{" "}
@@ -517,16 +508,25 @@ const KeyTab = () => {
   );
 };
 
+// Thread and composer options share one tab: both shape the chat itself.
+const ChatTab = () => (
+  <>
+    <SettingsSection>
+      <ThreadTab />
+    </SettingsSection>
+    <ComposerTab />
+  </>
+);
+
 const PLAYGROUND_TABS = [
-  { value: "theme", label: "Theme", Icon: IconAdjustmentsHorizontal, content: <ThemeTab /> },
-  { value: "thread", label: "Thread", Icon: IconLayoutList, content: <ThreadTab /> },
-  { value: "composer", label: "Composer", Icon: IconForms, content: <ComposerTab /> },
-  { value: "key", label: "Key", Icon: OpenAIIcon, content: <KeyTab /> },
+  { value: "theme", label: "Theme", content: <ThemeTab /> },
+  { value: "chat", label: "Chat", content: <ChatTab /> },
+  { value: "key", label: "Key", content: <KeyTab /> },
 ] as const;
 
 type PlaygroundTabValue = (typeof PLAYGROUND_TABS)[number]["value"];
 
-// One spring for the shell's height and the panels' travel, so everything settles
+// One spring for the card's height and the panels' travel, so everything settles
 // together. bounce: 0 keeps a settings panel from wobbling.
 const PANEL_SPRING = { duration: 0.5, type: "spring", bounce: 0 } as const;
 
@@ -539,10 +539,21 @@ const panelVariants = {
   exit: (direction: number) => ({ x: `${-110 * direction}%`, opacity: 0 }),
 };
 
+/**
+ * The gear trigger plus the docked card. Rendered as a flex sibling of the
+ * thread: the slot animates its width so the chat column narrows and re-centres
+ * instead of sitting under the card. The card stays mounted (inert while closed)
+ * and slides in from the right edge, where the viewport clips it.
+ */
 export const PlaygroundSettings = () => {
-  // The four panels differ in height, so the shell animates to the measured
-  // content. Because it is a ResizeObserver, content that grows *inside* a tab
-  // (the key form revealing a validation error) animates too, not just switches.
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
+  const panelId = useId();
+
+  // The panels differ in height, so the card animates to the measured content.
+  // Because it is a ResizeObserver, content that grows *inside* a tab (the key
+  // form revealing a validation error) animates too, not just switches.
   const [panelRef, { height }] = useMeasure<HTMLDivElement>();
 
   // Controlled rather than defaultValue: the slide needs to know which way the
@@ -558,45 +569,77 @@ export const PlaygroundSettings = () => {
     setActiveTab(next);
   };
 
+  // Focus follows the toggle: into the card on open, back to the gear on close.
+  // preventScroll: the card starts off-screen, and a plain focus() would scroll
+  // the clipped viewport sideways to reveal it.
+  const show = () => {
+    flushSync(() => setOpen(true));
+    cardRef.current?.focus({ preventScroll: true });
+  };
+  const hide = () => {
+    flushSync(() => setOpen(false));
+    triggerRef.current?.focus({ preventScroll: true });
+  };
+
   const activePanel = PLAYGROUND_TABS.find((tab) => tab.value === activeTab);
 
   return (
-    <div data-slot="playground-settings" className="absolute top-2 right-2 z-20 hidden md:block">
-      <Popover>
-        <Popover.Trigger
-          render={
-            <IconButton
-              variant="primary"
-              className="rounded-full"
-              aria-label="Playground settings"
-            />
-          }
-        >
-          <IconSettings className="size-4" />
-        </Popover.Trigger>
-        <Popover.Content
-          align="end"
-          sideOffset={4}
-          className="w-96 border-0 p-0 shadow-none smooth-shadow-ring-sm!"
+    <>
+      <IconButton
+        ref={triggerRef}
+        variant="primary"
+        aria-label="Playground settings"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={show}
+        className={cn(
+          "absolute top-3 right-3 z-20 hidden transition-[opacity,visibility] duration-200 md:inline-flex",
+          open && "invisible opacity-0",
+        )}
+      >
+        <SettingsIcon />
+      </IconButton>
+      <div
+        data-slot="playground-settings"
+        data-open={open ? "" : undefined}
+        className="relative hidden w-0 shrink-0 transition-[width] duration-200 ease-out data-open:w-[328px] motion-reduce:transition-none md:block"
+      >
+        <aside
+          ref={cardRef}
+          id={panelId}
+          tabIndex={-1}
+          aria-label="Playground settings"
+          inert={!open}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !event.defaultPrevented) hide();
+          }}
+          className={cn(
+            "absolute top-3 right-3 z-20 flex w-[304px] flex-col overflow-hidden rounded-2xl bg-primary-bg shadow-card outline-none",
+            "transition-transform duration-200 ease-out motion-reduce:transition-none",
+            open ? "translate-x-0" : "pointer-events-none translate-x-[calc(100%+1rem)]",
+          )}
         >
           <Tabs.Root value={activeTab} onValueChange={handleTabChange}>
-            <Tabs.List className="flex gap-1 border-b border-primary-border p-2">
-              {PLAYGROUND_TABS.map((tab) => (
-                <Tabs.Tab
-                  key={tab.value}
-                  value={tab.value}
-                  className={cn(
-                    "flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-medium text-ink-secondary outline-none transition-colors border border-transparent",
-                    "hover:bg-primary-bg-hover hover:text-ink-primary focus-visible:ring-2 focus-visible:ring-accent-bg/50",
-                    "data-active:bg-primary-bg data-active:text-ink-primary data-active:border-primary-border-active",
-                    "[&>svg]:size-3.5 [&>svg]:shrink-0 [&>svg]:text-ink-tertiary data-active:[&>svg]:text-ink-primary",
-                  )}
-                >
-                  <tab.Icon />
-                  {tab.label}
-                </Tabs.Tab>
-              ))}
-            </Tabs.List>
+            <div className="flex items-center gap-1.5 p-2 shadow-[inset_0_-1px_0_color-mix(in_oklab,var(--color-ink-primary)_6%,transparent)]">
+              <Tabs.List className="flex flex-1 gap-0.5 rounded-full bg-base-bg p-0.5">
+                {PLAYGROUND_TABS.map((tab) => (
+                  <Tabs.Tab
+                    key={tab.value}
+                    value={tab.value}
+                    className={cn(
+                      "flex h-7 flex-1 cursor-pointer items-center justify-center rounded-full font-medium text-ink-secondary text-sm transition-[color,background-color,box-shadow]",
+                      "hover:text-ink-primary focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-1",
+                      "data-active:bg-raised data-active:text-ink-primary data-active:shadow-raised",
+                    )}
+                  >
+                    {tab.label}
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+              <IconButton variant="ghost" aria-label="Close settings" onClick={hide}>
+                <X />
+              </IconButton>
+            </div>
             <MotionConfig transition={PANEL_SPRING}>
               <motion.div
                 initial={false}
@@ -613,6 +656,7 @@ export const PlaygroundSettings = () => {
                         animate="active"
                         exit="exit"
                         custom={direction}
+                        className="py-1"
                       >
                         {activePanel?.content}
                       </motion.div>
@@ -622,8 +666,8 @@ export const PlaygroundSettings = () => {
               </motion.div>
             </MotionConfig>
           </Tabs.Root>
-        </Popover.Content>
-      </Popover>
-    </div>
+        </aside>
+      </div>
+    </>
   );
 };

@@ -1,28 +1,30 @@
 import { highlight } from "fumadocs-core/highlight";
 import type { ReactNode } from "react";
+import { codeTheme } from "@/lib/docs/code-theme";
 import { cn } from "@/lib/utils";
+import { CodeFrame, CodeTab } from "./code-frame";
 
 type CodeBlockProps = {
   code: string;
   lang?: string;
-  /** Small label shown above the block (e.g. a target file path). */
+  /** The tab label, usually a file path. Falls back to the language. */
   title?: ReactNode;
   className?: string;
 };
 
-// Server-side shiki highlight. Emits dual-theme spans (--shiki / --shiki-dark);
-// the `.dark` activation rule lives in globals.css under the shiki section.
-export const CodeBlock = async ({ code, lang = "tsx", title, className }: CodeBlockProps) => {
-  const rendered = await highlight(code, {
+/** Server-side shiki highlight into a bare <pre>, for any code chrome to wrap. */
+export const highlightCode = (code: string, lang = "tsx") =>
+  highlight(code, {
     lang,
-    themes: { light: "github-light", dark: "github-dark" },
-    defaultColor: false,
+    theme: codeTheme,
     components: {
-      pre: ({ className: preClassName, ...props }) => (
+      pre: ({ className, ...props }) => (
         <pre
+          // Multi-line blocks get a line-number gutter (see globals.css).
+          data-line-numbers={code.includes("\n") ? "" : undefined}
           className={cn(
-            "overflow-x-auto rounded-lg border border-base-border bg-base-bg p-4 text-sm leading-relaxed [scrollbar-width:thin]",
-            preClassName,
+            "scroll-mask overflow-x-auto px-4 py-3.5 font-mono text-[13px] leading-[22px] [scrollbar-width:thin] data-line-numbers:pl-0",
+            className,
           )}
           {...props}
         />
@@ -30,14 +32,12 @@ export const CodeBlock = async ({ code, lang = "tsx", title, className }: CodeBl
     },
   });
 
-  return (
-    <div className={cn("not-prose flex flex-col overflow-hidden", className)}>
-      {title && (
-        <div className="rounded-t-lg border border-primary-border border-b-0 bg-primary-bg px-4 py-2 font-mono text-ink-tertiary text-xs">
-          {title}
-        </div>
-      )}
-      <div className={cn(title && "[&>pre]:rounded-t-none")}>{rendered}</div>
-    </div>
-  );
-};
+export const CodeBlock = async ({ code, lang = "tsx", title, className }: CodeBlockProps) => (
+  <CodeFrame
+    tabs={<CodeTab active={Boolean(title)}>{title ?? lang}</CodeTab>}
+    code={code}
+    className={className}
+  >
+    {await highlightCode(code, lang)}
+  </CodeFrame>
+);

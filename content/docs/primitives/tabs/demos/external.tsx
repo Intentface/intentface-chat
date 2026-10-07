@@ -25,19 +25,19 @@ export const ExternalTabs = () => {
         defaultItems={["Inbox"]}
         defaultValue="Inbox"
         selectOnClose="adjacent"
-        className="flex flex-col gap-1.5"
+        className="relative flex flex-col gap-2 rounded-xl bg-[#f5f5f6] p-2 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]"
       >
         <Tabs.List aria-label="Documents" className="flex shrink-0 flex-wrap items-center gap-1">
           {(id) => (
             <Tabs.Trigger value={id} aria-label={id} className={tabClass}>
-              <Tabs.Icon className="shrink-0 text-[#949494] dark:text-[#6f6f6f] [&>svg]:size-3.5">
+              <Tabs.Icon className="shrink-0 text-zinc-500 dark:text-zinc-400 [&>svg]:size-[15px]">
                 {createElement(TAB_ICONS[id] ?? Inbox)}
               </Tabs.Icon>
               <span className="min-w-0 truncate">{id}</span>
               <Tabs.Action className="absolute inset-y-0 right-1.5 flex items-center opacity-0 transition-opacity group-hover/tab:opacity-100 group-data-[selected]/tab:opacity-100">
                 <Tabs.Close
                   aria-label={`Close ${id}`}
-                  className="grid size-5 shrink-0 cursor-pointer place-items-center rounded text-[#949494] transition-colors hover:bg-[#dcdcdc] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#3d3d3d] dark:hover:text-[#fcfcfc]"
+                  className="grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-100"
                 >
                   <X className="size-3.5" />
                 </Tabs.Close>
@@ -46,7 +46,7 @@ export const ExternalTabs = () => {
           )}
         </Tabs.List>
 
-        <Tabs.Viewport className="flex h-24 items-center justify-center rounded-xl border border-[#f0f0f0] bg-white px-4 text-sm text-[#686868] dark:border-[#262626] dark:bg-[#111111] dark:text-[#9b9b9b]">
+        <Tabs.Viewport className="flex h-24 items-center justify-center rounded-lg bg-white px-4 text-[13px] text-zinc-500 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-900 dark:text-zinc-400 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]">
           {(id) => <span>{id}</span>}
         </Tabs.Viewport>
       </Tabs.Root>
@@ -69,7 +69,7 @@ const Launcher = ({ store }: { store: TabsStore }) => {
           key={id}
           type="button"
           onClick={() => store.getSnapshot().open(id)}
-          className="h-8 cursor-pointer rounded-full border border-[#e4e4e4] bg-white px-4 font-medium text-[#1a1a1a] text-sm transition-colors hover:bg-[#f4f4f4] focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:border-[#2d2d2d] dark:bg-[#181818] dark:text-[#fcfcfc] dark:hover:bg-[#232323] dark:focus-visible:outline-[#fcfcfc]"
+          className="h-8 cursor-pointer rounded-full bg-white bg-linear-to-b from-white to-[#fdfdfd] px-4 font-medium text-[13px] text-zinc-900 shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] transition-colors hover:from-[#fafafa] hover:to-[#f6f6f6] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:text-zinc-100 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:hover:from-[#38383b] dark:hover:to-[#313134]"
         >
           {items.includes(id) ? `Go to ${id}` : `Open ${id}`}
         </button>
@@ -79,18 +79,20 @@ const Launcher = ({ store }: { store: TabsStore }) => {
 };
 
 const tabClass = [
-  // No strip behind the tabs: they sit on the page ground, and the open one is
-  // a white card matching the panel below, so the selection reads as continuous
+  // No strip behind the tabs: they sit on the frame's ground, and the open one
+  // is raised to match the panel below, so the selection reads as continuous
   // with its content rather than as a highlighted button.
-  "group/tab relative flex h-8 w-40 shrink-0 cursor-pointer select-none items-center gap-2 overflow-hidden",
+  "group/tab relative flex h-[30px] w-40 min-w-0 shrink cursor-pointer select-none items-center gap-2 overflow-hidden",
   // pr-7 reserves the close button's slot permanently. Overlaying it would
   // cover the label on any short title, and padding it in on hover would make
   // every tab jump the moment you point at one.
-  "rounded-lg pr-7 pl-2.5 text-[#686868] text-sm transition-colors dark:text-[#9b9b9b]",
-  "hover:bg-[#e7e7e7] dark:hover:bg-[#262626]",
-  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
-  "data-[selected]:bg-white data-[selected]:text-[#1a1a1a] data-[selected]:shadow-[0_1px_2px_rgba(0,0,0,0.06)]",
-  "dark:data-[selected]:bg-[#2d2d2d] dark:data-[selected]:text-[#fcfcfc]",
+  "rounded-md pr-7 pl-2.5 font-medium text-[13px] text-zinc-700 transition-colors dark:text-zinc-300",
+  "hover:bg-zinc-950/5 dark:hover:bg-white/8",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60",
+  "data-[selected]:bg-white data-[selected]:bg-linear-to-b data-[selected]:from-white data-[selected]:to-[#fdfdfd] data-[selected]:text-zinc-900",
+  "data-[selected]:shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)]",
+  "dark:data-[selected]:bg-[#2d2d30] dark:data-[selected]:from-[#313134] dark:data-[selected]:to-[#2a2a2d] dark:data-[selected]:text-zinc-100",
+  "dark:data-[selected]:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]",
 ].join(" ");
 
 /* Per-tab icons rather than one generic page glyph — a strip of identical

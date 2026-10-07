@@ -52,25 +52,33 @@ export const DocsTOC = ({ items }: DocsTOCProps) => {
 
   const linkClass = (isActive: boolean, depth = 2) =>
     cn(
-      "-ml-px border-transparent border-l py-1 text-sm transition-colors",
-      depth >= 3 ? "pl-6" : "pl-4",
+      "flex h-7 min-w-0 shrink-0 items-center text-sm transition-colors",
+      depth >= 3 ? "pl-[26px]" : "pl-3.5",
+      // The active entry draws its own 2px ink rule over the 1px rail.
       isActive
-        ? "border-accent-bg font-medium text-ink-primary"
-        : "text-ink-tertiary hover:text-ink-secondary",
+        ? "font-medium text-ink-primary shadow-[inset_2px_0_0_var(--color-ink-primary)]"
+        : "text-ink-secondary hover:text-ink-primary",
     );
 
   return (
-    <aside className="sticky top-16 hidden h-[calc(100vh-8rem)] w-56 shrink-0 overflow-y-auto xl:block">
-      <nav className="flex flex-col gap-1 border-secondary-border border-l">
+    <aside className="sticky top-13 hidden max-h-[calc(100dvh-4.25rem)] w-[260px] shrink-0 flex-col gap-3 self-start overflow-y-auto pt-[34px] pr-6 pb-8 pl-1 xl:flex">
+      <p className="font-medium text-ink-primary text-sm">On this page</p>
+      <nav className="flex flex-col shadow-[inset_1px_0_0_color-mix(in_oklab,var(--color-ink-primary)_10%,transparent)]">
         <a href="#overview" className={linkClass(activeId === null)}>
-          Overview
+          <span className="truncate">Overview</span>
         </a>
         {items.map((item) => {
           const id = item.url.replace(/^#/, "");
           const isActive = activeId === id;
           return (
-            <a key={item.url} href={item.url} className={linkClass(isActive, item.depth)}>
-              {item.title}
+            // One line per entry: long headings truncate, the full text on hover.
+            <a
+              key={item.url}
+              href={item.url}
+              title={typeof item.title === "string" ? item.title : undefined}
+              className={linkClass(isActive, item.depth)}
+            >
+              <span className="truncate">{item.title}</span>
             </a>
           );
         })}

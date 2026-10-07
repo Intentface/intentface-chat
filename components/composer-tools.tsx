@@ -20,14 +20,18 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
         <Button
           type="button"
           variant="ghost"
-          className="group/pill cursor-pointer rounded-full font-normal"
+          size="sm"
+          aria-label={`Turn off Web Search`}
+          className="group/pill gap-1.5 px-2 text-ink-primary text-sm"
           onClick={() => onToolsChange({ ...tools, webSearch: false })}
         >
-          <span className="relative size-4">
-            <Globe className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <X className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+          <span className="relative size-3.5">
+            <Globe className="absolute top-0 left-0 size-3.5 opacity-100 group-hover/pill:opacity-0" />
+            <X className="absolute top-0 left-0 size-3.5 opacity-0 group-hover/pill:opacity-100" />
           </span>
           Web Search
+          {/* The "on" dot, as in the Paper composer. */}
+          <span className="size-1.5 rounded-full bg-accent-bg shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-accent-bg)_15%,transparent)]" />
         </Button>
       )}
 
@@ -35,14 +39,18 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
         <Button
           type="button"
           variant="ghost"
-          className="group/pill cursor-pointer rounded-full font-normal"
+          size="sm"
+          aria-label={`Turn off Thinking`}
+          className="group/pill gap-1.5 px-2 text-ink-primary text-sm"
           onClick={() => onToolsChange({ ...tools, thinking: false })}
         >
-          <span className="relative size-4">
-            <Brain className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <X className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+          <span className="relative size-3.5">
+            <Brain className="absolute top-0 left-0 size-3.5 opacity-100 group-hover/pill:opacity-0" />
+            <X className="absolute top-0 left-0 size-3.5 opacity-0 group-hover/pill:opacity-100" />
           </span>
           Thinking
+          {/* The "on" dot, as in the Paper composer. */}
+          <span className="size-1.5 rounded-full bg-accent-bg shadow-[0_0_0_2px_color-mix(in_oklab,var(--color-accent-bg)_15%,transparent)]" />
         </Button>
       )}
     </div>
@@ -56,7 +64,7 @@ export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
     <DropdownMenu>
       <DropdownMenu.Trigger
         render={
-          <IconButton variant="ghost" type="button" className="rounded-full">
+          <IconButton variant="primary" size="sm" type="button" aria-label="Add">
             <Plus />
           </IconButton>
         }

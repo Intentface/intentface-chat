@@ -30,7 +30,7 @@ export const Chips = () => (
     <Message.Root role="assistant">
       <Message.Text
         renderChip={renderChip}
-        className="text-[#1a1a1a] text-sm leading-8 dark:text-[#fcfcfc]"
+        className="text-sm text-zinc-700 leading-8 dark:text-zinc-300"
       >
         {TEXT}
       </Message.Text>
@@ -43,23 +43,20 @@ const renderChip = (chip: MessageChipSegment, index: number) => (
   <Chip.Root
     key={`${chip.prefix}-${chip.value}-${index}`}
     variant={chip.prefix === "tool" ? "accent" : "primary"}
-    className={chipClass}
+    className="mx-0.5 inline-flex h-6 items-center gap-1 rounded-full bg-white bg-linear-to-b from-white to-[#fdfdfd] px-2 align-middle font-medium text-xs text-zinc-900 shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] data-[variant=accent]:bg-[#0169cc]/10 data-[variant=accent]:bg-none data-[variant=accent]:text-[#0169cc] data-[variant=accent]:shadow-none dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:text-zinc-100 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:data-[variant=accent]:bg-[#4c9bea]/15 dark:data-[variant=accent]:text-[#4c9bea] dark:data-[variant=accent]:shadow-none"
   >
     <Chip.Icon className="flex items-center">
       {chip.prefix === "file" ? (
-        <File className="size-4" />
+        <File className="size-3.5" />
       ) : chip.prefix === "doc" ? (
-        <FileText className="size-4" />
+        <FileText className="size-3.5" />
       ) : (
-        <Wrench className="size-4" />
+        <Wrench className="size-3.5" />
       )}
     </Chip.Icon>
     <Chip.Label>{chip.label}</Chip.Label>
   </Chip.Root>
 );
-
-const chipClass =
-  "mx-0.5 inline-flex items-center gap-1 rounded-md border border-[#f0f0f0] bg-[#f4f4f4] px-1.5 py-0.5 align-baseline font-medium text-xs data-[variant=accent]:border-blue-200 data-[variant=accent]:bg-blue-50 data-[variant=accent]:text-blue-700 dark:border-[#2d2d2d] dark:bg-[#232323] dark:data-[variant=accent]:border-blue-900 dark:data-[variant=accent]:bg-blue-950 dark:data-[variant=accent]:text-blue-300";
 
 const _icon = (props: ComponentProps<"svg">) => ({
   viewBox: "0 0 16 16",

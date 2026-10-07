@@ -7,12 +7,12 @@ import {
   useAskUserOptions,
 } from "@intentface/chat/ask-user";
 import {
-  IconCheck,
-  IconChevronDown,
-  IconChevronLeft,
-  IconChevronRight,
-  IconHelpCircle,
-} from "@tabler/icons-react";
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleQuestion,
+} from "@keyline-icons/react";
 import { type ComponentProps, type RefObject, useState } from "react";
 import { Collapsible } from "@/components/ui/collapsible";
 import type { AskUserQuestion } from "@/lib/ai/types";
@@ -55,14 +55,14 @@ const AskUserNavigation = ({ className, ...props }: AskUserNavigationProps) => (
 );
 
 const navigationButtonClasses =
-  "flex size-6 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-tertiary-bg-hover hover:text-ink-primary disabled:pointer-events-none disabled:opacity-30";
+  "flex size-6 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ink-primary/5 hover:text-ink-primary focus-visible:outline-2 focus-visible:outline-accent-bg/60 disabled:pointer-events-none disabled:opacity-30";
 
 /** Navigate to the previous step. */
 type AskUserPreviousProps = ComponentProps<typeof AskUserPrimitive.Previous>;
 
 const AskUserPrevious = ({ className, ...props }: AskUserPreviousProps) => (
   <AskUserPrimitive.Previous className={cn(navigationButtonClasses, className)} {...props}>
-    <IconChevronLeft className="size-3.5" />
+    <ChevronLeft className="size-3.5" />
   </AskUserPrimitive.Previous>
 );
 
@@ -71,7 +71,7 @@ type AskUserNextProps = ComponentProps<typeof AskUserPrimitive.Next>;
 
 const AskUserNext = ({ className, ...props }: AskUserNextProps) => (
   <AskUserPrimitive.Next className={cn(navigationButtonClasses, className)} {...props}>
-    <IconChevronRight className="size-3.5" />
+    <ChevronRight className="size-3.5" />
   </AskUserPrimitive.Next>
 );
 
@@ -106,10 +106,10 @@ const AskUserOption = ({ className, ...props }: AskUserOptionProps) => (
   <AskUserPrimitive.Option
     className={cn(
       "flex cursor-pointer items-start gap-2 rounded-lg p-2 leading-tight transition-colors",
-      "data-highlighted:bg-primary-bg-hover",
+      "data-highlighted:bg-ink-primary/5",
       // Options carry real focus (roving tabindex), but focus always tracks
-      // the highlight — the bg-primary-bg-hover highlight IS the focus
-      // indication, same as command items. No extra ring.
+      // the highlight — the highlight wash IS the focus indication, same as
+      // command items. No extra ring.
       "outline-none",
       className,
     )}
@@ -127,11 +127,10 @@ const AskUserOptionInput = () => {
 };
 
 const INDICATOR_CLASS = cn(
-  "flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-tertiary-border bg-tertiary-bg text-2xs font-medium tabular-nums text-ink-secondary",
+  "flex size-4 shrink-0 items-center justify-center rounded-[5px] bg-raised font-medium text-[10px] text-ink-secondary tabular-nums shadow-raised",
 );
 
-const INDICATOR_SELECTED_CLASS =
-  "border-tertiary-border-active bg-tertiary-bg-active text-ink-primary";
+const INDICATOR_SELECTED_CLASS = "bg-accent-raised text-white shadow-accent";
 
 const AskUserOptionCheckIndicator = () => {
   const option = useAskUserOption();
@@ -140,7 +139,7 @@ const AskUserOptionCheckIndicator = () => {
       aria-hidden="true"
       className={cn(INDICATOR_CLASS, option.selected && INDICATOR_SELECTED_CLASS)}
     >
-      {option.selected && <IconCheck className="size-3" />}
+      {option.selected && <Check className="size-3" />}
     </span>
   );
 };
@@ -205,10 +204,10 @@ const AskUserSummary = ({ questions, answers, className, ...props }: AskUserSumm
       {...props}
     >
       <Collapsible.Trigger className="flex w-full cursor-pointer items-center gap-2 rounded-md py-1 text-sm text-ink-secondary transition-colors hover:text-ink-primary">
-        <span className="text-gray-11/60">
+        <span>
           Answered {count} {count === 1 ? "question" : "questions"}
         </span>
-        <IconChevronDown
+        <ChevronDown
           className={cn(
             "size-3.5 shrink-0 transition-transform",
             isOpen ? "rotate-180" : "rotate-0",
@@ -219,7 +218,7 @@ const AskUserSummary = ({ questions, answers, className, ...props }: AskUserSumm
         {questions.map((q) => (
           <div key={q.question} className="flex gap-2 leading-tight">
             <div className="flex h-lh shrink-0 items-center justify-center">
-              <IconHelpCircle className="size-4" />
+              <CircleQuestion className="size-4" />
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium leading-tight">{q.question}</span>

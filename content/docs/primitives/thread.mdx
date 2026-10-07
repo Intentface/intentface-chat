@@ -58,9 +58,9 @@ A realistic surface with overlays and a message list:
 ### Choosing an auto-scroll mode
 
 `autoScroll` decides two things at once: where a new turn lands, and whether the
-view keeps following while text streams into it. `Thread.Viewport` maps
-`--thread-turn-min-height` onto its last child, so the reserve that lets a turn
-land at the top is wired for you.
+view keeps following while text streams into it. In `"follow"` and `"jump"` the
+newest turn reserves a full visible area so it can land at the top;
+[Sizing the last turn](#sizing-the-last-turn) shows the markup that keeps it exact.
 
 export const autoScrollModes = [
   { value: '"follow"', default: true, description: "Newest lands at the top; the view follows the stream (ChatGPT-style)." },
@@ -87,6 +87,43 @@ return to the bottom (see [Keyboard](#keyboard)). Content growth alone never
 releases it: a large code block landing at once won't drop the follow
 mid-stream. Once you scroll up, the follow can't scroll again until you return
 to the bottom.
+
+### Sizing the last turn
+
+A turn lands at the top because it is at least one visible area tall. The thread
+measures that area — the root's height minus the top overlay and the docked
+composer — and publishes it as `--thread-turn-min-height` on `Thread.Content`.
+Three pieces of markup make the landing exact:
+
+- **Give the reserve to the whole turn.** Apply the variable to the last child,
+  and make that child the turn: wrap each question and its reply in
+  `Message.Turn`. On a bare reply, the question above it is pushed off the top.
+- **Mount a top overlay.** Its height is the gap a landed turn keeps from the
+  top edge. Without one, the turn lands flush against it.
+- **Pad the content by the same insets.** Use `--thread-overlay-top-height` and
+  `--thread-overlay-bottom-height` on the wrapper inside the viewport. Any other
+  vertical padding or margin between the viewport and the turns shifts the
+  landing by that much.
+
+```tsx
+<Thread.Root className="relative h-full [--thread-overlay-top-height:1rem]">
+  <Thread.Overlay direction="top" className="inset-x-0 top-0 h-(--thread-overlay-top-height)" />
+  <Thread.Viewport className="h-full overflow-y-auto">
+    <div className="flex min-h-full flex-col pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
+      <Thread.Content className="flex flex-col gap-4 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)">
+        {turns.map((turn) => (
+          <Message.Turn key={turn.key}>{/* question, then reply */}</Message.Turn>
+        ))}
+      </Thread.Content>
+    </div>
+  </Thread.Viewport>
+  <Thread.Composer className="absolute inset-x-0 bottom-0">{/* … */}</Thread.Composer>
+</Thread.Root>
+```
+
+The composer's height is measured and written to `--thread-overlay-bottom-height`
+for you. Without a `Thread.Composer`, the area leaves 128px at the bottom, so set
+`--thread-overlay-bottom-height: 128px` for the padding to match.
 
 ### Jumping to a message
 

@@ -1,10 +1,11 @@
 "use client";
-import { Bin, BookOpen, MoreVertical, Plus } from "@keyline-icons/react";
+import { Bin, BookOpen, MoreVertical, SquarePen } from "@keyline-icons/react";
 // Keyline has no brand icons, so these two stay on Tabler.
 import { IconBrandGithub, IconBrandNpm } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { IntentfaceLogo } from "@/components/icons/intentface-logo";
+import { LogoTile } from "@/components/icons/logo-tile";
+import { IconButton } from "@/components/ui/icon-button";
 import { Sidebar } from "@/components/ui/sidebar";
 import { deleteChatInstance } from "@/lib/chat-instance";
 import { useChatStore } from "@/lib/store/chat";
@@ -27,26 +28,21 @@ export const AppSidebar = () => {
 
   return (
     <Sidebar>
-      <Sidebar.Header className="flex-row items-center justify-between">
-        <IntentfaceLogo className="size-6" />
-        <Sidebar.Trigger />
+      <Sidebar.Header className="h-10 shrink-0 flex-row items-center justify-between pr-1 pl-2">
+        <Link href="/playground" className="flex items-center gap-2.5 text-ink-primary">
+          <LogoTile />
+          <span className="font-semibold text-md tracking-[-0.01em]">intentface/chat</span>
+        </Link>
+        <Sidebar.Trigger className="size-7" />
       </Sidebar.Header>
+      <Link
+        href="/playground"
+        className="flex h-[34px] shrink-0 items-center gap-2 rounded-md bg-raised px-2.5 font-medium text-ink-primary text-sm shadow-raised transition-[background-color] hover:bg-raised-hover focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-2"
+      >
+        <SquarePen className="size-[15px] text-ink-body" />
+        New chat
+      </Link>
       <Sidebar.Content>
-        <Sidebar.Group>
-          <Sidebar.Menu>
-            <Sidebar.MenuItem>
-              <Sidebar.MenuButton
-                isActive={pathname === "/playground"}
-                render={
-                  <Link href="/playground">
-                    <Plus />
-                    <span>New Chat</span>
-                  </Link>
-                }
-              />
-            </Sidebar.MenuItem>
-          </Sidebar.Menu>
-        </Sidebar.Group>
         <Sidebar.Group>
           <Sidebar.GroupLabel>Threads</Sidebar.GroupLabel>
           <Sidebar.GroupContent>
@@ -87,47 +83,48 @@ export const AppSidebar = () => {
           </Sidebar.GroupContent>
         </Sidebar.Group>
       </Sidebar.Content>
-      <Sidebar.Footer>
-        <Sidebar.Menu>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              render={
-                <Link href="/">
-                  <BookOpen />
-                  <span>Docs</span>
-                </Link>
-              }
-            />
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              render={
-                <a
-                  href="https://github.com/Intentface/intentface-chat"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <IconBrandGithub />
-                  <span>GitHub</span>
-                </a>
-              }
-            />
-          </Sidebar.MenuItem>
-          <Sidebar.MenuItem>
-            <Sidebar.MenuButton
-              render={
-                <a
-                  href="https://www.npmjs.com/package/@intentface/chat"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <IconBrandNpm />
-                  <span>npm</span>
-                </a>
-              }
-            />
-          </Sidebar.MenuItem>
-        </Sidebar.Menu>
+      <Sidebar.Footer className="flex-row items-center justify-between border-ink-primary/8 border-t pt-2 pr-1 pl-0.5">
+        <Link
+          href="/"
+          className="flex h-[30px] items-center gap-[7px] rounded-md pr-2 pl-1.5 font-medium text-ink-body text-sm transition-colors hover:bg-ink-primary/5 hover:text-ink-primary focus-visible:outline-2 focus-visible:outline-accent-bg/60"
+        >
+          <BookOpen className="size-[15px] text-ink-secondary" />
+          Docs
+        </Link>
+        <div className="flex items-center gap-0.5">
+          <IconButton
+            variant="ghost"
+            size="sm"
+            nativeButton={false}
+            aria-label="GitHub"
+            className="rounded-md"
+            render={
+              <a
+                href="https://github.com/Intentface/intentface-chat"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <IconBrandGithub />
+              </a>
+            }
+          />
+          <IconButton
+            variant="ghost"
+            size="sm"
+            nativeButton={false}
+            aria-label="npm"
+            className="rounded-md"
+            render={
+              <a
+                href="https://www.npmjs.com/package/@intentface/chat"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <IconBrandNpm />
+              </a>
+            }
+          />
+        </div>
       </Sidebar.Footer>
     </Sidebar>
   );

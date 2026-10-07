@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import type { ReactNode } from "react";
-import { CodeBlock } from "./code-block";
+import { languageOf, readDemoFiles } from "@/lib/docs/demo-files";
+import { highlightCode } from "./code-block";
+import { CodeFiles } from "./code-files";
 import { ComponentPreviewFrame } from "./component-preview-frame";
 
 type DemoProps = {
@@ -10,15 +10,18 @@ type DemoProps = {
   file: string;
 };
 
-// Server component: renders a colocated demo and shows that same file's source,
-// read from disk at build time — the file that runs is the file displayed.
+// Server component: renders a colocated demo and shows its source, read from
+// disk at build time — the files that run are the files displayed. A demo split
+// across local imports shows one tab per file.
 export const Demo = async ({ component, file }: DemoProps) => {
-  const source = await readFile(path.join(process.cwd(), "content", "docs", file), "utf8");
-
-  return (
-    <ComponentPreviewFrame
-      preview={component}
-      code={<CodeBlock code={source.trimEnd()} lang="tsx" />}
-    />
+  const files = await readDemoFiles(file);
+  const entries = await Promise.all(
+    files.map(async ({ name, file: filePath, source }) => ({
+      name,
+      source: source.trimEnd(),
+      code: await highlightCode(source.trimEnd(), languageOf(filePath)),
+    })),
   );
+
+  return <ComponentPreviewFrame preview={component} code={<CodeFiles files={entries} />} />;
 };

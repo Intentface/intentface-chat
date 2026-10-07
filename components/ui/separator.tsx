@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-const separatorVariants = cva("bg-slate-7 shrink-0", {
+const separatorVariants = cva("bg-ink-primary/8 shrink-0", {
   variants: {
     type: {
       line: "data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-px data-[orientation=vertical]:self-stretch",

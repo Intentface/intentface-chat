@@ -16,16 +16,16 @@ const MESSAGES = [
 ];
 
 export const Basic = () => (
-  <div className="flex w-full max-w-xl flex-col gap-4">
+  <div className="flex w-full max-w-xl flex-col gap-5">
     {MESSAGES.map((message, index) => (
       <Message.Root
         key={message.id}
         role={message.role}
         isLast={index === MESSAGES.length - 1}
-        className="group flex w-full flex-col gap-1 data-[role=user]:items-end"
+        className="group flex w-full flex-col gap-1.5 data-[role=user]:items-end"
       >
         {/* data-role sits on Root, so the bubble reads it through the group. */}
-        <Message.Text className="text-sm leading-[1.7] text-[#1a1a1a] group-data-[role=user]:min-h-9 group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-2xl group-data-[role=user]:border group-data-[role=user]:border-[#f0f0f0] group-data-[role=user]:bg-white group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs dark:text-[#fcfcfc] dark:group-data-[role=user]:border-[#262626] dark:group-data-[role=user]:bg-[#181818]">
+        <Message.Text className="text-sm text-zinc-700 leading-6 group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-[20px] group-data-[role=user]:bg-white group-data-[role=user]:px-3.5 group-data-[role=user]:py-1.5 group-data-[role=user]:text-zinc-900 group-data-[role=user]:leading-6 group-data-[role=user]:shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_rgb(0_0_0/0.04)] dark:text-zinc-300 dark:group-data-[role=user]:bg-zinc-800 dark:group-data-[role=user]:text-zinc-100 dark:group-data-[role=user]:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16)]">
           {message.text}
         </Message.Text>
         {message.role === "assistant" && <CopyButton value={message.text} />}
@@ -48,9 +48,9 @@ const CopyButton = ({ value }: { value: string }) => {
       type="button"
       onClick={handleCopy}
       aria-label="Copy message"
-      className="flex size-7 cursor-pointer items-center justify-center rounded-md text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
+      className="-ml-1.5 flex size-7 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-100"
     >
-      {copied ? <Check className="size-3.5" /> : <Copy className="size-4" />}
+      {copied ? <Check className="size-[15px]" /> : <Copy className="size-[15px]" />}
     </button>
   );
 };

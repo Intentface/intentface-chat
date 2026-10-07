@@ -68,7 +68,16 @@ export type {
 export type ComposerRootProps = ComponentProps<typeof ComposerPrimitive.Root>;
 
 const ComposerRoot = ({ className, ...props }: ComposerRootProps) => (
-  <ComposerPrimitive.Root className={cn("relative w-full flex flex-col", className)} {...props} />
+  <ComposerPrimitive.Root
+    className={cn(
+      "relative flex w-full flex-col rounded-2xl transition-[padding,background-color] duration-200",
+      // With context showing, the root becomes the Linear-style tray: a grey
+      // band wrapping the composer, its context row on top.
+      "has-[>[data-composer-context-window][data-open]]:bg-ink-primary/[0.04] has-[>[data-composer-context-window][data-open]]:p-1 dark:has-[>[data-composer-context-window][data-open]]:bg-white/[0.02]",
+      className,
+    )}
+    {...props}
+  />
 );
 
 // ---------------------------------------------------------------------------
@@ -80,10 +89,8 @@ type ComposerContainerProps = ComponentProps<typeof ComposerPrimitive.Container>
 const ComposerContainer = ({ className, ...props }: ComposerContainerProps) => (
   <ComposerPrimitive.Container
     className={cn(
-      // Positioned so it paints above the context window peeking out from
-      // behind its top edge. Edge is shadow-drawn (shadow-border), not a
-      // border, matching the playground cards.
-      "relative bg-primary-bg rounded-4xl border border-primary-border shadow-xs [corner-shape:squircle] cursor-text transition-colors",
+      // One colour throughout; the edge is the composer shadow, not a border.
+      "relative cursor-text rounded-xl bg-composer-bg p-1 shadow-composer transition-colors",
       className,
     )}
     {...props}
@@ -193,24 +200,21 @@ const ComposerTextarea = ({ className, disabled = false, ...props }: ComposerTex
     renderChip={(chip) => {
       const icon = chip.icon && isChipIconKey(chip.icon) ? CHIP_ICONS[chip.icon] : undefined;
       return (
-        // The composer input uses the plain borderless chip surface; the
-        // bordered/filled CHIP_SURFACE_CLASS is reserved for message/docs chips.
-        <Chip className="border-tertiary-border bg-tertiary-bg">
+        // One chip surface everywhere, so the badge commits without a jump.
+        <Chip>
           {icon && <Chip.Icon>{icon}</Chip.Icon>}
           <Chip.Label>{chip.label}</Chip.Label>
         </Chip>
       );
     }}
     className={cn(
-      "max-h-32 min-h-8 overflow-y-auto py-2 px-3 text-md",
+      "max-h-32 min-h-12 overflow-y-auto px-2.5 pt-2.5 pb-1 text-md",
       "mask-[linear-gradient(to_bottom,transparent,black_16px,black_calc(100%-16px),transparent)]",
       // The editor element — engine-owned DOM, out of JSX reach.
-      "**:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:font-book **:data-composer-editor:leading-[1.7] [&_[data-composer-editor]:focus]:outline-none",
-      // Active-prefix badge: the composer's own borderless surface (matching the
-      // committed chip above, not the bordered CHIP_SURFACE_CLASS used in
-      // messages/docs) so the badge and the chip it becomes share one baseline —
-      // no jump on commit.
-      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded-sm **:data-command-badge:px-0.75 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-primary-bg-hover **:data-command-badge:text-ink-primary",
+      "**:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:font-book **:data-composer-editor:leading-6 [&_[data-composer-editor]:focus]:outline-none",
+      // Active-prefix badge: the same surface as the committed chip above, so
+      // the badge and the chip it becomes share one baseline — no jump on commit.
+      "**:data-command-badge:box-decoration-clone **:data-command-badge:inline **:data-command-badge:rounded **:data-command-badge:px-1.5 **:data-command-badge:py-0.5 **:data-command-badge:align-baseline **:data-command-badge:font-book **:data-command-badge:leading-[inherit] **:data-command-badge:whitespace-nowrap **:data-command-badge:bg-ink-primary/6 **:data-command-badge:text-ink-primary",
       // The badge's hint element — ghost-text completion or the empty-query
       // placeholder (the package renders whichever applies into one slot).
       "**:data-command-hint:pointer-events-none **:data-command-hint:whitespace-nowrap **:data-command-hint:text-ink-tertiary",
@@ -243,9 +247,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
   const { currentItem, key } = useLoop(loopItems);
 
   if (!isLooping && items.length === 1) {
-    return (
-      <div className={cn("min-h-lh text-ink-tertiary leading-[1.7]", className)}>{items[0]}</div>
-    );
+    return <div className={cn("min-h-lh text-ink-tertiary leading-6", className)}>{items[0]}</div>;
   }
 
   if (!isLooping && items.length === 0) return null;
@@ -259,7 +261,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className={cn("text-ink-tertiary font-book leading-[1.7]", className)}
+          className={cn("text-ink-tertiary font-book leading-6", className)}
         >
           {typeof items[0] === "string" ? currentItem : items[key % items.length]}
         </motion.span>
@@ -277,11 +279,9 @@ type ComposerContextWindowProps = ComponentProps<typeof ComposerPrimitive.Contex
 const ComposerContextWindow = ({ className, ...props }: ComposerContextWindowProps) => (
   <ComposerPrimitive.ContextWindow
     className={cn(
-      "relative z-0 overflow-hidden flex items-center transition-all duration-200 px-1.5 text-xs rounded-t-2xl bg-secondary-bg-active",
-      // Visible: 32px band peeking above the container plus 16px submerged
-      // beneath it (negative margin pulls the container up over the
-      // bottom-padded zone).
-      "h-0 opacity-0 data-open:h-12 data-open:pb-4 data-open:-mb-4 data-open:opacity-100",
+      "flex items-center gap-3 overflow-hidden px-3 font-medium text-ink-body text-xs transition-[height,opacity] duration-200",
+      // The tray's top row: 34px when there is context, collapsed when not.
+      "h-0 opacity-0 data-open:h-[34px] data-open:opacity-100",
       className,
     )}
     {...props}
@@ -292,7 +292,10 @@ const ComposerActions = ({
   className,
   ...props
 }: ComponentProps<typeof ComposerPrimitive.Actions>) => (
-  <ComposerPrimitive.Actions className={cn("flex justify-end gap-2 p-2", className)} {...props} />
+  <ComposerPrimitive.Actions
+    className={cn("flex h-12 items-center justify-end gap-1 px-1.5", className)}
+    {...props}
+  />
 );
 
 type ComposerSubmitProps = ComponentProps<typeof IconButton> & {
@@ -318,6 +321,7 @@ const ComposerSubmit = ({
     <IconButton
       type={submit.type}
       variant="accent"
+      size="sm"
       data-slot="composer-submit"
       data-generating={isGenerating ? "" : undefined}
       aria-label={isGenerating ? "Stop generating" : "Send message"}
@@ -365,7 +369,7 @@ const ComposerPanel = ({ className, ...props }: ComposerPanelProps) => (
       // coordinates); portaled to the body, so it never reserves layout in the composer.
       // Match the composer Container's width via the positioner's --anchor-width var.
       "absolute z-50 w-(--anchor-width) overflow-hidden",
-      "rounded-4xl border border-primary-border bg-primary-bg [corner-shape:squircle]",
+      "rounded-xl bg-primary-bg shadow-composer",
       "transition-[opacity,transform] duration-150 ease-out",
       "data-starting-style:opacity-0 data-ending-style:opacity-0",
       // Slide from the anchored edge: default (above) drops in from below; flipped
@@ -395,7 +399,7 @@ const ComposerPopover = ({ className, ...props }: ComposerPopoverProps) => {
         // off the anchor token with a stronger shadow. `absolute` is the base positioning
         // context (the positioner then writes left/top in page coordinates); z-50 keeps
         // the portaled popover above the thread.
-        "absolute z-50 w-72 overflow-hidden border border-primary-border bg-primary-bg rounded-4xl shadow-lg [corner-shape:squircle]",
+        "absolute z-50 w-72 overflow-hidden rounded-xl bg-primary-bg shadow-composer",
         "transition-[opacity,transform,filter] duration-150 ease-out",
         "data-closed:opacity-0 data-closed:blur-[3px]",
         // Slide from the anchored edge — opens upward by default, downward when flipped.
@@ -470,7 +474,7 @@ const ComposerCommandEmpty = ({
       "hidden group-data-empty/composer-command-list:flex",
       // Shown only when nothing matches, where it acts as the single highlighted
       // option whose selection dismisses — so it carries the highlight styling.
-      "items-center gap-2 rounded-lg bg-primary-bg-hover px-3 h-8 text-sm text-ink-primary",
+      "items-center gap-2 rounded-lg bg-ink-primary/5 px-3 h-8 text-sm text-ink-primary",
       className,
     )}
     {...props}
@@ -497,9 +501,9 @@ type ComposerCommandItemProps = ComponentProps<typeof ComposerPrimitive.CommandI
 const ComposerCommandItem = ({ className, ...props }: ComposerCommandItemProps) => (
   <ComposerPrimitive.CommandItem
     className={cn(
-      // Radius is the popover's 16px (rounded-2xl) minus the 5px gap to its edge
-      // (1px border + p-1) so the highlight corner stays concentric with it.
-      "flex w-full items-center rounded-lg gap-2.5 px-3 h-8 text-sm font-book text-ink-primary cursor-pointer data-highlighted:bg-primary-bg-hover",
+      // Radius is the surface's 12px (rounded-xl) minus its 4px padding, so the
+      // highlight corner stays concentric with it.
+      "flex w-full items-center rounded-lg gap-2.5 px-2.5 h-8 text-sm font-book text-ink-primary cursor-pointer data-highlighted:bg-ink-primary/5",
       className,
     )}
     {...props}
@@ -546,7 +550,7 @@ const ComposerCommandGroupLabel = ({
   ...props
 }: ComponentProps<typeof ComposerPrimitive.CommandGroupLabel>) => (
   <ComposerPrimitive.CommandGroupLabel
-    className={cn("px-2 pt-2 pb-1 text-xs font-medium text-ink-tertiary", className)}
+    className={cn("px-2.5 pt-2 pb-1 text-xs font-medium text-ink-secondary", className)}
     {...props}
   />
 );

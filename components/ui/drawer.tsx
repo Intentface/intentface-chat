@@ -28,10 +28,10 @@ const DrawerContent = ({
 }) => {
   return (
     <DrawerPrimitive.Portal>
-      <DrawerPrimitive.Backdrop className="data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 z-50 bg-black/50" />
+      <DrawerPrimitive.Backdrop className="data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 z-50 bg-zinc-950/16 dark:bg-black/36" />
       <DrawerPrimitive.Popup
         className={cn(
-          "bg-background fixed z-50 flex flex-col gap-4 shadow-lg transition-transform duration-200 ease-in-out",
+          "bg-primary-bg fixed z-50 flex flex-col gap-4 shadow-overlay transition-transform duration-200 ease-in-out",
           side === "right" &&
             "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm data-closed:translate-x-full",
           side === "left" &&
@@ -69,7 +69,7 @@ const DrawerDescription = ({
 }: React.ComponentProps<typeof DrawerPrimitive.Description>) => (
   <DrawerPrimitive.Description
     data-slot="sheet-description"
-    className={cn("text-muted-foreground text-sm", className)}
+    className={cn("text-ink-secondary text-sm", className)}
     {...props}
   />
 );

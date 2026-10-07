@@ -1,7 +1,7 @@
 "use client";
 
 import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
-import { IconFile, IconPaperclip, IconX } from "@tabler/icons-react";
+import { File, Paperclip, X } from "@keyline-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
@@ -64,8 +64,8 @@ type AttachmentsItemProps = {
 };
 
 const getFileIcon = (mediaType: string) => {
-  if (isPdfAttachment(mediaType)) return IconFile;
-  return IconPaperclip;
+  if (isPdfAttachment(mediaType)) return File;
+  return Paperclip;
 };
 
 const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) => {
@@ -87,7 +87,8 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
         isImageAttachment(mediaType) ? "image" : isPdfAttachment(mediaType) ? "pdf" : "file"
       }
       className={cn(
-        "group relative flex h-12 max-w-48 items-center gap-2 rounded-lg border border-secondary-border bg-secondary-bg px-2",
+        // Attachment chips are rounded squares, raised like the composer's buttons.
+        "group relative flex h-7 max-w-56 items-center gap-1.5 rounded-[7px] bg-raised pr-2 pl-1.5 shadow-raised",
         className,
       )}
     >
@@ -96,21 +97,21 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
           width={32}
           height={32}
           alt={filename}
-          className="size-8 shrink-0 rounded-xs object-cover ring-1 ring-inset ring-slate-7/10"
+          className="size-[18px] shrink-0 rounded-[4px] object-cover ring-1 ring-ink-primary/10 ring-inset"
           src={item.url}
         />
       ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-bg-hover">
-          <Icon className="size-4 text-muted-foreground" />
-        </div>
+        <Icon className="size-[13px] shrink-0 text-ink-secondary" />
       )}
-      <div className="flex min-w-0 flex-col">
-        <span className="flex text-xs font-medium">
+      <div className="flex min-w-0 items-baseline gap-1.5">
+        <span className="flex min-w-0 font-medium text-ink-primary text-xs">
           <span className="truncate">{filename.slice(0, -7)}</span>
           <span className="shrink-0">{filename.slice(-7)}</span>
         </span>
         {item.fileSize != null && (
-          <span className="text-2xs text-muted-foreground">{formatFileSize(item.fileSize)}</span>
+          <span className="shrink-0 font-mono text-2xs text-ink-tertiary">
+            {formatFileSize(item.fileSize)}
+          </span>
         )}
       </div>
       {children}
@@ -135,7 +136,7 @@ const AttachmentsRemove = ({ onRemove, filename, className }: AttachmentsRemoveP
     size="2xs"
     type="button"
   >
-    <IconX className="size-3" />
+    <X className="size-3" />
   </IconButton>
 );
 
@@ -148,9 +149,9 @@ type AttachmentsDropzoneProps = {
 
 const dropzoneVariants = {
   inline:
-    "absolute inset-0 m-1 flex items-center justify-center rounded-xl border border-dashed border-secondary-border bg-secondary-bg",
+    "absolute inset-0 m-1 flex items-center justify-center rounded-lg border border-accent-bg/50 border-dashed bg-composer-bg text-accent-bg",
   global:
-    "absolute inset-0 z-50 flex items-center justify-center rounded-[inherit] border-2 border-dashed border-secondary-border bg-secondary-bg/80 backdrop-blur-xs",
+    "absolute inset-0 z-50 flex items-center justify-center rounded-[inherit] border-2 border-accent-bg/50 border-dashed bg-secondary-bg/80 text-accent-bg backdrop-blur-xs",
 };
 
 const GLOBAL_DROPZONE_SELECTOR = '[data-slot="sidebar-inset"]';
@@ -221,7 +222,7 @@ type AttachmentsTriggerProps = ComponentProps<typeof IconButton>;
 const AttachmentsTrigger = ({ children, className, ...props }: AttachmentsTriggerProps) => {
   return (
     <IconButton type="button" variant="ghost" aria-label="Add attachment" {...props}>
-      {children ?? <IconPaperclip />}
+      {children ?? <Paperclip />}
     </IconButton>
   );
 };

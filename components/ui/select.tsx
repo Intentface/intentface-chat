@@ -1,7 +1,7 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { IconCheck, IconChevronDown, IconChevronUp, IconSelector } from "@tabler/icons-react";
+import { Check, ChevronDown, ChevronsUpDown, ChevronUp } from "@keyline-icons/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
@@ -11,32 +11,28 @@ const selectTriggerVariants = cva(
     // Layout
     "flex w-fit items-center justify-between gap-1.5",
     "whitespace-nowrap",
-    // Base styles
-    "rounded-lg border text-sm",
-    "cursor-pointer select-none outline-none",
-    "transition-colors",
+    // Base styles: fields are rounded squares, not pills
+    "rounded-[7px] text-sm text-ink-primary",
+    "cursor-pointer select-none",
+    "transition-[background-color,box-shadow]",
     // Focus states
-    "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-    // Invalid states
-    "aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
-    "dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+    "focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-2",
     // Disabled state
     "disabled:cursor-not-allowed disabled:opacity-50",
     // Placeholder styling
-    "data-placeholder:text-muted-foreground",
+    "data-placeholder:text-ink-tertiary",
     // Select value (child) styling
     "*:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center",
     "*:data-[slot=select-value]:gap-1.5 *:data-[slot=select-value]:line-clamp-1",
     // Select icon (child) styling
     "*:data-[slot=select-icon]:pointer-events-none *:data-[slot=select-icon]:shrink-0",
-    "*:data-[slot=select-icon]:text-muted-foreground",
+    "*:data-[slot=select-icon]:text-ink-tertiary",
   ],
   {
     variants: {
       variant: {
-        primary:
-          "border-border bg-primary-bg hover:bg-primary-bg-hover hover:border-primary-border-hover aria-expanded:bg-muted aria-expanded:text-foreground",
-        ghost: "border-transparent hover:bg-primary-bg-hover aria-expanded:bg-primary-bg-hover",
+        primary: "bg-raised shadow-raised hover:bg-raised-hover aria-expanded:bg-raised-hover",
+        ghost: "hover:bg-ink-primary/5 aria-expanded:bg-ink-primary/5",
       },
       size: {
         sm: "h-8 pr-2 pl-2.5 text-sm *:data-[slot=select-value]:text-sm *:data-[slot=select-icon]:size-3.5",
@@ -77,7 +73,7 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon data-slot="select-icon" render={<IconSelector />} />
+      <SelectPrimitive.Icon data-slot="select-icon" render={<ChevronsUpDown />} />
     </SelectPrimitive.Trigger>
   );
 }
@@ -115,8 +111,8 @@ function SelectContent({
               "relative isolate z-50 min-w-36 origin-(--transform-origin) max-h-(--available-height)",
               // "w-(--anchor-width)",
               // Styling
-              "rounded-lg p-1 shadow-md",
-              "bg-primary-bg text-ink-primary border border-primary-border",
+              "rounded-xl p-1 shadow-overlay",
+              "bg-primary-bg text-ink-primary",
               // Overflow
               "overflow-x-hidden overflow-y-auto",
               // Animation base
@@ -161,7 +157,7 @@ const SelectLabel = ({ className, ...props }: SelectPrimitive.GroupLabel.Props) 
   return (
     <SelectPrimitive.GroupLabel
       data-slot="select-label"
-      className={cn(["px-1.5 py-1 text-xs text-muted-foreground"], className)}
+      className={cn(["px-1.5 py-1 text-xs text-ink-secondary"], className)}
       {...props}
     />
   );
@@ -172,10 +168,9 @@ const SelectItem = ({ className, children, ...props }: SelectPrimitive.Item.Prop
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-md text-sm flex w-full items-center gap-2",
+        "relative cursor-pointer select-none outline-hidden h-8 px-2 rounded-lg text-sm flex w-full items-center gap-2",
         // Focus states
-        "data-highlighted:bg-primary-bg-hover",
-        "not-data-[variant=destructive]:focus:**:text-accent-foreground",
+        "data-highlighted:bg-ink-primary/5",
         // Disabled states
         "data-disabled:pointer-events-none data-disabled:opacity-50",
         // SVG styling
@@ -193,7 +188,7 @@ const SelectItem = ({ className, children, ...props }: SelectPrimitive.Item.Prop
 
       <div className={cn(["pointer-events-none flex size-4 shrink-0 items-center justify-center"])}>
         <SelectPrimitive.ItemIndicator>
-          <IconCheck className="pointer-events-none" />
+          <Check className="pointer-events-none" />
         </SelectPrimitive.ItemIndicator>
       </div>
     </SelectPrimitive.Item>
@@ -204,7 +199,7 @@ const SelectSeparator = ({ className, ...props }: SelectPrimitive.Separator.Prop
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn(["-mx-1 my-1 h-px pointer-events-none bg-border"], className)}
+      className={cn(["-mx-1 my-1 h-px pointer-events-none bg-ink-primary/6"], className)}
       {...props}
     />
   );
@@ -223,7 +218,7 @@ const SelectScrollUpButton = ({
           "top-0 z-10 flex w-full items-center justify-center",
           "py-1",
           // Styling
-          "cursor-default hover:bg-primary-bg-hover",
+          "cursor-default hover:bg-ink-primary/5",
           // SVG sizing
           "[&_svg:not([class*='size-'])]:size-4",
         ],
@@ -231,7 +226,7 @@ const SelectScrollUpButton = ({
       )}
       {...props}
     >
-      <IconChevronUp />
+      <ChevronUp />
     </SelectPrimitive.ScrollUpArrow>
   );
 };
@@ -248,7 +243,7 @@ const SelectScrollDownButton = ({
         "bottom-0 z-10 flex w-full items-center justify-center",
         "py-1",
         // Styling
-        "cursor-default hover:bg-primary-bg-hover",
+        "cursor-default hover:bg-ink-primary/5",
         // SVG sizing
         "[&_svg:not([class*='size-'])]:size-4",
 
@@ -256,7 +251,7 @@ const SelectScrollDownButton = ({
       )}
       {...props}
     >
-      <IconChevronDown />
+      <ChevronDown />
     </SelectPrimitive.ScrollDownArrow>
   );
 };

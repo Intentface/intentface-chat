@@ -1,5 +1,4 @@
 "use client";
-import { IconChevronDown, IconColorPicker } from "@tabler/icons-react";
 
 import { useCallback, useState } from "react";
 import { HexColorPicker } from "react-colorful";
@@ -18,10 +17,11 @@ type ColorPillProps = {
 };
 
 const colorPillSizes = {
-  default: "box-border h-9 w-full px-2.5",
-  compact: "box-border h-8 w-28 shrink-0 px-2",
+  default: "h-9 w-full pr-2.5 pl-2",
+  compact: "h-7 w-[5.75rem] shrink-0 pr-2 pl-1.5",
 } as const;
 
+// A raised field: the swatch opens the picker, the hex text is editable.
 export const ColorPill = ({
   id,
   value,
@@ -43,33 +43,26 @@ export const ColorPill = ({
     <Popover>
       <div
         className={cn(
-          "relative flex items-center gap-1.5 rounded-md border border-primary-border",
+          "relative flex items-center gap-2 rounded-[7px] bg-raised shadow-raised",
           colorPillSizes[size],
           className,
         )}
-        style={{
-          background: value,
-          color: `oklch(from ${value} calc(round(1 - l)) 0 0)`,
-        }}
       >
         <Popover.Trigger
           disabled={disabled}
-          className="flex size-5 shrink-0 items-center justify-center rounded-sm outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent-bg/50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="size-4 shrink-0 cursor-pointer rounded-[4px] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.14)]"
+          style={{ background: value }}
           aria-label="Pick color"
-        >
-          <IconColorPicker className="size-3.5" />
-        </Popover.Trigger>
+        />
         <input
           id={id}
-          value={draft ?? value}
+          value={(draft ?? value).replace(/^#/, "")}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={handleBlur}
           disabled={disabled}
           spellCheck={false}
-          className="flex-1 bg-transparent font-mono text-xs uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <IconChevronDown
-          className={cn("size-3 shrink-0 opacity-70", size === "compact" && "hidden")}
+          aria-label="Hex color"
+          className="w-full min-w-0 flex-1 bg-transparent font-mono text-ink-body text-xs uppercase outline-none disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
       <Popover.Content align="end" className="w-auto p-2">

@@ -19,21 +19,30 @@ export const Destination = () => {
 
   return (
     <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
-      <div className="w-full shrink-0 rounded-xl border border-[#f0f0f0] bg-white py-2 sm:w-60 dark:border-[#262626] dark:bg-[#111111]">
+      <div className="relative w-full shrink-0 rounded-xl bg-[#f5f5f6] shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] py-2 sm:w-60 dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]">
         <Nav.Root
           aria-label="Documentation"
           defaultExpanded={["guides"]}
           render={<nav />}
           className="flex flex-col px-2"
         >
-          <Nav.List className={listClass}>
+          <Nav.List className="flex flex-col gap-0.5">
             <Nav.Group value="guides">
               <Nav.Trigger
                 active={page === "guides"}
                 onClick={() => setPage("guides")}
                 className={rowClass}
               >
-                <Nav.Toggle aria-label="More Guides pages" className={toggleClass}>
+                {/* Its own hit area, a little larger than the glyph, so the caret is an
+                    easy target and the rest of the row stays the destination. */}
+                <Nav.Toggle
+                  aria-label="More Guides pages"
+                  className={[
+                    "-ml-1 flex size-5 shrink-0 items-center justify-center rounded-full text-zinc-400 dark:text-zinc-500",
+                    "transition-transform data-closed:-rotate-90",
+                    "hover:bg-zinc-950/5 hover:text-zinc-900 dark:hover:bg-white/8 dark:hover:text-zinc-100",
+                  ].join(" ")}
+                >
                   <ChevronIcon className="size-3" />
                 </Nav.Toggle>
                 <Nav.Label className="min-w-0 truncate">Guides</Nav.Label>
@@ -56,7 +65,12 @@ export const Destination = () => {
 
             <Nav.Group value="reference">
               <Nav.Trigger className={rowClass}>
-                <span aria-hidden="true" className={chevronClass}>
+                {/* Decoration only: it turns with the row it sits in, through the row's
+                    data-closed. */}
+                <span
+                  aria-hidden="true"
+                  className="-ml-1 flex size-5 shrink-0 items-center justify-center text-zinc-400 transition-transform group-data-closed/row:-rotate-90 dark:text-zinc-500"
+                >
                   <ChevronIcon className="size-3" />
                 </span>
                 <Nav.Label className="min-w-0 truncate">Reference</Nav.Label>
@@ -80,35 +94,24 @@ export const Destination = () => {
         </Nav.Root>
       </div>
 
-      <div className="flex min-h-32 flex-1 items-center justify-center rounded-xl border border-[#f0f0f0] bg-white text-sm text-[#686868] dark:border-[#262626] dark:bg-[#111111] dark:text-[#9b9b9b]">
-        Showing <span className="ml-1 font-medium text-[#1a1a1a] dark:text-[#fcfcfc]">{page}</span>
+      <div className="flex min-h-32 flex-1 items-center justify-center rounded-xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] text-[13px] text-zinc-500 dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:text-zinc-400">
+        Showing <span className="ml-1 font-medium text-zinc-900 dark:text-zinc-100">{page}</span>
       </div>
     </div>
   );
 };
 
-const listClass = "flex flex-col gap-0.5";
 const nestedClass = "ml-[15px] flex flex-col gap-0.5 pl-[7px]";
 
 const rowClass = [
-  "group/row flex h-8 shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-md px-2 text-sm",
-  "text-[#686868] transition-colors dark:text-[#9b9b9b]",
-  "hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]",
-  "data-active:bg-[#f4f4f4] data-active:text-[#1a1a1a] dark:data-active:bg-[#232323] dark:data-active:text-[#fcfcfc]",
-  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
+  "group/row flex h-[30px] shrink-0 cursor-pointer select-none items-center gap-1.5 rounded-md px-2 font-medium text-[13px]",
+  "text-zinc-700 transition-colors dark:text-zinc-300",
+  "hover:bg-zinc-950/5 hover:text-zinc-900 dark:hover:bg-white/8 dark:hover:text-zinc-100",
+  // The selected row is raised off the sidebar.
+  "data-active:bg-white data-active:bg-linear-to-b data-active:from-white data-active:to-[#fdfdfd] data-active:text-zinc-900 data-active:shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)]",
+  "dark:data-active:bg-[#2d2d30] dark:data-active:from-[#29292c] dark:data-active:to-[#242427] dark:data-active:text-zinc-100 dark:data-active:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]",
+  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#0169cc]/60",
 ].join(" ");
-
-/* Its own hit area, a little larger than the glyph, so the caret is an easy
-   target and the rest of the row stays the destination. */
-const toggleClass = [
-  "-ml-1 flex size-5 shrink-0 items-center justify-center rounded text-[#949494] dark:text-[#6f6f6f]",
-  "transition-transform data-closed:-rotate-90",
-  "hover:bg-[#e8e8e8] hover:text-[#1a1a1a] dark:hover:bg-[#2e2e2e] dark:hover:text-[#fcfcfc]",
-].join(" ");
-
-/* Decoration only: it turns with the row it sits in, through the row's data-closed. */
-const chevronClass =
-  "-ml-1 flex size-5 shrink-0 items-center justify-center text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]";
 
 const ChevronIcon = (props: ComponentProps<"svg">) => (
   <svg

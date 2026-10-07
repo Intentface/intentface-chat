@@ -5,17 +5,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const kbdVariants = cva(
-  "flex shrink-0 select-none items-center justify-center rounded-sm border font-medium font-sans leading-none [&_svg]:stroke-[2.5]",
+  "flex shrink-0 select-none items-center justify-center font-medium font-mono leading-none [&_svg]:stroke-[2.5]",
   {
     variants: {
       size: {
-        sm: "h-4 min-w-4 px-1 text-2xs [&>svg]:size-2.5",
-        md: "h-5 min-w-5 px-1.5 text-xs [&>svg]:size-3",
-        lg: "h-6 min-w-6 px-1.5 text-sm [&>svg]:size-3.5",
+        sm: "h-4 min-w-4 rounded-[4px] px-1 text-[10px] [&>svg]:size-2.5",
+        md: "h-5 min-w-5 rounded-[5px] px-1.5 text-2xs [&>svg]:size-3",
+        lg: "h-6 min-w-6 rounded-[6px] px-1.5 text-xs [&>svg]:size-3.5",
       },
       variant: {
-        default: "border-secondary-border bg-secondary-bg text-ink-secondary",
-        frosted: "border-white/15 bg-white/25 text-white backdrop-blur-sm",
+        // A small raised key, same lighting as buttons.
+        default: "bg-raised text-ink-secondary shadow-raised",
+        frosted: "border border-white/15 bg-white/25 text-white backdrop-blur-sm",
       },
       square: {
         true: "",

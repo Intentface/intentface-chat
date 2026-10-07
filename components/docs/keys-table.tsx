@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ReferenceTable } from "./reference-table";
 
 export type KeyRow = {
   /** The key or chord, as a reader would press it: "Arrow up", "Enter / Space". */
@@ -15,30 +16,16 @@ type KeysTableProps = {
 // `default` badge — there is no such thing as a default keystroke. Column
 // widths and chrome match the other tables so they stay aligned down the page.
 export const KeysTable = ({ rows }: KeysTableProps) => (
-  <div className="not-prose my-6 overflow-hidden rounded-lg border border-secondary-border bg-primary-bg">
-    <table className="w-full table-fixed border-collapse text-left text-sm">
-      <colgroup>
-        <col className="w-[28%]" />
-        <col className="w-[72%]" />
-      </colgroup>
-      <thead>
-        <tr className="border-secondary-border border-b bg-secondary-bg">
-          <th className="px-4 py-2.5 font-medium text-ink-primary">Key</th>
-          <th className="px-4 py-2.5 font-medium text-ink-primary">Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.keys} className="border-secondary-border/60 border-b last:border-0">
-            <td className="px-4 py-2.5 align-top">
-              <kbd className="rounded border border-secondary-border bg-secondary-bg px-1.5 py-0.5 font-sans text-ink-primary text-xs">
-                {row.keys}
-              </kbd>
-            </td>
-            <td className="px-4 py-2.5 align-top text-ink-secondary">{row.description}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+  <ReferenceTable columns={[{ label: "Key", width: "w-[30%]" }, { label: "Description" }]}>
+    {rows.map((row) => (
+      <tr key={row.keys} className="border-ink-primary/6 border-b last:border-0">
+        <td className="px-4 py-3.5 align-top">
+          <kbd className="inline-flex h-5 items-center rounded-[5px] bg-raised px-1.5 font-mono text-2xs text-ink-body shadow-raised">
+            {row.keys}
+          </kbd>
+        </td>
+        <td className="px-4 py-3.5 align-top text-ink-body leading-5">{row.description}</td>
+      </tr>
+    ))}
+  </ReferenceTable>
 );

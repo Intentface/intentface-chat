@@ -73,21 +73,21 @@ export const Dropzone = () => {
       onDragOver={(event) => event.preventDefault()}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className="relative flex w-full max-w-lg flex-col gap-3 rounded-xl border border-[#f0f0f0] bg-white p-3 dark:border-[#262626] dark:bg-[#181818]"
+      className="relative flex w-full max-w-lg flex-col gap-3 rounded-xl border border-zinc-950/15 border-dashed bg-zinc-950/[0.02] p-3 has-data-[visible]:border-[#0169cc]/60 has-data-[visible]:bg-[#0169cc]/5 dark:border-white/15 dark:bg-white/[0.03] dark:has-data-[visible]:border-[#4c9bea]/60 dark:has-data-[visible]:bg-[#4c9bea]/10"
     >
       <Attachments.Dropzone
         visible={dragging}
-        className="pointer-events-none absolute inset-0 z-10 hidden place-items-center rounded-xl border-2 border-[#1a1a1a] border-dashed bg-white/80 font-medium text-[#1a1a1a] text-sm data-[visible]:grid dark:border-[#fcfcfc] dark:bg-[#181818]/80 dark:text-[#fcfcfc]"
+        className="pointer-events-none absolute inset-0 z-10 hidden place-items-center rounded-[11px] bg-white/80 font-medium text-[#0169cc] text-[13px] data-[visible]:grid dark:bg-zinc-900/80 dark:text-[#4c9bea]"
       >
         Drop to attach
       </Attachments.Dropzone>
 
       {items.length > 0 && (
-        <Attachments.Root className="flex flex-wrap gap-2">
+        <Attachments.Root className="flex flex-wrap gap-1.5">
           {items.map((item) => (
             <Attachments.Item
               key={item.id}
-              className="group/item flex h-8 items-center gap-2 rounded-lg border border-[#f0f0f0] bg-[#fafafa] pr-1 pl-2.5 text-[#1a1a1a] text-xs dark:border-[#2d2d2d] dark:bg-[#232323] dark:text-[#fcfcfc]"
+              className={`group/item flex h-6 items-center gap-1.5 rounded-[7px] px-2 font-medium text-xs text-zinc-900 dark:text-zinc-100 ${RAISED}`}
             >
               <span className="max-w-40 truncate">{item.filename}</span>
               <Attachments.Remove
@@ -96,9 +96,9 @@ export const Dropzone = () => {
                   revokeAttachmentUrl(item);
                   setItems((current) => current.filter((candidate) => candidate.id !== item.id));
                 }}
-                className="grid size-5 cursor-pointer place-items-center rounded text-[#949494] opacity-0 transition-opacity hover:text-[#1a1a1a] group-hover/item:opacity-100 dark:text-[#6f6f6f] dark:hover:text-[#fcfcfc]"
+                className="-mr-1 grid size-4 cursor-pointer place-items-center rounded-full text-zinc-400 opacity-0 transition-opacity hover:text-zinc-900 focus-visible:opacity-100 group-hover/item:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:text-zinc-100"
               >
-                <X className="size-3.5" />
+                <X className="size-[11px]" />
               </Attachments.Remove>
             </Attachments.Item>
           ))}
@@ -108,7 +108,7 @@ export const Dropzone = () => {
       <div className="flex items-center gap-3">
         <Attachments.Trigger
           onClick={() => input.current?.click()}
-          className="h-8 cursor-pointer rounded-full border border-[#e4e4e4] bg-white px-4 font-medium text-[#1a1a1a] text-sm transition-colors hover:bg-[#f4f4f4] dark:border-[#2d2d2d] dark:bg-[#181818] dark:text-[#fcfcfc] dark:hover:bg-[#232323]"
+          className={`h-8 shrink-0 cursor-pointer rounded-full px-3.5 font-medium text-[13px] text-zinc-900 hover:from-[#fafafa] hover:to-[#f6f6f6] dark:hover:from-[#38383b] dark:hover:to-[#313134] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-100 ${RAISED}`}
         >
           Add attachment
         </Attachments.Trigger>
@@ -126,7 +126,7 @@ export const Dropzone = () => {
           className="hidden"
         />
 
-        <span className="text-[#949494] text-xs dark:text-[#6f6f6f]">
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">
           Images and PDFs, up to 2 MB. Try a .txt to see a rejection.
         </span>
       </div>
@@ -145,3 +145,7 @@ const MESSAGES: Record<AttachmentErrorCode, string> = {
   max_file_size: "That file is larger than 2 MB.",
   max_files: "Too many files at once.",
 };
+
+// The raised surface shared by each attachment chip and the picker button.
+const RAISED =
+  "bg-white bg-linear-to-b from-white to-[#fdfdfd] shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]";

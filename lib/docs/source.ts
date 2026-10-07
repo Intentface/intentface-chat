@@ -33,3 +33,29 @@ export const getPage = (slug: string[] | undefined): DocPage | undefined =>
   source.getPage(slug) as DocPage | undefined;
 
 export const getPages = (): DocPage[] => source.getPages() as DocPage[];
+
+/**
+ * The sidebar group a page sits in — its folder, or the separator above it for
+ * root pages. The breadcrumb's first segment.
+ */
+export const getSectionLabel = (url: string): string | undefined => {
+  let separator: string | undefined;
+
+  for (const node of source.pageTree.children) {
+    switch (node.type) {
+      case "separator":
+        separator = typeof node.name === "string" ? node.name : undefined;
+        break;
+      case "folder":
+        if (node.children.some((child) => child.type === "page" && child.url === url)) {
+          return typeof node.name === "string" ? node.name : undefined;
+        }
+        break;
+      case "page":
+        if (node.url === url) return separator;
+        break;
+    }
+  }
+
+  return undefined;
+};

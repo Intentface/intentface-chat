@@ -1,28 +1,24 @@
 "use client";
 
-import { ChevronDown } from "@keyline-icons/react";
 // Keyline has no brand or sandbox icons, so these stay on Tabler.
 import { IconBrandGithub, IconBrandNpm, IconSandbox } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { IntentfaceLogo } from "@/components/icons/intentface-logo";
-import { Collapsible } from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
-import { DocsSearch } from "./docs-search";
+import type { ReactNode } from "react";
+import { LogoTile } from "@/components/icons/logo-tile";
+import { IconButton } from "@/components/ui/icon-button";
+import { Sidebar } from "@/components/ui/sidebar";
+import { DocsSearch, type SearchSuggestion } from "./docs-search";
 import { DocsThemeToggle } from "./docs-theme-toggle";
 
 // Structural mirror of fumadocs' page-tree nodes (typeof source.pageTree). We
-// only render the two node shapes our docs use: pages and one level of folder.
+// only render the node shapes our docs use: pages, separators and one level of folder.
 type TreeItem = { type: "page"; name: ReactNode; url: string };
-type TreeFolder = {
-  type: "folder";
-  name: ReactNode;
-  index?: TreeItem;
-  children: TreeNode[];
-};
+type TreeFolder = { type: "folder"; name: ReactNode; children: TreeNode[] };
 type TreeSeparator = { type: "separator"; name?: ReactNode };
 type TreeNode = TreeItem | TreeFolder | TreeSeparator;
+
+type NavGroup = { label?: ReactNode; items: TreeItem[] };
 
 type DocsSidebarProps = {
   tree: { children: TreeNode[] };
@@ -32,148 +28,139 @@ type DocsSidebarProps = {
 // out for a release or two.
 const NEW_PAGES = new Set(["/primitives/shell", "/primitives/nav", "/primitives/tabs"]);
 
-const NavLink = ({ url, name }: { url: string; name: ReactNode }) => {
-  const pathname = usePathname();
-  const isActive = pathname === url;
-  return (
-    <Link
-      href={url}
-      className={cn(
-        "flex h-8 items-center gap-2 rounded-md px-2 text-md font-medium transition-colors duration-0",
-        isActive
-          ? "bg-secondary-bg-hover text-ink-primary"
-          : "text-ink-secondary hover:bg-secondary-bg-hover hover:text-ink-primary",
-      )}
-    >
-      <span className="min-w-0 flex-1 truncate">{name}</span>
-      {NEW_PAGES.has(url) && (
-        <span className="flex h-4 shrink-0 items-center rounded-sm bg-accent-bg/10 px-1.5 font-medium text-2xs text-accent-bg">
-          New
-        </span>
-      )}
-    </Link>
-  );
-};
+// A separator opens a labelled group for the root pages after it; a folder is a
+// group of its own.
+const toGroups = (nodes: TreeNode[]): NavGroup[] => {
+  const groups: NavGroup[] = [];
+  let open: NavGroup | null = null;
 
-const hasActiveNode = (nodes: TreeNode[], pathname: string): boolean =>
-  nodes.some((child) => {
-    if (child.type === "page") return child.url === pathname;
-    if (child.type === "folder") {
-      if (child.index?.url === pathname) return true;
-      return hasActiveNode(child.children, pathname);
+  for (const node of nodes) {
+    switch (node.type) {
+      case "separator":
+        open = { label: node.name, items: [] };
+        groups.push(open);
+        break;
+      case "folder":
+        groups.push({
+          label: node.name,
+          items: node.children.filter((child): child is TreeItem => child.type === "page"),
+        });
+        open = null;
+        break;
+      case "page":
+        if (!open) {
+          open = { items: [] };
+          groups.push(open);
+        }
+        open.items.push(node);
+        break;
     }
-    return false;
-  });
+  }
 
-const TreeFolderNode = ({ node, index }: { node: TreeFolder; index: number }) => {
+  return groups;
+};
+
+// The search palette opens on these before anything is typed.
+const toSuggestions = (groups: NavGroup[]): SearchSuggestion[] =>
+  groups
+    .flatMap((group) => group.items)
+    .filter((item) => item.url.startsWith("/primitives/"))
+    .map((item) => ({
+      url: item.url,
+      title: typeof item.name === "string" ? item.name : item.url,
+    }));
+
+const NavLink = ({ item }: { item: TreeItem }) => {
   const pathname = usePathname();
-  const containsActive = useMemo(
-    () => hasActiveNode(node.children, pathname) || node.index?.url === pathname,
-    [node, pathname],
-  );
-  const [open, setOpen] = useState(true);
-
-  useEffect(() => {
-    if (containsActive) setOpen(true);
-  }, [containsActive]);
 
   return (
-    <li key={`folder-${index}`} className="mt-2">
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <Collapsible.Trigger className="flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-md px-2 text-left font-medium text-ink-tertiary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-secondary">
-          <span className="flex-1">{node.name}</span>
-          <ChevronDown
-            className={cn(
-              "size-[18px] shrink-0 transition-transform",
-              open ? "rotate-0" : "-rotate-90",
+    <Sidebar.MenuItem>
+      <Sidebar.MenuButton
+        isActive={pathname === item.url}
+        render={
+          <Link href={item.url}>
+            <span className="min-w-0 flex-1 truncate">{item.name}</span>
+            {NEW_PAGES.has(item.url) && (
+              <span className="flex h-[18px] shrink-0 items-center rounded-[5px] bg-accent-bg/10 px-1.5 font-medium text-2xs text-accent-bg dark:bg-accent-bg/15">
+                New
+              </span>
             )}
-          />
-        </Collapsible.Trigger>
-        <Collapsible.Panel>
-          <TreeNodes nodes={node.children} />
-        </Collapsible.Panel>
-      </Collapsible>
-    </li>
+          </Link>
+        }
+      />
+    </Sidebar.MenuItem>
   );
 };
 
-const TreeNodes = ({ nodes }: { nodes: TreeNode[] }) => (
-  <ul className="flex flex-col gap-0.5">
-    {nodes.map((node, index) => {
-      if (node.type === "separator") {
-        return (
-          <li
-            key={`sep-${index}`}
-            className="mt-2 flex h-8 items-center px-2 font-medium text-ink-tertiary text-md"
-          >
-            {node.name}
-          </li>
-        );
-      }
-      if (node.type === "folder") {
-        return <TreeFolderNode key={`folder-${index}`} node={node} index={index} />;
-      }
-      return (
-        <li key={node.url}>
-          <NavLink url={node.url} name={node.name} />
-        </li>
-      );
-    })}
-  </ul>
+const FooterLink = ({ href, label, icon }: { href: string; label: string; icon: ReactNode }) => (
+  <IconButton
+    variant="ghost"
+    size="sm"
+    nativeButton={false}
+    aria-label={label}
+    className="rounded-md"
+    render={
+      <a href={href} target="_blank" rel="noreferrer">
+        {icon}
+      </a>
+    }
+  />
 );
 
-const ExternalLink = ({ href, icon, label }: { href: string; icon: ReactNode; label: string }) => (
-  <a
-    href={href}
-    target="_blank"
-    rel="noreferrer"
-    className="flex h-8 items-center gap-2 rounded-md px-2 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-primary"
-  >
-    <span className="[&>svg]:size-4">{icon}</span>
-    {label}
-  </a>
-);
+export const DocsSidebar = ({ tree }: DocsSidebarProps) => {
+  const groups = toGroups(tree.children);
 
-export const DocsSidebar = ({ tree }: DocsSidebarProps) => (
-  <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col gap-2 overflow-y-auto border-secondary-border border-r p-2 md:flex">
-    <div className="flex h-9 shrink-0 items-center justify-between gap-2">
-      <Link
-        href="/"
-        className="flex items-center px-2 text-ink-primary"
-        aria-label="@intentface/chat"
-      >
-        <IntentfaceLogo className="size-6" />
-      </Link>
-      <div className="flex shrink-0 items-center gap-1">
-        <DocsThemeToggle />
-        <DocsSearch />
-      </div>
-    </div>
-    <nav className="flex-1">
-      <TreeNodes nodes={tree.children} />
-    </nav>
-    <div className="flex flex-col gap-0.5 border-secondary-border border-t pt-2">
-      {/* Internal route — next/link, not the external-anchor ExternalLink.
-          The chat root IS the playground (corner config cards). */}
-      <Link
-        href="/playground"
-        className="flex h-8 items-center gap-2 rounded-md px-2 font-medium text-ink-secondary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-primary"
-      >
-        <span className="[&>svg]:size-4">
+  return (
+    <Sidebar>
+      <Sidebar.Header className="h-10 shrink-0 flex-row items-center justify-between pr-1 pl-2">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 text-ink-primary"
+          aria-label="@intentface/chat docs"
+        >
+          <LogoTile />
+          <span className="font-semibold text-md tracking-[-0.01em]">intentface/chat</span>
+        </Link>
+        <div className="flex items-center gap-1.5">
+          <DocsSearch suggestions={toSuggestions(groups)} />
+          <Sidebar.Trigger className="size-7" />
+        </div>
+      </Sidebar.Header>
+      <Sidebar.Content className="gap-[18px]">
+        {groups.map((group, index) => (
+          <Sidebar.Group key={typeof group.label === "string" ? group.label : index}>
+            {group.label && <Sidebar.GroupLabel>{group.label}</Sidebar.GroupLabel>}
+            <Sidebar.Menu>
+              {group.items.map((item) => (
+                <NavLink key={item.url} item={item} />
+              ))}
+            </Sidebar.Menu>
+          </Sidebar.Group>
+        ))}
+      </Sidebar.Content>
+      <Sidebar.Footer className="flex-row items-center justify-between border-ink-primary/8 border-t pt-2 pr-1 pl-0.5">
+        {/* Internal route — next/link. The chat root IS the playground. */}
+        <Link
+          href="/playground"
+          className="flex h-[30px] items-center gap-[7px] rounded-md pr-2 pl-1.5 font-medium text-ink-body text-sm transition-colors hover:bg-ink-primary/5 hover:text-ink-primary [&>svg]:size-[15px] [&>svg]:text-ink-secondary"
+        >
           <IconSandbox />
-        </span>
-        Playground
-      </Link>
-      <ExternalLink
-        href="https://github.com/Intentface/intentface-chat"
-        icon={<IconBrandGithub />}
-        label="GitHub"
-      />
-      <ExternalLink
-        href="https://www.npmjs.com/package/@intentface/chat"
-        icon={<IconBrandNpm />}
-        label="npm"
-      />
-    </div>
-  </aside>
-);
+          Playground
+        </Link>
+        <div className="flex items-center gap-0.5">
+          <FooterLink
+            href="https://github.com/Intentface/intentface-chat"
+            label="GitHub"
+            icon={<IconBrandGithub />}
+          />
+          <FooterLink
+            href="https://www.npmjs.com/package/@intentface/chat"
+            label="npm"
+            icon={<IconBrandNpm />}
+          />
+          <DocsThemeToggle />
+        </div>
+      </Sidebar.Footer>
+    </Sidebar>
+  );
+};

@@ -1,14 +1,7 @@
 import type { ReactNode } from "react";
-import { DocsSidebar } from "@/components/docs/docs-sidebar";
+import { DocsShell } from "@/components/docs/docs-shell";
 import { source } from "@/lib/docs/source";
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen bg-secondary-bg">
-      <DocsSidebar tree={source.pageTree} />
-      <div className="min-w-0 flex-1">
-        <main className="mx-auto w-full px-4 pt-10 md:px-6">{children}</main>
-      </div>
-    </div>
-  );
+  return <DocsShell tree={source.pageTree}>{children}</DocsShell>;
 }

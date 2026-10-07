@@ -73,7 +73,7 @@ ThreadOverlay.displayName = "ThreadOverlay";
 export type ThreadViewportProps = ComponentProps<"div">;
 
 const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => (
-  <ThreadPrimitive.Viewport className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] scrollbar-gutter-stable scrollbar-thin [scrollbar-color:var(--color-ink-tertiary)_transparent] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50">
+  <ThreadPrimitive.Viewport className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] scrollbar-gutter-stable scrollbar-thin [scrollbar-color:var(--color-ink-tertiary)_transparent] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-bg/40">
     <div
       data-slot="thread-viewport"
       className={cn(
@@ -142,12 +142,7 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
               transition={{ duration: 0.2, ease: "easeOut" }}
               {...props}
             >
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleScrollToBottom}
-                className="rounded-full shadow-xs"
-              >
+              <Button variant="primary" size="sm" onClick={handleScrollToBottom}>
                 <ArrowDown />
                 Latest
               </Button>

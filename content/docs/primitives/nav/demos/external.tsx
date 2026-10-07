@@ -3,6 +3,7 @@
 import { Nav, type NavStore, useNavStore } from "@intentface/chat/nav";
 import { ChevronDown } from "@keyline-icons/react";
 import { useState } from "react";
+import "./external.css";
 
 const GROUPS = ["workspace", "projects", "archive"];
 
@@ -27,7 +28,7 @@ export const ExternalNav = () => {
         aria-label="Workspace"
         guide="indent"
         render={<nav />}
-        className="flex w-72 flex-col gap-0.5 rounded-xl border border-[#f0f0f0] bg-white px-2 py-2 dark:border-[#262626] dark:bg-[#111111]"
+        className="relative flex w-72 flex-col gap-0.5 rounded-xl bg-[#f5f5f6] shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] px-2 py-2 dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]"
       >
         <Nav.List guide="none" className={listClass}>
           {GROUPS.map((value) => (
@@ -50,7 +51,6 @@ export const ExternalNav = () => {
       </Nav.Root>
 
       <Controls store={store} />
-      <CollapseRecipe />
     </div>
   );
 };
@@ -86,32 +86,18 @@ const Controls = ({ store }: { store: NavStore }) => {
 };
 
 const buttonClass =
-  "h-8 cursor-pointer rounded-full border border-[#e4e4e4] bg-white px-4 font-medium text-[#1a1a1a] text-sm transition-colors hover:bg-[#f4f4f4] disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:border-[#2d2d2d] dark:bg-[#181818] dark:text-[#fcfcfc] dark:hover:bg-[#232323] dark:focus-visible:outline-[#fcfcfc]";
+  "h-8 cursor-pointer rounded-full bg-white bg-linear-to-b from-white to-[#fdfdfd] shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] px-4 font-medium text-[13px] text-zinc-900 enabled:hover:from-[#fafafa] enabled:hover:to-[#f6f6f6] disabled:cursor-default disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 focus-visible:outline-offset-2 dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:text-zinc-100 dark:enabled:hover:from-[#38383b] dark:enabled:hover:to-[#313134]";
 
 const listClass = "flex flex-col gap-0.5";
 
 const rowClass = [
-  "group/row flex h-8 shrink-0 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-sm",
-  "text-[#686868] transition-colors dark:text-[#9b9b9b]",
-  "hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]",
-  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
+  "group/row flex h-[30px] shrink-0 cursor-pointer select-none items-center gap-2 rounded-md px-2 font-medium text-[13px]",
+  "text-zinc-700 transition-colors dark:text-zinc-300",
+  "hover:bg-zinc-950/5 hover:text-zinc-900 dark:hover:bg-white/8 dark:hover:text-zinc-100",
+  // Inset: the collapsing lists clip their overflow, so an outset ring would be cut.
+  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#0169cc]/60",
 ].join(" ");
 
 const Chevron = () => (
-  <ChevronDown className="ml-auto size-3 text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
-);
-
-const CollapseRecipe = () => (
-  <style>{`
-.external-nav-demo [data-nav-group] > [data-nav-list] {
-  height: var(--nav-list-height);
-  overflow: hidden;
-  opacity: 1;
-  transition: height 200ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease-out;
-}
-.external-nav-demo [data-nav-list][data-starting-style],
-.external-nav-demo [data-nav-list][data-ending-style] { height: 0; opacity: 0; }
-.external-nav-demo [data-nav-list] > * { flex-shrink: 0; }
-.external-nav-demo [data-nav-list][data-indent] { margin-left: 15px; padding-left: 7px; }
-`}</style>
+  <ChevronDown className="ml-auto size-3 text-zinc-400 transition-transform group-data-closed/row:-rotate-90 dark:text-zinc-500" />
 );

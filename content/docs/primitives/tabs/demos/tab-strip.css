@@ -1,0 +1,48 @@
+/*
+ * Scroll-position-driven edge fades, with no JavaScript: a scroll timeline
+ * animates two registered custom properties, and those feed the mask. At the
+ * start the left mask is fully opaque; from 10% in, it fades. The right mask
+ * does the reverse. Unsupported browsers get hard edges, which is fine.
+ * After https://twilson.net/scroll-mask.
+ */
+
+@property --tabs-demo-mask-l {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+@property --tabs-demo-mask-r {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100%;
+}
+
+@keyframes tabs-demo-scroll-mask {
+  0% {
+    --tabs-demo-mask-l: 100%;
+    --tabs-demo-mask-r: var(--tabs-demo-fade-from);
+  }
+  10% {
+    --tabs-demo-mask-l: var(--tabs-demo-fade-from);
+  }
+  90% {
+    --tabs-demo-mask-r: var(--tabs-demo-fade-from);
+  }
+  100% {
+    --tabs-demo-mask-l: var(--tabs-demo-fade-from);
+    --tabs-demo-mask-r: 100%;
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .tabs-demo .scroll-mask-x {
+    --tabs-demo-fade-from: calc(100% - 1.5rem);
+    mask-image:
+      linear-gradient(to left, black, black var(--tabs-demo-mask-l), transparent),
+      linear-gradient(to right, black, black var(--tabs-demo-mask-r), transparent);
+    mask-composite: intersect;
+    -webkit-mask-composite: source-in;
+    animation: tabs-demo-scroll-mask linear;
+    animation-timeline: scroll(self inline);
+  }
+}

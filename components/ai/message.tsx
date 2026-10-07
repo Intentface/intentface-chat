@@ -77,16 +77,15 @@ const MessageContent = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-content"
     className={cn(
-      "flex flex-col gap-4 overflow-hidden border",
-      // User message styling — edge is shadow-drawn (shadow-border), matching
-      // the composer and playground cards.
-      "group-data-[role=user]:max-w-[80%] group-data-[role=user]:border group-data-[role=user]:bg-primary-bg group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs group-data-[role=user]:border-primary-border group-data-[role=user]:min-h-9 group-data-[role=user]:rounded-[20px]",
+      "flex flex-col gap-4 overflow-hidden",
+      // User bubble — the composer's colour with the crisp card edge.
+      "group-data-[role=user]:min-h-9 group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-[20px] group-data-[role=user]:bg-composer-bg group-data-[role=user]:px-3.5 group-data-[role=user]:py-1.5 group-data-[role=user]:text-ink-primary group-data-[role=user]:shadow-card",
       // Sticky turns: the pinned user message spans the column, text left.
       "group-data-[role=user]:group-data-sticky/turn:max-w-none",
       // Assistant message styling
-      "group-data-[role=assistant]:w-full group-data-[role=assistant]:border-none",
+      "group-data-[role=assistant]:w-full group-data-[role=assistant]:text-ink-body",
       // Error styling — presence attribute (data-error=""), not a value match.
-      "group-data-error:border-destructive group-data-error:bg-destructive/10",
+      "group-data-error:bg-red-500/8 group-data-error:text-red-700 dark:group-data-error:text-red-300",
       className,
     )}
     {...props}
@@ -172,7 +171,7 @@ type MessageTextProps = {
 
 const MessageText = ({ children, className }: MessageTextProps) => (
   <MessagePrimitive.Text
-    className={cn("whitespace-pre-wrap text-md", className)}
+    className={cn("whitespace-pre-wrap text-md leading-6", className)}
     renderChip={(segment) => <MessageChip label={segment.label} chip={segment} />}
   >
     {children}
@@ -183,7 +182,7 @@ const MessageText = ({ children, className }: MessageTextProps) => (
 const MessageError = ({ children, className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-error"
-    className={cn("flex items-start gap-2 text-sm text-destructive", className)}
+    className={cn("flex items-start gap-2 text-red-600 text-sm dark:text-red-400", className)}
     {...props}
   >
     <svg
@@ -214,7 +213,7 @@ const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
     className={cn("flex w-full justify-center", className)}
     {...props}
   >
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-border bg-primary-bg px-2.5 py-1 text-xs text-ink-secondary">
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-raised px-2.5 font-medium text-ink-secondary text-xs shadow-raised">
       <Stop className="size-3 shrink-0" />
       Stopped
     </span>
@@ -225,7 +224,7 @@ const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
 const MessageLoading = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="message-loading"
-    className={cn("flex items-start gap-1 text-sm text-muted-foreground", className)}
+    className={cn("flex items-start gap-1 text-ink-secondary text-sm", className)}
     {...props}
   >
     <span>Loading...</span>
@@ -283,7 +282,7 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
   return (
     <div
       className={cn(
-        "flex h-10 max-w-48 items-center gap-2 rounded-lg border border-slate-7 bg-primary-bg px-2",
+        "flex h-10 max-w-48 items-center gap-2 rounded-[10px] bg-raised px-2 shadow-raised",
         className,
       )}
       {...props}
@@ -295,7 +294,7 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
               width={32}
               height={32}
               alt={filename}
-              className="size-6 shrink-0 rounded-xs object-cover ring-1 ring-inset ring-slate-7/10"
+              className="size-6 shrink-0 rounded-[5px] object-cover ring-1 ring-ink-primary/10 ring-inset"
               src={attachment.url}
             />
           </HoverCard.Trigger>
@@ -310,12 +309,12 @@ const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmen
           </HoverCard.Content>
         </HoverCard>
       ) : (
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-bg-hover">
-          <Icon className="size-4 text-muted-foreground" />
+        <div className="flex size-6 shrink-0 items-center justify-center rounded-[5px] bg-ink-primary/6">
+          <Icon className="size-3.5 text-ink-secondary" />
         </div>
       )}
       <div className="flex min-w-0 flex-col">
-        <span className="flex text-xs font-medium">
+        <span className="flex font-medium text-ink-primary text-xs">
           <span className="truncate">{filename.slice(0, -7)}</span>
           <span className="shrink-0">{filename.slice(-7)}</span>
         </span>
@@ -383,7 +382,7 @@ const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
               initialFocus={false}
               finalFocus={false}
               className={cn(
-                "flex items-center gap-1 rounded-full border border-primary-border bg-primary-bg p-0.5 shadow-md outline-none",
+                "flex items-center gap-1 rounded-full bg-primary-bg p-0.5 shadow-overlay outline-none",
                 "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
                 "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                 "duration-100",
@@ -396,7 +395,7 @@ const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="gap-1.5 rounded-full"
+                className="gap-1.5"
                 onClick={() => {
                   if (selection) onAdd(selection.text);
                   window.getSelection()?.removeAllRanges();
@@ -432,18 +431,20 @@ const MessageSource = ({
     target="_blank"
     rel="noopener noreferrer"
     className={cn(
-      "inline-flex items-center gap-1.5 rounded-md border border-primary-border bg-primary-bg px-2 py-1 text-xs text-ink-secondary transition-colors hover:bg-primary-bg-hover",
+      "inline-flex h-6 items-center gap-1.5 rounded-full bg-raised pr-2 pl-1 font-medium text-ink-body text-xs shadow-raised transition-colors hover:bg-raised-hover focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-2",
       className,
     )}
     {...props}
   >
-    <img
-      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
-      alt=""
-      width={14}
-      height={14}
-      className="shrink-0"
-    />
+    <span className="grid size-4 shrink-0 place-items-center rounded-full bg-ink-primary/6">
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${domain}&sz=16`}
+        alt=""
+        width={10}
+        height={10}
+        className="rounded-full"
+      />
+    </span>
     {domain}
   </a>
 );

@@ -10,17 +10,18 @@ import {
 } from "@intentface/chat/message-utils";
 import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
 import {
-  IconAlertTriangle,
-  IconBrain,
-  IconCheck,
-  IconChevronDown,
-  IconCircle,
-  IconHelpCircle,
-  IconQuote,
-  IconRefresh,
-  IconSandbox,
-  IconX,
-} from "@tabler/icons-react";
+  Brain,
+  Check,
+  ChevronDown,
+  Circle,
+  CircleQuestion,
+  Quote,
+  RefreshCw,
+  TriangleAlert,
+  X,
+} from "@keyline-icons/react";
+// Keyline has no sandbox icon, so this one stays on Tabler.
+import { IconSandbox } from "@tabler/icons-react";
 import type { ChatStatus } from "ai";
 import { AnimatePresence, motion, stagger } from "motion/react";
 import { useRouter } from "next/navigation";
@@ -35,7 +36,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { CHIP_SURFACE_CLASS } from "@/components/ai/chip";
 import {
   type CommandItemData,
   Composer,
@@ -70,7 +70,7 @@ import { useModelStore } from "@/lib/store/model";
 import { usePlaygroundStore } from "@/lib/store/playground";
 import { useSettingsStore } from "@/lib/store/settings";
 import { cn } from "@/lib/utils";
-import { IntentfaceLogo } from "./icons/intentface-logo";
+import { LogoTile } from "./icons/logo-tile";
 import { TextShimmer } from "./ui/text-shimmer";
 
 type ChatSelection = {
@@ -130,10 +130,10 @@ export const useChatMessages = (): ChatMessagesValue => {
 type IconComponent = React.ComponentType<{ className?: string }>;
 
 const statusIcons: Record<StepStatus, IconComponent> = {
-  complete: IconCheck,
-  active: IconCircle,
-  pending: IconCircle,
-  error: IconAlertTriangle,
+  complete: Check,
+  active: Circle,
+  pending: Circle,
+  error: TriangleAlert,
 };
 
 // A timeline row: static when it has no detail, collapsible (icon morphs to a
@@ -155,14 +155,14 @@ const TimelineStep = ({
   const iconClasses = cn(
     status === "complete" && "text-ink-secondary",
     status === "active" && "text-ink-primary",
-    status === "pending" && "text-slate-9",
+    status === "pending" && "text-ink-tertiary",
     status === "error" && "text-red-500",
   );
   const labelClasses = cn(
     "text-sm text-left",
     status === "active" && "text-ink-primary font-medium",
     status === "complete" && "text-ink-secondary",
-    status === "pending" && "text-slate-9",
+    status === "pending" && "text-ink-tertiary",
     status === "error" && "text-red-500",
   );
 
@@ -188,7 +188,7 @@ const TimelineStep = ({
           <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
             <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
           </span>
-          <IconChevronDown className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
+          <ChevronDown className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
         </span>
         <span className={labelClasses}>{label}</span>
       </Steps.Trigger>
@@ -209,7 +209,7 @@ const TimelineToolCall = ({ part }: { part: ToolPart }) => {
           {sources.map((source, index) => (
             <span
               key={index}
-              className="inline-flex items-center rounded-md border border-primary-border bg-primary-bg px-2 py-0.5 text-xs text-ink-secondary"
+              className="inline-flex h-6 items-center rounded-full bg-raised px-2 font-medium text-ink-secondary text-xs shadow-raised"
             >
               {source.domain}
             </span>
@@ -224,7 +224,7 @@ const TimelineAskUser = ({ part }: { part: ToolPart }) => {
   const { label, status, questions, answers, isComplete } = getAskUserStepInfo(part);
 
   return (
-    <TimelineStep label={label} status={status} icon={IconHelpCircle}>
+    <TimelineStep label={label} status={status} icon={CircleQuestion}>
       <div className="flex flex-col gap-1.5">
         {questions.map((q) => (
           <div key={q.question} className="flex flex-col gap-0.5">
@@ -360,7 +360,7 @@ const InterleavedSteps = ({
       <Steps.Item open={open} onOpenChange={setUserOpen}>
         <Steps.Trigger>
           <span className="overflow-hidden text-left">{header}</span>
-          <IconChevronDown className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
+          <ChevronDown className="size-4 shrink-0 transition-transform group-data-open/steps-trigger:rotate-180" />
         </Steps.Trigger>
         <Steps.Panel>
           {segments.map((seg, i) => {
@@ -376,7 +376,7 @@ const InterleavedSteps = ({
                   key={`r-${i}-${j}`}
                   label={section.header ?? "Thinking"}
                   status={streaming && j === sections.length - 1 ? "active" : "complete"}
-                  icon={IconBrain}
+                  icon={Brain}
                 >
                   {section.body && (
                     <Markdown className="text-sm leading-tight text-ink-secondary [&_p]:mb-0">
@@ -525,7 +525,7 @@ const ChatMessageItem = memo(
                 onClick={() => regenerate({ messageId: message.id })}
                 tooltip="Regenerate"
               >
-                <IconRefresh />
+                <RefreshCw />
               </Message.Action>
             )}
             <Message.Copy value={textInfo.text} />
@@ -961,30 +961,24 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
 
       <Composer.ContextWindow>
         {showContextStrip && (
-          <span
-            data-slot="context-playground"
-            className={cn(
-              CHIP_SURFACE_CLASS,
-              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-secondary",
-            )}
-          >
-            <IconSandbox className="size-3.5 opacity-70" aria-hidden />
+          <span data-slot="context-playground" className="inline-flex items-center gap-1.5">
+            <IconSandbox className="size-[13px] text-ink-secondary" aria-hidden />
             Playground
           </span>
         )}
         {selections.length > 0 && (
-          <div data-slot="chat-selections" className="flex items-center gap-1.5 text-ink-secondary">
-            <IconQuote className="size-3.5" />
+          <div data-slot="chat-selections" className="flex items-center gap-1.5">
+            <Quote className="size-[13px] text-ink-secondary" />
             <span>
               {selections.length} selection{selections.length === 1 ? "" : "s"}
             </span>
             <button
               type="button"
               aria-label="Clear selections"
-              className="cursor-pointer rounded-full p-0.5 hover:bg-primary-bg-hover hover:text-ink-primary"
+              className="cursor-pointer rounded-full p-0.5 text-ink-secondary hover:bg-ink-primary/6 hover:text-ink-primary"
               onClick={clearSelections}
             >
-              <IconX className="size-3" />
+              <X className="size-3" />
             </button>
           </div>
         )}
@@ -1024,7 +1018,7 @@ const ChatInputInner = memo(({ panelState, status }: ChatInputInnerProps) => {
           </Composer.Actions>
         ) : (
           <Composer.Actions className="flex items-center justify-between">
-            <div className="flex items-center">
+            <div className="flex items-center gap-1">
               <ToolsMenu tools={toolValues} onToolsChange={setToolValues} />
               <ModelSelector value={model} onValueChange={setModel} />
               <ActiveTools tools={toolValues} onToolsChange={setToolValues} />
@@ -1060,13 +1054,16 @@ const ChatPlaceholder = () => {
         className="flex flex-col items-center justify-center gap-4"
       >
         <motion.div variants={variants}>
-          <IntentfaceLogo className="size-12" />
+          <LogoTile size="lg" />
         </motion.div>
         <div className="flex flex-col items-center justify-center">
-          <motion.span variants={variants} className="text-lg font-semibold">
+          <motion.span
+            variants={variants}
+            className="font-semibold text-[20px] text-ink-primary leading-7 tracking-[-0.01em]"
+          >
             Intentface Chat
           </motion.span>
-          <motion.span variants={variants} className="text-sm text-ink-secondary">
+          <motion.span variants={variants} className="text-ink-secondary text-md">
             Start a conversation
           </motion.span>
         </div>
@@ -1089,27 +1086,30 @@ const ChatDefaultLayout = memo(() => {
       {/* Auto-scroll behavior is driven by the user's setting: "bottom" lands the
           newest turn at the bottom and follows, "jump" lands it at the top without
           following, "follow" lands at the top and follows, "off" disables it. */}
-      <Thread autoScroll={scrollMode}>
-        <Header />
-        {showOverlays && <Thread.Overlay direction="top" />}
-        <Thread.Viewport>
-          {isEmpty ? (
-            <Thread.Placeholder>
-              <ChatPlaceholder />
-            </Thread.Placeholder>
-          ) : (
-            <ChatMessages />
-          )}
-        </Thread.Viewport>
-        <Thread.Composer>
-          {showScrollButton && <Thread.ScrollButton />}
-          <ChatInput />
-        </Thread.Composer>
-        {showOverlays && <Thread.Overlay direction="bottom" />}
-        {/* Rendered last so the card triggers come after the composer in tab
-            order; absolute positioning puts them in the top-right regardless. */}
+      {/* A row, so the settings card pushes the thread over instead of covering it. */}
+      <div className="relative flex h-full min-h-0 w-full">
+        <Thread autoScroll={scrollMode} className="min-w-0 flex-1">
+          <Header />
+          {showOverlays && <Thread.Overlay direction="top" />}
+          <Thread.Viewport>
+            {isEmpty ? (
+              <Thread.Placeholder>
+                <ChatPlaceholder />
+              </Thread.Placeholder>
+            ) : (
+              <ChatMessages />
+            )}
+          </Thread.Viewport>
+          <Thread.Composer>
+            {showScrollButton && <Thread.ScrollButton />}
+            <ChatInput />
+          </Thread.Composer>
+          {showOverlays && <Thread.Overlay direction="bottom" />}
+        </Thread>
+        {/* Rendered last so the settings come after the composer in tab order;
+            the gear is positioned in the top-right regardless. */}
         <PlaygroundSettings />
-      </Thread>
+      </div>
     </>
   );
 });

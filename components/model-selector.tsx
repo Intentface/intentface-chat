@@ -1,5 +1,5 @@
 "use client";
-import { IconCheck, IconSelector } from "@tabler/icons-react";
+import { Check, ChevronDown } from "@keyline-icons/react";
 
 import { ClaudeIcon } from "@/components/icons/claude";
 import { GeminiIcon } from "@/components/icons/gemini";
@@ -51,10 +51,10 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
     <DropdownMenu>
       <DropdownMenu.Trigger
         render={
-          <Button variant="ghost" size="md" type="button" className="rounded-full gap-1.5">
+          <Button variant="ghost" size="sm" type="button" className="gap-1 pr-1.5 pl-2 text-sm">
             {CurrentProviderIcon ? <CurrentProviderIcon className="text-ink-secondary" /> : null}
             <span>{currentLabel}</span>
-            <IconSelector className="text-ink-tertiary" />
+            <ChevronDown className="size-[13px] text-ink-tertiary" />
           </Button>
         }
       />
@@ -72,7 +72,7 @@ export const ModelSelector = ({ value, onValueChange }: ModelSelectorProps) => {
                 {group.models.map((model) => {
                   return (
                     <DropdownMenu.Item key={model.id} onClick={() => onValueChange(model.id)}>
-                      <IconCheck className={cn(value !== model.id && "opacity-0")} />
+                      <Check className={cn(value !== model.id && "opacity-0")} />
                       <span>{model.label}</span>
                     </DropdownMenu.Item>
                   );

@@ -207,25 +207,25 @@ const SidebarRoot = ({
         onResize={(next) => writeSidebarLayout({ width: next })}
         data-slot="sidebar"
         className={cn(
-          "fixed z-10 hidden w-(--sidebar-width) border border-transparent bg-base-bg overflow-hidden transition-[left,right,top,bottom,border-color,border-radius,box-shadow] duration-150 ease-linear motion-reduce:transition-none md:flex",
+          "fixed z-30 hidden w-(--sidebar-width) border border-transparent bg-base-bg overflow-hidden transition-[left,right,top,bottom,border-color,border-radius,box-shadow] duration-150 ease-linear motion-reduce:transition-none md:flex",
           side === "left"
             ? cn(
                 "left-0 inset-y-0",
                 "group-data-[state=collapsed]:-left-(--sidebar-width)",
                 "group-data-[state=collapsed]:group-data-hotspot:left-2",
-                "group-data-[state=collapsed]:inset-y-2 group-data-[state=collapsed]:rounded-xl group-data-[state=collapsed]:border-secondary-border",
-                "group-data-hotspot:shadow-lg",
+                "group-data-[state=collapsed]:inset-y-2 group-data-[state=collapsed]:rounded-xl",
+                "group-data-hotspot:shadow-overlay",
               )
             : "right-0 inset-y-0 group-data-[state=collapsed]:-right-(--sidebar-width)",
           className,
         )}
         {...props}
       >
-        {/* No right padding while flush: the viewport's own p-2 already supplies
-            the seam, and padding both sides of it would make that gap twice the
-            one at every screen edge. The floating card pads all four sides,
-            because then it has edges of its own. */}
-        <div className="flex h-full w-full flex-col gap-2 py-2 pl-2 group-data-[state=collapsed]:p-2">
+        {/* Only a sliver of right padding while flush: the viewport's own p-2
+            supplies most of the seam, so the two add up to the 12px left edge.
+            The floating card pads all four sides, because then it has edges of
+            its own. */}
+        <div className="flex h-full w-full flex-col gap-4 pt-2 pr-1 pb-3 pl-3 group-data-[state=collapsed]:p-2">
           {children}
         </div>
       </Shell.Sidebar>
@@ -237,7 +237,7 @@ const SidebarRoot = ({
       {side === "left" && (
         <Shell.Hotspot
           data-slot="sidebar-hotspot"
-          className="fixed inset-y-0 left-0 z-20 hidden w-5 group-data-[state=collapsed]:block"
+          className="fixed inset-y-0 left-0 z-40 hidden w-5 group-data-[state=collapsed]:block"
         />
       )}
     </div>
@@ -251,7 +251,7 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
     <IconButton
       data-slot="sidebar-trigger"
       variant="ghost"
-      className={cn("hover:bg-base-bg-hover", className)}
+      className={cn("rounded-md", className)}
       {...props}
     >
       <PanelLeft />
@@ -270,7 +270,7 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
         toggleSidebar();
       }}
       variant="ghost"
-      className={cn("hover:bg-base-bg-hover", className)}
+      className={cn("rounded-md", className)}
       {...props}
     >
       <PanelLeft />
@@ -304,8 +304,12 @@ const SidebarViewport = ({ className, children, ...props }: ComponentProps<"div"
   <div
     data-slot="sidebar-viewport"
     className={cn(
-      "flex h-full min-h-0 flex-1 bg-secondary-bg overflow-hidden border border-transparent",
-      "group-data-expanded/sidebar-inset:border-secondary-border group-data-expanded/sidebar-inset:rounded-xl",
+      // clip, not hidden: a clipping box can't be scrolled by focus() or scrollIntoView.
+      "relative flex h-full min-h-0 flex-1 bg-secondary-bg overflow-clip",
+      "group-data-expanded/sidebar-inset:rounded-xl group-data-expanded/sidebar-inset:border group-data-expanded/sidebar-inset:border-transparent group-data-expanded/sidebar-inset:shadow-card",
+      // Dark: the card's inset edge is a real border, so content (sticky bars,
+      // thread fades) is clipped inside it instead of painting over it.
+      "dark:group-data-expanded/sidebar-inset:border-white/6 dark:group-data-expanded/sidebar-inset:border-t-white/11 dark:group-data-expanded/sidebar-inset:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]",
       className,
     )}
     {...props}
@@ -315,16 +319,7 @@ const SidebarViewport = ({ className, children, ...props }: ComponentProps<"div"
 );
 
 const SidebarInput = ({ className, ...props }: ComponentProps<typeof Input>) => {
-  return (
-    <Input
-      data-slot="sidebar-input"
-      className={cn(
-        "bg-background focus-visible:ring-sidebar-ring h-8 w-full shadow-none",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <Input data-slot="sidebar-input" className={cn("h-8 w-full", className)} {...props} />;
 };
 
 const SidebarHeader = ({ className, ...props }: ComponentProps<"div">) => {
@@ -346,11 +341,7 @@ const SidebarFooter = ({ className, ...props }: ComponentProps<"div">) => {
 
 const SidebarSeparator = ({ className, ...props }: ComponentProps<typeof Separator>) => {
   return (
-    <Separator
-      data-slot="sidebar-separator"
-      className={cn("bg-sidebar-border mx-2 w-auto", className)}
-      {...props}
-    />
+    <Separator data-slot="sidebar-separator" className={cn("mx-2 w-auto", className)} {...props} />
   );
 };
 
@@ -358,7 +349,9 @@ const SidebarContent = ({ className, ...props }: ComponentProps<"div">) => {
   return (
     <div
       data-slot="sidebar-content"
-      className={cn("flex min-h-0 flex-1 flex-col gap-2 overflow-auto", className)}
+      // The scroller clips, so it bleeds 4px each side: raised rows keep their
+      // ring and shadow, and stay aligned with the header.
+      className={cn("-mx-1 flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-1 pb-1", className)}
       {...props}
     />
   );
@@ -382,7 +375,7 @@ const SidebarGroupLabel = ({ className, render, ...props }: useRender.ComponentP
       "data-slot": "sidebar-group-label",
       ...props,
       className: cn(
-        "text-ink-tertiary flex shrink-0 items-center rounded-md px-2 py-1.5 text-sm font-medium outline-hidden focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-ink-secondary flex h-7 shrink-0 items-center rounded-md px-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-accent-bg/60 [&>svg]:size-4 [&>svg]:shrink-0",
         className,
       ),
     },
@@ -401,7 +394,7 @@ const SidebarGroupAction = ({
       "data-slot": "sidebar-group-action",
       ...props,
       className: cn(
-        "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 outline-hidden transition-transform focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-ink-secondary hover:bg-ink-primary/5 hover:text-ink-primary absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 transition-transform focus-visible:outline-2 focus-visible:outline-accent-bg/60 [&>svg]:size-4 [&>svg]:shrink-0",
         "after:absolute after:-inset-2 after:md:hidden",
         className,
       ),
@@ -416,7 +409,7 @@ const SidebarGroupContent = ({ className, ...props }: ComponentProps<"div">) => 
 const SidebarMenu = ({ className, ...props }: ComponentProps<"ul">) => (
   <ul
     data-slot="sidebar-menu"
-    className={cn("flex w-full min-w-0 flex-col gap-0.5", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-px", className)}
     {...props}
   />
 );
@@ -432,13 +425,15 @@ const SidebarMenuItem = ({ className, ...props }: ComponentProps<"li">) => (
 const sidebarMenuButtonVariants = cva(
   [
     "peer/menu-button cursor-pointer flex w-full items-center gap-2",
-    "overflow-hidden rounded-md px-2 h-8 font-medium text-left text-md/none text-ink-secondary outline-hidden",
-    "focus-visible:ring-1",
-    "hover:bg-base-bg-hover hover:text-ink-primary data-active:bg-base-bg-hover data-active:text-ink-primary",
+    "overflow-hidden rounded-md px-2 h-[30px] font-medium text-left text-sm/none text-ink-body",
+    "focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:-outline-offset-2",
+    // Hover is a faint wash; the active row rises like a button.
+    "hover:bg-ink-primary/5 hover:text-ink-primary",
+    "data-active:bg-raised-selected data-active:text-ink-primary data-active:shadow-raised",
     "disabled:pointer-events-none disabled:opacity-50",
     "group-has-data-[slot=sidebar-menu-action]/menu-item:pr-1",
     "aria-disabled:pointer-events-none aria-disabled:opacity-50",
-    "data-popup-open:bg-base-bg-hover data-popup-open:text-ink-primary",
+    "data-popup-open:bg-ink-primary/5 data-popup-open:text-ink-primary",
     "[&>span:last-child]:truncate [&_svg]:text-ink-secondary [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:pointer-events-none hover:[&>svg]:text-ink-primary data-active:[&>svg]:text-ink-primary",
   ],
   {
@@ -524,7 +519,7 @@ const SidebarMenuAction = ({
       onClick: handleClick,
       ...props,
       className: cn(
-        "hover:bg-primary-bg-hover text-ink-secondary cursor-pointer hover:text-ink-primary flex aspect-square size-5 items-center justify-center rounded-sm outline-hidden focus-visible:ring-1 [&>svg]:size-3.5 [&>svg]:shrink-0",
+        "hover:bg-ink-primary/6 text-ink-secondary cursor-pointer hover:text-ink-primary flex aspect-square size-5 items-center justify-center rounded-sm focus-visible:outline-2 focus-visible:outline-accent-bg/60 [&>svg]:size-3.5 [&>svg]:shrink-0",
         showOnHover &&
           "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-popup-open:opacity-100 data-pressed:opacity-100 md:opacity-0",
         className,
@@ -537,8 +532,8 @@ const SidebarMenuBadge = ({ className, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="sidebar-menu-badge"
     className={cn(
-      "text-sidebar-foreground pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-md px-1 text-xs font-medium tabular-nums",
-      "peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground",
+      "text-ink-secondary pointer-events-none absolute right-1 flex h-5 min-w-5 select-none items-center justify-center rounded-md px-1 text-xs font-medium tabular-nums",
+      "peer-hover/menu-button:text-ink-primary peer-data-[active=true]/menu-button:text-ink-primary",
       className,
     )}
     {...props}
@@ -549,7 +544,7 @@ const SidebarMenuSub = ({ className, ...props }: ComponentProps<"ul">) => (
   <ul
     data-slot="sidebar-menu-sub"
     className={cn(
-      "border-sidebar-border mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l px-2.5 py-0.5",
+      "border-ink-primary/8 mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l px-2.5 py-0.5",
       "group-data-[collapsible=icon]:hidden",
       className,
     )}
@@ -580,8 +575,8 @@ const SidebarMenuSubButton = ({
       "data-active": isActive,
       ...props,
       className: cn(
-        "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground [&>svg]:text-sidebar-accent-foreground flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
-        "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
+        "text-ink-body hover:bg-ink-primary/5 hover:text-ink-primary active:bg-ink-primary/8 [&>svg]:text-ink-secondary flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 focus-visible:outline-2 focus-visible:outline-accent-bg/60 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+        "data-[active=true]:bg-raised-selected data-[active=true]:text-ink-primary data-[active=true]:shadow-raised",
         size === "sm" && "text-xs",
         size === "md" && "text-sm",
         "group-data-[collapsible=icon]:hidden",

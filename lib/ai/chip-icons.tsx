@@ -1,33 +1,30 @@
 import {
-  IconBrain,
-  IconBug,
-  IconChartBar,
-  IconCode,
-  IconFileText,
-  IconMap2,
-  IconMessageChatbot,
-  IconPhoto,
-  IconTable,
-  IconWorld,
-} from "@tabler/icons-react";
+  Brain,
+  Bug,
+  ChartBar,
+  Code,
+  FileText,
+  Globe,
+  Image,
+  MapPin,
+  MessageSquareSparkles,
+  Table,
+} from "@keyline-icons/react";
 import type { ReactNode } from "react";
 
-/*
- * Outlined throughout. Brain, code and chart have no filled variant in Tabler,
- * and a set where three of ten are hollow reads as a mistake rather than a
- * choice — so the whole set stays outlined.
- */
+// Outlined Keyline glyphs, matching the rest of the app. MapPin stands in for
+// "map" because Keyline's Map would shadow the global Map.
 export const CHIP_ICONS = {
-  brain: <IconBrain />,
-  bug: <IconBug />,
-  bubbleWideSparkle: <IconMessageChatbot />,
-  code: <IconCode />,
-  fileChart: <IconChartBar />,
-  fileText: <IconFileText />,
-  globe: <IconWorld />,
-  imageAlt: <IconPhoto />,
-  map: <IconMap2 />,
-  spreadsheet: <IconTable />,
+  brain: <Brain />,
+  bug: <Bug />,
+  bubbleWideSparkle: <MessageSquareSparkles />,
+  code: <Code />,
+  fileChart: <ChartBar />,
+  fileText: <FileText />,
+  globe: <Globe />,
+  imageAlt: <Image />,
+  map: <MapPin />,
+  spreadsheet: <Table />,
 } satisfies Record<string, ReactNode>;
 
 export type ChipIconKey = keyof typeof CHIP_ICONS;

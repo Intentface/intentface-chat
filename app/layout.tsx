@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import "streamdown/styles.css";
 import "./globals.css";
@@ -10,12 +11,15 @@ const inter = Inter({
   display: "swap",
 });
 
-// IBM Plex Mono isn't a variable font — enumerate the weights actually used (regular,
-// medium, semibold) so next/font subsets only those.
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-ibm-plex-mono",
-  weight: ["400", "500", "600"],
-  subsets: ["latin"],
+// Ioskeley Mono (OFL-1.1, github.com/ahatem/IoskeleyMono). Only the ligature
+// build ships web fonts, so globals.css turns ligatures off for mono text.
+const ioskeleyMono = localFont({
+  variable: "--font-ioskeley-mono",
+  src: [
+    { path: "./fonts/IoskeleyMono-Regular.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/IoskeleyMono-Medium.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/IoskeleyMono-SemiBold.woff2", weight: "600", style: "normal" },
+  ],
   display: "swap",
 });
 
@@ -36,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${ibmPlexMono.variable} antialiased`}
+        className={`${inter.variable} ${ioskeleyMono.variable} antialiased`}
         suppressHydrationWarning
       >
         <Providers>{children}</Providers>

@@ -7,14 +7,7 @@ import {
   useMessageSelection,
   useMessageSelectionScope,
 } from "@intentface/chat/message";
-import {
-  IconCheck,
-  IconCopy,
-  IconFile,
-  IconMessage,
-  IconPaperclip,
-  IconPlayerStop,
-} from "@tabler/icons-react";
+import { Check, Copy, File, MessageSquare, Paperclip, Stop } from "@keyline-icons/react";
 import { motion } from "motion/react";
 import Image from "next/image";
 import { type ComponentProps, useMemo } from "react";
@@ -222,7 +215,7 @@ const MessageStopped = ({ className, ...props }: ComponentProps<"div">) => (
     {...props}
   >
     <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-border bg-primary-bg px-2.5 py-1 text-xs text-ink-secondary">
-      <IconPlayerStop className="size-3 shrink-0" />
+      <Stop className="size-3 shrink-0" />
       Stopped
     </span>
   </div>
@@ -258,7 +251,7 @@ const MessageCopy = ({
             className={className}
             {...props}
           >
-            {isCopied ? <IconCheck /> : <IconCopy />}
+            {isCopied ? <Check /> : <Copy />}
           </IconButton>
         }
       />
@@ -285,7 +278,7 @@ type MessageAttachmentProps = {
 const MessageAttachment = ({ attachment, className, ...props }: MessageAttachmentProps) => {
   const mediaType = attachment.mediaType ?? "";
   const filename = attachment.filename ?? "Attachment";
-  const Icon = isPdfAttachment(mediaType) ? IconFile : IconPaperclip;
+  const Icon = isPdfAttachment(mediaType) ? File : Paperclip;
 
   return (
     <div
@@ -409,7 +402,7 @@ const MessageSelection = ({ onAdd, className }: MessageSelectionProps) => {
                   window.getSelection()?.removeAllRanges();
                 }}
               >
-                <IconMessage className="size-3.5" />
+                <MessageSquare className="size-3.5" />
                 Add to chat
               </Button>
             </PopoverPrimitive.Popup>

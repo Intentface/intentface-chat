@@ -1,7 +1,7 @@
 "use client";
 
 import { type AttachmentItem, Attachments } from "@intentface/chat/attachments";
-import { IconFile, IconX } from "@tabler/icons-react";
+import { File, X } from "@keyline-icons/react";
 import { useState } from "react";
 
 // A removable strip driven by local state — the parts are structural slots and
@@ -39,7 +39,7 @@ export const Basic = () => {
           key={item.id}
           className="flex items-center gap-2 rounded-xl border border-[#f0f0f0] bg-white py-1.5 pr-1.5 pl-2.5 text-xs dark:border-[#262626] dark:bg-[#181818]"
         >
-          <IconFile className="size-4 text-[#949494]" />
+          <File className="size-4 text-[#949494]" />
           <span className="max-w-40 truncate">{item.filename}</span>
           <span className="text-[#949494] dark:text-[#6f6f6f]">
             {formatFileSize(item.fileSize)}
@@ -49,7 +49,7 @@ export const Basic = () => {
             filename={item.filename}
             className="flex size-5 cursor-pointer items-center justify-center rounded-full text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
           >
-            <IconX className="size-3.5" />
+            <X className="size-3.5" />
           </Attachments.Remove>
         </Attachments.Item>
       ))}

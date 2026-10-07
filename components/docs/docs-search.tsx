@@ -1,6 +1,6 @@
 "use client";
 
-import { IconSearch } from "@tabler/icons-react";
+import { Search } from "@keyline-icons/react";
 import { useDocsSearch } from "fumadocs-core/search/client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -36,14 +36,14 @@ export const DocsSearch = () => {
             aria-label="Search docs (⌘K)"
             className="rounded-full"
           >
-            <IconSearch />
+            <Search />
           </IconButton>
         }
       />
       <Dialog.Content className="top-24 max-w-lg translate-y-0 p-0">
         <Dialog.Title className="sr-only">Search documentation</Dialog.Title>
         <div className="flex items-center gap-2 border-secondary-border border-b px-4">
-          <IconSearch className="size-4 shrink-0 text-ink-tertiary" />
+          <Search className="size-4 shrink-0 text-ink-tertiary" />
           <input
             autoFocus
             value={search}

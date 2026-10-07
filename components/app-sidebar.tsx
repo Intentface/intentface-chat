@@ -1,12 +1,7 @@
 "use client";
-import {
-  IconBook,
-  IconBrandGithub,
-  IconBrandNpm,
-  IconDotsVertical,
-  IconPlus,
-  IconTrash,
-} from "@tabler/icons-react";
+import { Bin, BookOpen, MoreVertical, Plus } from "@keyline-icons/react";
+// Keyline has no brand icons, so these two stay on Tabler.
+import { IconBrandGithub, IconBrandNpm } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { IntentfaceLogo } from "@/components/icons/intentface-logo";
@@ -44,7 +39,7 @@ export const AppSidebar = () => {
                 isActive={pathname === "/playground"}
                 render={
                   <Link href="/playground">
-                    <IconPlus />
+                    <Plus />
                     <span>New Chat</span>
                   </Link>
                 }
@@ -67,7 +62,7 @@ export const AppSidebar = () => {
                           <DropdownMenu.Trigger
                             render={
                               <Sidebar.MenuAction showOnHover>
-                                <IconDotsVertical />
+                                <MoreVertical />
                                 <span className="sr-only">Delete</span>
                               </Sidebar.MenuAction>
                             }
@@ -77,7 +72,7 @@ export const AppSidebar = () => {
                               onClick={() => handleDelete(chat.id)}
                               aria-label="Delete"
                             >
-                              <IconTrash />
+                              <Bin />
                               Delete
                               <span className="sr-only">Delete</span>
                             </DropdownMenu.Item>
@@ -98,7 +93,7 @@ export const AppSidebar = () => {
             <Sidebar.MenuButton
               render={
                 <Link href="/">
-                  <IconBook />
+                  <BookOpen />
                   <span>Docs</span>
                 </Link>
               }

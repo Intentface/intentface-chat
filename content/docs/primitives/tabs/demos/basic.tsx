@@ -1,7 +1,7 @@
 "use client";
 
 import { Tabs, useTabs } from "@intentface/chat/tabs";
-import { IconFile, IconPlus, IconX } from "@tabler/icons-react";
+import { File, Plus, X } from "@keyline-icons/react";
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 
 /*
@@ -81,7 +81,7 @@ export const Basic = () => {
                   className={tabClass}
                 >
                   <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
-                    <IconFile className="size-4" />
+                    <File className="size-4" />
                   </Tabs.Icon>
                   <span className="min-w-0 truncate">{documents[id]?.name ?? id}</span>
 
@@ -100,7 +100,7 @@ export const Basic = () => {
                       aria-label={`Close ${documents[id]?.name ?? id}`}
                       className="grid size-5 shrink-0 cursor-pointer select-none place-items-center rounded-md text-[#686868] transition-colors hover:bg-[#e4e4e4] hover:text-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:bg-[#333333] dark:hover:text-[#fcfcfc]"
                     >
-                      <IconX className="size-3.5" />
+                      <X className="size-3.5" />
                     </Tabs.Close>
                   </Tabs.Action>
                 </Tabs.Trigger>
@@ -204,7 +204,7 @@ const NewDocument = ({ onCreate }: { onCreate: (id: string, document: Document) 
       }}
       className="grid size-7 shrink-0 cursor-pointer select-none place-items-center rounded-md text-[#686868] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc] dark:focus-visible:outline-[#fcfcfc]"
     >
-      <IconPlus className="size-4" />
+      <Plus className="size-4" />
     </button>
   );
 };

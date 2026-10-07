@@ -1,6 +1,6 @@
 "use client";
 
-import { IconChevronDown } from "@tabler/icons-react";
+import { ChevronDown } from "@keyline-icons/react";
 import { motion } from "motion/react";
 import { type ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -76,7 +76,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
                 setOpen((current) => !current);
               }}
             >
-              <IconChevronDown
+              <ChevronDown
                 className={cn("size-4 transition-transform", open ? "rotate-180" : "rotate-0")}
               />
             </button>

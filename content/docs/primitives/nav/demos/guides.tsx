@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "@intentface/chat/nav";
-import { IconBox, IconChevronDown, IconHome } from "@tabler/icons-react";
+import { ChevronDown, Home, Package } from "@keyline-icons/react";
 
 /*
  * The same tree four times, once per `guide` value, so the rungs can be
@@ -44,7 +44,7 @@ const GuideTree = ({ guide, caption }: { guide: GuideValue; caption: string }) =
         <Nav.List guide="none" className={listClass}>
           <Nav.Item value="overview" active className={rowClass}>
             <Nav.Icon>
-              <IconHome className="size-4" />
+              <Home className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Overview</Nav.Label>
           </Nav.Item>
@@ -52,7 +52,7 @@ const GuideTree = ({ guide, caption }: { guide: GuideValue; caption: string }) =
           <Nav.Group value="chat">
             <Nav.Trigger className={rowClass}>
               <Nav.Icon>
-                <IconBox className="size-4" />
+                <Package className="size-4" />
               </Nav.Icon>
               <Nav.Label className="min-w-0 truncate">Chat</Nav.Label>
               <Chevron />
@@ -101,7 +101,7 @@ const rowClass = [
 ].join(" ");
 
 const Chevron = () => (
-  <IconChevronDown className="ml-auto size-3! text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
+  <ChevronDown className="ml-auto size-3! text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
 );
 
 /*

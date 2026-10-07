@@ -1,5 +1,5 @@
 "use client";
-import { IconBrain, IconPaperclip, IconPlus, IconWorld, IconX } from "@tabler/icons-react";
+import { Brain, Globe, Paperclip, Plus, X } from "@keyline-icons/react";
 
 import { useComposer } from "@/components/ai/composer";
 import Button from "@/components/ui/button";
@@ -24,8 +24,8 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
           onClick={() => onToolsChange({ ...tools, webSearch: false })}
         >
           <span className="relative size-4">
-            <IconWorld className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <IconX className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+            <Globe className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
+            <X className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
           </span>
           Web Search
         </Button>
@@ -39,8 +39,8 @@ export const ActiveTools = ({ tools, onToolsChange }: ToolToggleProps) => {
           onClick={() => onToolsChange({ ...tools, thinking: false })}
         >
           <span className="relative size-4">
-            <IconBrain className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
-            <IconX className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
+            <Brain className="opacity-100 absolute top-0 left-0 group-hover/pill:opacity-0" />
+            <X className="opacity-0 absolute top-0 left-0 group-hover/pill:opacity-100" />
           </span>
           Thinking
         </Button>
@@ -57,13 +57,13 @@ export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
       <DropdownMenu.Trigger
         render={
           <IconButton variant="ghost" type="button" className="rounded-full">
-            <IconPlus />
+            <Plus />
           </IconButton>
         }
       />
       <DropdownMenu.Content side="top" align="start" sideOffset={8} className="w-auto">
         <DropdownMenu.Item onClick={() => attachments.openFileDialog()}>
-          <IconPaperclip />
+          <Paperclip />
           <span className="flex-1">Attach files</span>
         </DropdownMenu.Item>
         <DropdownMenu.Separator />
@@ -71,13 +71,13 @@ export const ToolsMenu = ({ tools, onToolsChange }: ToolToggleProps) => {
           checked={tools.webSearch ?? false}
           onCheckedChange={(checked) => onToolsChange({ ...tools, webSearch: checked })}
         >
-          <IconWorld /> <span className="flex-1">Web Search</span>
+          <Globe /> <span className="flex-1">Web Search</span>
         </DropdownMenu.SwitchItem>
         <DropdownMenu.SwitchItem
           checked={tools.thinking ?? false}
           onCheckedChange={(checked) => onToolsChange({ ...tools, thinking: checked })}
         >
-          <IconBrain /> <span className="flex-1">Thinking</span>
+          <Brain /> <span className="flex-1">Thinking</span>
         </DropdownMenu.SwitchItem>
       </DropdownMenu.Content>
     </DropdownMenu>

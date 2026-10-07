@@ -1,7 +1,7 @@
 "use client";
 
 import { Steps } from "@intentface/chat/steps";
-import { IconCheck, IconCircle, IconLoader2, IconX } from "@tabler/icons-react";
+import { Check, Circle, LoaderCircle, X } from "@keyline-icons/react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 
 const ROWS = ["Read the request", "Searched the web", "Checked the cache", "Wrote the answer"];
@@ -54,13 +54,13 @@ export const Status = () => {
                 <div key={row} className="flex items-center gap-2">
                   <Steps.Icon status={status} className={iconClass}>
                     {status === "complete" ? (
-                      <IconCheck className="size-3.5" />
+                      <Check className="size-3.5" />
                     ) : status === "error" ? (
-                      <IconX className="size-3.5" />
+                      <X className="size-3.5" />
                     ) : status === "active" ? (
-                      <IconLoader2 />
+                      <LoaderCircle />
                     ) : (
-                      <IconCircle className="size-3.5" />
+                      <Circle className="size-3.5" />
                     )}
                   </Steps.Icon>
 

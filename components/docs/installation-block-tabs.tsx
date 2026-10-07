@@ -1,6 +1,6 @@
 "use client";
 
-import { IconCheck, IconCopy } from "@tabler/icons-react";
+import { Check, Copy } from "@keyline-icons/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { useCopy } from "@/hooks/use-copy";
@@ -48,11 +48,7 @@ export const InstallationBlockTabs = ({ entries }: InstallationBlockTabsProps) =
           aria-label={`Copy: ${current.command}`}
           className="ml-auto grid size-8 cursor-pointer place-items-center rounded-full text-ink-tertiary transition-colors hover:bg-primary-bg hover:text-ink-secondary"
         >
-          {copied === current.command ? (
-            <IconCheck className="size-4" />
-          ) : (
-            <IconCopy className="size-4" />
-          )}
+          {copied === current.command ? <Check className="size-4" /> : <Copy className="size-4" />}
         </button>
       </div>
       <div className="[&_pre]:rounded-none [&_pre]:border-0">{current.code}</div>

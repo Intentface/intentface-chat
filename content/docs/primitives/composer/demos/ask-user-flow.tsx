@@ -7,7 +7,7 @@ import {
   type ComposerSubmitData,
   useComposer,
 } from "@intentface/chat/composer";
-import { IconArrowUp } from "@tabler/icons-react";
+import { ArrowUp } from "@keyline-icons/react";
 import { useState } from "react";
 
 // Setting `questions` arms the flow and flips askUser.active. Answering or
@@ -79,7 +79,7 @@ export const AskUserFlow = () => {
           <Composer.Actions className="flex items-center justify-end gap-2 p-2">
             {done ? (
               <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-                <IconArrowUp className="size-4" />
+                <ArrowUp className="size-4" />
               </Composer.Submit>
             ) : (
               <Controls />

@@ -3,7 +3,7 @@
 import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Thread, useThread } from "@intentface/chat/thread";
-import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
+import { ArrowDown, ArrowUp } from "@keyline-icons/react";
 import { useState } from "react";
 
 type DemoMessage = { id: string; role: "user" | "assistant"; text: string };
@@ -74,7 +74,7 @@ export const Basic = () => {
                 </Composer.Textarea>
                 <Composer.Actions className="flex justify-end gap-2 p-2">
                   <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-                    <IconArrowUp className="size-4" />
+                    <ArrowUp className="size-4" />
                   </Composer.Submit>
                 </Composer.Actions>
               </Composer.Container>
@@ -99,7 +99,7 @@ const ScrollButton = () => {
       aria-label="Scroll to latest"
       className="absolute -top-10 z-10 flex size-8 cursor-pointer items-center justify-center rounded-full border border-[#f0f0f0] bg-white text-[#686868] shadow-xs transition-colors hover:text-[#1a1a1a] dark:border-[#262626] dark:bg-[#181818] dark:text-[#9b9b9b] dark:hover:text-[#fcfcfc]"
     >
-      <IconArrowDown className="size-4" />
+      <ArrowDown className="size-4" />
     </button>
   );
 };

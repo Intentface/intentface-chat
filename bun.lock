@@ -10,6 +10,7 @@
         "@ai-sdk/react": "^3.0.220",
         "@base-ui/react": "^1.6.0",
         "@intentface/chat": "workspace:*",
+        "@keyline-icons/react": "^1.4.0",
         "@tabler/icons-react": "^3.46.0",
         "ai": "^6.0.218",
         "class-variance-authority": "^0.7.1",
@@ -47,7 +48,7 @@
     },
     "packages/chat": {
       "name": "@intentface/chat",
-      "version": "0.3.0",
+      "version": "0.5.0",
       "dependencies": {
         "@floating-ui/dom": "^1.7.6",
         "nanoid": "^5.1.11",
@@ -284,6 +285,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@keyline-icons/react": ["@keyline-icons/react@1.4.0", "", { "peerDependencies": { "react": ">=18" } }, "sha512-zpeRzPHRFQcSEC5qBM5LYE9hNePkM2wMGBAgD35vOSoXMghSLndeYrAQovjsFIPn0cDxg7EVJoFx3pga5QdmVg=="],
 
     "@manypkg/find-root": ["@manypkg/find-root@1.1.0", "", { "dependencies": { "@babel/runtime": "^7.5.5", "@types/node": "^12.7.1", "find-up": "^4.1.0", "fs-extra": "^8.1.0" } }, "sha512-mki5uBvhHzO8kYYix/WRy2WX8S3B5wdVSc9D6KcU5lQNglP2yt58/VfLuAK49glRXChosY8ap2oJ1qgma3GUVA=="],
 

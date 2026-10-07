@@ -4,14 +4,7 @@ import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Tabs, useTabs } from "@intentface/chat/tabs";
 import { Thread } from "@intentface/chat/thread";
-import {
-  IconArrowUp,
-  IconMessage,
-  IconMinus,
-  IconPlayerStop,
-  IconSparkles,
-  IconX,
-} from "@tabler/icons-react";
+import { ArrowUp, MessageSquare, Minus, Sparkles, Stop, X } from "@keyline-icons/react";
 import { type KeyboardEvent, useRef, useState } from "react";
 
 /*
@@ -195,7 +188,7 @@ export const Anchored = () => {
             {(id) => (
               <Tabs.Trigger value={id} aria-label={title(id)} className={dockTabClass}>
                 <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
-                  <IconMessage className="size-4" />
+                  <MessageSquare className="size-4" />
                 </Tabs.Icon>
                 <span className="min-w-0 truncate">{title(id)}</span>
                 <Tabs.Action
@@ -209,7 +202,7 @@ export const Anchored = () => {
                     aria-label={`Close ${title(id)}`}
                     className="grid size-5 shrink-0 cursor-pointer select-none place-items-center rounded text-[#686868] transition-colors hover:bg-[#e4e4e4] hover:text-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:bg-[#333333] dark:hover:text-[#fcfcfc]"
                   >
-                    <IconX className="size-3.5" />
+                    <X className="size-3.5" />
                   </Tabs.Close>
                 </Tabs.Action>
               </Tabs.Trigger>
@@ -221,7 +214,7 @@ export const Anchored = () => {
               disclosure ARIA a tab does. */}
           <Tabs.Trigger value={DRAFT} className={`${dockTabClass} ml-1 max-w-none`}>
             <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
-              <IconSparkles className="size-4" />
+              <Sparkles className="size-4" />
             </Tabs.Icon>
             Agent
           </Tabs.Trigger>
@@ -298,7 +291,7 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
         onClick={() => select(null)}
         className={iconButtonClass}
       >
-        <IconMinus className="size-3.5" />
+        <Minus className="size-3.5" />
       </button>
       <button
         type="button"
@@ -311,7 +304,7 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
         }}
         className={iconButtonClass}
       >
-        <IconX className="size-3.5" />
+        <X className="size-3.5" />
       </button>
     </header>
   );
@@ -385,7 +378,7 @@ const ChatThread = ({
 const NewChat = ({ onStart }: { onStart: (text: string) => void }) => (
   <div className="flex h-full flex-col">
     <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-6 text-center">
-      <IconSparkles className="size-5 text-[#949494] dark:text-[#6f6f6f]" />
+      <Sparkles className="size-5 text-[#949494] dark:text-[#6f6f6f]" />
       <p className="font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">Ask the agent</p>
       <p className="text-[#686868] text-sm leading-[1.7] dark:text-[#9b9b9b]">
         This is a draft — it becomes a tab once you send something.
@@ -433,11 +426,7 @@ const DockComposer = ({
             aria-label={generating ? "Stop" : "Send"}
             className="flex size-7 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-30 dark:bg-[#fcfcfc] dark:text-[#111111]"
           >
-            {generating ? (
-              <IconPlayerStop className="size-4" />
-            ) : (
-              <IconArrowUp className="size-4" />
-            )}
+            {generating ? <Stop className="size-4" /> : <ArrowUp className="size-4" />}
           </Composer.Submit>
         </Composer.Actions>
       </Composer.Container>

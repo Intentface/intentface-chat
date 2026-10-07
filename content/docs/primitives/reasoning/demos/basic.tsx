@@ -1,7 +1,7 @@
 "use client";
 
 import { Reasoning } from "@intentface/chat/reasoning";
-import { IconBrain, IconChevronDown } from "@tabler/icons-react";
+import { Brain, ChevronDown } from "@keyline-icons/react";
 
 // A completed reasoning block. The parts ship no copy and no layout — the
 // trigger label and the section structure below are both yours.
@@ -20,9 +20,9 @@ export const Basic = () => (
   <div className="w-full max-w-xl">
     <Reasoning.Root defaultOpen className="flex flex-col gap-1">
       <Reasoning.Trigger className="group flex w-fit cursor-pointer items-center gap-2 text-sm text-[#686868] transition-colors hover:text-[#1a1a1a] dark:text-[#9b9b9b] dark:hover:text-[#fcfcfc]">
-        <IconBrain className="size-4" />
+        <Brain className="size-4" />
         Thought for a few seconds
-        <IconChevronDown className="size-3 transition-transform group-data-closed:rotate-180" />
+        <ChevronDown className="size-3 transition-transform group-data-closed:rotate-180" />
       </Reasoning.Trigger>
       <Reasoning.Content className="flex flex-col gap-3 pl-6 text-sm">
         {SECTIONS.map((section) => (

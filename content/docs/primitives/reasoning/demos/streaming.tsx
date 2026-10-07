@@ -1,7 +1,7 @@
 "use client";
 
 import { Reasoning, useReasoning } from "@intentface/chat/reasoning";
-import { IconBrain, IconChevronDown } from "@tabler/icons-react";
+import { Brain, ChevronDown } from "@keyline-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 const SECTIONS = [
@@ -82,7 +82,7 @@ const TriggerLabel = () => {
 
   return (
     <Reasoning.Trigger className="group flex w-fit cursor-pointer items-center gap-2 rounded text-[#686868] text-sm transition-colors hover:text-[#1a1a1a] focus-visible:outline-2 focus-visible:outline-[#1a1a1a] focus-visible:outline-offset-2 dark:text-[#9b9b9b] dark:hover:text-[#fcfcfc] dark:focus-visible:outline-[#fcfcfc]">
-      <IconBrain className="size-4" />
+      <Brain className="size-4" />
       <span className={isStreaming ? "animate-pulse" : undefined}>
         {isStreaming
           ? "Thinking…"
@@ -90,7 +90,7 @@ const TriggerLabel = () => {
             ? "Reasoning"
             : `Thought for ${duration}s`}
       </span>
-      <IconChevronDown className="size-3 transition-transform group-data-closed:rotate-180" />
+      <ChevronDown className="size-3 transition-transform group-data-closed:rotate-180" />
     </Reasoning.Trigger>
   );
 };

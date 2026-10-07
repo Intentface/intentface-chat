@@ -2,7 +2,7 @@
 
 import { Chip } from "@intentface/chat/chip";
 import { Message, type MessageChipSegment } from "@intentface/chat/message";
-import { IconFile, IconFileText, IconTool } from "@tabler/icons-react";
+import { File, FileText, Wrench } from "@keyline-icons/react";
 import type { ComponentProps } from "react";
 
 /*
@@ -47,11 +47,11 @@ const renderChip = (chip: MessageChipSegment, index: number) => (
   >
     <Chip.Icon className="flex items-center">
       {chip.prefix === "file" ? (
-        <IconFile className="size-4" />
+        <File className="size-4" />
       ) : chip.prefix === "doc" ? (
-        <IconFileText className="size-4" />
+        <FileText className="size-4" />
       ) : (
-        <IconTool className="size-4" />
+        <Wrench className="size-4" />
       )}
     </Chip.Icon>
     <Chip.Label>{chip.label}</Chip.Label>

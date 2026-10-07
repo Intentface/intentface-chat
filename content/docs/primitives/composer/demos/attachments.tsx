@@ -2,7 +2,7 @@
 
 import { Attachments } from "@intentface/chat/attachments";
 import { Composer, type ComposerSubmitData, useComposer } from "@intentface/chat/composer";
-import { IconArrowUp, IconPaperclip, IconX } from "@tabler/icons-react";
+import { ArrowUp, Paperclip, X } from "@keyline-icons/react";
 
 // Composer.Attachments carries the policy and the hidden file input; the strip
 // itself is yours. Files can be picked with the trigger or dropped on the composer.
@@ -32,10 +32,10 @@ export const AttachmentsDemo = () => {
               aria-label="Attach a file"
               className="flex size-8 cursor-pointer items-center justify-center rounded-full text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
             >
-              <IconPaperclip className="size-4" />
+              <Paperclip className="size-4" />
             </Composer.AttachmentTrigger>
             <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-              <IconArrowUp className="size-4" />
+              <ArrowUp className="size-4" />
             </Composer.Submit>
           </Composer.Actions>
         </Composer.Container>
@@ -67,7 +67,7 @@ const Strip = () => {
             filename={item.filename}
             className="flex size-5 cursor-pointer items-center justify-center rounded-full text-[#949494] transition-colors hover:bg-[#ececec] hover:text-[#1a1a1a] dark:hover:bg-[#2d2d2d] dark:hover:text-[#fcfcfc]"
           >
-            <IconX className="size-3.5" />
+            <X className="size-3.5" />
           </Attachments.Remove>
         </Attachments.Item>
       ))}

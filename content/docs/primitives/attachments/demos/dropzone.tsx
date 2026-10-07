@@ -8,7 +8,7 @@ import {
   revokeAttachmentUrl,
   toAttachmentItem,
 } from "@intentface/chat/attachments";
-import { IconX } from "@tabler/icons-react";
+import { X } from "@keyline-icons/react";
 import { type DragEvent, useEffect, useRef, useState } from "react";
 
 const ACCEPT = "image/*,.pdf";
@@ -98,7 +98,7 @@ export const Dropzone = () => {
                 }}
                 className="grid size-5 cursor-pointer place-items-center rounded text-[#949494] opacity-0 transition-opacity hover:text-[#1a1a1a] group-hover/item:opacity-100 dark:text-[#6f6f6f] dark:hover:text-[#fcfcfc]"
               >
-                <IconX className="size-3.5" />
+                <X className="size-3.5" />
               </Attachments.Remove>
             </Attachments.Item>
           ))}

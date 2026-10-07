@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "@intentface/chat/nav";
-import { IconChevronDown } from "@tabler/icons-react";
+import { ChevronDown } from "@keyline-icons/react";
 
 /*
  * The collapse, slowed to 500ms so the mechanism is visible.
@@ -75,7 +75,7 @@ const rowClass = [
 ].join(" ");
 
 const Chevron = () => (
-  <IconChevronDown className="ml-auto size-3 text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
+  <ChevronDown className="ml-auto size-3 text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
 );
 
 /*

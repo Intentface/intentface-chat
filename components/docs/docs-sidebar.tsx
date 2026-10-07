@@ -1,6 +1,8 @@
 "use client";
 
-import { IconBrandGithub, IconBrandNpm, IconChevronDown, IconSandbox } from "@tabler/icons-react";
+import { ChevronDown } from "@keyline-icons/react";
+// Keyline has no brand or sandbox icons, so these stay on Tabler.
+import { IconBrandGithub, IconBrandNpm, IconSandbox } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
@@ -80,7 +82,7 @@ const TreeFolderNode = ({ node, index }: { node: TreeFolder; index: number }) =>
       <Collapsible open={open} onOpenChange={setOpen}>
         <Collapsible.Trigger className="flex h-8 w-full cursor-pointer items-center gap-1.5 rounded-md px-2 text-left font-medium text-ink-tertiary text-md transition-colors duration-0 hover:bg-secondary-bg-hover hover:text-ink-secondary">
           <span className="flex-1">{node.name}</span>
-          <IconChevronDown
+          <ChevronDown
             className={cn(
               "size-[18px] shrink-0 transition-transform",
               open ? "rotate-0" : "-rotate-90",

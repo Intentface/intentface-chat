@@ -1,7 +1,7 @@
 "use client";
 
 import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
-import { IconArrowUp } from "@tabler/icons-react";
+import { ArrowUp } from "@keyline-icons/react";
 import { useState } from "react";
 
 // The Textarea's plain-text value is controlled by the parent: the buttons
@@ -31,7 +31,7 @@ export const Controlled = () => {
           </Composer.Textarea>
           <Composer.Actions className="flex justify-end gap-2 p-2">
             <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-              <IconArrowUp className="size-4" />
+              <ArrowUp className="size-4" />
             </Composer.Submit>
           </Composer.Actions>
         </Composer.Container>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Nav } from "@intentface/chat/nav";
-import { IconBox, IconChevronDown, IconHome, IconInbox, IconMessage } from "@tabler/icons-react";
+import { ChevronDown, Home, Inbox, MessageSquare, Package } from "@keyline-icons/react";
 import { type ComponentProps, useState } from "react";
 
 /*
@@ -46,7 +46,7 @@ export const Basic = () => {
             render={link("/overview", () => setCurrent("overview"))}
           >
             <Nav.Icon>
-              <IconHome className="size-4" />
+              <Home className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Overview</Nav.Label>
           </Nav.Item>
@@ -58,7 +58,7 @@ export const Basic = () => {
             render={link("/inbox", () => setCurrent("inbox"))}
           >
             <Nav.Icon>
-              <IconInbox className="size-4" />
+              <Inbox className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Inbox</Nav.Label>
           </Nav.Item>
@@ -76,7 +76,7 @@ export const Basic = () => {
               <Nav.Group value="intentface">
                 <Nav.Trigger className={rowClass}>
                   <Nav.Icon>
-                    <IconBox className="size-4" />
+                    <Package className="size-4" />
                   </Nav.Icon>
                   <Nav.Label className="min-w-0 truncate">Intentface</Nav.Label>
                   <Chevron />
@@ -92,7 +92,7 @@ export const Basic = () => {
                     render={link("/intentface/home", () => setCurrent("team-home"))}
                   >
                     <Nav.Icon>
-                      <IconHome className="size-4" />
+                      <Home className="size-4" />
                     </Nav.Icon>
                     <Nav.Label className="min-w-0 truncate">Home</Nav.Label>
                   </Nav.Item>
@@ -104,7 +104,7 @@ export const Basic = () => {
                     render={link("/intentface/issues", () => setCurrent("team-issues"))}
                   >
                     <Nav.Icon>
-                      <IconInbox className="size-4" />
+                      <Inbox className="size-4" />
                     </Nav.Icon>
                     <Nav.Label className="min-w-0 truncate">Issues</Nav.Label>
                   </Nav.Item>
@@ -115,7 +115,7 @@ export const Basic = () => {
                   <Nav.Group value="chat">
                     <Nav.Trigger className={rowClass}>
                       <Nav.Icon>
-                        <IconMessage className="size-4" />
+                        <MessageSquare className="size-4" />
                       </Nav.Icon>
                       <Nav.Label className="min-w-0 truncate">Chat</Nav.Label>
                       <Chevron />
@@ -146,7 +146,7 @@ export const Basic = () => {
                   <Nav.Group value="website">
                     <Nav.Trigger className={rowClass}>
                       <Nav.Icon>
-                        <IconBox className="size-4" />
+                        <Package className="size-4" />
                       </Nav.Icon>
                       <Nav.Label className="min-w-0 truncate">Website</Nav.Label>
                       <Chevron />
@@ -221,7 +221,7 @@ const rowClass = [
  * reading `data-closed` off the enclosing trigger, so nothing is threaded down.
  */
 const Chevron = () => (
-  <IconChevronDown className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90 dark:text-[#6f6f6f]" />
+  <ChevronDown className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90 dark:text-[#6f6f6f]" />
 );
 
 /*

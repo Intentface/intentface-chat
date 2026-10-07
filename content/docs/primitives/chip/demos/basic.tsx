@@ -1,7 +1,7 @@
 "use client";
 
 import { Chip } from "@intentface/chat/chip";
-import { IconWorld } from "@tabler/icons-react";
+import { Globe } from "@keyline-icons/react";
 import type { ReactElement, ReactNode } from "react";
 
 // Chips flow inline with text. `variant` is an opaque string surfaced as
@@ -11,7 +11,7 @@ export const Basic = () => (
     Pulled results from{" "}
     <Chip.Root variant="accent" className={CHIP_CLASS}>
       <Chip.Icon className="flex items-center">
-        <IconWorld className="size-4" />
+        <Globe className="size-4" />
       </Chip.Icon>
       <Chip.Label>web-search</Chip.Label>
     </Chip.Root>{" "}

@@ -7,7 +7,7 @@ import {
   useThread,
   useThreadVisibility,
 } from "@intentface/chat/thread";
-import { IconArrowDown } from "@tabler/icons-react";
+import { ArrowDown } from "@keyline-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ComponentProps } from "react";
 import { memo, useCallback } from "react";
@@ -148,7 +148,7 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
                 onClick={handleScrollToBottom}
                 className="rounded-full shadow-xs"
               >
-                <IconArrowDown />
+                <ArrowDown />
                 Latest
               </Button>
             </motion.div>

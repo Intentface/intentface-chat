@@ -1,7 +1,7 @@
 "use client";
 
 import { Tabs, type TabsStore, useTabsStore } from "@intentface/chat/tabs";
-import { IconArchive, IconInbox, IconPencil, IconSend, IconX } from "@tabler/icons-react";
+import { Archive, Inbox, Pen, Send, X } from "@keyline-icons/react";
 import { createElement, useState } from "react";
 
 /*
@@ -31,7 +31,7 @@ export const ExternalTabs = () => {
           {(id) => (
             <Tabs.Trigger value={id} aria-label={id} className={tabClass}>
               <Tabs.Icon className="shrink-0 text-[#949494] dark:text-[#6f6f6f] [&>svg]:size-3.5">
-                {createElement(TAB_ICONS[id] ?? IconInbox)}
+                {createElement(TAB_ICONS[id] ?? Inbox)}
               </Tabs.Icon>
               <span className="min-w-0 truncate">{id}</span>
               <Tabs.Action className="absolute inset-y-0 right-1.5 flex items-center opacity-0 transition-opacity group-hover/tab:opacity-100 group-data-[selected]/tab:opacity-100">
@@ -39,7 +39,7 @@ export const ExternalTabs = () => {
                   aria-label={`Close ${id}`}
                   className="grid size-5 shrink-0 cursor-pointer place-items-center rounded text-[#949494] transition-colors hover:bg-[#dcdcdc] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#3d3d3d] dark:hover:text-[#fcfcfc]"
                 >
-                  <IconX className="size-3.5" />
+                  <X className="size-3.5" />
                 </Tabs.Close>
               </Tabs.Action>
             </Tabs.Trigger>
@@ -96,9 +96,9 @@ const tabClass = [
 /* Per-tab icons rather than one generic page glyph — a strip of identical
    icons carries no information, and the whole point of a tab icon is telling
    the tabs apart at a glance. */
-const TAB_ICONS: Record<string, typeof IconInbox> = {
-  Inbox: IconInbox,
-  Drafts: IconPencil,
-  Sent: IconSend,
-  Archive: IconArchive,
+const TAB_ICONS: Record<string, typeof Inbox> = {
+  Inbox: Inbox,
+  Drafts: Pen,
+  Sent: Send,
+  Archive: Archive,
 };

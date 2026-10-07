@@ -2,13 +2,7 @@
 
 import { Nav } from "@intentface/chat/nav";
 import { Shell } from "@intentface/chat/shell";
-import {
-  IconBox,
-  IconChevronDown,
-  IconHome,
-  IconInbox,
-  IconLayoutSidebar,
-} from "@tabler/icons-react";
+import { ChevronDown, Home, Inbox, Package, PanelLeft } from "@keyline-icons/react";
 
 /*
  * A shell the way it is meant to be used: a sidebar that collapses, floats out
@@ -74,7 +68,7 @@ export const Basic = () => (
           @intentface/chat
         </span>
         <Shell.Trigger aria-label="Collapse sidebar" className={iconButtonClass}>
-          <IconLayoutSidebar className="size-4" />
+          <PanelLeft className="size-4" />
         </Shell.Trigger>
       </div>
 
@@ -90,13 +84,13 @@ export const Basic = () => (
         <Nav.List className="flex flex-col gap-0.5">
           <Nav.Item value="overview" active className={rowClass}>
             <Nav.Icon>
-              <IconHome className="size-4" />
+              <Home className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Overview</Nav.Label>
           </Nav.Item>
           <Nav.Item value="inbox" className={rowClass}>
             <Nav.Icon>
-              <IconInbox className="size-4" />
+              <Inbox className="size-4" />
             </Nav.Icon>
             <Nav.Label className="min-w-0 truncate">Inbox</Nav.Label>
           </Nav.Item>
@@ -104,13 +98,13 @@ export const Basic = () => (
           <Nav.Group value="workspace" className="mt-3">
             <Nav.Trigger className={rowClass}>
               <Nav.Label className="min-w-0 truncate">Workspace</Nav.Label>
-              <IconChevronDown className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90" />
+              <ChevronDown className="ml-auto !size-3 text-[#949494] transition-transform group-data-[closed]/row:-rotate-90" />
             </Nav.Trigger>
             <Nav.List className="flex flex-col gap-0.5">
               {["Initiatives", "Projects", "Views", "Loops"].map((label) => (
                 <Nav.Item key={label} value={label.toLowerCase()} className={rowClass}>
                   <Nav.Icon>
-                    <IconBox className="size-4" />
+                    <Package className="size-4" />
                   </Nav.Icon>
                   <Nav.Label className="min-w-0 truncate">{label}</Nav.Label>
                 </Nav.Item>
@@ -150,7 +144,7 @@ export const Basic = () => (
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#f0f0f0] bg-white dark:border-[#262626] dark:bg-[#181818]">
         <div className="flex h-11 shrink-0 items-center gap-1 border-[#f0f0f0] border-b px-3 dark:border-[#262626]">
           <span className="px-1 text-[#949494] text-sm dark:text-[#6f6f6f]">Docs</span>
-          <IconChevronDown className="size-3 -rotate-90 text-[#949494] dark:text-[#6f6f6f]" />
+          <ChevronDown className="size-3 -rotate-90 text-[#949494] dark:text-[#6f6f6f]" />
           <span className="px-1 font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">
             Overview
           </span>

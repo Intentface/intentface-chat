@@ -1,7 +1,7 @@
 "use client";
 
 import { Message } from "@intentface/chat/message";
-import { IconCheck, IconCopy } from "@tabler/icons-react";
+import { Check, Copy } from "@keyline-icons/react";
 import { useState } from "react";
 
 // Message.Root stamps data-role / data-last / data-error and imposes no layout;
@@ -50,7 +50,7 @@ const CopyButton = ({ value }: { value: string }) => {
       aria-label="Copy message"
       className="flex size-7 cursor-pointer items-center justify-center rounded-md text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
     >
-      {copied ? <IconCheck className="size-3.5" /> : <IconCopy className="size-4" />}
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-4" />}
     </button>
   );
 };

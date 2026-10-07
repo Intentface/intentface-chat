@@ -1,7 +1,7 @@
 "use client";
 
 import { Steps } from "@intentface/chat/steps";
-import { IconCheck, IconChevronDown, IconCircle } from "@tabler/icons-react";
+import { Check, ChevronDown, Circle } from "@keyline-icons/react";
 
 // Steps is recursive: an item's panel can hold rows and further items. A nested
 // panel picks up data-nested, which is how the rail indent is drawn.
@@ -21,13 +21,13 @@ export const Basic = () => (
       <Steps.Item defaultOpen>
         <Steps.Trigger className={`${TRIGGER_CLASS} py-1`}>
           <span>Worked for 3 seconds</span>
-          <IconChevronDown className="size-4 shrink-0 -rotate-90 transition-transform group-data-open/steps-trigger:rotate-0" />
+          <ChevronDown className="size-4 shrink-0 -rotate-90 transition-transform group-data-open/steps-trigger:rotate-0" />
         </Steps.Trigger>
 
         <Steps.Panel className={`${PANEL_CLASS}`}>
           <div className="flex items-center gap-2 py-0.5">
             <Steps.Icon className={ICON_CLASS}>
-              <IconCheck className="size-3.5" />
+              <Check className="size-3.5" />
             </Steps.Icon>
             <Steps.Label className={LABEL_CLASS}>Read the request</Steps.Label>
           </div>
@@ -37,9 +37,9 @@ export const Basic = () => (
             <Steps.Trigger className={`${TRIGGER_CLASS} py-0.5`}>
               <Steps.Icon className={`relative ${ICON_CLASS}`}>
                 <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-focus-visible/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
-                  <IconCheck className="size-3.5" />
+                  <Check className="size-3.5" />
                 </span>
-                <IconChevronDown className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-focus-visible/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
+                <ChevronDown className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-focus-visible/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
               </Steps.Icon>
               <Steps.Label className={LABEL_CLASS}>Searched the web</Steps.Label>
             </Steps.Trigger>
@@ -53,7 +53,7 @@ export const Basic = () => (
 
           <div className="flex items-center gap-2 py-0.5">
             <Steps.Icon status="active" className={ICON_CLASS}>
-              <IconCircle className="size-3.5 animate-pulse" />
+              <Circle className="size-3.5 animate-pulse" />
             </Steps.Icon>
             <Steps.Label status="active" className={LABEL_CLASS}>
               Writing the answer

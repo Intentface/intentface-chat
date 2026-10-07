@@ -4,7 +4,7 @@ import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Tabs, useTabs } from "@intentface/chat/tabs";
 import { Thread } from "@intentface/chat/thread";
-import { type ComponentProps, useRef, useState } from "react";
+import { type ComponentProps, type KeyboardEvent, useRef, useState } from "react";
 
 /*
  * A chat dock in the corner of a page. The same Root, List and Viewport as the
@@ -23,9 +23,8 @@ import { type ComponentProps, useRef, useState } from "react";
  * palette or a keyboard shortcut elsewhere on the page can reach. Anything
  * inside the Root reads it through `useTabs` instead.
  *
- * A reply takes a moment to arrive, so Escape has two layers to peel: the
- * first press stops the reply (the composer claims it with preventDefault),
- * and only the next one closes the dock.
+ * A reply takes a moment to arrive. Escape anywhere in the chat stops it first,
+ * and only the next Escape closes the dock.
  */
 const dockStore = Tabs.createStore();
 
@@ -92,9 +91,9 @@ export const Anchored = () => {
 
   const title = (id: string) => (id === DRAFT ? "New chat" : (chats[id]?.name ?? id));
 
-  // The chat whose reply is on its way, standing in for a model streaming one.
-  const [generating, setGenerating] = useState<string | null>(null);
-  const pendingReply = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Each chat's reply on its way, standing in for a model streaming one.
+  const [generating, setGenerating] = useState<ReadonlySet<string>>(new Set());
+  const pendingReplies = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   const append = (id: string, turn: Turn) =>
     setChats((current) => {
@@ -103,23 +102,36 @@ export const Anchored = () => {
       return { ...current, [id]: { ...chat, turns: [...chat.turns, turn] } };
     });
 
+  const settle = (id: string) => {
+    pendingReplies.current.delete(id);
+    setGenerating((current) => {
+      const remaining = new Set(current);
+      remaining.delete(id);
+      return remaining;
+    });
+  };
+
   const reply = (id: string, text: string) => {
     const next = chats[id]?.turns.length ?? 0;
     append(id, { id: `${next}-u`, role: "user", text });
-    setGenerating(id);
-    pendingReply.current = setTimeout(() => {
-      append(id, {
-        id: `${next}-a`,
-        role: "assistant",
-        text: REPLIES[next % REPLIES.length] as string,
-      });
-      setGenerating(null);
-    }, 2500);
+    clearTimeout(pendingReplies.current.get(id));
+    setGenerating((current) => new Set(current).add(id));
+    pendingReplies.current.set(
+      id,
+      setTimeout(() => {
+        append(id, {
+          id: `${next}-a`,
+          role: "assistant",
+          text: REPLIES[next % REPLIES.length] as string,
+        });
+        settle(id);
+      }, 2500),
+    );
   };
 
-  const stop = () => {
-    clearTimeout(pendingReply.current);
-    setGenerating(null);
+  const stop = (id: string) => {
+    clearTimeout(pendingReplies.current.get(id));
+    settle(id);
   };
 
   /** A chat the visitor started is titled by what they typed. */
@@ -241,8 +253,8 @@ export const Anchored = () => {
                           key={id}
                           chat={chats[id]}
                           onSend={(text) => reply(id, text)}
-                          generating={generating === id}
-                          onStop={stop}
+                          generating={generating.has(id)}
+                          onStop={() => stop(id)}
                         />
                       )
                     }
@@ -315,9 +327,17 @@ const ChatThread = ({
   // `bottom` rather than the default `follow`: it is the one mode that reserves
   // no viewport for the last turn. In a dock this small the reserve would push
   // every earlier turn out of sight, so each chat would look like one exchange.
+  // Escape in the transcript stops the reply too; the composer handles its own first.
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Escape" || event.defaultPrevented || !generating) return;
+    event.preventDefault();
+    onStop();
+  };
+
   return (
     <Thread.Root
       autoScroll="bottom"
+      onKeyDown={handleKeyDown}
       className="relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:0.75rem]"
     >
       <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto]">
@@ -398,8 +418,7 @@ const DockComposer = ({
           />
         </Composer.Textarea>
         <Composer.Actions className="flex justify-end p-1.5 pt-0">
-          {/* While a reply is coming the button stops it — and so does Escape,
-              typed here or nowhere in particular. */}
+          {/* While a reply is coming, the button and Escape in the composer stop it. */}
           <Composer.Submit
             isGenerating={generating}
             onStop={onStop}

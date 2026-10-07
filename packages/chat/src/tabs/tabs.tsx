@@ -275,12 +275,7 @@ export const TabsRoot = <Value extends string = string>({
     if (!dismissOnEscape) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       const { value } = store.getSnapshot();
-      // An Escape something else already handled is spent: a composer that
-      // closed its command list or stopped generating, a menu anywhere on the
-      // page. Window listeners run last in the bubble phase, after every
-      // element and document listener, so anything that claims the key with
-      // preventDefault() wins and the panel stays — layered Escape peels one
-      // layer per press instead of all of them at once.
+      // The window hears Escape last, so one handled inside (a composer stopping) is spent.
       if (event.key !== "Escape" || event.defaultPrevented || value === null) return;
       event.preventDefault();
       // From inside the popup, focus would drop to the body as it closes; it goes back to the tab.

@@ -196,8 +196,22 @@ export const askUserKeys = [
 
 <AttributesTable rows={askUserKeys} />
 
-While `isSubmitting`, `Submit` (via `useComposerSubmit`) also listens document-wide
-for `Escape` to call `onStop`, unless the event was already handled.
+While `isGenerating`, `Submit` (via `useComposerSubmit`) also listens document-wide
+for `Escape` to call `onStop`, so a stop still works after focus has left the
+editor. It takes only an Escape that is this composer's:
+
+- typed into this composer, or into its ask-user options wherever a panel
+  renders them, stops it;
+- typed into nothing in particular — the page body, a button, the transcript —
+  stops it too;
+- typed into another composer, or into any other text field (an input, a
+  textarea, a `contenteditable` editor), is left to that field.
+
+An Escape that something already handled — the command list closing, a menu
+calling `preventDefault()` — never stops generation. The composer calls
+`preventDefault()` on the Escape it uses, so the same press does not also
+dismiss a surface around it, such as a floating `Tabs.Popup`. With two
+composers generating, one unclaimed Escape therefore stops one of them.
 
 ## Accessibility
 
@@ -391,7 +405,7 @@ Submit button that morphs into a stop control while generating. Renders
 
 export const submitProps = [
   { name: "isGenerating", type: "boolean", default: "false", description: "Morphs into a stop control: type becomes \"button\" and clicking calls onStop." },
-  { name: "onStop", type: "() => void", description: "Abort callback — on click while generating, or Escape." },
+  { name: "onStop", type: "() => void", description: "Abort callback — on click while generating, or on an Escape typed into this composer or into nothing in particular (see Keyboard)." },
 ];
 
 <PropsTable rows={submitProps} />
@@ -603,7 +617,7 @@ export const hooks = [
   { name: "useComposer", type: "(selector?) => Selected", description: "Subscribe to a slice of the nearest composer's store. Throws outside <Composer.Root>." },
   { name: "useComposerStore", type: "(store, selector?) => Selected", description: "Same, for an explicit createStore() handle — the outside-the-tree twin." },
   { name: "useComposerController", type: "() => ComposerEditorState", description: "The nearest composer's imperative editor controls (focus, insert, clear, …)." },
-  { name: "useComposerSubmit", type: "(options) => ComposerSubmitState", description: "Computes Submit's type/disabled/generating; auto-disables while empty or submitting; aborts on Escape." },
+  { name: "useComposerSubmit", type: "(options) => ComposerSubmitState", description: "Computes Submit's type/disabled/generating; auto-disables while empty or submitting; aborts on Escape typed into this composer or into nothing in particular." },
   { name: "useCommandListItems", type: "() => { items, state }", description: "The resolved items and load state inside a Command. Throws outside one." },
 ];
 

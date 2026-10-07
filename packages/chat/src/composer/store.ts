@@ -178,6 +178,10 @@ export type ComposerStore = {
   // observes this box to reposition — the badge moves when the container grows
   // (attachments strip, multi-line input).
   containerRef: RefObject<HTMLElement | null>;
+  // The mounted Composer.Root's element. Document-level listeners use it to
+  // tell this composer's keystrokes from another composer's (see
+  // isEscapeForComposer).
+  rootRef: RefObject<HTMLElement | null>;
   // Co-located refs the mounted Composer wires up at runtime.
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
@@ -206,6 +210,41 @@ const isEventForComposer = (
   const optionsHost = target?.closest<HTMLElement>("[data-ask-user-options]");
   if (optionsHost) return optionsHost === optionsElement;
   return true;
+};
+
+const EDITABLE_SELECTOR = 'input, textarea, [contenteditable]:not([contenteditable="false"])';
+
+// Scope a document-level Escape (stop generating) to this composer. A page can
+// hold several composers — one in the layout, another in a floating panel —
+// next to editors that are not composers at all, and an Escape belongs to
+// whoever it was typed into:
+//   • inside this composer's root, or our ask-user options → ours;
+//   • inside another composer's root, or its ask-user options → theirs;
+//   • in any other text field → that field's (it may be closing its own menu,
+//     and typing there says nothing about this composer's generation);
+//   • anywhere else — the body after a click on chrome, a button, the
+//     transcript — is unclaimed, and an unclaimed Escape stops the generation
+//     the way it always has.
+// Stricter than isEventForComposer above, which lets keys from another
+// composer's non-editable chrome through — ask-user wants those keys to keep
+// flowing after focus drops to the body, but "stop" is destructive, so here
+// any other composer's territory is off limits.
+export const isEscapeForComposer = (
+  event: KeyboardEvent,
+  rootElement: HTMLElement | null,
+  optionsElement: HTMLElement | null,
+) => {
+  const target = event.target;
+  // Dispatched on the document or window itself: nobody in particular.
+  if (!(target instanceof Element)) return true;
+  // Options first: a Panel may have portaled them out of any root.
+  const optionsHost = target.closest<HTMLElement>("[data-ask-user-options]");
+  if (optionsHost) return optionsHost === optionsElement;
+  // The nearest root, not mere containment, so a composer nested inside
+  // another's root still owns its own keystrokes.
+  const composerHost = target.closest<HTMLElement>("[data-composer-root]");
+  if (composerHost) return composerHost === rootElement;
+  return target.closest(EDITABLE_SELECTOR) === null;
 };
 
 type AskUserKeydownDeps = {
@@ -296,6 +335,7 @@ export const createComposerStore = (): ComposerStore => {
 
   // Imperative refs co-located with the store; not reactive.
   const containerRef: RefObject<HTMLElement | null> = { current: null };
+  const rootRef: RefObject<HTMLElement | null> = { current: null };
   const optionsRef: RefObject<AskUserOptionsHandle | null> = { current: null };
   const fileInputRef: RefObject<HTMLInputElement | null> = { current: null };
   const globalDropRef: RefObject<boolean> = { current: false };
@@ -603,6 +643,7 @@ export const createComposerStore = (): ComposerStore => {
     controller,
     registerEditor,
     containerRef,
+    rootRef,
     attachmentConfigRef,
     submitAnswersRef,
     commandSelectRef,

@@ -119,6 +119,14 @@ The surface is non-modal throughout: no backdrop, no scroll lock, no focus
 trap, and no dismissal on outside press. A chat dock is something you work
 *behind*.
 
+Escape closes it, but only an Escape nothing else has used. The listener sits
+on the window, so it hears the key last, and it skips any event that is already
+`defaultPrevented` — the contract every Escape handler inside the panel relies
+on. A composer stopping a reply, a command list closing, a menu anywhere on the
+page: each claims its press with `preventDefault()`, and the panel stays. Send
+a message in the demo and press Escape twice — the first press stops the reply,
+the second closes the dock.
+
 `Positioner` owns the movement and `Popup` owns the appearance, so the element
 being animated is never the element being moved. Until the first placement
 lands the surface withholds paint rather than showing at 0,0 — otherwise the
@@ -223,7 +231,7 @@ export const keys = [
   { keys: "Arrow keys", description: "Move focus along the strip, following its orientation." },
   { keys: "Enter / Space", description: "Open the focused tab." },
   { keys: "Delete / Backspace", description: "Close the focused tab — only inside a Tabs.List, and the keyboard equivalent of the × beside it." },
-  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape. From inside the panel, focus returns to its tab." },
+  { keys: "Escape", description: "Close the open panel. The one key bound on the window rather than the strip, since the panel may be portaled away from it — turn it off with dismissOnEscape. An Escape something else already handled with preventDefault() is left alone, so a composer stopping or a menu closing inside the panel does not close it too. From inside the panel, focus returns to its tab." },
 ];
 
 <KeysTable rows={keys} />
@@ -256,7 +264,7 @@ export const rootProps = [
   { name: "loop", type: "boolean", default: "true", description: "Wrap at the ends of the strip." },
   { name: "activateOnFocus", type: "boolean", default: "false", description: "Select as focus moves, instead of on activation." },
   { name: "disabled", type: "boolean", default: "false", description: "Disable the whole collection." },
-  { name: "dismissOnEscape", type: "boolean", default: "true", description: "Escape closes the open panel." },
+  { name: "dismissOnEscape", type: "boolean", default: "true", description: "Escape closes the open panel, unless something already handled it (event.defaultPrevented)." },
   { name: "store", type: "TabsStore", description: "An explicit Tabs.createStore() handle. Must be stable for the Root's lifetime." },
 ];
 

@@ -4,7 +4,7 @@ import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Tabs, useTabs } from "@intentface/chat/tabs";
 import { Thread } from "@intentface/chat/thread";
-import { type ComponentProps, useState } from "react";
+import { type ComponentProps, useRef, useState } from "react";
 
 /*
  * A chat dock in the corner of a page. The same Root, List and Viewport as the
@@ -22,6 +22,10 @@ import { type ComponentProps, useState } from "react";
  * is not a descendant of it. That is what the handle is for: state a command
  * palette or a keyboard shortcut elsewhere on the page can reach. Anything
  * inside the Root reads it through `useTabs` instead.
+ *
+ * A reply takes a moment to arrive, so Escape has two layers to peel: the
+ * first press stops the reply (the composer claims it with preventDefault),
+ * and only the next one closes the dock.
  */
 const dockStore = Tabs.createStore();
 
@@ -88,23 +92,35 @@ export const Anchored = () => {
 
   const title = (id: string) => (id === DRAFT ? "New chat" : (chats[id]?.name ?? id));
 
-  const reply = (id: string, text: string) =>
+  // The chat whose reply is on its way, standing in for a model streaming one.
+  const [generating, setGenerating] = useState<string | null>(null);
+  const pendingReply = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const append = (id: string, turn: Turn) =>
     setChats((current) => {
       const chat = current[id];
       if (!chat) return current;
-      const next = chat.turns.length;
-      return {
-        ...current,
-        [id]: {
-          ...chat,
-          turns: [
-            ...chat.turns,
-            { id: `${next}-u`, role: "user", text },
-            { id: `${next}-a`, role: "assistant", text: REPLIES[next % REPLIES.length] as string },
-          ],
-        },
-      };
+      return { ...current, [id]: { ...chat, turns: [...chat.turns, turn] } };
     });
+
+  const reply = (id: string, text: string) => {
+    const next = chats[id]?.turns.length ?? 0;
+    append(id, { id: `${next}-u`, role: "user", text });
+    setGenerating(id);
+    pendingReply.current = setTimeout(() => {
+      append(id, {
+        id: `${next}-a`,
+        role: "assistant",
+        text: REPLIES[next % REPLIES.length] as string,
+      });
+      setGenerating(null);
+    }, 2500);
+  };
+
+  const stop = () => {
+    clearTimeout(pendingReply.current);
+    setGenerating(null);
+  };
 
   /** A chat the visitor started is titled by what they typed. */
   const start = (text: string) => {
@@ -221,7 +237,13 @@ export const Anchored = () => {
                       ) : (
                         // Keyed so a different chat gets a fresh scroll position
                         // and an empty composer, rather than inheriting the last one's.
-                        <ChatThread key={id} chat={chats[id]} onSend={(text) => reply(id, text)} />
+                        <ChatThread
+                          key={id}
+                          chat={chats[id]}
+                          onSend={(text) => reply(id, text)}
+                          generating={generating === id}
+                          onStop={stop}
+                        />
                       )
                     }
                   </Tabs.Viewport>
@@ -280,9 +302,13 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
 const ChatThread = ({
   chat,
   onSend,
+  generating,
+  onStop,
 }: {
   chat: Chat | undefined;
   onSend: (text: string) => void;
+  generating: boolean;
+  onStop: () => void;
 }) => {
   if (!chat) return null;
 
@@ -313,7 +339,12 @@ const ChatThread = ({
         </div>
       </Thread.Viewport>
       <Thread.Composer className="absolute inset-x-0 bottom-0 z-2 w-full p-2 pt-0">
-        <DockComposer placeholder="Reply…" onSubmit={onSend} />
+        <DockComposer
+          placeholder="Reply…"
+          onSubmit={onSend}
+          generating={generating}
+          onStop={onStop}
+        />
       </Thread.Composer>
     </Thread.Root>
   );
@@ -343,9 +374,13 @@ const NewChat = ({ onStart }: { onStart: (text: string) => void }) => (
 const DockComposer = ({
   placeholder,
   onSubmit,
+  generating = false,
+  onStop,
 }: {
   placeholder: string;
   onSubmit: (text: string) => void;
+  generating?: boolean;
+  onStop?: () => void;
 }) => {
   const handleSubmit = (data: ComposerSubmitData) => {
     if (data.kind !== "message") return;
@@ -363,11 +398,15 @@ const DockComposer = ({
           />
         </Composer.Textarea>
         <Composer.Actions className="flex justify-end p-1.5 pt-0">
+          {/* While a reply is coming the button stops it — and so does Escape,
+              typed here or nowhere in particular. */}
           <Composer.Submit
-            aria-label="Send"
+            isGenerating={generating}
+            onStop={onStop}
+            aria-label={generating ? "Stop" : "Send"}
             className="flex size-7 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-30 dark:bg-[#fcfcfc] dark:text-[#111111]"
           >
-            <ArrowUpIcon />
+            {generating ? <StopIcon /> : <ArrowUpIcon />}
           </Composer.Submit>
         </Composer.Actions>
       </Composer.Container>
@@ -430,6 +469,12 @@ const ArrowUpIcon = (props: ComponentProps<"svg">) => (
     {...props}
   >
     <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
+  </svg>
+);
+
+const StopIcon = (props: ComponentProps<"svg">) => (
+  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden="true" {...props}>
+    <rect x="3" y="3" width="10" height="10" rx="1.5" />
   </svg>
 );
 

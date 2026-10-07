@@ -11,7 +11,7 @@ import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping } from "../internal/state-mappings";
 import { useAsRef } from "./internals";
-import { useComposer } from "./store";
+import { isEscapeForComposer, useComposer, useComposerContextStore } from "./store";
 
 // ---------------------------------------------------------------------------
 // Context window — content-driven strip, open while it has content and no panel
@@ -88,8 +88,9 @@ export type ComposerSubmitState = {
 
 /**
  * Send↔stop behavior: auto-disables while empty or submitting, flips the
- * button type while generating, and aborts on Escape (unless something closer
- * — the command list — already handled it).
+ * button type while generating, and aborts on Escape typed into this composer
+ * or into nothing in particular (unless something closer — the command list —
+ * already handled it).
  */
 export const useComposerSubmit = ({
   isGenerating = false,
@@ -101,18 +102,28 @@ export const useComposerSubmit = ({
   const attachments = useComposer((composer) => composer.attachments);
 
   // Esc aborts while generating — unless something already handled it (the
-  // command-list closes on Esc and preventDefaults first, so it wins).
+  // command-list closes on Esc and preventDefaults first, so it wins), and
+  // only when the Escape is this composer's to take: typed into it, or into
+  // nothing in particular, never into another composer or someone else's
+  // text field (isEscapeForComposer has the full rule). The listener stays on
+  // the document rather than the root so an Escape after focus dropped to the
+  // body still stops. preventDefault marks the Escape as spent: a floating
+  // surface around the composer (Tabs.Root's dismissOnEscape) leaves it alone,
+  // and with two composers generating, one unclaimed Escape stops one of them.
+  const store = useComposerContextStore();
   const onStopRef = useAsRef(onStop);
   useEffect(() => {
     if (!isGenerating) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
+      const optionsElement = store.getSnapshot().askUser.optionsRef.current?.getElement() ?? null;
+      if (!isEscapeForComposer(event, store.rootRef.current, optionsElement)) return;
       event.preventDefault();
       onStopRef.current?.();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isGenerating]);
+  }, [isGenerating, store]);
 
   const autoDisabled =
     disabled ?? ((!hasContent && attachments.items.length === 0) || isSubmitting);

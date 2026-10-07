@@ -5,7 +5,7 @@
 // Composer.createStore() handle via the store prop, or an instance created for
 // this mount. Every bare <Composer> is fully isolated.
 
-import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react";
+import { useEffect, useId, useMemo, useSyncExternalStore } from "react";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
 import { useRenderElement } from "../internal/render/useRenderElement";
@@ -74,8 +74,6 @@ export const ComposerRoot = ({
     return { store: resolved, ownsStore: !storeProp };
   }).current;
 
-  const formRef = useRef<HTMLFormElement | null>(null);
-
   const onSubmitRef = useAsRef(onSubmit);
 
   // Register this mount on the store: answers submit through this mount's
@@ -114,7 +112,7 @@ export const ComposerRoot = ({
   const { getRegisteredPrefixes } = useCommandRegistry(commands);
 
   useDragDropFiles({
-    rootRef: formRef,
+    rootRef: store.rootRef,
     globalDropRef,
     onFiles: addAttachments,
     setDragging: store.setDragging,
@@ -172,7 +170,7 @@ export const ComposerRoot = ({
     { className, render, style },
     {
       state: { submitting: isSubmitting, dragging: isDragging },
-      ref: formRef,
+      ref: store.rootRef,
       props: [{ "data-composer-root": "", onSubmit: handleFormSubmit }, elementProps],
     },
   );

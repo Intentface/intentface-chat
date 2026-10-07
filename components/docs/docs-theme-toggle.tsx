@@ -8,7 +8,8 @@ import { useInterfaceTheme } from "@/hooks/use-interface-theme";
  * A single button rather than a three-way control: the sidebar footer has room
  * for one affordance, and "system" is the starting mode, not a destination
  * anyone picks from here. It flips whichever mode is resolved, so the first
- * press always changes what you see.
+ * press always changes what you see. The server can't know that mode, so the
+ * label is fixed and the icon follows the `.dark` class rather than state.
  */
 export const DocsThemeToggle = () => {
   const { resolvedMode, setMode } = useInterfaceTheme();
@@ -18,11 +19,12 @@ export const DocsThemeToggle = () => {
     <IconButton
       variant="ghost"
       size="sm"
-      aria-label={`Switch to ${next} theme`}
+      aria-label="Toggle theme"
       onClick={() => setMode(next)}
       className="rounded-md"
     >
-      {resolvedMode === "dark" ? <Moon /> : <Sun />}
+      <Moon className="hidden dark:block" />
+      <Sun className="dark:hidden" />
     </IconButton>
   );
 };

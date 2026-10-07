@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
+import { SiteShell } from "@/components/site-shell";
+import { source } from "@/lib/docs/source";
 import "streamdown/styles.css";
 import "./globals.css";
 const inter = Inter({
@@ -43,7 +45,9 @@ export default function RootLayout({
         className={`${inter.variable} ${ioskeleyMono.variable} antialiased`}
         suppressHydrationWarning
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <SiteShell tree={source.pageTree}>{children}</SiteShell>
+        </Providers>
       </body>
     </html>
   );

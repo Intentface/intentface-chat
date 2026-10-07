@@ -588,6 +588,22 @@
     calc(100% - 32px) 100%;
 }
 
+/* Switching between the docs and the playground cross-dissolves the viewport (a
+   ViewTransition in SiteShell). The root swaps live rather than fading a frozen
+   snapshot, so the sidebar's own slide plays through. */
+/* biome-ignore lint/correctness/noUnknownTypeSelector: `root` is a view-transition name, not an element. */
+::view-transition-old(root) {
+  display: none;
+}
+/* biome-ignore lint/correctness/noUnknownTypeSelector: `root` is a view-transition name, not an element. */
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(site-viewport) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* Docs code blocks: a line-number gutter on multi-line blocks. */
 [data-code-block] pre[data-line-numbers] code {
   counter-reset: line;

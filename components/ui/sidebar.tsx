@@ -1,16 +1,19 @@
 "use client";
 
 import { useRender } from "@base-ui/react/use-render";
-import { SHELL_SIDEBAR_WIDTH_VAR, Shell, useShell } from "@intentface/chat/shell";
+import { Shell, useShell } from "@intentface/chat/shell";
 import { PanelLeft } from "@keyline-icons/react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type ComponentProps,
-  type CSSProperties,
   createContext,
+  type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Drawer from "@/components/ui/drawer";
@@ -18,7 +21,6 @@ import Input from "@/components/ui/input";
 import Separator from "@/components/ui/separator";
 import Tooltip from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { writeSidebarLayout } from "@/lib/sidebar-cookie";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./icon-button";
 
@@ -72,17 +74,13 @@ const useSidebar = () => {
 
 const SidebarProvider = ({
   defaultOpen = true,
-  width,
   open,
   onOpenChange,
   className,
   children,
   ...props
 }: ComponentProps<"div"> & {
-  /** Read it from the request with `readSidebarLayout` so the first paint is already right. */
   defaultOpen?: boolean;
-  /** A restored width, applied as the custom property the sidebar's `width` reads. */
-  width?: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) => {
@@ -99,20 +97,8 @@ const SidebarProvider = ({
       <Shell.Root
         defaultOpen={defaultOpen}
         open={open}
-        // Where the layout is kept is this app's business, not the package's —
-        // see lib/sidebar-cookie.
-        onOpenChange={(next) => {
-          onOpenChange?.(next);
-          writeSidebarLayout({ open: next });
-        }}
+        onOpenChange={onOpenChange}
         data-slot="sidebar-wrapper"
-        // A restored width goes back the way the grip writes it: the
-        // custom property. There is no prop for it, because the width is CSS's.
-        style={
-          width === undefined
-            ? undefined
-            : ({ [SHELL_SIDEBAR_WIDTH_VAR]: `${width}px` } as CSSProperties)
-        }
         className={cn("group/sidebar-wrapper flex min-h-svh w-full bg-base-bg", className)}
         {...props}
       >
@@ -204,7 +190,6 @@ const SidebarRoot = ({
       {/* Shell.Sidebar brings the hotspot hold/release pointer handlers with it. */}
       <Shell.Sidebar
         side={side}
-        onResize={(next) => writeSidebarLayout({ width: next })}
         data-slot="sidebar"
         className={cn(
           "fixed z-30 hidden w-(--sidebar-width) border border-transparent bg-base-bg overflow-hidden transition-[left,right,top,bottom,border-color,border-radius,box-shadow] duration-150 ease-linear motion-reduce:transition-none md:flex",
@@ -251,7 +236,12 @@ const SidebarTrigger = ({ className, onClick, ...props }: ComponentProps<"button
     <IconButton
       data-slot="sidebar-trigger"
       variant="ghost"
-      className={cn("rounded-md", className)}
+      // Shell.Trigger sets aria-expanded, which ghost paints as a pressed menu
+      // trigger; an open sidebar isn't "pressed", so only hover tints it.
+      className={cn(
+        "rounded-md aria-expanded:not-hover:bg-transparent aria-expanded:not-hover:text-ink-secondary",
+        className,
+      )}
       {...props}
     >
       <PanelLeft />
@@ -345,13 +335,121 @@ const SidebarSeparator = ({ className, ...props }: ComponentProps<typeof Separat
   );
 };
 
+/**
+ * Navs that replace one another in the sidebar, shaped like Tabs: the root's
+ * `value` names the view shown and each `Sidebar.View` declares its own. A view
+ * declared later slides in from the right, an earlier one from the left.
+ */
+type SidebarViewsDirection = "forward" | "backward";
+
+type SidebarViewsState = {
+  value: string;
+  direction: SidebarViewsDirection;
+  register: (value: string) => void;
+};
+
+const SidebarViewsContext = createContext<SidebarViewsState | null>(null);
+
+const useSidebarViews = () => {
+  const context = useContext(SidebarViewsContext);
+  if (!context) throw new Error("Sidebar.View must be rendered inside Sidebar.Views");
+  return context;
+};
+
+const SidebarViews = ({
+  value,
+  className,
+  ...props
+}: ComponentProps<"div"> & {
+  /** The `value` of the view on screen. */
+  value: string;
+}) => {
+  // Declaration order, as the views first render: there is no list to read it from.
+  const order = useRef<string[]>([]);
+  const [shown, setShown] = useState<{ value: string; direction: SidebarViewsDirection }>({
+    value,
+    direction: "forward",
+  });
+
+  // Decided while rendering, so the leaving and arriving views agree on the direction.
+  if (shown.value !== value) {
+    const from = order.current.indexOf(shown.value);
+    const to = order.current.indexOf(value);
+    setShown({ value, direction: to < from ? "backward" : "forward" });
+  }
+
+  const register = useCallback((view: string) => {
+    if (!order.current.includes(view)) order.current.push(view);
+  }, []);
+
+  return (
+    <SidebarViewsContext.Provider value={{ value, direction: shown.direction, register }}>
+      <div
+        data-slot="sidebar-views"
+        // Bleeds 4px each side like Content, so raised rows keep their ring.
+        className={cn("relative -mx-1 min-h-0 flex-1 overflow-hidden", className)}
+        {...props}
+      />
+    </SidebarViewsContext.Provider>
+  );
+};
+
+const VIEW_TRANSITION = { duration: 0.22, ease: [0.22, 1, 0.36, 1] } as const;
+
+const SidebarView = ({
+  value,
+  className,
+  children,
+}: {
+  value: string;
+  className?: string;
+  children?: ReactNode;
+}) => {
+  const { value: shown, direction, register } = useSidebarViews();
+  register(value);
+
+  // Reduced motion cross-fades instead: a lateral slide is what it asks to avoid.
+  const reduceMotion = useReducedMotion();
+  const offset = (side: 1 | -1) =>
+    reduceMotion ? { opacity: 0 } : { opacity: 0, x: `${side * 100}%` };
+  const variants = {
+    enter: (to: SidebarViewsDirection) => offset(to === "forward" ? 1 : -1),
+    shown: { opacity: 1, x: 0 },
+    exit: (to: SidebarViewsDirection) => offset(to === "forward" ? -1 : 1),
+  };
+
+  return (
+    // Each view owns its presence, so the leaving one still reads the direction.
+    <AnimatePresence custom={direction} initial={false}>
+      {shown === value ? (
+        <motion.div
+          data-slot="sidebar-view"
+          custom={direction}
+          variants={variants}
+          initial="enter"
+          animate="shown"
+          exit="exit"
+          transition={VIEW_TRANSITION}
+          className={cn("absolute inset-0 flex flex-col gap-4 px-1", className)}
+        >
+          {children}
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+  );
+};
+
 const SidebarContent = ({ className, ...props }: ComponentProps<"div">) => {
   return (
     <div
       data-slot="sidebar-content"
       // The scroller clips, so it bleeds 4px each side: raised rows keep their
-      // ring and shadow, and stay aligned with the header.
-      className={cn("-mx-1 flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-1 pb-1", className)}
+      // ring and shadow, and stay aligned with the header. Its edges fade where it
+      // can still scroll.
+      className={cn(
+        "scroll-mask-y -mx-1 flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-1 pb-1",
+        className,
+      )}
       {...props}
     />
   );
@@ -608,6 +706,8 @@ const Sidebar = Object.assign(SidebarRoot, {
   Provider: SidebarProvider,
   Separator: SidebarSeparator,
   Trigger: SidebarTrigger,
+  View: SidebarView,
+  Views: SidebarViews,
 });
 
 export { useSidebar, Sidebar };

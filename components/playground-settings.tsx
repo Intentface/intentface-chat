@@ -614,13 +614,18 @@ export const PlaygroundSettings = () => {
             if (event.key === "Escape" && !event.defaultPrevented) hide();
           }}
           className={cn(
-            "absolute top-3 right-3 z-20 flex w-[304px] flex-col overflow-hidden rounded-2xl bg-primary-bg shadow-card outline-none",
+            "absolute top-3 right-3 z-20 flex max-h-[calc(100%-1.5rem)] w-[304px] flex-col overflow-hidden rounded-2xl bg-primary-bg shadow-card outline-none",
             "transition-transform duration-200 ease-out motion-reduce:transition-none",
             open ? "translate-x-0" : "pointer-events-none translate-x-[calc(100%+1rem)]",
           )}
         >
-          <Tabs.Root value={activeTab} onValueChange={handleTabChange}>
-            <div className="flex items-center gap-1.5 p-2 shadow-[inset_0_-1px_0_color-mix(in_oklab,var(--color-ink-primary)_6%,transparent)]">
+          {/* Capped at the viewport: the tab bar stays, the panel below scrolls. */}
+          <Tabs.Root
+            value={activeTab}
+            onValueChange={handleTabChange}
+            className="flex min-h-0 flex-col"
+          >
+            <div className="flex shrink-0 items-center gap-1.5 p-2 shadow-[inset_0_-1px_0_color-mix(in_oklab,var(--color-ink-primary)_6%,transparent)]">
               <Tabs.List className="flex flex-1 gap-0.5 rounded-full bg-base-bg p-0.5">
                 {PLAYGROUND_TABS.map((tab) => (
                   <Tabs.Tab
@@ -644,7 +649,7 @@ export const PlaygroundSettings = () => {
               <motion.div
                 initial={false}
                 animate={{ height: height || "auto" }}
-                className="overflow-hidden"
+                className="scroll-mask-y min-h-0 overflow-y-auto overscroll-contain"
               >
                 <div ref={panelRef} className="relative">
                   <Tabs.Panel value={activeTab}>

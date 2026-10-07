@@ -2,18 +2,10 @@
 
 import { Sidebar } from "@/components/ui/sidebar";
 
-// Mouse users expand via the edge-hover hotspot (trigger lives inside the
-// sidebar); this header trigger stays for the mobile drawer and iPad-class
-// touch screens, where there's no hover to summon the hotspot.
-export const Header = () => {
-  return (
-    <header
-      data-slot="header"
-      className="absolute top-0 right-0 left-0 flex items-center p-2 md:pointer-fine:hidden"
-    >
-      <div className="z-2 flex w-full items-center justify-between">
-        <Sidebar.Trigger />
-      </div>
-    </header>
-  );
-};
+// The sidebar's collapse button, at the same spot as in the docs top bar: 12px
+// from the top and left, like the settings gear on the right.
+export const Header = () => (
+  <header data-slot="header" className="absolute top-0 left-0 z-20 flex h-13 items-center pl-3">
+    <Sidebar.Trigger className="size-7" />
+  </header>
+);

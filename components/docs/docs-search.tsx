@@ -253,7 +253,7 @@ export const DocsSearch = ({ suggestions = [] }: { suggestions?: SearchSuggestio
             variant="ghost"
             aria-label="Search docs"
             aria-keyshortcuts="Meta+K Control+K"
-            className="size-7 rounded-md"
+            className="size-7 rounded-full"
           >
             <Search />
           </IconButton>

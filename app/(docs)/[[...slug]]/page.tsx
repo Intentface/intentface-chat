@@ -24,13 +24,13 @@ export default async function DocsPage(props: PageProps) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 isolate flex h-13 shrink-0 items-center justify-between gap-3 pr-4 pl-3 md:pl-6">
+      <header className="sticky top-0 z-10 isolate flex h-13 shrink-0 items-center justify-between gap-3 px-3">
         {/* Content dissolves under the bar instead of cutting off: a progressive
-            blur plus a fade that reach past the bar's bottom edge. */}
+            blur plus a fade. */}
         <ProgressiveBlur
           direction="top"
           blurIntensity={0.5}
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-20 bg-linear-to-b from-40% from-secondary-bg to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-14 bg-linear-to-b from-secondary-bg to-transparent"
         />
         <div className="flex min-w-0 items-center gap-2">
           <DocsTopBarTrigger />

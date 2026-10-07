@@ -158,6 +158,17 @@ export const ComposerRoot = ({
     });
   };
 
+  // Escape stops generating. React bubbles keys from portaled parts (a positioned
+  // Panel) here too; a consumer's onKeyDown can skip it with preventPrimitiveHandler().
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    const stopGenerating = store.stopGeneratingRef.current;
+    if (event.key !== "Escape" || event.defaultPrevented || !stopGenerating) return;
+    // While a question is open, Escape dismisses its step instead.
+    if (store.getSnapshot().askUser.questions?.length) return;
+    event.preventDefault();
+    stopGenerating();
+  };
+
   const internalsValue = useMemo<ComposerInternalsValue>(
     () => ({
       commands,
@@ -173,7 +184,10 @@ export const ComposerRoot = ({
     {
       state: { submitting: isSubmitting, dragging: isDragging },
       ref: formRef,
-      props: [{ "data-composer-root": "", onSubmit: handleFormSubmit }, elementProps],
+      props: [
+        { "data-composer-root": "", onSubmit: handleFormSubmit, onKeyDown: handleKeyDown },
+        elementProps,
+      ],
     },
   );
 

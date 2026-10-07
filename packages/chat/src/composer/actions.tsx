@@ -11,7 +11,7 @@ import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
 import { openStateMapping } from "../internal/state-mappings";
 import { useAsRef } from "./internals";
-import { useComposer } from "./store";
+import { useComposer, useComposerContextStore } from "./store";
 
 // ---------------------------------------------------------------------------
 // Context window — content-driven strip, open while it has content and no panel
@@ -88,8 +88,8 @@ export type ComposerSubmitState = {
 
 /**
  * Send↔stop behavior: auto-disables while empty or submitting, flips the
- * button type while generating, and aborts on Escape (unless something closer
- * — the command list — already handled it).
+ * button type while generating, and aborts on Escape inside this composer
+ * (unless something closer — the command list — already handled it).
  */
 export const useComposerSubmit = ({
   isGenerating = false,
@@ -100,19 +100,20 @@ export const useComposerSubmit = ({
   const isSubmitting = useComposer((composer) => composer.isSubmitting);
   const attachments = useComposer((composer) => composer.attachments);
 
-  // Esc aborts while generating — unless something already handled it (the
-  // command-list closes on Esc and preventDefaults first, so it wins).
+  // While generating, hand the stop to Composer.Root, which calls it on Escape.
+  const store = useComposerContextStore();
   const onStopRef = useAsRef(onStop);
+  // Without an onStop there is nothing to stop, so Escape stays free for surfaces around it.
+  const hasOnStop = onStop !== undefined;
   useEffect(() => {
-    if (!isGenerating) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      event.preventDefault();
-      onStopRef.current?.();
+    if (!isGenerating || !hasOnStop) return;
+    const stopGenerating = () => onStopRef.current?.();
+    store.stopGeneratingRef.current = stopGenerating;
+    return () => {
+      if (store.stopGeneratingRef.current !== stopGenerating) return;
+      store.stopGeneratingRef.current = null;
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isGenerating]);
+  }, [isGenerating, hasOnStop, store]);
 
   const autoDisabled =
     disabled ?? ((!hasContent && attachments.items.length === 0) || isSubmitting);

@@ -275,7 +275,8 @@ export const TabsRoot = <Value extends string = string>({
     if (!dismissOnEscape) return;
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       const { value } = store.getSnapshot();
-      if (event.key !== "Escape" || value === null) return;
+      // The window hears Escape last, so one handled inside (a composer stopping) is spent.
+      if (event.key !== "Escape" || event.defaultPrevented || value === null) return;
       event.preventDefault();
       // From inside the popup, focus would drop to the body as it closes; it goes back to the tab.
       const fromPopup = store.popupRef.current?.contains(document.activeElement) ?? false;

@@ -241,6 +241,24 @@ describe("dismissal", () => {
     expect(getByTestId("tab-a").getAttribute("aria-expanded")).toBe("false");
   });
 
+  test("an Escape something else already handled leaves it open", async () => {
+    const { getByTestId } = render(<Dock />);
+
+    act(() => void fireEvent.click(getByTestId("tab-a")));
+    await settle();
+
+    // A menu elsewhere on the page closing on this press, say.
+    const claim = (event: KeyboardEvent) => event.preventDefault();
+    document.addEventListener("keydown", claim);
+    act(() => void fireEvent.keyDown(document.body, { key: "Escape" }));
+    document.removeEventListener("keydown", claim);
+    expect(getByTestId("tab-a").getAttribute("aria-expanded")).toBe("true");
+
+    // The next press is unclaimed, and closes it.
+    act(() => void fireEvent.keyDown(document.body, { key: "Escape" }));
+    expect(getByTestId("tab-a").getAttribute("aria-expanded")).toBe("false");
+  });
+
   test("an outside press deliberately does not — this is a surface you work behind", async () => {
     const { getByTestId } = render(<Dock />);
 

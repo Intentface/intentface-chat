@@ -181,6 +181,8 @@ export type ComposerStore = {
   // Co-located refs the mounted Composer wires up at runtime.
   attachmentConfigRef: RefObject<AttachmentStoreConfig>;
   submitAnswersRef: RefObject<((answers: ComposerAnswerEntry[]) => void) | null>;
+  // The mounted Submit's stop while generating; Composer.Root calls it on Escape.
+  stopGeneratingRef: RefObject<(() => void) | null>;
   // Invokes the active list's current selection. Registered by the mounted
   // CommandList via a callback ref (commit-time), not an effect.
   commandSelectRef: RefObject<(() => void) | null>;
@@ -315,6 +317,7 @@ export const createComposerStore = (): ComposerStore => {
     current: null,
   };
   const commandSelectRef: RefObject<(() => void) | null> = { current: null };
+  const stopGeneratingRef: RefObject<(() => void) | null> = { current: null };
 
   // Canonical machine states; the snapshot mirrors them on every update.
   let attachmentState = INITIAL_ATTACHMENT_STATE;
@@ -605,6 +608,7 @@ export const createComposerStore = (): ComposerStore => {
     containerRef,
     attachmentConfigRef,
     submitAnswersRef,
+    stopGeneratingRef,
     commandSelectRef,
   };
 };

@@ -4,7 +4,7 @@ import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Tabs, useTabs } from "@intentface/chat/tabs";
 import { Thread } from "@intentface/chat/thread";
-import { type ComponentProps, useState } from "react";
+import { type ComponentProps, type KeyboardEvent, useRef, useState } from "react";
 
 /*
  * A chat dock in the corner of a page. The same Root, List and Viewport as the
@@ -22,6 +22,9 @@ import { type ComponentProps, useState } from "react";
  * is not a descendant of it. That is what the handle is for: state a command
  * palette or a keyboard shortcut elsewhere on the page can reach. Anything
  * inside the Root reads it through `useTabs` instead.
+ *
+ * A reply takes a moment to arrive. Escape anywhere in the chat stops it first,
+ * and only the next Escape closes the dock.
  */
 const dockStore = Tabs.createStore();
 
@@ -88,23 +91,48 @@ export const Anchored = () => {
 
   const title = (id: string) => (id === DRAFT ? "New chat" : (chats[id]?.name ?? id));
 
-  const reply = (id: string, text: string) =>
+  // Each chat's reply on its way, standing in for a model streaming one.
+  const [generating, setGenerating] = useState<ReadonlySet<string>>(new Set());
+  const pendingReplies = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+
+  const append = (id: string, turn: Turn) =>
     setChats((current) => {
       const chat = current[id];
       if (!chat) return current;
-      const next = chat.turns.length;
-      return {
-        ...current,
-        [id]: {
-          ...chat,
-          turns: [
-            ...chat.turns,
-            { id: `${next}-u`, role: "user", text },
-            { id: `${next}-a`, role: "assistant", text: REPLIES[next % REPLIES.length] as string },
-          ],
-        },
-      };
+      return { ...current, [id]: { ...chat, turns: [...chat.turns, turn] } };
     });
+
+  const settle = (id: string) => {
+    pendingReplies.current.delete(id);
+    setGenerating((current) => {
+      const remaining = new Set(current);
+      remaining.delete(id);
+      return remaining;
+    });
+  };
+
+  const reply = (id: string, text: string) => {
+    const next = chats[id]?.turns.length ?? 0;
+    append(id, { id: `${next}-u`, role: "user", text });
+    clearTimeout(pendingReplies.current.get(id));
+    setGenerating((current) => new Set(current).add(id));
+    pendingReplies.current.set(
+      id,
+      setTimeout(() => {
+        append(id, {
+          id: `${next}-a`,
+          role: "assistant",
+          text: REPLIES[next % REPLIES.length] as string,
+        });
+        settle(id);
+      }, 2500),
+    );
+  };
+
+  const stop = (id: string) => {
+    clearTimeout(pendingReplies.current.get(id));
+    settle(id);
+  };
 
   /** A chat the visitor started is titled by what they typed. */
   const start = (text: string) => {
@@ -221,7 +249,13 @@ export const Anchored = () => {
                       ) : (
                         // Keyed so a different chat gets a fresh scroll position
                         // and an empty composer, rather than inheriting the last one's.
-                        <ChatThread key={id} chat={chats[id]} onSend={(text) => reply(id, text)} />
+                        <ChatThread
+                          key={id}
+                          chat={chats[id]}
+                          onSend={(text) => reply(id, text)}
+                          generating={generating.has(id)}
+                          onStop={() => stop(id)}
+                        />
                       )
                     }
                   </Tabs.Viewport>
@@ -280,18 +314,30 @@ const DockHeader = ({ title }: { title: (id: string) => string }) => {
 const ChatThread = ({
   chat,
   onSend,
+  generating,
+  onStop,
 }: {
   chat: Chat | undefined;
   onSend: (text: string) => void;
+  generating: boolean;
+  onStop: () => void;
 }) => {
   if (!chat) return null;
 
   // `bottom` rather than the default `follow`: it is the one mode that reserves
   // no viewport for the last turn. In a dock this small the reserve would push
   // every earlier turn out of sight, so each chat would look like one exchange.
+  // Escape in the transcript stops the reply too; the composer handles its own first.
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Escape" || event.defaultPrevented || !generating) return;
+    event.preventDefault();
+    onStop();
+  };
+
   return (
     <Thread.Root
       autoScroll="bottom"
+      onKeyDown={handleKeyDown}
       className="relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:0.75rem]"
     >
       <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto]">
@@ -313,7 +359,12 @@ const ChatThread = ({
         </div>
       </Thread.Viewport>
       <Thread.Composer className="absolute inset-x-0 bottom-0 z-2 w-full p-2 pt-0">
-        <DockComposer placeholder="Reply…" onSubmit={onSend} />
+        <DockComposer
+          placeholder="Reply…"
+          onSubmit={onSend}
+          generating={generating}
+          onStop={onStop}
+        />
       </Thread.Composer>
     </Thread.Root>
   );
@@ -343,9 +394,13 @@ const NewChat = ({ onStart }: { onStart: (text: string) => void }) => (
 const DockComposer = ({
   placeholder,
   onSubmit,
+  generating = false,
+  onStop,
 }: {
   placeholder: string;
   onSubmit: (text: string) => void;
+  generating?: boolean;
+  onStop?: () => void;
 }) => {
   const handleSubmit = (data: ComposerSubmitData) => {
     if (data.kind !== "message") return;
@@ -363,11 +418,14 @@ const DockComposer = ({
           />
         </Composer.Textarea>
         <Composer.Actions className="flex justify-end p-1.5 pt-0">
+          {/* While a reply is coming, the button and Escape in the composer stop it. */}
           <Composer.Submit
-            aria-label="Send"
+            isGenerating={generating}
+            onStop={onStop}
+            aria-label={generating ? "Stop" : "Send"}
             className="flex size-7 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-30 dark:bg-[#fcfcfc] dark:text-[#111111]"
           >
-            <ArrowUpIcon />
+            {generating ? <StopIcon /> : <ArrowUpIcon />}
           </Composer.Submit>
         </Composer.Actions>
       </Composer.Container>
@@ -430,6 +488,12 @@ const ArrowUpIcon = (props: ComponentProps<"svg">) => (
     {...props}
   >
     <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
+  </svg>
+);
+
+const StopIcon = (props: ComponentProps<"svg">) => (
+  <svg viewBox="0 0 16 16" fill="currentColor" className="size-3" aria-hidden="true" {...props}>
+    <rect x="3" y="3" width="10" height="10" rx="1.5" />
   </svg>
 );
 

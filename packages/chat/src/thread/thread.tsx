@@ -461,19 +461,28 @@ const useThreadScroll = (
     // A resize alone can't say whether content grew or the viewport did: the
     // reserve tracks --thread-turn-area, so a container animating open resizes
     // `content` every frame. Only a viewport change moves the scroller's own
-    // box — re-pin those instantly instead of smooth-scrolling a moving target
-    // for the length of the animation.
+    // box — re-pin those instantly instead of smooth-scrolling a moving target.
+    //
+    // The whole frame of a viewport change counts as resized: the reserve
+    // follows the box, so `content` resizes a pass later in the same frame,
+    // when the box already reads as unchanged. The document timeline's time is
+    // fixed for a frame, observer passes included, so it names the frame.
     let viewport = readViewportBox(scrollRef.current);
+    let resizedFrame: CSSNumberish | null = null;
     const follow = () => {
+      const frame = document.timeline.currentTime;
       const previous = viewport;
       viewport = readViewportBox(scrollRef.current);
-      const resized = !sameViewportBox(previous, viewport);
+      if (!sameViewportBox(previous, viewport)) resizedFrame = frame;
+
       if (skipNextResize) {
         skipNextResize = false;
         return;
       }
       if (!followingRef.current) return;
-      scrollToBottom(resized ? "instant" : "smooth");
+
+      const isResizing = resizedFrame === frame;
+      scrollToBottom(isResizing ? "instant" : "smooth");
     };
 
     land();
@@ -482,6 +491,9 @@ const useThreadScroll = (
 
     const growth = followsStream ? new ResizeObserver(follow) : null;
     growth?.observe(content);
+    // The scroller too: a drag or window resize moves the bottom even when
+    // the content keeps its size (a last turn taller than its reserve).
+    if (scrollRef.current) growth?.observe(scrollRef.current);
 
     return () => {
       turns.disconnect();

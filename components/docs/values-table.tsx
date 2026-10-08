@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ReferenceTable } from "./reference-table";
+import { ScrollLine } from "./scroll-line";
 
 export type ValueRow = {
   value: string;
@@ -30,10 +31,7 @@ export const ValuesTable = ({ rows }: ValuesTableProps) => (
           </div>
         </td>
         <td className="p-0 align-top text-ink-body leading-5">
-          {/* One line, scrolling sideways with fading edges instead of wrapping. */}
-          <div className="scroll-mask overflow-x-auto whitespace-nowrap px-4 py-3.5 [scrollbar-width:none]">
-            {row.description}
-          </div>
+          <ScrollLine label={`${row.value}: description`}>{row.description}</ScrollLine>
         </td>
       </tr>
     ))}

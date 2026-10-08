@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ReferenceTable } from "./reference-table";
+import { ScrollLine } from "./scroll-line";
 
 export type AttributeRow = {
   attribute: string;
@@ -52,15 +53,14 @@ const AttributeTableRow = ({ row }: { row: AttributeRow }) => (
       </code>
     </td>
     <td className="p-0 align-top text-ink-body text-sm leading-5">
-      {/* One line, scrolling sideways with fading edges instead of wrapping. */}
-      <div className="scroll-mask overflow-x-auto whitespace-nowrap px-4 py-3.5 [scrollbar-width:none]">
+      <ScrollLine label={`${row.attribute}: description`}>
         {row.description}
         {row.values && (
           <code className="ml-2 rounded-[4px] bg-ink-primary/6 px-1.5 py-0.5 font-mono text-ink-body text-xs">
             {row.values}
           </code>
         )}
-      </div>
+      </ScrollLine>
     </td>
   </tr>
 );

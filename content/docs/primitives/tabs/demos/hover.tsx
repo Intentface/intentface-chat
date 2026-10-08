@@ -4,15 +4,15 @@ import { Tabs } from "@intentface/chat/tabs";
 import { useState } from "react";
 import "./hover-motion.css";
 import { BubbleIcon, FileIcon } from "./icons";
-import { Body, Conversation, TABS } from "./pages";
+import { Body, Preview, TABS } from "./pages";
 
 /*
- * A page strip where a conversation can be glanced at without leaving the page.
+ * A page strip where any tab can be glanced at without leaving the page.
  *
  * The page is this component's own state, not the tabs' selection: pressing a
  * tab opens it in the card below. The tabs' selection is only what floats.
- * Conversations open on hover and float over the page; press one and it
- * becomes the page instead.
+ * Hovering a tab floats a preview over the page, a document as a mini page and
+ * a conversation as a small chat; press one and it becomes the page instead.
  *
  * `onValueChange` tells the two apart by `eventDetails.reason`. Click into the
  * reply field and the float stays, however far the mouse wanders; Escape or
@@ -46,7 +46,7 @@ export const Hover = () => {
             return (
               <Tabs.Trigger
                 value={id}
-                openOnHover={tab?.kind === "conversation"}
+                openOnHover
                 aria-current={id === page ? "page" : undefined}
                 className={tabClass}
               >
@@ -66,7 +66,7 @@ export const Hover = () => {
         <Tabs.Portal>
           <Tabs.Positioner side="bottom" align="start" sideOffset={6}>
             <Tabs.Popup className="hover-demo-popup w-80 overflow-hidden rounded-xl bg-white p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.16)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.16),0_12px_32px_-8px_rgb(0_0_0/0.4)]">
-              <Tabs.Viewport>{(id) => <Conversation tab={TABS[id]} />}</Tabs.Viewport>
+              <Tabs.Viewport>{(id) => <Preview tab={TABS[id]} />}</Tabs.Viewport>
             </Tabs.Popup>
           </Tabs.Positioner>
         </Tabs.Portal>

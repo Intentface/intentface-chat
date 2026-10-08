@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 /**
  * The dark code chrome shared by every block in the docs: a header of file (or
  * package-manager) tabs with a copy button, over an inset code panel. Dark in
- * both themes, so the tokens are fixed rather than seed-derived.
+ * both themes, tinted by the theme's seeds (see --code-bg in globals.css).
  */
 export const CodeFrame = ({
   tabs,

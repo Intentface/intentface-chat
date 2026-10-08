@@ -137,11 +137,13 @@
   --table-panel: var(--primary-bg);
 
   /* Code blocks are dark in both modes: fixed zinc, not seed-derived. */
-  --code-bg: #18181b;
-  --code-panel: #212124;
+  /* Code stays dark in light mode: the frame is the ink seed, the panel a step
+     lighter (scaled by contrast like the tables), so a theme's hue tints both. */
+  --code-bg: var(--fg);
+  --code-panel: oklch(from var(--fg) calc(l + 0.13 * var(--con)) c h);
   --elevation-code:
     inset 0 0 0 1px rgb(255 255 255 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px
-    #18181b, 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 10px -2px rgb(0 0 0 / 0.12);
+    var(--code-bg), 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 10px -2px rgb(0 0 0 / 0.12);
 
   --radius: 8px;
 
@@ -214,8 +216,8 @@
   --table-tray: var(--primary-bg);
   --table-panel: oklch(from var(--bg) calc(l + 0.2 * var(--con)) c h);
 
-  --code-bg: #1f1f22;
-  --code-panel: #26262a;
+  --code-bg: oklch(from var(--bg) calc(l + 0.1 * var(--con)) c h);
+  --code-panel: oklch(from var(--bg) calc(l + 0.2 * var(--con)) c h);
   --elevation-code:
     inset 0 0 0 1px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px
     rgb(0 0 0 / 0.16), 0 1px 2px rgb(0 0 0 / 0.1);

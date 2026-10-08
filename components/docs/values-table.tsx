@@ -29,7 +29,12 @@ export const ValuesTable = ({ rows }: ValuesTableProps) => (
             ) : null}
           </div>
         </td>
-        <td className="px-4 py-3.5 align-top text-ink-body leading-5">{row.description}</td>
+        <td className="p-0 align-top text-ink-body leading-5">
+          {/* One line, scrolling sideways with fading edges instead of wrapping. */}
+          <div className="scroll-mask overflow-x-auto whitespace-nowrap px-4 py-3.5 [scrollbar-width:none]">
+            {row.description}
+          </div>
+        </td>
       </tr>
     ))}
   </ReferenceTable>

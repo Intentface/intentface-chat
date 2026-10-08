@@ -281,7 +281,8 @@ export const DocsSearch = ({ suggestions = [] }: { suggestions?: SearchSuggestio
           id={listId}
           role="listbox"
           aria-label="Results"
-          className="scroll-mask-y flex max-h-[min(60vh,26rem)] flex-col overflow-y-auto p-2"
+          // scroll-py matches the 32px edge fade, so arrowing keeps the active row clear of it.
+          className="scroll-mask-y flex max-h-[min(60vh,26rem)] scroll-py-8 flex-col overflow-y-auto p-2"
         >
           {body}
         </div>

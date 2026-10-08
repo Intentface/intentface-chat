@@ -34,6 +34,11 @@ const visuallyHiddenStyle: CSSProperties = {
 
 export type StepsRootProps = PrimitiveProps<"div">;
 
+/**
+ * The timeline container. Ships the disclosure and status plumbing and no row
+ * content: what a tool call or a reasoning step looks like is yours.
+ * Renders a `<div>` element.
+ */
 export const StepsRoot = ({ className, render, style, ...elementProps }: StepsRootProps) =>
   useRenderElement(
     "div",
@@ -67,6 +72,12 @@ export type StepsItemProps = ComponentProps<typeof Collapsible> & {
   status?: StepStatus;
 };
 
+/**
+ * One node of the tree, and the unit that nests: an item's panel may hold
+ * further items, so a timeline goes as deep as the run did. Publishes its
+ * `status` to the icon and label through context.
+ * Renders a `<div>` element.
+ */
 export const StepsItem = ({ status = "complete", defaultOpen, ...props }: StepsItemProps) => {
   const isNested = use(NestedContext);
 
@@ -92,6 +103,11 @@ StepsItem.displayName = "StepsItem";
 
 export type StepsTriggerProps = ComponentProps<typeof Collapsible.Trigger>;
 
+/**
+ * The row that expands an item. A real button, so the tree is plain sequential
+ * tab order rather than a composite widget with its own keyboard model.
+ * Renders a `<button>` element.
+ */
 export const StepsTrigger = (props: StepsTriggerProps) => (
   <Collapsible.Trigger data-steps-trigger="" {...props} />
 );
@@ -100,6 +116,12 @@ StepsTrigger.displayName = "StepsTrigger";
 
 export type StepsPanelProps = ComponentProps<typeof Collapsible.Panel>;
 
+/**
+ * The collapsible body. Publishes its measured height while a transition runs
+ * and releases it once settled open, so an open panel grows with content that
+ * arrives inside it.
+ * Renders a `<div>` element.
+ */
 export const StepsPanel = (props: StepsPanelProps) => (
   <Collapsible.Panel data-steps-panel="" {...props} />
 );
@@ -115,6 +137,11 @@ export type StepsIconProps = PrimitiveProps<"span", { status: StepStatus }> & {
   status?: StepStatus;
 };
 
+/**
+ * The row's status glyph, `aria-hidden` because colour and shape announce
+ * nothing. Resolves `status` from its own prop, then the enclosing item.
+ * Renders a `<span>` element.
+ */
 export const StepsIcon = ({
   status,
   className,
@@ -140,6 +167,11 @@ export type StepsLabelProps = PrimitiveProps<"span", { status: StepStatus }> & {
   status?: StepStatus;
 };
 
+/**
+ * The row's text. Resolves `status` the same way the icon does, so one
+ * attribute drives both.
+ * Renders a `<span>` element.
+ */
 export const StepsLabel = ({
   status,
   className,
@@ -171,6 +203,11 @@ export type StepsStatusProps = PrimitiveProps<"span", { status: StepStatus }> & 
   status?: StepStatus;
 };
 
+/**
+ * The only part that speaks the status. Renders a visually hidden span saying
+ * the resolved status string; pass `children` to localise the wording.
+ * Renders a `<span>` element.
+ */
 export const StepsStatus = ({
   status,
   children,

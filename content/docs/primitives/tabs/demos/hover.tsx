@@ -1,53 +1,32 @@
 "use client";
 
 import { Tabs } from "@intentface/chat/tabs";
-import { type ComponentProps, useState } from "react";
+import { useState } from "react";
+import "./hover-motion.css";
+import { BubbleIcon, FileIcon } from "./icons";
+import { Body, Preview, TABS } from "./pages";
 
 /*
- * A page strip where a conversation can be glanced at without leaving the page.
+ * A page strip where any tab can be glanced at without leaving the page.
  *
  * The page is this component's own state, not the tabs' selection: pressing a
  * tab opens it in the card below. The tabs' selection is only what floats.
- * Conversations open on hover and float over the page; press one and it
- * becomes the page instead.
+ * Hovering a tab floats a preview over the page, a document as a mini page and
+ * a conversation as a small chat; press one and it becomes the page instead.
  *
  * `onValueChange` tells the two apart by `eventDetails.reason`. Click into the
  * reply field and the float stays, however far the mouse wanders; Escape or
  * pressing a tab ends it.
  */
 
-type Tab = { name: string; kind: "document" | "conversation"; lines: string[] };
-
-const TABS: Record<string, Tab> = {
-  brief: {
-    name: "Launch brief",
-    kind: "document",
-    lines: ["Ship the beta to the waitlist on the 14th.", "Pricing stays as drafted."],
-  },
-  roadmap: {
-    name: "Roadmap",
-    kind: "document",
-    lines: ["Q4: offline drafts, shared views.", "Q1: the public API."],
-  },
-  "chat-launch": {
-    name: "Launch questions",
-    kind: "conversation",
-    lines: ["Is the 14th still realistic?", "Yes, if the waitlist email goes out on the 12th."],
-  },
-  "chat-pricing": {
-    name: "Pricing check",
-    kind: "conversation",
-    lines: ["Do we discount annual plans?", "Two months free, same as last year."],
-  },
-};
-
 export const Hover = () => {
   const [page, setPage] = useState("brief");
   const [floating, setFloating] = useState<string | null>(null);
+  // Replies typed into a floating conversation, kept per tab for this visit.
+  const [replies, setReplies] = useState<Record<string, string[]>>({});
 
   return (
-    <div className="flex h-96 w-full flex-col overflow-hidden rounded-xl border border-[#f0f0f0] bg-[#fafafa] dark:border-[#262626] dark:bg-[#111111]">
-      <HoverMotion />
+    <div className="relative flex h-96 w-full flex-col overflow-hidden rounded-xl bg-[#f5f5f6] shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]">
       <Tabs.Root
         defaultItems={Object.keys(TABS)}
         value={floating}
@@ -69,11 +48,11 @@ export const Hover = () => {
             return (
               <Tabs.Trigger
                 value={id}
-                openOnHover={tab?.kind === "conversation"}
+                openOnHover
                 aria-current={id === page ? "page" : undefined}
                 className={tabClass}
               >
-                <Tabs.Icon className="[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:opacity-60">
+                <Tabs.Icon className="text-zinc-500 dark:text-zinc-400 [&>svg]:size-[15px] [&>svg]:shrink-0">
                   {tab?.kind === "conversation" ? <BubbleIcon /> : <FileIcon />}
                 </Tabs.Icon>
                 <span className="min-w-0 truncate">{tab?.name ?? id}</span>
@@ -82,14 +61,32 @@ export const Hover = () => {
           }}
         </Tabs.List>
 
-        <div className="mx-2 mb-2 min-h-0 flex-1 overflow-auto rounded-md border border-[#f0f0f0] bg-white dark:border-[#262626] dark:bg-[#181818]">
-          <Body tab={TABS[page]} />
+        <div className="mx-2 mb-2 min-h-0 flex-1 overflow-auto rounded-lg bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]">
+          <Body tab={TABS[page]} replies={replies[page]} />
         </div>
 
         <Tabs.Portal>
           <Tabs.Positioner side="bottom" align="start" sideOffset={6}>
-            <Tabs.Popup className="hover-demo-popup w-80 overflow-hidden rounded-xl border border-[#f0f0f0] bg-white shadow-lg dark:border-[#262626] dark:bg-[#181818]">
-              <Tabs.Viewport>{(id) => <Conversation tab={TABS[id]} />}</Tabs.Viewport>
+            <Tabs.Popup className="hover-demo-popup w-80 overflow-hidden rounded-xl bg-white p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.16)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.16),0_12px_32px_-8px_rgb(0_0_0/0.4)]">
+              <Tabs.Viewport>
+                {(id) => (
+                  <Preview
+                    tab={TABS[id]}
+                    replies={replies[id]}
+                    // Opening is the same as pressing the tab: it becomes the page.
+                    onOpen={() => {
+                      setPage(id);
+                      setFloating(null);
+                    }}
+                    onReply={(text) =>
+                      setReplies((current) => ({
+                        ...current,
+                        [id]: [...(current[id] ?? []), text],
+                      }))
+                    }
+                  />
+                )}
+              </Tabs.Viewport>
             </Tabs.Popup>
           </Tabs.Positioner>
         </Tabs.Portal>
@@ -98,96 +95,16 @@ export const Hover = () => {
   );
 };
 
-const Body = ({ tab }: { tab: Tab | undefined }) =>
-  tab ? (
-    <article className="px-8 py-6">
-      <h1 className="mb-4 font-semibold text-[#1a1a1a] text-xl tracking-tight dark:text-[#fcfcfc]">
-        {tab.name}
-      </h1>
-      {tab.lines.map((line) => (
-        <p key={line} className="mb-2 text-[#686868] text-sm leading-[1.7] dark:text-[#9b9b9b]">
-          {line}
-        </p>
-      ))}
-    </article>
-  ) : null;
-
-const Conversation = ({ tab }: { tab: Tab | undefined }) =>
-  tab ? (
-    <div className="flex flex-col gap-3 p-3">
-      <p className="font-medium text-[#1a1a1a] text-sm dark:text-[#fcfcfc]">{tab.name}</p>
-      {tab.lines.map((line, index) => (
-        <p
-          key={line}
-          className={[
-            "max-w-[85%] rounded-lg px-2.5 py-1.5 text-sm",
-            index % 2 === 0
-              ? "self-end bg-[#f4f4f4] text-[#1a1a1a] dark:bg-[#232323] dark:text-[#fcfcfc]"
-              : "text-[#686868] dark:text-[#9b9b9b]",
-          ].join(" ")}
-        >
-          {line}
-        </p>
-      ))}
-      <input
-        aria-label={`Reply in ${tab.name}`}
-        placeholder="Reply…"
-        className="h-8 rounded-md border border-[#f0f0f0] bg-transparent px-2.5 text-sm outline-none focus:border-[#c4c4c4] dark:border-[#262626] dark:focus:border-[#4a4a4a]"
-      />
-    </div>
-  ) : null;
-
-/* The surface fades and drops in; the switch between floating tabs is the
-   positioner moving, so it only needs the top/left transition. */
-const HoverMotion = () => (
-  <style>{`
-[data-tabs-positioner]:has(> .hover-demo-popup) { transition: top 150ms ease-out, left 150ms ease-out; }
-.hover-demo-popup { transition: opacity 150ms ease-out, transform 150ms ease-out; }
-.hover-demo-popup[data-starting-style], .hover-demo-popup[data-ending-style] { opacity: 0; transform: translateY(-4px); }
-@media (prefers-reduced-motion: reduce) {
-  [data-tabs-positioner]:has(> .hover-demo-popup), .hover-demo-popup { transition: none; }
-}
-`}</style>
-);
-
 const tabClass = [
-  "relative flex h-7 max-w-48 shrink-0 cursor-pointer select-none items-center gap-1.5 overflow-hidden",
-  "rounded-md px-2.5 text-[#686868] text-sm transition-[background-color,color] duration-200 dark:text-[#9b9b9b]",
-  "hover:bg-[#f4f4f4] dark:hover:bg-[#232323]",
-  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
+  "relative flex h-[30px] max-w-48 shrink-0 cursor-pointer select-none items-center gap-1.5 overflow-hidden",
+  "rounded-md px-2.5 font-medium text-[13px] text-zinc-700 transition-[background-color,color] duration-200 dark:text-zinc-300",
+  "hover:bg-zinc-950/5 dark:hover:bg-white/8",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60",
   // The page you are on, which this demo marks itself with aria-current.
-  "border border-transparent aria-[current=page]:border-[#f0f0f0] aria-[current=page]:bg-white aria-[current=page]:text-[#1a1a1a]",
-  "dark:aria-[current=page]:border-[#262626] dark:aria-[current=page]:bg-[#181818] dark:aria-[current=page]:text-[#fcfcfc]",
+  "aria-[current=page]:bg-white aria-[current=page]:bg-linear-to-b aria-[current=page]:from-white aria-[current=page]:to-[#fdfdfd] aria-[current=page]:text-zinc-900",
+  "aria-[current=page]:shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)]",
+  "dark:aria-[current=page]:bg-[#2d2d30] dark:aria-[current=page]:from-[#313134] dark:aria-[current=page]:to-[#2a2a2d] dark:aria-[current=page]:text-zinc-100",
+  "dark:aria-[current=page]:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]",
   // The floating tab is the tabs' selection, and keeps its hover colour while you are over the surface.
-  "data-[selected]:bg-[#f4f4f4] data-[selected]:text-[#1a1a1a] dark:data-[selected]:bg-[#232323] dark:data-[selected]:text-[#fcfcfc]",
+  "data-[selected]:bg-zinc-950/5 data-[selected]:text-zinc-900 dark:data-[selected]:bg-white/8 dark:data-[selected]:text-zinc-100",
 ].join(" ");
-
-const FileIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M4 2h5l3 3v9H4V2Z" strokeLinejoin="round" />
-    <path d="M9 2v3h3" strokeLinejoin="round" />
-  </svg>
-);
-
-const BubbleIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path
-      d="M2.5 4.5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v4.5a2 2 0 0 1-2 2H7l-3 2.5v-2.5h0a2 2 0 0 1-1.5-2V4.5Z"
-      strokeLinejoin="round"
-    />
-  </svg>
-);

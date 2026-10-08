@@ -24,7 +24,7 @@ const SliderTrack = ({
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Track>) => (
   <SliderPrimitive.Track
-    className={cn("h-1 w-full rounded-full bg-base-bg-active", className)}
+    className={cn("h-1 w-full rounded-full bg-ink-primary/15", className)}
     {...props}
   />
 );
@@ -42,8 +42,8 @@ const SliderThumb = ({
 }: React.ComponentProps<typeof SliderPrimitive.Thumb>) => (
   <SliderPrimitive.Thumb
     className={cn(
-      "h-4 w-6 rounded-full border-2 border-accent-bg bg-primary-bg shadow-sm",
-      "focus-visible:ring-2 focus-visible:ring-accent-bg/50 focus-visible:outline-none",
+      "size-4 rounded-full bg-white shadow-[0_0_0_0.5px_rgb(0_0_0/0.08),0_1px_2px_rgb(0_0_0/0.2),0_2px_4px_-1px_rgb(0_0_0/0.12)]",
+      "focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-2",
       className,
     )}
     {...props}

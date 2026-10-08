@@ -40,15 +40,15 @@ export type PresetDefinition = {
 
 export const DEFAULT_LIGHT_SEEDS: CustomSeeds = {
   bg: "#ffffff",
-  fg: "#1a1a1a",
+  fg: "#18181b",
   acc: "#0169cc",
   con: CONTRAST_DEFAULT,
 };
 
 export const DEFAULT_DARK_SEEDS: CustomSeeds = {
-  bg: "#111111",
-  fg: "#fcfcfc",
-  acc: "#4a9eed",
+  bg: "#18181b",
+  fg: "#f4f4f5",
+  acc: "#4c9bea",
   con: CONTRAST_DEFAULT,
 };
 

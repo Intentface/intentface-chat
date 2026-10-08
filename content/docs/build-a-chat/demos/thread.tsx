@@ -13,12 +13,12 @@ const LINES = [
 
 // Stage 1 — just the scroll container, filled with plain rows.
 export const ThreadStage = () => (
-  <div className="h-[280px] w-full max-w-xl overflow-hidden rounded-xl border border-[#f0f0f0] bg-white dark:border-[#262626] dark:bg-[#111111]">
+  <div className="h-[280px] w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:bg-zinc-900">
     <Thread.Root className="relative flex h-full w-full overflow-hidden">
       <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto]">
         <Thread.Content className="mx-auto flex w-full flex-col gap-4 p-4">
           {LINES.map((line) => (
-            <p key={line} className="text-sm leading-[1.7] text-[#1a1a1a] dark:text-[#fcfcfc]">
+            <p key={line} className="text-sm text-zinc-700 leading-6 dark:text-zinc-300">
               {line}
             </p>
           ))}

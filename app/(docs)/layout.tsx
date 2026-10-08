@@ -1,14 +1,11 @@
 import type { ReactNode } from "react";
-import { DocsSidebar } from "@/components/docs/docs-sidebar";
-import { source } from "@/lib/docs/source";
 
+// The site shell lives in the root layout; the docs only add their own scroller.
+// The panel scrolls, not the window, so the frame stays put around it.
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-secondary-bg">
-      <DocsSidebar tree={source.pageTree} />
-      <div className="min-w-0 flex-1">
-        <main className="mx-auto w-full px-4 pt-10 md:px-6">{children}</main>
-      </div>
+    <div data-docs-scroll="" className="h-full w-full overflow-y-auto">
+      {children}
     </div>
   );
 }

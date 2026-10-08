@@ -1,4 +1,12 @@
 {
   "title": "Documentation",
-  "pages": ["index", "quick-start", "build-a-chat", "handbook", "primitives"]
+  "pages": [
+    "---Get started---",
+    "index",
+    "quick-start",
+    "build-a-chat",
+    "changelog",
+    "handbook",
+    "primitives"
+  ]
 }

@@ -22,7 +22,7 @@ const DialogContent = ({
   <DialogPrimitive.Portal>
     <DialogPrimitive.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/50",
+        "fixed inset-0 z-50 bg-zinc-950/16 dark:bg-black/36",
         "data-open:animate-in data-open:fade-in-0",
         "data-closed:animate-out data-closed:fade-out-0",
       )}
@@ -30,7 +30,7 @@ const DialogContent = ({
     <DialogPrimitive.Popup
       className={cn(
         "fixed top-1/2 left-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2",
-        "rounded-xl border border-secondary-border bg-secondary-bg p-6 shadow-lg",
+        "rounded-2xl bg-primary-bg p-6 shadow-overlay",
         "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
         "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
         "duration-150",

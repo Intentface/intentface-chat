@@ -41,7 +41,7 @@ const SettingsSubtitle = ({ className, children, ...props }: ComponentProps<"p">
 const SettingsCard = ({ className, children, ...props }: ComponentProps<"div">) => (
   <div
     data-slot="settings-card"
-    className={cn("flex flex-col rounded-lg border border-primary-border bg-primary-bg", className)}
+    className={cn("flex flex-col rounded-xl bg-primary-bg shadow-card", className)}
     {...props}
   >
     {children}
@@ -52,7 +52,7 @@ const SettingsRow = ({ className, children, ...props }: ComponentProps<"div">) =
   <div
     data-slot="settings-row"
     className={cn(
-      "flex min-h-14 items-center gap-3 border-b border-primary-border p-3 last-of-type:border-0",
+      "flex min-h-14 items-center gap-3 border-ink-primary/6 border-b p-3 last-of-type:border-0",
       className,
     )}
     {...props}
@@ -62,7 +62,11 @@ const SettingsRow = ({ className, children, ...props }: ComponentProps<"div">) =
 );
 
 const SettingsLabel = ({ className, children, ...props }: ComponentProps<"span">) => (
-  <span data-slot="settings-label" className={cn("text-sm text-ink-primary", className)} {...props}>
+  <span
+    data-slot="settings-label"
+    className={cn("font-medium text-ink-primary text-sm", className)}
+    {...props}
+  >
     {children}
   </span>
 );

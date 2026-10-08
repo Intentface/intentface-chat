@@ -123,7 +123,10 @@ for (const [slug, namespace] of Object.entries(NAMESPACES)) {
   const page = readFileSync(path.join(DOCS, `${slug}.mdx`), "utf8");
   const findings = [];
 
-  for (const section of page.split(/^### /m).slice(1)) {
+  for (const block of page.split(/^### /m).slice(1)) {
+    // A part's section ends at the next `##` too, so a hook documented under its
+    // own `##` heading isn't read as the preceding part's props.
+    const section = block.split(/^## /m)[0];
     const heading = section.split("\n", 1)[0].trim().replace(/\(\)$/, "");
     let part;
     if (heading.startsWith(`${namespace}.`)) part = heading.slice(namespace.length + 1);

@@ -1,7 +1,8 @@
 "use client";
 
 import { type AttachmentItem, Attachments } from "@intentface/chat/attachments";
-import { type ComponentProps, useState } from "react";
+import { File, X } from "@keyline-icons/react";
+import { useState } from "react";
 
 // A removable strip driven by local state — the parts are structural slots and
 // impose no media taxonomy, so icons and layout are yours to decide.
@@ -24,7 +25,7 @@ export const Basic = () => {
       <button
         type="button"
         onClick={() => setItems(INITIAL)}
-        className="cursor-pointer rounded-full border border-[#f0f0f0] bg-white px-4 py-1.5 text-sm font-medium text-[#686868] transition-colors hover:bg-[#fafafa] dark:border-[#262626] dark:bg-[#181818] dark:text-[#9b9b9b] dark:hover:bg-[#232323]"
+        className={`h-8 cursor-pointer rounded-full px-3.5 font-medium text-[13px] text-zinc-900 hover:from-[#fafafa] hover:to-[#f6f6f6] dark:hover:from-[#38383b] dark:hover:to-[#313134] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-100 ${RAISED}`}
       >
         Reset
       </button>
@@ -32,23 +33,25 @@ export const Basic = () => {
   }
 
   return (
-    <Attachments.Root className="flex w-full max-w-md flex-wrap gap-2">
+    <Attachments.Root className="flex w-full max-w-md flex-wrap gap-1.5">
       {items.map((item) => (
         <Attachments.Item
           key={item.id}
-          className="flex items-center gap-2 rounded-xl border border-[#f0f0f0] bg-white py-1.5 pr-1.5 pl-2.5 text-xs dark:border-[#262626] dark:bg-[#181818]"
+          className={`flex h-6 items-center gap-1.5 rounded-[7px] pr-2 pl-1.5 ${RAISED}`}
         >
-          <FileIcon className="text-[#949494]" />
-          <span className="max-w-40 truncate">{item.filename}</span>
-          <span className="text-[#949494] dark:text-[#6f6f6f]">
+          <File className="size-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" />
+          <span className="max-w-40 truncate font-medium text-xs text-zinc-900 dark:text-zinc-100">
+            {item.filename}
+          </span>
+          <span className="font-mono text-[11px] text-zinc-400 dark:text-zinc-500">
             {formatFileSize(item.fileSize)}
           </span>
           <Attachments.Remove
             onRemove={() => setItems((current) => current.filter((it) => it.id !== item.id))}
             filename={item.filename}
-            className="flex size-5 cursor-pointer items-center justify-center rounded-full text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
+            className="-mr-1 flex size-4 cursor-pointer items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-100"
           >
-            <CrossIcon />
+            <X className="size-[11px]" />
           </Attachments.Remove>
         </Attachments.Item>
       ))}
@@ -63,35 +66,6 @@ const formatFileSize = (bytes?: number) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const FileIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M9 1.5H4.5A1.5 1.5 0 0 0 3 3v10a1.5 1.5 0 0 0 1.5 1.5h7A1.5 1.5 0 0 0 13 13V5.5L9 1.5Z" />
-    <path d="M9 1.5v4h4" />
-  </svg>
-);
-
-const CrossIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4.5 4.5 7 7m-7 0 7-7" />
-  </svg>
-);
+// The raised surface shared by the reset button and each attachment chip.
+const RAISED =
+  "bg-white bg-linear-to-b from-white to-[#fdfdfd] shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]";

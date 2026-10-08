@@ -30,58 +30,80 @@ const heading =
 
 const proseComponents: MDXComponents = {
   h1: (props) => (
-    <h1 className="font-semibold text-2xl text-ink-primary tracking-tight" {...props} />
-  ),
-  h2: heading("h2", "mt-10 mb-3 font-semibold text-ink-primary text-xl"),
-  h3: heading("h3", "mt-8 mb-2 font-semibold text-ink-primary text-lg"),
-  h4: heading("h4", "mt-6 mb-2 font-medium text-ink-primary"),
-  p: (props) => <p className="my-4 text-lg text-ink-secondary leading-7" {...props} />,
-  ul: (props) => (
-    <ul className="my-4 ml-6 flex list-disc flex-col gap-2 text-lg text-ink-secondary" {...props} />
-  ),
-  ol: (props) => (
-    <ol
-      className="my-4 ml-6 flex list-decimal flex-col gap-2 text-lg text-ink-secondary"
+    <h1
+      className="font-semibold text-[32px] text-ink-primary leading-[38px] tracking-[-0.02em]"
       {...props}
     />
   ),
-  li: (props) => <li className="text-lg leading-7" {...props} />,
-  strong: (props) => <strong className="font-medium text-ink-primary" {...props} />,
-  b: (props) => <b className="font-medium text-ink-primary" {...props} />,
+  // Every section opens on a hairline rule, like the Paper sheets.
+  h2: heading(
+    "h2",
+    "mt-12 mb-3.5 border-ink-primary/6 border-t pt-8 font-semibold text-[20px] text-ink-primary leading-7 tracking-[-0.01em]",
+  ),
+  h3: heading("h3", "mt-8 mb-2 font-semibold text-ink-primary text-xl tracking-[-0.01em]"),
+  h4: heading("h4", "mt-6 mb-2 font-semibold text-ink-primary text-lg"),
+  p: (props) => <p className="my-4 text-ink-body text-lg leading-6" {...props} />,
+  ul: (props) => (
+    <ul
+      className="my-4 ml-5 flex list-disc flex-col gap-1.5 text-ink-body text-lg marker:text-ink-tertiary"
+      {...props}
+    />
+  ),
+  ol: (props) => (
+    <ol
+      className="my-4 ml-5 flex list-decimal flex-col gap-1.5 text-ink-body text-lg marker:text-ink-tertiary"
+      {...props}
+    />
+  ),
+  li: (props) => <li className="pl-1 text-lg leading-6" {...props} />,
+  strong: (props) => <strong className="font-semibold text-ink-primary" {...props} />,
+  b: (props) => <b className="font-semibold text-ink-primary" {...props} />,
   a: ({ href, ...props }: ComponentProps<"a">) => (
     <Link
       href={href ?? "#"}
-      className="font-medium text-accent-bg underline underline-offset-4 hover:text-accent-bg-hover"
+      // A link that is only a code badge (a commit hash) drops the underline; the
+      // badge darkens on hover instead.
+      className="font-medium text-accent-bg underline decoration-accent-bg/30 underline-offset-4 transition-colors hover:decoration-accent-bg has-[>code]:no-underline [&>code]:transition-colors hover:[&>code]:bg-ink-primary/10"
       {...props}
     />
   ),
   blockquote: (props) => (
     <blockquote
-      className="my-4 border-accent-bg border-l-2 pl-4 text-ink-tertiary italic"
+      className="my-5 border-ink-primary/10 border-l-2 pl-4 text-ink-body [&>p]:my-2"
       {...props}
     />
   ),
+  hr: (props) => <hr className="my-10 border-ink-primary/6" {...props} />,
+  // The ReferenceTable frame in one table: the header sits in the tray and the
+  // rows form the inset panel, its edge and corners drawn by the outer cells.
   table: (props) => (
-    <div className="my-6 overflow-x-auto">
-      <table className="w-full border-collapse text-sm" {...props} />
+    <div className="my-6 overflow-x-auto rounded-xl bg-table-tray p-[5px] shadow-card">
+      <table className="w-full border-separate border-spacing-0 text-sm" {...props} />
     </div>
   ),
   th: (props) => (
     <th
-      className="border-secondary-border border-b px-3 py-2.5 align-top text-left font-medium text-ink-primary"
+      className="h-[31px] px-4 pb-[5px] text-left align-middle font-medium text-ink-secondary text-xs"
       {...props}
     />
   ),
   td: (props) => (
     <td
-      className="border-secondary-border/60 border-b px-3 py-2.5 align-top text-ink-secondary"
+      className={cn(
+        "bg-table-panel px-4 py-3 align-top text-ink-body [&>code]:whitespace-nowrap",
+        "border-black/6 first:border-l last:border-r dark:border-white/7",
+        "[tr:first-child>&]:border-t [tr:last-child>&]:border-b",
+        "[tr+tr>&]:border-t [tr+tr>&]:border-t-ink-primary/6",
+        "[tr:first-child>&:first-child]:rounded-tl-md [tr:first-child>&:last-child]:rounded-tr-md",
+        "[tr:last-child>&:first-child]:rounded-bl-md [tr:last-child>&:last-child]:rounded-br-md",
+      )}
       {...props}
     />
   ),
   // Inline code; fenced blocks arrive as <pre><code> and are handled by `pre`.
   code: (props) => (
     <code
-      className="rounded border border-base-border bg-base-bg px-1 py-px font-mono text-[0.85em] text-ink-primary"
+      className="rounded-[4px] bg-ink-primary/6 px-1.5 py-px font-mono text-[0.85em] text-ink-primary"
       {...props}
     />
   ),

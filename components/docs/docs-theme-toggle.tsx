@@ -1,15 +1,15 @@
 "use client";
 
-import { MoonIcon } from "@/components/icons/moon";
-import { SunIcon } from "@/components/icons/sun";
+import { Moon, Sun } from "@keyline-icons/react";
 import { IconButton } from "@/components/ui/icon-button";
 import { useInterfaceTheme } from "@/hooks/use-interface-theme";
 
 /**
- * A single button rather than a three-way control: the sidebar header has room
+ * A single button rather than a three-way control: the sidebar footer has room
  * for one affordance, and "system" is the starting mode, not a destination
  * anyone picks from here. It flips whichever mode is resolved, so the first
- * press always changes what you see.
+ * press always changes what you see. The server can't know that mode, so the
+ * label is fixed and the icon follows the `.dark` class rather than state.
  */
 export const DocsThemeToggle = () => {
   const { resolvedMode, setMode } = useInterfaceTheme();
@@ -18,12 +18,13 @@ export const DocsThemeToggle = () => {
   return (
     <IconButton
       variant="ghost"
-      size="md"
-      aria-label={`Switch to ${next} theme`}
+      size="sm"
+      aria-label="Toggle theme"
       onClick={() => setMode(next)}
-      className="rounded-full"
+      className="rounded-md"
     >
-      {resolvedMode === "dark" ? <MoonIcon /> : <SunIcon />}
+      <Moon className="hidden dark:block" />
+      <Sun className="dark:hidden" />
     </IconButton>
   );
 };

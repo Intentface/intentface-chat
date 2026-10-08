@@ -1,7 +1,8 @@
 "use client";
 
 import { Tabs } from "@intentface/chat/tabs";
-import { type ComponentProps, createElement, type ReactElement } from "react";
+import { Archive, Inbox, Pen, Send, X } from "@keyline-icons/react";
+import { createElement } from "react";
 
 /*
  * The three close policies side by side. Close the open tab in each strip and
@@ -39,7 +40,7 @@ const Strip = ({
   caption: string;
 }) => (
   <div className="flex flex-col gap-2">
-    <code className="font-mono text-[#1a1a1a] text-xs dark:text-[#fcfcfc]">
+    <code className="font-mono text-xs text-zinc-900 dark:text-zinc-100">
       {policy === "unset" ? "selectOnClose unset" : `selectOnClose="${policy}"`}
     </code>
 
@@ -47,144 +48,60 @@ const Strip = ({
       defaultItems={TABS}
       defaultValue="Drafts"
       selectOnClose={policy === "unset" ? undefined : policy}
-      className="flex flex-col gap-1.5"
+      className="relative flex flex-col gap-2 rounded-xl bg-[#f5f5f6] p-2 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]"
     >
       <Tabs.List aria-label={`Tabs, ${policy}`} className="flex shrink-0 items-center gap-1">
         {(id) => (
           <Tabs.Trigger value={id} aria-label={id} className={tabClass}>
-            <Tabs.Icon className="shrink-0 text-[#949494] dark:text-[#6f6f6f] [&>svg]:size-3.5">
-              {createElement(TAB_ICONS[id] ?? InboxIcon)}
+            <Tabs.Icon className="shrink-0 text-zinc-500 dark:text-zinc-400 [&>svg]:size-[15px]">
+              {createElement(TAB_ICONS[id] ?? Inbox)}
             </Tabs.Icon>
             <span className="min-w-0 truncate">{id}</span>
 
             <Tabs.Action className="absolute inset-y-0 right-1.5 flex items-center opacity-0 transition-opacity group-hover/tab:opacity-100 group-data-[selected]/tab:opacity-100">
               <Tabs.Close
                 aria-label={`Close ${id}`}
-                className="grid size-5 shrink-0 cursor-pointer place-items-center rounded text-[#949494] transition-colors hover:bg-[#dcdcdc] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#3d3d3d] dark:hover:text-[#fcfcfc]"
+                className="grid size-5 shrink-0 cursor-pointer place-items-center rounded-full text-zinc-400 transition-colors hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:bg-white/8 dark:hover:text-zinc-100"
               >
-                <CloseIcon />
+                <X className="size-3.5" />
               </Tabs.Close>
             </Tabs.Action>
           </Tabs.Trigger>
         )}
       </Tabs.List>
 
-      <Tabs.Viewport className="flex h-20 items-center justify-center rounded-xl border border-[#f0f0f0] bg-white px-4 text-sm dark:border-[#262626] dark:bg-[#111111]">
-        {(id) => <span className="text-[#686868] dark:text-[#9b9b9b]">{id}</span>}
+      <Tabs.Viewport className="flex h-20 items-center justify-center rounded-lg bg-white px-4 text-[13px] shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]">
+        {(id) => <span className="text-zinc-500 dark:text-zinc-400">{id}</span>}
       </Tabs.Viewport>
     </Tabs.Root>
 
-    <p className="text-[#686868] text-xs leading-5 dark:text-[#9b9b9b]">{caption}</p>
+    <p className="text-xs text-zinc-500 leading-5 dark:text-zinc-400">{caption}</p>
   </div>
 );
 
 const tabClass = [
-  // No strip behind the tabs: they sit on the page ground, and the open one is
-  // a white card matching the panel below, so the selection reads as continuous
+  // No strip behind the tabs: they sit on the frame's ground, and the open one
+  // is raised to match the panel below, so the selection reads as continuous
   // with its content rather than as a highlighted button.
-  "group/tab relative flex h-8 w-40 shrink-0 cursor-pointer select-none items-center gap-2 overflow-hidden",
+  "group/tab relative flex h-[30px] w-40 min-w-0 shrink cursor-pointer select-none items-center gap-2 overflow-hidden",
   // pr-7 reserves the close button's slot permanently. Overlaying it would
   // cover the label on any short title, and padding it in on hover would make
   // every tab jump the moment you point at one.
-  "rounded-lg pr-7 pl-2.5 text-[#686868] text-sm transition-colors dark:text-[#9b9b9b]",
-  "hover:bg-[#e7e7e7] dark:hover:bg-[#262626]",
-  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
-  "data-[selected]:bg-white data-[selected]:text-[#1a1a1a] data-[selected]:shadow-[0_1px_2px_rgba(0,0,0,0.06)]",
-  "dark:data-[selected]:bg-[#2d2d2d] dark:data-[selected]:text-[#fcfcfc]",
+  "rounded-md pr-7 pl-2.5 font-medium text-[13px] text-zinc-700 transition-colors dark:text-zinc-300",
+  "hover:bg-zinc-950/5 dark:hover:bg-white/8",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60",
+  "data-[selected]:bg-white data-[selected]:bg-linear-to-b data-[selected]:from-white data-[selected]:to-[#fdfdfd] data-[selected]:text-zinc-900",
+  "data-[selected]:shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)]",
+  "dark:data-[selected]:bg-[#2d2d30] dark:data-[selected]:from-[#313134] dark:data-[selected]:to-[#2a2a2d] dark:data-[selected]:text-zinc-100",
+  "dark:data-[selected]:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]",
 ].join(" ");
-
-const CloseIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    className="size-3"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4.5 4.5 7 7m0-7-7 7" />
-  </svg>
-);
 
 /* Per-tab icons rather than one generic page glyph — a strip of identical
    icons carries no information, and the whole point of a tab icon is telling
    the tabs apart at a glance. */
-const TAB_ICONS: Record<string, (props: ComponentProps<"svg">) => ReactElement> = {
-  Inbox: InboxIcon,
-  Drafts: PencilIcon,
-  Sent: SendIcon,
-  Archive: ArchiveIcon,
+const TAB_ICONS: Record<string, typeof Inbox> = {
+  Inbox: Inbox,
+  Drafts: Pen,
+  Sent: Send,
+  Archive: Archive,
 };
-
-function InboxIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <path
-        d="M2.5 8.5h3l1 2h3l1-2h3v3a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-3Z"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M2.5 8.5 4.1 4.3a1 1 0 0 1 .94-.65h5.92a1 1 0 0 1 .94.65l1.6 4.2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function PencilIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="m10.6 3.1 2.3 2.3-7.2 7.2-3 .7.7-3 7.2-7.2Z" strokeLinejoin="round" />
-      <path d="m9.4 4.3 2.3 2.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SendIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <path d="M13.4 2.6 2.6 6.4l4.4 2.6 2.6 4.4 3.8-10.8Z" strokeLinejoin="round" />
-      <path d="M13.4 2.6 7 9" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ArchiveIcon(props: ComponentProps<"svg">) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      aria-hidden="true"
-      {...props}
-    >
-      <rect x="2.5" y="2.6" width="11" height="3" rx="1" strokeLinejoin="round" />
-      <path d="M3.6 5.6v6.8a1 1 0 0 0 1 1h6.8a1 1 0 0 0 1-1V5.6" strokeLinejoin="round" />
-      <path d="M6.6 8.4h2.8" strokeLinecap="round" />
-    </svg>
-  );
-}

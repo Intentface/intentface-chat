@@ -59,7 +59,7 @@ const StepsPanel = ({ className, children, ...props }: StepsPanelProps) => (
       // The rail: a nested item's panel indents behind a vertical line, so
       // depth reads visually without any depth counter. `[data-nested]` is set
       // by the primitive on items that sit inside another item.
-      "in-data-nested:ml-2 in-data-nested:border-l in-data-nested:border-slate-6 in-data-nested:pl-4",
+      "in-data-nested:ml-2 in-data-nested:border-ink-primary/10 in-data-nested:border-l in-data-nested:pl-4",
       className,
     )}
     {...props}
@@ -82,7 +82,7 @@ const StepsIcon = ({ className, ...props }: StepsIconProps) => (
       "flex size-4 shrink-0 items-center justify-center",
       "data-[status=complete]:text-ink-secondary",
       "data-[status=active]:text-ink-primary",
-      "data-[status=pending]:text-slate-9",
+      "data-[status=pending]:text-ink-tertiary",
       className,
     )}
     {...props}
@@ -99,7 +99,7 @@ const StepsLabel = ({ className, ...props }: StepsLabelProps) => (
       "text-sm text-left",
       "data-[status=complete]:text-ink-secondary",
       "data-[status=active]:font-medium data-[status=active]:text-ink-primary",
-      "data-[status=pending]:text-slate-9",
+      "data-[status=pending]:text-ink-tertiary",
       className,
     )}
     {...props}

@@ -1,6 +1,11 @@
-import { GitHubIcon } from "@/components/icons/github";
-import { MarkdownIcon } from "@/components/icons/markdown";
+"use client";
+
+import { Check } from "@keyline-icons/react";
+// Keyline has no brand or Markdown icons, so these stay on Tabler.
+import { IconBrandGithub, IconMarkdown } from "@tabler/icons-react";
 import Button from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { useCopy } from "@/hooks/use-copy";
 
 const REPO = "https://github.com/Intentface/intentface-chat";
 
@@ -11,43 +16,39 @@ type PageActionsProps = {
   source?: string;
 };
 
-const actionButtonClass =
-  "h-9 rounded-full px-4 text-md font-medium text-ink-secondary hover:bg-secondary-bg-hover hover:text-ink-primary";
+// "Copy page" puts the page's raw markdown on the clipboard (the same file the
+// `.md` route serves); the GitHub link goes to the primitive's source when the
+// page documents one, and to the repo otherwise.
+export const PageActions = ({ slug, source }: PageActionsProps) => {
+  const { copy, isCopied } = useCopy();
+  const markdownUrl = `/${slug.join("/")}.md`;
 
-// "View as Markdown" (raw .mdx as text) + "Primitive source" (the headless
-// component on GitHub — not the demos), mirroring Base UI's page header.
-export const PageActions = ({ slug, source }: PageActionsProps) => (
-  <div className="flex items-center gap-2">
-    {/* These navigate rather than act, so they render as anchors. Base UI needs
-        telling: `nativeButton` defaults to true and warns when the rendered
-        element is not a real <button>. */}
-    <Button
-      variant="ghost"
-      nativeButton={false}
-      className={actionButtonClass}
-      render={
-        <a href={`/${slug.join("/")}.md`} target="_blank" rel="noreferrer">
-          <MarkdownIcon />
-          View as Markdown
-        </a>
-      }
-    />
-    {source && (
-      <Button
+  const copyPage = async () => {
+    const response = await fetch(markdownUrl);
+    if (response.ok) await copy(await response.text());
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Button size="sm" className="gap-1.5 pr-2.5 pl-2 text-sm" onClick={copyPage}>
+        {isCopied ? <Check /> : <IconMarkdown />}
+        {isCopied ? "Copied" : "Copy page"}
+      </Button>
+      <IconButton
         variant="ghost"
+        size="sm"
         nativeButton={false}
-        className={actionButtonClass}
+        aria-label={source ? "Primitive source on GitHub" : "GitHub repository"}
         render={
           <a
-            href={`${REPO}/tree/main/packages/chat/src/${source}`}
+            href={source ? `${REPO}/tree/main/packages/chat/src/${source}` : REPO}
             target="_blank"
             rel="noreferrer"
           >
-            <GitHubIcon />
-            Primitive source
+            <IconBrandGithub />
           </a>
         }
       />
-    )}
-  </div>
-);
+    </div>
+  );
+};

@@ -12,7 +12,7 @@
 
   /* ─── Seeds ─── */
   --bg: #ffffff;
-  --fg: #1a1a1a;
+  --fg: #18181b;
   --acc: #0169cc;
   --con: 0.3;
 
@@ -32,11 +32,11 @@
        0.05   subtle    near-bg, slight elevation
        0.01   hairline  barely visible separation
        -0.01  soft      input-strength fill
-       -0.05  moderate  clearly sunken below bg */
+       -0.1   frame     app frame and trays, sunk below bg */
   --primary-lightness: calc(0.05 * var(--con));
   --tertiary-lightness: calc(0.01 * var(--con));
   --quaternary-lightness: calc(-0.01 * var(--con));
-  --base-lightness: calc(-0.05 * var(--con));
+  --base-lightness: calc(-0.1 * var(--con));
 
   /* Surface families + state variants — defined once; in .dark the deltas
      flip sign and the surfaces redefine, so these formulas pick up both.
@@ -93,19 +93,68 @@
      keep fg's hue. Sign positive in light (fg dark, lifts toward
      white bg); negative in dark. */
   --text-primary: var(--fg);
-  --text-secondary: oklch(from var(--fg) calc(l + 0.3) c h);
-  --text-tertiary: oklch(from var(--fg) calc(l + 0.45) c h);
+  --text-body: oklch(from var(--fg) calc(l + 0.16) c h);
+  --text-secondary: oklch(from var(--fg) calc(l + 0.34) c h);
+  --text-tertiary: oklch(from var(--fg) calc(l + 0.5) c h);
+
+  /* Elevation. Raised controls are lit from above: a face a touch lighter
+     than the surface, a top highlight and a crisp ring. The .dark block
+     swaps in lighter rings and an inner edge. */
+  --raised-bg: var(--primary-bg);
+  --raised-bg-hover: oklch(from var(--raised-bg) calc(l + var(--raised-hover-shift)) c h);
+  --raised-selected-bg: var(--raised-bg);
+  --raised-spread: 0.004;
+  --raised-hover-shift: -0.012;
+  --elevation-raised:
+    inset 0 1px 0 rgb(255 255 255), 0 0 0 1px rgb(0 0 0 / 0.075), 0 1px 2px rgb(0 0 0 / 0.07), 0 2px
+    6px -2px rgb(0 0 0 / 0.05);
+  --elevation-card:
+    0 0 0 1px rgb(0 0 0 / 0.075), 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 8px -2px rgb(0 0 0 / 0.05);
+  --elevation-composer:
+    0 0 0 1px rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08), 0 6px 16px -6px rgb(0 0 0 / 0.1);
+  --elevation-overlay:
+    0 0 0 1px rgb(0 0 0 / 0.075), 0 1px 2px rgb(0 0 0 / 0.06), 0 12px 32px -8px rgb(0 0 0 / 0.16),
+    0 32px 64px -16px rgb(0 0 0 / 0.14);
+
+  /* Accent controls (send, logo tile) share one cobalt bevel. */
+  --elevation-logo:
+    inset 0 1px 0 rgb(255 255 255 / 0.28), inset 0 -2px 3px oklch(30% 0.12 258 / 0.35), 0 0 0 1px
+    oklch(from var(--acc) calc(l - 0.064) c h), 0 1px 2px oklch(from var(--acc) l c h / 0.35);
+  --elevation-logo-lg:
+    inset 0 1px 0 rgb(255 255 255 / 0.28), inset 0 -3px 5px oklch(30% 0.12 258 / 0.35), 0 0 0 1px
+    oklch(from var(--acc) calc(l - 0.064) c h), 0 1px 2px oklch(from var(--acc) l c h / 0.35), 0
+    4px 10px -2px oklch(from var(--acc) l c h / 0.3);
+  --elevation-accent:
+    inset 0 1px 0 rgb(255 255 255 / 0.28), 0 0 0 1px oklch(from var(--acc) calc(l - 0.064) c h), 0
+    1px 2px oklch(from var(--acc) l c h / 0.35);
+
+  /* The composer: white in light; a step above the tray in dark. */
+  --composer-bg: var(--primary-bg);
+
+  /* Reference tables are two-tone like code blocks: a tray (header, expanded
+     rows) around a lighter panel of rows. */
+  --table-tray: var(--base-bg);
+  --table-panel: var(--primary-bg);
+
+  /* Code blocks are dark in both modes: fixed zinc, not seed-derived. */
+  /* Code stays dark in light mode: the frame is the ink seed, the panel a step
+     lighter (scaled by contrast like the tables), so a theme's hue tints both. */
+  --code-bg: var(--fg);
+  --code-panel: oklch(from var(--fg) calc(l + 0.13 * var(--con)) c h);
+  --elevation-code:
+    inset 0 0 0 1px rgb(255 255 255 / 0.1), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px
+    var(--code-bg), 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 10px -2px rgb(0 0 0 / 0.12);
 
   --radius: 8px;
 
-  --sidebar-width: 224px;
+  --sidebar-width: 256px;
   --thread-width: 672px;
 }
 
 .dark {
-  --bg: #111111;
-  --fg: #fcfcfc;
-  --acc: #4a9eed;
+  --bg: #18181b;
+  --fg: #f4f4f5;
+  --acc: #4c9bea;
 
   /* State deltas flip positive in dark — surfaces sit far from
      white, so states lift toward white instead of sinking. */
@@ -118,7 +167,7 @@
   --primary-lightness: calc(0.1 * var(--con));
   --tertiary-lightness: calc(0.2 * var(--con));
   --quaternary-lightness: calc(0.3 * var(--con));
-  --base-lightness: calc(-0.03 * var(--con));
+  --base-lightness: calc(-0.075 * var(--con));
 
   /* Absolute L floors. The natural lift compresses below 1 sRGB
      unit at bg=#000; floors guarantee tiers stay distinct. At
@@ -139,15 +188,46 @@
   );
   --base-bg: oklch(from var(--bg) max(0, calc(l + var(--base-lightness))) c h);
 
-  --text-secondary: oklch(from var(--fg) calc(l - 0.3) c h);
-  --text-tertiary: oklch(from var(--fg) calc(l - 0.45) c h);
+  --text-body: oklch(from var(--fg) calc(l - 0.1) c h);
+  --text-secondary: oklch(from var(--fg) calc(l - 0.26) c h);
+  --text-tertiary: oklch(from var(--fg) calc(l - 0.42) c h);
+
+  /* Dark rings stay light: a near-black ring reads as a cut-out. */
+  --raised-bg: oklch(from var(--bg) calc(l + 0.29 * var(--con)) c h);
+  /* Selected rows sit a step below raised buttons so they don't shout. */
+  --raised-selected-bg: oklch(from var(--bg) calc(l + 0.21 * var(--con)) c h);
+  --raised-spread: 0.014;
+  --raised-hover-shift: 0.02;
+  --elevation-raised:
+    inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.05), 0 0 0 1px
+    rgb(0 0 0 / 0.16), 0 1px 2px rgb(0 0 0 / 0.1);
+  --elevation-card:
+    inset 0 1px 0 rgb(255 255 255 / 0.05), inset 0 0 0 1px rgb(255 255 255 / 0.06), 0 0 0 1px
+    rgb(0 0 0 / 0.16), 0 1px 2px rgb(0 0 0 / 0.1);
+  --elevation-composer:
+    inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px rgb(255 255 255 / 0.07),
+    0 0 0 1px rgb(0 0 0 / 0.2), 0 1px 2px rgb(0 0 0 / 0.12), 0 6px 16px -6px rgb(0 0 0 / 0.22);
+  --elevation-overlay:
+    inset 0 1px 0 rgb(255 255 255 / 0.06), inset 0 0 0 1px rgb(255 255 255 / 0.07),
+    0 0 0 1px rgb(0 0 0 / 0.16), 0 12px 32px -8px rgb(0 0 0 / 0.4), 0 32px 64px -16px
+    rgb(0 0 0 / 0.36);
+
+  --composer-bg: oklch(from var(--bg) calc(l + 0.13 * var(--con)) c h);
+  --table-tray: var(--primary-bg);
+  --table-panel: oklch(from var(--bg) calc(l + 0.2 * var(--con)) c h);
+
+  --code-bg: oklch(from var(--bg) calc(l + 0.1 * var(--con)) c h);
+  --code-panel: oklch(from var(--bg) calc(l + 0.2 * var(--con)) c h);
+  --elevation-code:
+    inset 0 0 0 1px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.06), 0 0 0 1px
+    rgb(0 0 0 / 0.16), 0 1px 2px rgb(0 0 0 / 0.1);
 
   --shadow-border-opacity: 0.06;
 }
 
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-mono: var(--font-ioskeley-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --font-weight-normal: 450;
 
@@ -158,6 +238,14 @@
 
   /* 0px 0px 0px 1px oklch(from var(--primary-border) l c h / 1), */
   --shadow-border: 0px 1px 2px -1px rgb(0 0 0 / 0.06), 0px 2px 4px 0px rgb(0 0 0 / 0.04);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-card: var(--elevation-card);
+  --shadow-composer: var(--elevation-composer);
+  --shadow-overlay: var(--elevation-overlay);
+  --shadow-accent: var(--elevation-accent);
+  --shadow-logo: var(--elevation-logo);
+  --shadow-logo-lg: var(--elevation-logo-lg);
+  --shadow-code: var(--elevation-code);
 
   /* Background */
   --color-base-bg: var(--base-bg);
@@ -207,7 +295,14 @@
   --color-accent-border-active: var(--accent-border-active);
 
   /* Text */
+  --color-composer-bg: var(--composer-bg);
+  --color-table-tray: var(--table-tray);
+  --color-table-panel: var(--table-panel);
+  --color-code-bg: var(--code-bg);
+  --color-code-panel: var(--code-panel);
+
   --color-ink-primary: var(--text-primary);
+  --color-ink-body: var(--text-body);
   --color-ink-secondary: var(--text-secondary);
   --color-ink-tertiary: var(--text-tertiary);
 
@@ -226,6 +321,47 @@
   --text-md: 14px;
   --text-lg: 15px;
   --text-xl: 16px;
+}
+
+/* Raised face: pair with shadow-raised (or shadow-accent for bg-accent-raised).
+   The gradient reads --raised-face on the element itself, so the hover and
+   selected utilities only swap that variable. */
+@utility bg-raised {
+  --raised-face: var(--raised-bg);
+  background-color: var(--raised-face);
+  background-image: linear-gradient(
+    180deg,
+    oklch(from var(--raised-face) calc(l + var(--raised-spread)) c h),
+    oklch(from var(--raised-face) calc(l - var(--raised-spread)) c h)
+  );
+}
+
+@utility bg-raised-hover {
+  --raised-face: var(--raised-bg-hover);
+}
+
+@utility bg-raised-selected {
+  --raised-face: var(--raised-selected-bg);
+  background-color: var(--raised-face);
+  background-image: linear-gradient(
+    180deg,
+    oklch(from var(--raised-face) calc(l + var(--raised-spread)) c h),
+    oklch(from var(--raised-face) calc(l - var(--raised-spread)) c h)
+  );
+}
+
+@utility bg-accent-raised {
+  --accent-face: var(--acc);
+  background-color: var(--accent-face);
+  background-image: linear-gradient(
+    180deg,
+    oklch(from var(--accent-face) calc(l + 0.043) c h),
+    var(--accent-face)
+  );
+}
+
+@utility bg-accent-raised-hover {
+  --accent-face: oklch(from var(--acc) calc(l + 0.03) c h);
 }
 
 @keyframes shimmer {
@@ -261,6 +397,18 @@
     @apply bg-base-bg font-sans font-normal text-ink-primary;
     font-synthesis: none;
   }
+
+  /* Ioskeley's web build carries ligatures; code shows what was typed. */
+  code,
+  kbd,
+  pre,
+  samp,
+  .font-mono {
+    font-variant-ligatures: none;
+    font-feature-settings:
+      "liga" 0,
+      "calt" 0;
+  }
 }
 
 /* Streamdown element styles */
@@ -278,25 +426,25 @@
 }
 
 [data-streamdown="code-block"] {
-  @apply my-3 overflow-hidden rounded-lg border border-primary-border bg-primary-bg [corner-shape:squircle];
+  @apply my-3 overflow-hidden rounded-xl bg-primary-bg shadow-card;
 }
 [data-streamdown="code-block-header"] {
-  @apply flex items-center justify-between border-b border-primary-border bg-primary-bg p-3 text-xs text-ink-primary;
+  @apply flex h-9 items-center justify-between border-ink-primary/6 border-b bg-base-bg px-3 font-mono text-ink-secondary text-xs;
 }
 [data-streamdown="code-block-body"] {
-  @apply overflow-x-auto p-3 bg-primary-bg text-sm leading-relaxed;
+  @apply overflow-x-auto bg-primary-bg p-3 font-mono text-[13px] leading-[22px];
 }
 
 [data-streamdown="inline-code"] {
-  @apply rounded-sm bg-primary-bg px-1 py-0.5 text-sm text-ink-primary;
+  @apply rounded-[4px] bg-ink-primary/6 px-1 py-px font-mono text-[0.85em] text-ink-primary;
 }
 
 [data-streamdown="link"] {
-  @apply text-ink-primary underline underline-offset-2 decoration-primary-border hover:decoration-ink-primary;
+  @apply text-accent-bg underline decoration-accent-bg/30 underline-offset-4 hover:decoration-accent-bg;
 }
 
 [data-streamdown="blockquote"] {
-  @apply my-3 border-l-2 border-primary-border pl-3 text-ink-primary;
+  @apply my-3 border-ink-primary/10 border-l-2 pl-4 text-ink-body;
 }
 
 [data-streamdown="ordered-list"],
@@ -313,48 +461,171 @@
   @apply pl-1;
 }
 [data-streamdown="list-item"]::marker {
-  color: var(--ink-secondary);
+  color: var(--text-tertiary);
 }
 [data-streamdown="list-item"] > [data-streamdown="paragraph"] {
   @apply my-0;
 }
 
 [data-streamdown="horizontal-rule"] {
-  @apply my-4 border-primary-border;
+  @apply my-4 border-ink-primary/8;
 }
 
 [data-streamdown="strong"] {
-  @apply font-medium text-ink-primary;
+  @apply font-semibold text-ink-primary;
 }
 
 [data-streamdown="table-wrapper"] {
-  @apply my-3 overflow-x-auto;
+  @apply my-3 overflow-x-auto rounded-lg shadow-card;
 }
 [data-streamdown="table"] {
   @apply w-full text-sm;
 }
 [data-streamdown="table-header"] {
-  @apply border-b border-primary-border bg-primary-bg;
+  @apply border-ink-primary/8 border-b bg-base-bg;
 }
 [data-streamdown="table-header-cell"] {
-  @apply px-3 py-1.5 text-left font-medium text-ink-primary;
+  @apply px-3 py-2 text-left font-medium text-ink-secondary text-xs;
 }
 [data-streamdown="table-row"] {
-  @apply border-b border-primary-border;
+  @apply border-ink-primary/6 border-b last:border-0;
 }
 [data-streamdown="table-cell"] {
-  @apply px-3 py-1.5 text-ink-primary;
+  @apply px-3 py-2 text-ink-body;
 }
 
 [data-streamdown="image"] {
   @apply max-w-full rounded-md;
 }
 
-/* ─── Shiki dual-theme code blocks ───
-   CodeBlock highlights with { light: github-light, dark: github-dark } and
-   defaultColor:false, so shiki emits per-token CSS variables instead of a fixed
-   color. Activate light by default and swap to dark under the .dark class. Only
-   the text color switches — the <pre> keeps its own bg-secondary surface. */
+/* Scroll masks fade the edges a scroller can still scroll past. Scroll-driven
+   animations size each fade, so an axis that can't scroll (or a browser without
+   scroll timelines) gets none. */
+@property --scroll-mask-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-mask-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-mask-left {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-mask-right {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-mask-top {
+  to {
+    --scroll-mask-top: 32px;
+  }
+}
+@keyframes scroll-mask-bottom {
+  from {
+    --scroll-mask-bottom: 32px;
+  }
+}
+@keyframes scroll-mask-left {
+  to {
+    --scroll-mask-left: 32px;
+  }
+}
+@keyframes scroll-mask-right {
+  from {
+    --scroll-mask-right: 32px;
+  }
+}
+
+@utility scroll-mask-y {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--scroll-mask-top),
+    #000 calc(100% - var(--scroll-mask-bottom)),
+    transparent
+  );
+  animation:
+    scroll-mask-top linear both,
+    scroll-mask-bottom linear both;
+  animation-timeline: scroll(self y), scroll(self y);
+  animation-range:
+    0 32px,
+    calc(100% - 32px) 100%;
+}
+
+@utility scroll-mask {
+  mask-image:
+    linear-gradient(
+      to bottom,
+      transparent,
+      #000 var(--scroll-mask-top),
+      #000 calc(100% - var(--scroll-mask-bottom)),
+      transparent
+    ),
+    linear-gradient(
+      to right,
+      transparent,
+      #000 var(--scroll-mask-left),
+      #000 calc(100% - var(--scroll-mask-right)),
+      transparent
+    );
+  mask-composite: intersect;
+  animation:
+    scroll-mask-top linear both,
+    scroll-mask-bottom linear both,
+    scroll-mask-left linear both,
+    scroll-mask-right linear both;
+  animation-timeline: scroll(self y), scroll(self y), scroll(self x), scroll(self x);
+  animation-range:
+    0 32px,
+    calc(100% - 32px) 100%,
+    0 32px,
+    calc(100% - 32px) 100%;
+}
+
+/* Switching between the docs and the playground cross-dissolves the viewport (a
+   ViewTransition in SiteShell). The root swaps live rather than fading a frozen
+   snapshot, so the sidebar's own slide plays through. */
+/* biome-ignore lint/correctness/noUnknownTypeSelector: `root` is a view-transition name, not an element. */
+::view-transition-old(root) {
+  display: none;
+}
+/* biome-ignore lint/correctness/noUnknownTypeSelector: `root` is a view-transition name, not an element. */
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(site-viewport) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Docs code blocks: a line-number gutter on multi-line blocks. */
+[data-code-block] pre[data-line-numbers] code {
+  counter-reset: line;
+}
+
+[data-code-block] pre[data-line-numbers] .line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 3rem;
+  padding-right: 1.25rem;
+  text-align: right;
+  color: #71717a;
+  user-select: none;
+}
+
+/* ─── Shiki dual-theme fallback ───
+   Highlighting that runs with { light, dark } themes and defaultColor:false
+   emits per-token CSS variables; activate light by default and swap under
+   .dark. Docs code blocks use one dark theme with inline colors instead. */
 .shiki,
 .shiki span {
   color: var(--shiki-light);

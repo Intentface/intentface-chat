@@ -1,7 +1,8 @@
 "use client";
 
 import { Nav } from "@intentface/chat/nav";
-import type { ComponentProps } from "react";
+import { ChevronDown } from "@keyline-icons/react";
+import "./collapse.css";
 
 /*
  * The collapse, slowed to 500ms so the mechanism is visible.
@@ -17,9 +18,7 @@ import type { ComponentProps } from "react";
  * inner one, and watch the outer keep growing.
  */
 export const Collapse = () => (
-  <div className="collapse-demo w-72 rounded-xl border border-[#f0f0f0] bg-white py-2 dark:border-[#262626] dark:bg-[#111111]">
-    <CollapseRecipe />
-
+  <div className="relative collapse-demo w-72 rounded-xl bg-[#f5f5f6] shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] py-2 dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]">
     <Nav.Root
       aria-label="Collapse"
       guide="indent"
@@ -68,48 +67,13 @@ export const Collapse = () => (
 const listClass = "flex flex-col gap-0.5";
 
 const rowClass = [
-  "group/row flex h-8 shrink-0 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-sm",
-  "text-[#686868] transition-colors dark:text-[#9b9b9b]",
-  "hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]",
-  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#1a1a1a] dark:focus-visible:outline-[#fcfcfc]",
+  "group/row flex h-[30px] shrink-0 cursor-pointer select-none items-center gap-2 rounded-md px-2 font-medium text-[13px]",
+  "text-zinc-700 transition-colors dark:text-zinc-300",
+  "hover:bg-zinc-950/5 hover:text-zinc-900 dark:hover:bg-white/8 dark:hover:text-zinc-100",
+  // Inset: the collapsing lists clip their overflow, so an outset ring would be cut.
+  "focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-[#0169cc]/60",
 ].join(" ");
 
 const Chevron = () => (
-  <ChevronIcon className="ml-auto size-3 text-[#949494] transition-transform group-data-closed/row:-rotate-90 dark:text-[#6f6f6f]" />
-);
-
-/*
- * Deliberately slow. `flex-shrink: 0` on the rows is load-bearing: the
- * collapsing list squeezes to nothing, and a flex item shrinks below its own
- * height when the column runs short — so without it the rows compress instead
- * of sliding up behind the clip.
- */
-const CollapseRecipe = () => (
-  <style>{`
-.collapse-demo [data-nav-group] > [data-nav-list] {
-  height: var(--nav-list-height);
-  overflow: hidden;
-  opacity: 1;
-  transition: height 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 500ms ease-out;
-}
-.collapse-demo [data-nav-list][data-starting-style],
-.collapse-demo [data-nav-list][data-ending-style] { height: 0; opacity: 0; }
-.collapse-demo [data-nav-list] > * { flex-shrink: 0; }
-.collapse-demo [data-nav-list][data-indent] { margin-left: 15px; padding-left: 7px; }
-`}</style>
-);
-
-const ChevronIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="m4 6.5 4 4 4-4" />
-  </svg>
+  <ChevronDown className="ml-auto size-3 text-zinc-400 transition-transform group-data-closed/row:-rotate-90 dark:text-zinc-500" />
 );

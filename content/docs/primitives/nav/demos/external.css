@@ -1,0 +1,20 @@
+.external-nav-demo [data-nav-group] > [data-nav-list] {
+  height: var(--nav-list-height);
+  overflow: hidden;
+  opacity: 1;
+  transition:
+    height 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 200ms ease-out;
+}
+.external-nav-demo [data-nav-list][data-starting-style],
+.external-nav-demo [data-nav-list][data-ending-style] {
+  height: 0;
+  opacity: 0;
+}
+.external-nav-demo [data-nav-list] > * {
+  flex-shrink: 0;
+}
+.external-nav-demo [data-nav-list][data-indent] {
+  margin-left: 15px;
+  padding-left: 7px;
+}

@@ -1,13 +1,9 @@
 "use client";
 
-import { AskUser } from "@intentface/chat/ask-user";
-import {
-  type AskUserQuestion,
-  Composer,
-  type ComposerSubmitData,
-  useComposer,
-} from "@intentface/chat/composer";
-import { type ComponentProps, useState } from "react";
+import { type AskUserQuestion, Composer, type ComposerSubmitData } from "@intentface/chat/composer";
+import { ArrowUp } from "@keyline-icons/react";
+import { useState } from "react";
+import { Controls, Prompt } from "./ask-user";
 
 // Setting `questions` arms the flow and flips askUser.active. Answering or
 // skipping the last one fires onSubmit with { kind: "answers" }.
@@ -64,21 +60,21 @@ export const AskUserFlow = () => {
             composer upward; the default is a portaled overlay. */}
         <Composer.Panel
           anchor={false}
-          className="mb-2 overflow-hidden rounded-2xl border border-[#f0f0f0] bg-white dark:border-[#262626] dark:bg-[#181818]"
+          className="mb-2 overflow-hidden rounded-xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-800 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]"
         >
           {!done && <Prompt />}
         </Composer.Panel>
-        <Composer.Container className="cursor-text rounded-2xl border border-[#f0f0f0] bg-white shadow-xs transition-colors focus-within:border-[#ececec] dark:border-[#262626] dark:bg-[#181818] dark:focus-within:border-[#2d2d2d]">
-          <Composer.Textarea className="max-h-32 min-h-8 overflow-y-auto px-4 pt-3 text-sm **:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:leading-[1.7] [&_[data-composer-editor]:focus]:outline-none">
+        <Composer.Container className="cursor-text rounded-xl bg-white p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_-1px_rgb(0_0_0/0.08),0_6px_16px_-6px_rgb(0_0_0/0.1)] dark:bg-zinc-800 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.2),0_1px_2px_rgb(0_0_0/0.12),0_6px_16px_-6px_rgb(0_0_0/0.22)]">
+          <Composer.Textarea className="max-h-32 min-h-12 overflow-y-auto px-2.5 pt-2.5 text-sm text-zinc-900 dark:text-zinc-100 **:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:leading-6 [&_[data-composer-editor]:focus]:outline-none">
             <Composer.Placeholder
               placeholder={done ? "All set — reset to try again" : "Or type your own answer…"}
-              className="leading-[1.7] text-[#949494] dark:text-[#6f6f6f]"
+              className="text-zinc-400 leading-6 dark:text-zinc-500"
             />
           </Composer.Textarea>
-          <Composer.Actions className="flex items-center justify-end gap-2 p-2">
+          <Composer.Actions className="flex h-12 items-center justify-end gap-1.5 px-2.5">
             {done ? (
-              <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-                <SendIcon />
+              <Composer.Submit className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-[#0169cc] bg-linear-to-b from-[oklch(57.2%_0.166_253.2)] to-[oklch(52.9%_0.173_255)] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.28),0_0_0_1px_oklch(46.5%_0.146_254.8),0_1px_2px_rgb(1_105_204/0.35)] transition-opacity focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-40">
+                <ArrowUp className="size-[15px]" />
               </Composer.Submit>
             ) : (
               <Controls />
@@ -90,7 +86,7 @@ export const AskUserFlow = () => {
         <button
           type="button"
           onClick={reset}
-          className="cursor-pointer rounded-full border border-[#f0f0f0] bg-white px-4 py-1.5 text-sm font-medium text-[#686868] transition-colors hover:bg-[#fafafa] dark:border-[#262626] dark:bg-[#181818] dark:text-[#9b9b9b] dark:hover:bg-[#232323]"
+          className="h-8 cursor-pointer rounded-full bg-white bg-linear-to-b from-white to-[#fdfdfd] px-3 font-medium text-[13px] text-zinc-900 shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] transition-colors hover:from-[#fafafa] hover:to-[#f6f6f6] focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 focus-visible:outline-offset-2 dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:text-zinc-100 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:hover:from-[#38383b] dark:hover:to-[#313134]"
         >
           Reset questions
         </button>
@@ -98,126 +94,3 @@ export const AskUserFlow = () => {
     </div>
   );
 };
-
-// The parts are structural; the current question and selections come from the
-// composer's askUser slice.
-const Prompt = () => {
-  const askUser = useComposer((composer) => composer.askUser);
-  const question = askUser.questions?.[askUser.step];
-
-  if (!question) return null;
-
-  const entry = askUser.answers.get(askUser.step);
-  const total = askUser.questions?.length ?? 0;
-
-  return (
-    <AskUser.Root className="flex flex-col gap-1 p-2">
-      <AskUser.Header className="flex h-7 items-center gap-2 px-2">
-        <AskUser.Label className="text-sm font-medium">{question.question}</AskUser.Label>
-        {!askUser.isSingle && total > 1 && (
-          <AskUser.Navigation className="ml-auto flex items-center gap-1 text-[#949494] dark:text-[#6f6f6f]">
-            <AskUser.Previous
-              onClick={askUser.goBack}
-              disabled={askUser.step === 0}
-              aria-label="Previous question"
-              className="cursor-pointer rounded-md px-1.5 disabled:opacity-30"
-            >
-              ‹
-            </AskUser.Previous>
-            <AskUser.StepLabel className="text-xs tabular-nums">
-              {({ current, total: count }) => `${current} of ${count}`}
-            </AskUser.StepLabel>
-            <AskUser.Next
-              onClick={askUser.goNext}
-              disabled={askUser.step === total - 1}
-              aria-label="Next question"
-              className="cursor-pointer rounded-md px-1.5 disabled:opacity-30"
-            >
-              ›
-            </AskUser.Next>
-          </AskUser.Navigation>
-        )}
-      </AskUser.Header>
-      {question.options && (
-        <AskUser.Options
-          ref={askUser.optionsRef}
-          multiSelect={Boolean(question.multiSelect)}
-          groupName={`question-${askUser.step}`}
-          className="flex flex-col"
-        >
-          {question.options.map((option) => {
-            const selected = Boolean(entry?.selected.has(option.label));
-            return (
-              <AskUser.Option
-                key={option.label}
-                value={option.label}
-                selected={selected}
-                onSelect={() => askUser.toggleOption(option.label)}
-                className="flex cursor-pointer items-start gap-2 rounded-[10px] p-2 outline-none transition-colors data-highlighted:bg-[#f4f4f4] dark:data-highlighted:bg-[#232323]"
-              >
-                {/* Decorative: the Option itself carries the radio/checkbox role. */}
-                <span
-                  aria-hidden="true"
-                  className={`mt-px flex size-4 shrink-0 items-center justify-center rounded border text-[10px] ${
-                    selected
-                      ? "border-[#1a1a1a] bg-[#1a1a1a] text-white dark:border-[#fcfcfc] dark:bg-[#fcfcfc] dark:text-[#111111]"
-                      : "border-[#ececec] dark:border-[#2d2d2d]"
-                  }`}
-                >
-                  {selected ? "✓" : ""}
-                </span>
-                <AskUser.OptionContent className="flex flex-col gap-0.5">
-                  <AskUser.OptionLabel className="text-sm leading-tight">
-                    {option.label}
-                  </AskUser.OptionLabel>
-                  {option.description && (
-                    <AskUser.OptionDescription className="text-xs text-[#949494] dark:text-[#6f6f6f]">
-                      {option.description}
-                    </AskUser.OptionDescription>
-                  )}
-                </AskUser.OptionContent>
-              </AskUser.Option>
-            );
-          })}
-        </AskUser.Options>
-      )}
-    </AskUser.Root>
-  );
-};
-
-// Dismiss is a plain button you wire up; Continue is type=submit, so the
-// enclosing Composer.Root form drives it.
-const Controls = () => {
-  const askUser = useComposer((composer) => composer.askUser);
-
-  return (
-    <>
-      <AskUser.Dismiss
-        onClick={askUser.dismissStep}
-        className="cursor-pointer rounded-full px-3 py-1.5 text-sm text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
-      >
-        Skip
-      </AskUser.Dismiss>
-      <AskUser.Continue className="cursor-pointer rounded-full bg-[#1a1a1a] px-3.5 py-1.5 text-sm font-medium text-white dark:bg-[#fcfcfc] dark:text-[#111111]">
-        {askUser.isLastStep ? "Done" : "Continue"}
-      </AskUser.Continue>
-    </>
-  );
-};
-
-const SendIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
-  </svg>
-);

@@ -1,8 +1,5 @@
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+import { languageOf, readDemoFiles } from "./demo-files";
 import { PACKAGE_MANAGERS } from "./package-managers";
-
-const DOCS_DIR = path.join(process.cwd(), "content", "docs");
 
 // <InstallationBlock packageName="@intentface/chat" />
 const INSTALL_TAG = /<InstallationBlock\b[\s\S]*?\spackageName="([^"]+)"[\s\S]*?\/>/g;
@@ -30,26 +27,23 @@ export const expandDemos = async (markdown: string): Promise<string> => {
   const files = [...expanded.matchAll(DEMO_TAG)].map(([, file]) => file);
   if (files.length === 0) return expanded;
 
-  const sources = new Map<string, string>();
+  // A demo split across local imports expands to one fenced block per file. An
+  // unreadable entry leaves the tag untouched rather than a half-broken page.
+  const blocks = new Map<string, string>();
   await Promise.all(
     [...new Set(files)].map(async (file) => {
-      // Defence in depth: `file` comes from our own MDX, but never let a path
-      // escape content/docs.
-      const resolved = path.resolve(DOCS_DIR, file);
-      if (!resolved.startsWith(`${DOCS_DIR}${path.sep}`)) return;
-      try {
-        sources.set(file, await readFile(resolved, "utf8"));
-      } catch {
-        // Leave the tag untouched rather than emit a half-broken page.
-      }
+      const demoFiles = await readDemoFiles(file);
+      if (demoFiles.length === 0) return;
+      const fenced = demoFiles.map(
+        (demoFile) =>
+          `\`\`\`${languageOf(demoFile.file)} title="${demoFile.file}"\n${demoFile.source.trimEnd()}\n\`\`\``,
+      );
+      blocks.set(file, fenced.join("\n\n"));
     }),
   );
 
   return expanded
     .replace(DEMO_IMPORT, "")
-    .replace(DEMO_TAG, (tag, file: string) => {
-      const source = sources.get(file);
-      return source ? `\`\`\`tsx title="${file}"\n${source.trimEnd()}\n\`\`\`` : tag;
-    })
+    .replace(DEMO_TAG, (tag, file: string) => blocks.get(file) ?? tag)
     .replace(/\n{3,}/g, "\n\n");
 };

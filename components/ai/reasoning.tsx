@@ -1,13 +1,12 @@
 "use client";
 
 import { Reasoning as ReasoningPrimitive, useReasoning } from "@intentface/chat/reasoning";
+import { Brain, ChevronDown } from "@keyline-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { type ComponentProps, memo, type ReactNode } from "react";
-import { ChevronDownIcon } from "@/components/icons/chevron-down";
 import { Markdown } from "@/components/ui/markdown";
 import { splitReasoningByHeaders } from "@/lib/ai/message-info";
 import { cn } from "@/lib/utils";
-import { BrainIcon } from "../icons/brain";
 import { TextShimmer } from "../ui/text-shimmer";
 
 export { useReasoning };
@@ -68,15 +67,15 @@ const ReasoningTrigger = memo(
     return (
       <ReasoningPrimitive.Trigger
         className={cn(
-          "flex cursor-pointer w-full text-sm items-center gap-2 text-ink-secondary rounded-md transition-colors hover:text-ink-primary",
+          "flex w-full cursor-pointer items-center gap-1.5 rounded-md font-medium text-ink-secondary text-sm transition-colors hover:text-ink-primary focus-visible:outline-2 focus-visible:outline-accent-bg/60 focus-visible:outline-offset-2",
           className,
         )}
         {...props}
       >
         {children ?? (
           <>
-            <div className="flex items-center gap-1">
-              <BrainIcon className="size-4" />
+            <div className="flex items-center gap-1.5">
+              <Brain className="size-[15px]" />
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.span
                   key={key}
@@ -84,14 +83,17 @@ const ReasoningTrigger = memo(
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                   exit={{ opacity: 0, y: "-100%", filter: "blur(4px)" }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="whitespace-nowrap text-gray-11/60"
+                  className="whitespace-nowrap"
                 >
                   {component}
                 </motion.span>
               </AnimatePresence>
             </div>
-            <ChevronDownIcon
-              className={cn("size-5 transition-transform", isOpen ? "rotate-180" : "rotate-0")}
+            <ChevronDown
+              className={cn(
+                "size-3.5 text-ink-tertiary transition-transform",
+                isOpen ? "rotate-180" : "rotate-0",
+              )}
             />
           </>
         )}

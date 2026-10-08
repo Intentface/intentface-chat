@@ -3,7 +3,8 @@
 import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
 import { Message } from "@intentface/chat/message";
 import { Thread, useThread } from "@intentface/chat/thread";
-import { type ComponentProps, useState } from "react";
+import { ArrowDown, ArrowUp } from "@keyline-icons/react";
+import { useState } from "react";
 
 type DemoMessage = { id: string; role: "user" | "assistant"; text: string };
 
@@ -26,6 +27,9 @@ const REPLY = "Good question — the short answer is it depends on what you're o
 
 // Thread measures its docked composer and publishes the reserve as
 // --thread-overlay-bottom-height, so the scroll area never hides behind it.
+// autoScroll="bottom" pins the transcript to the composer: the latest turn sits
+// right above it instead of landing at the top over an empty reserve. Messages
+// and composer share one centred column, narrower than the window.
 export const Basic = () => {
   const [messages, setMessages] = useState<DemoMessage[]>(INITIAL);
 
@@ -39,20 +43,23 @@ export const Basic = () => {
   };
 
   return (
-    <div className="h-[440px] w-full max-w-xl overflow-hidden rounded-xl border border-[#f0f0f0] bg-white dark:border-[#262626] dark:bg-[#111111]">
-      <Thread.Root className="relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:1rem]">
+    <div className="h-[440px] w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:bg-zinc-900">
+      <Thread.Root
+        autoScroll="bottom"
+        className="relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:1rem]"
+      >
         <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto]">
           <div className="relative flex min-h-full w-full flex-col items-center pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
             {/* The last child carries the auto-scroll reserve the primitive sets. */}
-            <Thread.Content className="mx-auto flex min-h-full w-full flex-col gap-4 px-4 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)">
+            <Thread.Content className="mx-auto flex min-h-full w-full max-w-lg flex-col justify-end gap-5 px-4 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)">
               {messages.map((message, index) => (
                 <Message.Root
                   key={message.id}
                   role={message.role}
                   isLast={index === messages.length - 1}
-                  className="group flex w-full flex-col gap-1 data-[role=user]:items-end"
+                  className="group flex w-full flex-col gap-1.5 data-[role=user]:items-end"
                 >
-                  <Message.Text className="text-sm leading-[1.7] text-[#1a1a1a] group-data-[role=user]:min-h-9 group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-2xl group-data-[role=user]:border group-data-[role=user]:border-[#f0f0f0] group-data-[role=user]:bg-white group-data-[role=user]:px-3 group-data-[role=user]:py-1.5 group-data-[role=user]:shadow-xs dark:text-[#fcfcfc] dark:group-data-[role=user]:border-[#262626] dark:group-data-[role=user]:bg-[#181818]">
+                  <Message.Text className="text-sm text-zinc-700 leading-6 group-data-[role=user]:max-w-[80%] group-data-[role=user]:rounded-[20px] group-data-[role=user]:bg-white group-data-[role=user]:px-3.5 group-data-[role=user]:py-1.5 group-data-[role=user]:text-zinc-900 group-data-[role=user]:leading-6 group-data-[role=user]:shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_rgb(0_0_0/0.04)] dark:text-zinc-300 dark:group-data-[role=user]:bg-zinc-800 dark:group-data-[role=user]:text-zinc-100 dark:group-data-[role=user]:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16)]">
                     {message.text}
                   </Message.Text>
                 </Message.Root>
@@ -61,19 +68,19 @@ export const Basic = () => {
           </div>
         </Thread.Viewport>
         <Thread.Composer className="absolute inset-x-0 bottom-0 z-2 w-full">
-          <div className="relative flex w-full flex-col items-center px-4 pb-4">
+          <div className="relative mx-auto flex w-full max-w-lg flex-col items-center px-4 pb-4">
             <ScrollButton />
             <Composer.Root onSubmit={handleSubmit} className="flex w-full flex-col">
-              <Composer.Container className="cursor-text rounded-2xl border border-[#f0f0f0] bg-white shadow-xs transition-colors focus-within:border-[#ececec] dark:border-[#262626] dark:bg-[#181818] dark:focus-within:border-[#2d2d2d]">
-                <Composer.Textarea className="max-h-32 min-h-8 overflow-y-auto px-4 pt-3 text-sm **:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:leading-[1.7] [&_[data-composer-editor]:focus]:outline-none">
+              <Composer.Container className="cursor-text rounded-xl bg-white p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_-1px_rgb(0_0_0/0.08),0_6px_16px_-6px_rgb(0_0_0/0.1)] dark:bg-zinc-800 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.2),0_1px_2px_rgb(0_0_0/0.12),0_6px_16px_-6px_rgb(0_0_0/0.22)]">
+                <Composer.Textarea className="max-h-32 min-h-12 overflow-y-auto px-2.5 pt-2.5 text-sm text-zinc-900 dark:text-zinc-100 **:data-composer-editor:w-full **:data-composer-editor:max-w-none **:data-composer-editor:leading-6 [&_[data-composer-editor]:focus]:outline-none">
                   <Composer.Placeholder
                     placeholder="Ask a follow-up…"
-                    className="leading-[1.7] text-[#949494] dark:text-[#6f6f6f]"
+                    className="text-zinc-400 leading-6 dark:text-zinc-500"
                   />
                 </Composer.Textarea>
-                <Composer.Actions className="flex justify-end gap-2 p-2">
-                  <Composer.Submit className="flex size-8 items-center justify-center rounded-full bg-[#1a1a1a] text-white transition-opacity disabled:opacity-40 dark:bg-[#fcfcfc] dark:text-[#111111]">
-                    <SendIcon />
+                <Composer.Actions className="flex h-12 items-center justify-end px-2.5">
+                  <Composer.Submit className="flex size-7 cursor-pointer items-center justify-center rounded-full bg-[#0169cc] bg-linear-to-b from-[oklch(57.2%_0.166_253.2)] to-[oklch(52.9%_0.173_255)] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.28),0_0_0_1px_oklch(46.5%_0.146_254.8),0_1px_2px_rgb(1_105_204/0.35)] transition-opacity focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-40">
+                    <ArrowUp className="size-[15px]" />
                   </Composer.Submit>
                 </Composer.Actions>
               </Composer.Container>
@@ -96,43 +103,9 @@ const ScrollButton = () => {
       type="button"
       onClick={() => scrollToBottom()}
       aria-label="Scroll to latest"
-      className="absolute -top-10 z-10 flex size-8 cursor-pointer items-center justify-center rounded-full border border-[#f0f0f0] bg-white text-[#686868] shadow-xs transition-colors hover:text-[#1a1a1a] dark:border-[#262626] dark:bg-[#181818] dark:text-[#9b9b9b] dark:hover:text-[#fcfcfc]"
+      className="absolute -top-10 z-10 flex size-8 cursor-pointer items-center justify-center rounded-full bg-white bg-linear-to-b from-white to-[#fdfdfd] shadow-[inset_0_1px_0_#fff,0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.07),0_2px_6px_-2px_rgb(0_0_0/0.05)] dark:bg-[#2d2d30] dark:from-[#313134] dark:to-[#2a2a2d] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.1),inset_0_0_0_1px_rgb(255_255_255/0.05),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] text-zinc-500 transition-colors hover:text-zinc-900 hover:from-[#fafafa] hover:to-[#f6f6f6] dark:hover:from-[#38383b] dark:hover:to-[#313134] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-400 dark:hover:text-zinc-100"
     >
-      <ArrowDownIcon />
+      <ArrowDown className="size-[15px]" />
     </button>
   );
 };
-
-const ArrowDownIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M8 3v10m0 0 4.5-4.5M8 13l-4.5-4.5" />
-  </svg>
-);
-
-const SendIcon = (props: ComponentProps<"svg">) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 16 16"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-    {...props}
-  >
-    <path d="M8 13V3m0 0L3.5 7.5M8 3l4.5 4.5" />
-  </svg>
-);

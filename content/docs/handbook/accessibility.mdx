@@ -1,110 +1,69 @@
 ---
 title: Accessibility
-description: The accessibility features the primitives provide, and what your application still has to supply.
+description: What the primitives guarantee, and what your application still has to supply.
 ---
 
-The primitives handle ARIA attributes, roles, keyboard navigation, and focus
-management. Because the package renders no styles, anything visual — contrast,
-focus indication — is your application's responsibility.
+The primitives own roles, relationships, keyboard behaviour and focus movement.
+They render no styles, so everything visual is yours — and some of it is not
+optional.
 
-## Keyboard navigation
+## What you have to supply
+
+- **Focus indication.** Focus moves correctly; nothing paints it. Style
+  `:focus-visible` yourself, and remember that in command lists and ask-user
+  options the highlight *is* the indicator, so a faint highlight is a missing
+  focus ring rather than a soft hover.
+- **Contrast.** No colour ships with the package.
+- **Speaker identity.** A message's `role` reaches the DOM as `data-role` only.
+  Alignment and colour carry it to sighted readers and to nobody else, so add a
+  visually hidden prefix or an `aria-label`.
+- **Status copy.** Validation emits a code, not a message, and nothing announces
+  "generating" beyond a button label. Add your own `role="status"` region where
+  in-flight state matters, and `role="alert"` for failures.
+- **Anything you build in a seam.** A surface lifted through a render prop
+  inherits that pattern's obligations — a hover preview still has to open on
+  focus and close on Escape.
+
+## Keyboard
 
 The primitives follow the [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/).
-The composer's editor interprets keys by mode: an open command list, or an active
-ask-user flow, takes priority over normal typing. A primitive that claims keys of
-its own documents them in a key table on its page; one that relies on native focus
-order does not.
 
-Anything draggable is also operable from the keyboard. The shell's grip resizes
-the sidebar with the arrow keys once focused, so no layout a visitor can reach
-with a pointer is closed to them without one.
+A composite widget is one tab stop, not one per item: the arrow keys move within
+it and Tab moves past it. Focus follows the arrows without selecting, and a
+primitive that should select as focus moves says so through a prop. Anything
+draggable is operable from the keyboard too.
 
-A strip or a tree is one tab stop, not one per item. Focus follows the arrow
-keys without selecting, which is manual activation; a primitive that should
-select as focus moves says so through a prop rather than by default. The nav is a roving-tabindex widget:
-exactly one row is tabbable and the arrow keys move focus between rows. Before
-that state is seeded — a server render, or the frame before hydration — the
-active row carries the tab stop, which keeps a row rendered as a real anchor
-reachable without JavaScript. A field inside the tree keeps its own arrow keys,
-or its caret could never move.
+Which keys a primitive claims is on its own page, in a Keyboard table. A
+primitive with no table claims none and relies on native focus order.
 
-Command lists and ask-user options move a highlight rather than DOM focus, so the
-caret stays in the editor while you navigate. Arrowing past the end of a list
-keeps focus in place; arrowing up past the first ask-user option returns to the
-editor.
+## Names
 
-## Focus management
+Interactive parts ship default accessible names and containers do not, because
+containers are not controls. Every default is overridable through `aria-label`
+or `aria-labelledby`.
 
-Focus is managed automatically after interaction — the composer restores the
-caret after selecting a command item, and ask-user recovers arrow navigation if a
-click elsewhere drops focus to the body.
+Where a name would otherwise repeat down a list, the part takes the
+distinguishing piece as a prop rather than guessing. `Attachments.Remove` takes
+a `filename`, so five buttons in a row do not all announce "Remove attachment".
 
-In command lists and ask-user options the highlight *is* the focus indication —
-focus follows it rather than moving separately, so styling the highlight faintly
-removes the focus indicator rather than softening a hover effect.
+Anything announced as content rather than as a name is text you render, so it is
+localised wherever the rest of your copy lives.
 
-## Roles and relationships
+## Deviations
 
-The composer's editor is wired to its command list as a combobox: `aria-expanded`,
-`aria-controls`, and `aria-activedescendant` reference a `listbox`, and the active
-row carries `aria-selected`. Ask-user renders a labelled `radiogroup`, or
-checkboxes with `aria-checked` for multi-select questions. Disabled options are
-announced but skipped by highlight and selection.
+Twice, the standard role cannot describe the widget, and the primitive says so
+rather than failing quietly. Both are argued on the page that makes the choice:
 
-`Steps` marks the active item with `aria-current="step"`. `Reasoning.Root` carries
-`aria-busy` while streaming.
-
-Disclosure controls announce both their state and what they govern: the shell's
-trigger is a `<button>` with `aria-expanded` and an `aria-controls` pointing at
-the sidebar it opens. Its grip is a focusable `role="separator"` carrying
-`aria-orientation` and the `aria-valuenow` / `aria-valuemin` / `aria-valuemax`
-trio, and it always carries a value, falling back to the minimum before the first
-measurement lands — a focusable separator without one is an invalid widget.
-
-A part that exists only for the pointer is hidden from everything else. The
-shell's hotspot, the strip that floats a collapsed sidebar back out on hover, is
-`aria-hidden`, because the trigger already covers the same state change for
-keyboard and screen-reader users.
-
-The nav's trigger carries the same `aria-expanded` and `aria-controls` pair,
-pointing at the list it governs. Disabled rows get `aria-disabled` rather than
-leaving the focus ring, so they stay discoverable. `Nav.Action` sits outside the
-roving order and stops every event it handles, or activating it would also
-activate the row wrapped around it.
-
-Where a row is not a native control, activation is wired by hand. That is the
-price of a row that can hold an action rather than being a `<button>`, and a row
-that already activates itself — a real button, or an anchor swapped in through
-`render` — is left alone rather than activated twice.
-
-Where the standard role cannot describe the widget, the primitives say so and
-choose a different one rather than fail silently. A closable, open-ended tab
-strip is a `toolbar` of disclosures, not a `tablist`: a tablist may own only
-tabs, leaving nowhere for a close button, and it requires one selected tab, so
-"nothing open" is not a state it can express. Each trigger then carries
-`aria-expanded` and an `aria-controls` that only claims a viewport really in the
-document. Static, always-one-selected tabs are a different widget, and `tablist`
-is right for those.
-
-A floating surface that you work behind is non-modal throughout: no backdrop, no
-scroll lock, no focus trap, and no dismissal on outside press. Focus is never
-taken from you, but it is also never returned, so give such a surface its own
-close control — `Escape` then duplicates it rather than being the only way out.
-
-## Accessible labels
-
-Interactive parts carry default accessible names; containers do not, since they
-are not controls. `Composer.Submit` announces as "Stop generating" while
-generating rather than "Send message". `Attachments.Remove` takes a `filename` so
-each remove button announces its own item.
-
-All defaults are overridable via `aria-label` or `aria-labelledby`. Anything
-announced as content rather than as a name — status text, validation messages —
-is text you render, so it is localised wherever your copy lives.
+- [Tabs](/primitives/tabs#why-a-toolbar-and-not-a-tablist) is a `toolbar` of
+  disclosures, because a `tablist` may hold only tabs and must always have one
+  selected.
+- The [composer](/primitives/composer)'s editor omits `aria-expanded`, because
+  ARIA forbids it on `textbox` and `role="combobox"` would forbid
+  `aria-multiline`.
 
 ## Testing
 
 The package runs an axe-based suite over the composer combobox wiring, the
 ask-user flows, the display primitives' status attributes, and accessible names
-across controls. Automated checks can't evaluate contrast or focus visibility in
-your styling, so those need your own pass.
+across controls. Automated checks cannot evaluate contrast or focus visibility
+in your styling, so those need your own pass.

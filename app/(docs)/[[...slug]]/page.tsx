@@ -65,7 +65,14 @@ export default async function DocsPage(props: PageProps) {
             </div>
           </article>
         </div>
-        <DocsTOC items={page.data.toc} />
+        {/* The changelog lists versions only, not each "Patch Changes" heading. */}
+        <DocsTOC
+          items={
+            page.url === "/changelog"
+              ? page.data.toc.filter((item) => item.depth === 2)
+              : page.data.toc
+          }
+        />
       </div>
     </div>
   );

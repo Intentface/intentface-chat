@@ -61,7 +61,9 @@ const proseComponents: MDXComponents = {
   a: ({ href, ...props }: ComponentProps<"a">) => (
     <Link
       href={href ?? "#"}
-      className="font-medium text-accent-bg underline decoration-accent-bg/30 underline-offset-4 transition-colors hover:decoration-accent-bg"
+      // A link that is only a code badge (a commit hash) drops the underline; the
+      // badge darkens on hover instead.
+      className="font-medium text-accent-bg underline decoration-accent-bg/30 underline-offset-4 transition-colors hover:decoration-accent-bg has-[>code]:no-underline [&>code]:transition-colors hover:[&>code]:bg-ink-primary/10"
       {...props}
     />
   ),

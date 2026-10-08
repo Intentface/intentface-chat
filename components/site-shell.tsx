@@ -75,7 +75,16 @@ const useGoToShortcuts = (go: (mode: Mode) => void) => {
  * It reads no cookie: the docs stay statically rendered, so every full load
  * starts with the sidebar open.
  */
-export const SiteShell = ({ tree, children }: { tree: DocsTree; children: ReactNode }) => {
+export const SiteShell = ({
+  tree,
+  version,
+  children,
+}: {
+  tree: DocsTree;
+  /** The released package version, shown in the footer and linked to its notes. */
+  version: string;
+  children: ReactNode;
+}) => {
   const pathname = usePathname();
   const mode = modeOf(pathname);
   const groups = toGroups(tree.children);
@@ -152,7 +161,14 @@ export const SiteShell = ({ tree, children }: { tree: DocsTree; children: ReactN
           </Sidebar.View>
         </Sidebar.Views>
         {/* Shared by both sides, so it stays put while the views slide. */}
-        <Sidebar.Footer className="flex-row items-center justify-end border-ink-primary/8 border-t pt-2 pr-1 pl-0.5">
+        <Sidebar.Footer className="flex-row items-center justify-between border-ink-primary/8 border-t pt-2 pr-1 pl-0.5">
+          <Link
+            href="/changelog"
+            aria-label={`Version ${version}, see the changelog`}
+            className="flex h-7 items-center rounded-md px-1.5 font-mono text-ink-secondary text-xs transition-colors hover:bg-ink-primary/5 hover:text-ink-primary focus-visible:outline-2 focus-visible:outline-accent-bg/60"
+          >
+            v{version}
+          </Link>
           <div className="flex items-center gap-0.5">
             <FooterLink
               href="https://github.com/Intentface/intentface-chat"

@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { SiteShell } from "@/components/site-shell";
 import { source } from "@/lib/docs/source";
+import chatPackage from "@/packages/chat/package.json";
 import "streamdown/styles.css";
 import "./globals.css";
 const inter = Inter({
@@ -46,7 +47,10 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <Providers>
-          <SiteShell tree={source.pageTree}>{children}</SiteShell>
+          {/* Read here on the server, so only the version reaches the client. */}
+          <SiteShell tree={source.pageTree} version={chatPackage.version}>
+            {children}
+          </SiteShell>
         </Providers>
       </body>
     </html>

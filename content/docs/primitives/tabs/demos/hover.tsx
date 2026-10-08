@@ -22,6 +22,8 @@ import { Body, Preview, TABS } from "./pages";
 export const Hover = () => {
   const [page, setPage] = useState("brief");
   const [floating, setFloating] = useState<string | null>(null);
+  // Replies typed into a floating conversation, kept per tab for this visit.
+  const [replies, setReplies] = useState<Record<string, string[]>>({});
 
   return (
     <div className="relative flex h-96 w-full flex-col overflow-hidden rounded-xl bg-[#f5f5f6] shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-[#131315] dark:shadow-[0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:z-50 dark:after:rounded-[inherit] dark:after:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06)]">
@@ -60,13 +62,31 @@ export const Hover = () => {
         </Tabs.List>
 
         <div className="mx-2 mb-2 min-h-0 flex-1 overflow-auto rounded-lg bg-white shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)]">
-          <Body tab={TABS[page]} />
+          <Body tab={TABS[page]} replies={replies[page]} />
         </div>
 
         <Tabs.Portal>
           <Tabs.Positioner side="bottom" align="start" sideOffset={6}>
             <Tabs.Popup className="hover-demo-popup w-80 overflow-hidden rounded-xl bg-white p-1 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_12px_32px_-8px_rgb(0_0_0/0.16)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.16),0_12px_32px_-8px_rgb(0_0_0/0.4)]">
-              <Tabs.Viewport>{(id) => <Preview tab={TABS[id]} />}</Tabs.Viewport>
+              <Tabs.Viewport>
+                {(id) => (
+                  <Preview
+                    tab={TABS[id]}
+                    replies={replies[id]}
+                    // Opening is the same as pressing the tab: it becomes the page.
+                    onOpen={() => {
+                      setPage(id);
+                      setFloating(null);
+                    }}
+                    onReply={(text) =>
+                      setReplies((current) => ({
+                        ...current,
+                        [id]: [...(current[id] ?? []), text],
+                      }))
+                    }
+                  />
+                )}
+              </Tabs.Viewport>
             </Tabs.Popup>
           </Tabs.Positioner>
         </Tabs.Portal>

@@ -1,4 +1,7 @@
-import { ArrowUp, ArrowUpRight, Link } from "@keyline-icons/react";
+"use client";
+
+import { ArrowUp, ArrowUpRight } from "@keyline-icons/react";
+import type { FormEvent } from "react";
 import { BubbleIcon } from "./icons";
 
 // A document is a few Markdown-ish blocks; a conversation is the exchange.
@@ -80,7 +83,13 @@ const Blocks = ({ blocks, mini }: { blocks: Block[]; mini?: boolean }) => (
   </div>
 );
 
-export const Body = ({ tab }: { tab: Tab | undefined }) =>
+// A conversation's own lines, then whatever was replied in this session.
+const messagesOf = (tab: Extract<Tab, { kind: "conversation" }>, replies: string[]) => [
+  ...tab.lines.map((text, index) => ({ text, mine: index % 2 === 0 })),
+  ...replies.map((text) => ({ text, mine: true })),
+];
+
+export const Body = ({ tab, replies = [] }: { tab: Tab | undefined; replies?: string[] }) =>
   tab ? (
     <article className="px-8 py-6">
       <h1 className="mb-3 font-semibold text-base text-zinc-900 tracking-tight dark:text-zinc-100">
@@ -89,46 +98,89 @@ export const Body = ({ tab }: { tab: Tab | undefined }) =>
       {tab.kind === "document" ? (
         <Blocks blocks={tab.blocks} />
       ) : (
-        tab.lines.map((line) => (
-          <p key={line} className="mb-2 text-sm text-zinc-700 leading-[1.7] dark:text-zinc-300">
-            {line}
+        messagesOf(tab, replies).map((message, index) => (
+          <p
+            key={`${index}-${message.text}`}
+            className="mb-2 text-sm text-zinc-700 leading-[1.7] dark:text-zinc-300"
+          >
+            {message.text}
           </p>
         ))
       )}
     </article>
   ) : null;
 
-// What floats on hover: a document as a mini page, a conversation as a small chat.
-export const Preview = ({ tab }: { tab: Tab | undefined }) =>
-  tab?.kind === "document" ? <DocumentPreview tab={tab} /> : <Conversation tab={tab} />;
+type PreviewProps = {
+  tab: Tab | undefined;
+  replies?: string[];
+  /** Turns the previewed tab into the page. */
+  onOpen: () => void;
+  onReply: (text: string) => void;
+};
 
-// A Notion-style mini page: the title with its actions, then the document cut
+// What floats on hover: a document as a mini page, a conversation as a small chat.
+export const Preview = ({ tab, replies = [], onOpen, onReply }: PreviewProps) =>
+  tab?.kind === "document" ? (
+    <DocumentPreview tab={tab} onOpen={onOpen} />
+  ) : tab?.kind === "conversation" ? (
+    <Conversation tab={tab} replies={replies} onReply={onReply} />
+  ) : null;
+
+// A Notion-style mini page: the title with an Open action, then the document cut
 // off under a fade. As tall as a conversation, so the popup only glides between them.
-const DocumentPreview = ({ tab }: { tab: Extract<Tab, { kind: "document" }> }) => (
+const DocumentPreview = ({
+  tab,
+  onOpen,
+}: {
+  tab: Extract<Tab, { kind: "document" }>;
+  onOpen: () => void;
+}) => (
   <div className="h-[221px] overflow-hidden px-4 pt-3 mask-[linear-gradient(to_bottom,black_70%,transparent)]">
     <div className="mb-2 flex items-center justify-between gap-2">
       <p className="truncate font-semibold text-base text-zinc-900 tracking-tight dark:text-zinc-100">
         {tab.name}
       </p>
-      <div className="flex shrink-0 gap-0.5">
-        <button type="button" aria-label={`Copy link to ${tab.name}`} className={actionClass}>
-          <Link className="size-3.5" />
-        </button>
-        <button type="button" aria-label={`Open ${tab.name}`} className={actionClass}>
-          <ArrowUpRight className="size-3.5" />
-        </button>
-      </div>
+      <button
+        type="button"
+        aria-label={`Open ${tab.name}`}
+        onClick={onOpen}
+        className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-md text-zinc-500 hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-400 dark:hover:bg-white/8 dark:hover:text-zinc-100"
+      >
+        <ArrowUpRight className="size-3.5" />
+      </button>
     </div>
     <Blocks blocks={tab.blocks} mini />
   </div>
 );
 
-const actionClass =
-  "grid size-6 cursor-pointer place-items-center rounded-md text-zinc-500 hover:bg-zinc-950/5 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-400 dark:hover:bg-white/8 dark:hover:text-zinc-100";
+// Keeps the newest message in view: runs as it mounts, scrolling only the
+// message list, never the page around it.
+const pinToEnd = (node: HTMLElement | null) => {
+  const list = node?.parentElement;
+  if (list) list.scrollTop = list.scrollHeight;
+};
 
 // A small chat window: header, the exchange, and a composer-style reply field.
-const Conversation = ({ tab }: { tab: Tab | undefined }) =>
-  tab?.kind === "conversation" ? (
+const Conversation = ({
+  tab,
+  replies,
+  onReply,
+}: {
+  tab: Extract<Tab, { kind: "conversation" }>;
+  replies: string[];
+  onReply: (text: string) => void;
+}) => {
+  const messages = messagesOf(tab, replies);
+
+  const send = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const text = String(new FormData(event.currentTarget).get("reply") ?? "").trim();
+    if (!text) return;
+    onReply(text);
+    event.currentTarget.reset();
+  };
+
+  return (
     <div className="flex flex-col">
       <div className="flex h-9 items-center gap-1.5 px-2.5">
         <BubbleIcon className="size-[15px] text-zinc-500 dark:text-zinc-400" />
@@ -136,35 +188,42 @@ const Conversation = ({ tab }: { tab: Tab | undefined }) =>
       </div>
       {/* One height for every conversation: the popup only glides sideways
           between tabs instead of snapping taller or shorter mid-slide. */}
-      <div className="flex h-36 flex-col gap-4 px-2.5 py-4">
-        {tab.lines.map((line, index) => (
+      <div className="flex h-36 flex-col gap-4 overflow-y-auto px-2.5 py-4">
+        {messages.map((message, index) => (
           <p
-            key={line}
+            key={`${index}-${message.text}`}
+            ref={index === messages.length - 1 ? pinToEnd : undefined}
             className={[
-              "text-sm leading-6",
-              index % 2 === 0
+              "shrink-0 text-sm leading-6",
+              message.mine
                 ? "max-w-[80%] self-end rounded-[20px] bg-white px-3.5 py-1.5 text-zinc-900 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_rgb(0_0_0/0.04)] dark:bg-zinc-800 dark:text-zinc-100 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16)]"
                 : "text-zinc-700 dark:text-zinc-300",
             ].join(" ")}
           >
-            {line}
+            {message.text}
           </p>
         ))}
       </div>
       {/* The focus ring sits on the card, so the input itself draws none. */}
-      <div className="flex items-center gap-1 rounded-xl bg-white p-1 pl-2.5 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_-1px_rgb(0_0_0/0.08),0_6px_16px_-6px_rgb(0_0_0/0.1)] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-[#0169cc]/60 has-[input:focus-visible]:outline-offset-2 dark:bg-zinc-800 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.2),0_1px_2px_rgb(0_0_0/0.12),0_6px_16px_-6px_rgb(0_0_0/0.22)]">
+      <form
+        onSubmit={send}
+        className="flex items-center gap-1 rounded-xl bg-white p-1 pl-2.5 shadow-[0_0_0_1px_rgb(0_0_0/0.08),0_1px_2px_-1px_rgb(0_0_0/0.08),0_6px_16px_-6px_rgb(0_0_0/0.1)] has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-[#0169cc]/60 has-[input:focus-visible]:outline-offset-2 dark:bg-zinc-800 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),inset_0_0_0_1px_rgb(255_255_255/0.07),0_0_0_1px_rgb(0_0_0/0.2),0_1px_2px_rgb(0_0_0/0.12),0_6px_16px_-6px_rgb(0_0_0/0.22)]"
+      >
         <input
+          name="reply"
           aria-label={`Reply in ${tab.name}`}
           placeholder="Reply…"
+          autoComplete="off"
           className="h-8 min-w-0 flex-1 bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-zinc-100 dark:placeholder:text-zinc-500"
         />
         <button
-          type="button"
+          type="submit"
           aria-label="Send reply"
           className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#0169cc] bg-linear-to-b from-[oklch(57.2%_0.166_253.2)] to-[oklch(52.9%_0.173_255)] text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.28),0_0_0_1px_oklch(46.5%_0.146_254.8),0_1px_2px_rgb(1_105_204/0.35)] focus-visible:outline-2 focus-visible:outline-[#0169cc]/60 focus-visible:outline-offset-2"
         >
           <ArrowUp className="size-[15px]" />
         </button>
-      </div>
+      </form>
     </div>
-  ) : null;
+  );
+};

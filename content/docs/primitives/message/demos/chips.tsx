@@ -3,7 +3,6 @@
 import { Chip } from "@intentface/chat/chip";
 import { Message, type MessageChipSegment } from "@intentface/chat/message";
 import { File, FileText, Wrench } from "@keyline-icons/react";
-import type { ComponentProps } from "react";
 
 /*
  * A message whose text carries inline chip references, and the renderers that
@@ -57,13 +56,3 @@ const renderChip = (chip: MessageChipSegment, index: number) => (
     <Chip.Label>{chip.label}</Chip.Label>
   </Chip.Root>
 );
-
-const _icon = (props: ComponentProps<"svg">) => ({
-  viewBox: "0 0 16 16",
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.3,
-  className: "size-3",
-  "aria-hidden": true,
-  ...props,
-});

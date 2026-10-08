@@ -1,5 +1,11 @@
 # @intentface/chat
 
+## 0.5.2
+
+### Patch Changes
+
+- [#80](https://github.com/Intentface/intentface-chat/pull/80) [`07671d3`](https://github.com/Intentface/intentface-chat/commit/07671d3ac6931284d210d776b44f2848f78fe159) Thanks [@rpvilo](https://github.com/rpvilo)! - Documentation only, no runtime change. Every part of `Attachments`, `Chip`, `Message`, `Reasoning` and `Steps` now carries JSDoc saying what it is for and which element it renders, so editors show the same reference as the docs site. The package README is refreshed to match the rewritten docs.
+
 ## 0.5.1
 
 ### Patch Changes

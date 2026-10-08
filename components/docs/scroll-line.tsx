@@ -15,8 +15,11 @@ export const ScrollLine = ({ label, children }: { label: string; children: React
     if (!node) return;
     const measure = () => setOverflows(node.scrollWidth > node.clientWidth);
     measure();
+    // The scroller's box and its content's: a web font swapping in widens the
+    // text without resizing the scroller.
     const observer = new ResizeObserver(measure);
     observer.observe(node);
+    if (node.firstElementChild) observer.observe(node.firstElementChild);
     return () => observer.disconnect();
   }, []);
 
@@ -33,7 +36,7 @@ export const ScrollLine = ({ label, children }: { label: string; children: React
         tabIndex={overflows ? 0 : undefined}
         className="scroll-mask overflow-x-auto whitespace-nowrap px-4 py-3.5 outline-none [scrollbar-width:none]"
       >
-        {children}
+        <span className="inline-block">{children}</span>
       </div>
     </div>
   );

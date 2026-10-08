@@ -242,6 +242,29 @@ Returns a `ComposerStore` handle. Pass it to `store`, read it with
 `store.controller` (`focus`, `blur`, `clear`, `insertText`, `insertChip`,
 `getText`, `setText`, `serialize`, `ensureFocus`).
 
+```tsx
+import { Composer, useComposerStore } from "@intentface/chat/composer";
+
+// Created outside the tree, so anything can reach it: no context, no ref.
+const store = Composer.createStore();
+
+export const Chat = () => {
+  const hasContent = useComposerStore(store, (composer) => composer.textarea.hasContent);
+
+  return (
+    <>
+      <Composer.Root store={store} onSubmit={send}>{/* … */}</Composer.Root>
+      <button type="button" onClick={() => store.controller.insertText("@channel ")}>
+        Mention the channel
+      </button>
+      <button type="button" disabled={!hasContent} onClick={() => store.controller.clear()}>
+        Clear
+      </button>
+    </>
+  );
+};
+```
+
 `onSubmit` receives a discriminated `ComposerSubmitData`:
 
 ```ts

@@ -16,7 +16,7 @@ import { Jump } from './thread/demos/jump';
 - **Auto-scroll modes** — `off` / `bottom` / `jump` / `follow` via the `autoScroll` prop (see below).
 - **Composer inset** — measures the docked composer to reserve space; the overlays fade the top and bottom edges.
 - **Owns no data** — you map your messages in; rows are addressable by a `data-message-id` attribute.
-- **Costs nothing while streaming** — see [Why the scroll subsystem is free](#why-the-scroll-subsystem-is-free). There is nothing here to optimise around.
+- **Cheap while streaming** — no scroll handler and no re-render per token; see [Why the scroll subsystem is cheap](#why-the-scroll-subsystem-is-cheap).
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
 ## Anatomy
@@ -129,16 +129,16 @@ for you. Without a `Thread.Composer`, the area leaves 128px at the bottom, so se
 
 `scrollToMessage` finds a row by the `data-message-id` attribute you put on it.
 There is no wrapper part and no registry: rows resolve lazily at call time, so a
-transcript of ten thousand turns costs the same as this one.
+long transcript adds no per-row setup, only the lookup when you jump.
 `useThreadVisibility` reads the same attribute to report which rows are on
 screen, and creates its observers only once something subscribes.
 
 <Demo component={<Jump />} file="primitives/thread/demos/jump.tsx" />
 
-## Why the scroll subsystem is free
+## Why the scroll subsystem is cheap
 
-Thread's scroll subsystem is built to cost nothing while a reply streams — you
-don't need to optimize around it:
+Thread's scroll subsystem is built to stay out of the way while a reply streams:
+the work it does is event-driven and small, not per token or per frame.
 
 - **No scroll handler.** Edge detection is an IntersectionObserver sentinel per
   edge, computed off the main thread. Scrolling runs zero JavaScript.
@@ -147,7 +147,7 @@ don't need to optimize around it:
   reads, no animation-frame polling.
 - **Edge state lives in external stores** (one per edge), so a flip re-renders
   only the components that read it (your scroll button) — never the Thread tree.
-- **Lazy capabilities stay free until used**: visibility tracking creates its
+- **Lazy capabilities cost nothing until used**: visibility tracking creates its
   observers on the first `useThreadVisibility` subscriber and tears them down
   with the last; the prepend-preservation scroll listener exists only when
   `preserveScrollOnPrepend` is set.

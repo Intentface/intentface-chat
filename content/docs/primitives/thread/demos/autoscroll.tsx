@@ -105,6 +105,10 @@ export const AutoScroll = () => {
             key={candidate}
             type="button"
             onClick={() => {
+              // A reply still streaming belongs to the old transcript: stop it.
+              timers.current.forEach(clearTimeout);
+              timers.current = [];
+              setStreaming(false);
               setMode(candidate);
               setExchanges(SEED);
               setDraft(PROMPT);

@@ -99,9 +99,9 @@ export const removeProps = [
 
 ### Attachments.Dropzone
 
-The drop overlay. `portalSelector` moves it elsewhere in the document, so files
-can be dropped anywhere rather than only over the tray. Renders a `<div>`
-element.
+The drop overlay. `portalSelector` only moves where it renders (e.g. over an
+app shell region); where files can be dropped is `Composer.Attachments`'
+`globalDrop`, not this part. Renders a `<div>` element.
 
 export const dropzoneProps = [
   { name: "visible", type: "boolean", default: "false", description: "Show the overlay (while files are dragged over the scope)." },

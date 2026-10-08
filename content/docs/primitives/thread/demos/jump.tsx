@@ -47,7 +47,7 @@ const QUESTIONS = TURNS.filter((turn) => turn.role === "user");
  *
  * `scrollToMessage` finds a row by the `data-message-id` attribute you put on
  * it. There is no wrapper part and no registry: rows are resolved lazily at
- * call time, so a transcript of ten thousand turns costs the same as this one.
+ * call time, so a long transcript adds no per-row setup, only the lookup.
  *
  * `useThreadVisibility` is the other half. It reads the same attribute to
  * report which rows are on screen, and it creates its observers on the first

@@ -70,7 +70,7 @@ are app-shell parts rather than chat parts, and are useful on their own:
 
 | Import | What it is |
 | --- | --- |
-| `@intentface/chat/composer` | Rich-text input over a purpose-built contenteditable engine: `/` and `@` command palette, inline chips, attachments, ask-user flow. One store per `<Composer>`, or bring your own via `Composer.createStore()`. |
+| `@intentface/chat/composer` | Rich-text input over a purpose-built contenteditable engine: `/` and `@` command palette, inline chips, attachments, ask-user flow. One store per `<Composer.Root>`, or bring your own via `Composer.createStore()`. |
 | `@intentface/chat/thread` | Scroll container with at-bottom detection, auto-follow, and docked-composer measurement. |
 | `@intentface/chat/message` | Message parts, turns, chip-segmented text, selection hooks. |
 | `@intentface/chat/steps`, `/reasoning` | Tool-call timelines and reasoning disclosure. |

@@ -31,8 +31,13 @@ export const Dropzone = () => {
   const input = useRef<HTMLInputElement>(null);
   const depth = useRef(0);
 
-  // Blob URLs outlive the component unless something revokes them.
-  useEffect(() => () => items.forEach(revokeAttachmentUrl), [items]);
+  // Blob URLs outlive the component unless something revokes them: a removed
+  // item's on removal, and whatever is still minted when the demo unmounts.
+  const minted = useRef(new Set<AttachmentItem>());
+  useEffect(() => {
+    const live = minted.current;
+    return () => live.forEach(revokeAttachmentUrl);
+  }, []);
 
   const add = (files: FileList | null) => {
     if (!files?.length) return;
@@ -41,7 +46,9 @@ export const Dropzone = () => {
     for (const file of Array.from(files)) {
       if (!matchesAccept(file, ACCEPT)) return setError("accept");
       if (file.size > MAX_BYTES) return setError("max_file_size");
-      setItems((current) => [...current, toAttachmentItem(file)]);
+      const item = toAttachmentItem(file);
+      minted.current.add(item);
+      setItems((current) => [...current, item]);
     }
   };
 
@@ -94,6 +101,7 @@ export const Dropzone = () => {
                 filename={item.filename}
                 onRemove={() => {
                   revokeAttachmentUrl(item);
+                  minted.current.delete(item);
                   setItems((current) => current.filter((candidate) => candidate.id !== item.id));
                 }}
                 className="-mr-1 grid size-4 cursor-pointer place-items-center rounded-full text-zinc-400 opacity-0 transition-opacity hover:text-zinc-900 focus-visible:opacity-100 group-hover/item:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0169cc]/60 dark:text-zinc-500 dark:hover:text-zinc-100"

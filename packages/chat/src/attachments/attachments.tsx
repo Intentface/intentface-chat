@@ -175,8 +175,9 @@ export type AttachmentsDropzoneProps = PrimitiveProps<"div", AttachmentsDropzone
 };
 
 /**
- * The drop overlay. `portalSelector` moves it elsewhere in the document, so
- * files can be dropped anywhere rather than only over the tray.
+ * The drop overlay. `portalSelector` only moves where it renders (e.g. over an
+ * app shell region); where files can be dropped is `Composer.Attachments`'
+ * `globalDrop`, not this part.
  * Renders a `<div>` element.
  */
 export const AttachmentsDropzone = ({

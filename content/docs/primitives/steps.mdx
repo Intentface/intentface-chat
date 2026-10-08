@@ -195,14 +195,15 @@ export const labelAttrs = [
 
 ### Steps.Status
 
-The only part that speaks the status. Renders a visually hidden `<span>` saying
-the resolved status string; pass `children` to localise the wording. Carries
-screen-reader-only styling (overridable via `style`/`className`), containing
-the resolved status string unless `children` provide localized copy.
+The status as text for assistive technology. Renders a visually hidden `<span>`
+holding the resolved status string; pass `children` to localise the wording,
+and `style`/`className` to override the hiding. It is not a live region: a
+screen reader reads it when it reaches the row, but a change is not announced
+as it happens. Wrap the list in your own `role="status"` region if it should be.
 
 export const statusProps = [
-  { name: "status", type: "string", description: "Overrides the inherited status for this announcement." },
-  { name: "children", type: "ReactNode", default: "the resolved status string", description: "Localized copy to announce instead of the raw status value." },
+  { name: "status", type: "string", description: "Overrides the inherited status for this text." },
+  { name: "children", type: "ReactNode", default: "the resolved status string", description: "Localized copy to read instead of the raw status value." },
 ];
 
 <PropsTable rows={statusProps} />

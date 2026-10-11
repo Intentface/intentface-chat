@@ -79,6 +79,8 @@ Two constraints follow, and both are load-bearing:
 
 This pattern is used throughout: `Message`, `Composer`, `Attachments`, `Chip`, `Thread`, `Steps`, `Reasoning`, `AskUser`.
 
+A change to the package needs a changeset, and a changeset is one short line per change, not a write-up: see [`.changeset/README.md`](./.changeset/README.md). The reasoning goes in the PR body.
+
 ### AI Integration
 
 The chat API follows Vercel AI SDK conventions

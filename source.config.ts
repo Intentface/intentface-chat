@@ -1,5 +1,6 @@
 import { defineConfig, defineDocs, frontmatterSchema } from "fumadocs-mdx/config";
 import { z } from "zod";
+import { remarkChangelogTags } from "./lib/docs/remark-changelog-tags";
 
 export const docs = defineDocs({
   dir: "content/docs",
@@ -15,6 +16,7 @@ export const docs = defineDocs({
 
 export default defineConfig({
   mdxOptions: {
+    remarkPlugins: [remarkChangelogTags],
     // Disable fumadocs' built-in shiki pass so fenced code reaches our `pre`
     // handler as raw text. Highlighting is done in one place — the CodeBlock
     // component (fumadocs-core `highlight`) — shared by MDX fences, the styled

@@ -2,7 +2,7 @@ import { highlight } from "fumadocs-core/highlight";
 import type { ReactNode } from "react";
 import { codeTheme } from "@/lib/docs/code-theme";
 import { cn } from "@/lib/utils";
-import { CodeFrame, CodeTab } from "./code-frame";
+import { CodeFrame, CodeTitle } from "./code-frame";
 
 type CodeBlockProps = {
   code: string;
@@ -34,7 +34,7 @@ export const highlightCode = (code: string, lang = "tsx") =>
 
 export const CodeBlock = async ({ code, lang = "tsx", title, className }: CodeBlockProps) => (
   <CodeFrame
-    tabs={<CodeTab active={Boolean(title)}>{title ?? lang}</CodeTab>}
+    tabs={<CodeTitle active={Boolean(title)}>{title ?? lang}</CodeTitle>}
     code={code}
     className={className}
   >

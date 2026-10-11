@@ -1,8 +1,9 @@
 "use client";
 
+import { Tabs } from "@base-ui/react/tabs";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { CodeFrame, CodeTab } from "./code-frame";
+import { CodeFrame, CodePanel, CodeTab, CodeTabList } from "./code-frame";
 
 export type CodeFileEntry = {
   name: string;
@@ -18,16 +19,26 @@ export const CodeFiles = ({ files, className }: { files: CodeFileEntry[]; classN
   const current = files.find((file) => file.name === name) ?? files[0];
 
   return (
-    <CodeFrame
-      className={className}
-      code={current.source}
-      tabs={files.map((file) => (
-        <CodeTab key={file.name} active={file.name === name} onClick={() => setName(file.name)}>
-          {file.name}
-        </CodeTab>
-      ))}
-    >
-      {current.code}
-    </CodeFrame>
+    <Tabs.Root value={name} onValueChange={setName}>
+      <CodeFrame
+        className={className}
+        code={current.source}
+        tabs={
+          <CodeTabList>
+            {files.map((file) => (
+              <CodeTab key={file.name} value={file.name}>
+                {file.name}
+              </CodeTab>
+            ))}
+          </CodeTabList>
+        }
+      >
+        {files.map((file) => (
+          <CodePanel key={file.name} value={file.name}>
+            {file.code}
+          </CodePanel>
+        ))}
+      </CodeFrame>
+    </Tabs.Root>
   );
 };

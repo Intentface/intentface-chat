@@ -222,7 +222,7 @@ export const rootProps = [
   { name: "value", type: "ComposerSnapshot", description: "Controlled editor content." },
   { name: "defaultValue", type: "ComposerSnapshot", description: "Uncontrolled initial editor content." },
   { name: "onValueChange", type: "(snapshot: ComposerSnapshot) => void", description: "Fires on editor updates with a fresh snapshot." },
-  { name: "store", type: "ComposerStore", default: "per-mount instance", description: "An explicit Composer.createStore() handle. A per-mount instance is reset on unmount; an explicit handle is not." },
+  { name: "store", type: "ComposerStore", default: "per-mount instance", description: "An explicit Composer.createStore() handle, whose state outlives remounts. Without one, each mount creates its own store, which goes away with it." },
 ];
 
 <PropsTable rows={rootProps} />

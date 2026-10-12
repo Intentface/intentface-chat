@@ -1,20 +1,21 @@
 import { PACKAGE_MANAGERS } from "@/lib/docs/package-managers";
 import { highlightCode } from "./code-block";
-import { InstallationBlockTabs } from "./installation-block-tabs";
+import { CodeFiles } from "./code-files";
 
 type InstallationBlockProps = {
   packageName: string;
 };
 
 // Server component: highlights one install command per package manager and
-// hands them all to the client shell, which shows the selected one.
+// shows them as tabs, one per manager.
 export const InstallationBlock = async ({ packageName }: InstallationBlockProps) => (
-  <InstallationBlockTabs
-    entries={
+  <CodeFiles
+    className="my-6"
+    files={
       await Promise.all(
         PACKAGE_MANAGERS.map(async ({ manager, install }) => {
-          const command = `${install} ${packageName}`;
-          return { manager, command, code: await highlightCode(command, "bash") };
+          const source = `${install} ${packageName}`;
+          return { name: manager, source, code: await highlightCode(source, "bash") };
         }),
       )
     }

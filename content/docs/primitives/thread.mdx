@@ -7,6 +7,7 @@ source: thread
 import { AutoScroll } from './thread/demos/autoscroll';
 import { Basic } from './thread/demos/basic';
 import { Jump } from './thread/demos/jump';
+import { ScrollTiming } from './thread/demos/scroll-timing';
 
 <Demo component={<Basic />} file="primitives/thread/demos/basic.tsx" />
 
@@ -135,6 +136,64 @@ screen, and creates its observers only once something subscribes.
 
 <Demo component={<Jump />} file="primitives/thread/demos/jump.tsx" />
 
+### Timing the scroll
+
+Smooth scrolls are the browser's own until you give them a timing. Set one on
+the root and the thread animates every smooth scroll itself — the landing, the
+follow, `scrollToBottom`, `scrollToTop` and `scrollToMessage`:
+
+```css
+[data-thread-root] {
+  --thread-scroll: 450ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+```
+
+The value reads like `transition`: a duration, then any CSS easing, `linear()`
+included. That makes a Motion spring a one-liner, since `spring()` prints
+exactly that pair:
+
+```tsx
+import { spring } from "motion";
+
+<Thread.Root style={{ "--thread-scroll": String(spring(0.5, 0)) }}>{/* … */}</Thread.Root>
+```
+
+Keep `bounce` at 0: the scroller can't move past its end, so an overshoot at
+the bottom is clipped into a hard stop.
+
+While an animation runs, the root carries `data-scrolling`, naming why it
+started: `land`, `follow`, `bottom`, `top` or `message`. It is set before the
+timing is read, so a selector can time each kind on its own — a slow landing
+and a brisk follow:
+
+```css
+[data-thread-root] { --thread-scroll: 200ms ease-out; }
+[data-thread-root][data-scrolling="land"] { --thread-scroll-duration: 600ms; }
+```
+
+To pace by distance instead, set `--thread-scroll-speed` in pixels per second;
+a duration set alongside it becomes the cap. `--thread-scroll: none` opts a
+thread back into the native smooth scroll, over any longhand — useful when a
+shared stylesheet sets a timing for every thread.
+
+**Pin the follow instead of animating it.** A reply grows a line at a time, so
+pinning reads as smooth already. Animating the follow keeps a frame loop
+running for the whole stream — on the main thread, while it is busiest — and
+the easing trails the newest text below the fold:
+
+```css
+[data-thread-root][data-scrolling="follow"] { --thread-scroll-duration: 0ms; }
+```
+
+The destination is re-read every frame, so a reply that starts streaming before
+the landing finishes is carried along by it instead of restarting it. In
+`"jump"` the landing's destination is fixed when it starts: a reply outgrowing
+the reserve mid-flight never turns the landing into a follow. Any wheel, touch,
+scroll key or scrollbar press stops the animation where it is, and under
+`prefers-reduced-motion` every scroll is instant.
+
+<Demo component={<ScrollTiming />} file="primitives/thread/demos/scroll-timing.tsx" />
+
 ## Why the scroll subsystem is cheap
 
 Thread's scroll subsystem is built to stay out of the way while a reply streams:
@@ -145,6 +204,11 @@ the work it does is event-driven and small, not per token or per frame.
 - **Landing and follow are event-driven** — a MutationObserver for new turns, a
   ResizeObserver for growth, one `scrollTo` per change. No per-token geometry
   reads, no animation-frame polling.
+- **A timed scroll costs one frame loop, only while it runs.** With
+  `--thread-scroll` set, each smooth scroll reads its timing once and then does
+  one `scrollTo` per frame until it ends. Unlike the native smooth scroll, it
+  runs on the main thread, so a frame lost to heavy rendering is a frame the
+  scroll skips. Leave the timing unset to keep the native scroll.
 - **Edge state lives in external stores** (one per edge), so a flip re-renders
   only the components that read it (your scroll button) — never the Thread tree.
 - **Lazy capabilities cost nothing until used**: visibility tracking creates its
@@ -190,6 +254,7 @@ export const rootAttrs = [
   { attribute: "data-thread-root", description: "The root element." },
   { attribute: "data-at-top", description: "Present while the top edge is in view (start of the transcript) — the CSS-only mirror of useThread().isAtTop." },
   { attribute: "data-at-bottom", description: "Present while the bottom edge is in view (at the live end) — the CSS-only mirror of useThread().isAtBottom." },
+  { attribute: "data-scrolling", values: '"land" | "follow" | "bottom" | "top" | "message"', description: "Present while a timed scroll animates, naming why it started. Set before the timing is read, so selectors can time each kind. Never set for native or instant scrolls." },
 ];
 
 <AttributesTable rows={rootAttrs} />
@@ -267,6 +332,10 @@ export const cssVars = [
   { attribute: "--thread-width", values: "672px", description: "Max width of the content column and overlays." },
   { attribute: "--thread-overlay-top-height", values: "4rem", description: "Top overlay height and top inset." },
   { attribute: "--thread-overlay-bottom-height", values: "8rem", description: "Bottom overlay height and bottom inset (measured from the Thread.Composer slot at runtime)." },
+  { attribute: "--thread-scroll", values: "<duration> <easing> | none", description: "Times every smooth scroll. Unset or none keeps the browser's native smooth scroll (none wins over the longhands); 0ms makes them instant. Takes a Motion spring() string as-is." },
+  { attribute: "--thread-scroll-duration", values: "<duration>", description: "Longhand; overrides the shorthand. The cap when a speed is set." },
+  { attribute: "--thread-scroll-easing", values: "<easing-function>", description: "Longhand; overrides the shorthand. Defaults to ease." },
+  { attribute: "--thread-scroll-speed", values: "<number>", description: "Pixels per second; the duration follows the distance." },
 ];
 
 <AttributesTable rows={cssVars} />

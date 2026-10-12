@@ -9,7 +9,8 @@ import { Monitor, Moon, Settings as SettingsIcon, Sun, X } from "@keyline-icons/
 // deliberately persists nowhere client-side — see KeyTab. Desktop-only.
 
 import { Tabs } from "@base-ui/react/tabs";
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { AnimatePresence, MotionConfig } from "motion/react";
+import * as m from "motion/react-m";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { ComposerSubmitOn } from "@/components/ai/composer";
@@ -646,7 +647,7 @@ export const PlaygroundSettings = () => {
               </IconButton>
             </div>
             <MotionConfig transition={PANEL_SPRING}>
-              <motion.div
+              <m.div
                 initial={false}
                 animate={{ height: height || "auto" }}
                 className="scroll-mask-y min-h-0 overflow-y-auto overscroll-contain"
@@ -654,7 +655,7 @@ export const PlaygroundSettings = () => {
                 <div ref={panelRef} className="relative">
                   <Tabs.Panel value={activeTab}>
                     <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-                      <motion.div
+                      <m.div
                         key={activeTab}
                         variants={panelVariants}
                         initial="initial"
@@ -664,11 +665,11 @@ export const PlaygroundSettings = () => {
                         className="py-1"
                       >
                         {activePanel?.content}
-                      </motion.div>
+                      </m.div>
                     </AnimatePresence>
                   </Tabs.Panel>
                 </div>
-              </motion.div>
+              </m.div>
             </MotionConfig>
           </Tabs.Root>
         </aside>

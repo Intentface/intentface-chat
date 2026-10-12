@@ -23,7 +23,8 @@ import {
 // Keyline has no sandbox icon, so this one stays on Tabler.
 import { IconSandbox } from "@tabler/icons-react";
 import type { ChatStatus } from "ai";
-import { AnimatePresence, motion, stagger } from "motion/react";
+import { AnimatePresence, stagger } from "motion/react";
+import * as m from "motion/react-m";
 import { useRouter } from "next/navigation";
 import {
   Children,
@@ -188,7 +189,7 @@ const TimelineStep = ({
           <span className="transition-opacity group-hover/steps-trigger:opacity-0 group-data-open/steps-trigger:opacity-0">
             <Icon className={cn("size-3.5", status === "active" && "animate-pulse")} />
           </span>
-          <ChevronDown className="absolute size-4 opacity-0 transition-all group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
+          <ChevronDown className="absolute size-4 opacity-0 transition-[opacity,rotate] group-hover/steps-trigger:opacity-100 group-data-open/steps-trigger:rotate-180 group-data-open/steps-trigger:opacity-100" />
         </span>
         <span className={labelClasses}>{label}</span>
       </Steps.Trigger>
@@ -332,7 +333,7 @@ const InterleavedSteps = ({
   // (roll matches the composer placeholder / TextLoop; shimmer only while active).
   const header = (
     <AnimatePresence mode="popLayout" initial={false}>
-      <motion.span
+      <m.span
         key={displayLabel}
         initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -341,7 +342,7 @@ const InterleavedSteps = ({
         className="block"
       >
         {isActive ? <TextShimmer>{displayLabel}</TextShimmer> : displayLabel}
-      </motion.span>
+      </m.span>
     </AnimatePresence>
   );
 
@@ -564,8 +565,9 @@ const ChatMessages = () => {
   const isError = status === "error";
   const isStreaming = status === "streaming";
 
-  // Track messages present at mount — skip entrance animation for these
-  const initialMessageIds = useRef(new Set(messages.map((m) => m.id)));
+  // Track messages present at mount — skip entrance animation for these. Lazy:
+  // this component renders per stream chunk, and the set is only built once.
+  const [initialMessageIds] = useState(() => new Set(messages.map((message) => message.id)));
 
   const turns = groupTurns(messages);
   const lastMessageId = messages.at(-1)?.id;
@@ -581,7 +583,7 @@ const ChatMessages = () => {
               isLast={message.id === lastMessageId}
               isStreaming={message.id === lastMessageId && isStreaming}
               isError={isError}
-              skipAnimation={initialMessageIds.current.has(message.id)}
+              skipAnimation={initialMessageIds.has(message.id)}
             />
           ))}
           {turnIndex === turns.length - 1 && isError && (
@@ -667,11 +669,9 @@ const useAskUserPanelState = (
   messages: readonly AppUIMessage[],
   status: ChatStatus,
 ): AskUserPanelState | null => {
-  const prevRef = useRef<AskUserPanelState | null>(null);
-
   const lastAssistant =
     status === "ready" || status === "streaming"
-      ? messages.findLast((m) => m.role === "assistant")
+      ? messages.findLast((message) => message.role === "assistant")
       : undefined;
   // Widen to the package's structural part contract so the guard can narrow.
   const parts: readonly UnknownPart[] = lastAssistant?.parts ?? [];
@@ -688,14 +688,15 @@ const useAskUserPanelState = (
       }
     : null;
 
-  if (
-    prevRef.current?.toolCallId === next?.toolCallId &&
-    (prevRef.current === null) === (next === null)
-  ) {
-    return prevRef.current;
+  // Keep the first object seen for a tool call, so the result stays
+  // referentially stable while it waits. State adjusted during render rather
+  // than a ref written in it: it changes only when the tool call does.
+  const [current, setCurrent] = useState(next);
+  if (current?.toolCallId !== next?.toolCallId) {
+    setCurrent(next);
+    return next;
   }
-  prevRef.current = next;
-  return next;
+  return current;
 };
 
 // Thin bridge — the only composer piece that re-renders per stream chunk. It derives
@@ -1041,7 +1042,7 @@ const ChatPlaceholder = () => {
 
   return (
     <AnimatePresence>
-      <motion.div
+      <m.div
         variants={variants}
         initial="hidden"
         animate="visible"
@@ -1053,21 +1054,21 @@ const ChatPlaceholder = () => {
         }}
         className="flex flex-col items-center justify-center gap-4"
       >
-        <motion.div variants={variants}>
+        <m.div variants={variants}>
           <LogoTile size="lg" />
-        </motion.div>
+        </m.div>
         <div className="flex flex-col items-center justify-center">
-          <motion.span
+          <m.span
             variants={variants}
             className="font-semibold text-[20px] text-ink-primary leading-7 tracking-[-0.01em]"
           >
             Intentface Chat
-          </motion.span>
-          <motion.span variants={variants} className="text-ink-secondary text-md">
+          </m.span>
+          <m.span variants={variants} className="text-ink-secondary text-md">
             Start a conversation
-          </motion.span>
+          </m.span>
         </div>
-      </motion.div>
+      </m.div>
     </AnimatePresence>
   );
 };

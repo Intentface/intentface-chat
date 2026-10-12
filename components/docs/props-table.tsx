@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "@keyline-icons/react";
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 import { type ReactNode, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ReferenceTable } from "./reference-table";
@@ -87,7 +87,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
         className={cn("border-ink-primary/6 border-b last:border-0", open && "bg-table-tray")}
       >
         <td colSpan={4} className="p-0">
-          <motion.div
+          <m.div
             initial={false}
             animate={{ height: open ? "auto" : 0 }}
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
@@ -99,7 +99,7 @@ const PropsRow = ({ row }: { row: PropRow }) => {
                 {row.type}
               </TypeChip>
             </div>
-          </motion.div>
+          </m.div>
         </td>
       </tr>
     </>

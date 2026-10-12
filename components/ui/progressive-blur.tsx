@@ -1,5 +1,6 @@
 "use client";
-import { type HTMLMotionProps, motion } from "motion/react";
+import type { HTMLMotionProps } from "motion/react";
+import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
 
 export const GRADIENT_ANGLES = {
@@ -43,7 +44,7 @@ export const ProgressiveBlur = ({
         const gradient = `linear-gradient(${angle}deg, ${gradientStops.join(", ")})`;
 
         return (
-          <motion.div
+          <m.div
             key={index}
             className="pointer-events-none absolute inset-0 rounded-[inherit]"
             style={{

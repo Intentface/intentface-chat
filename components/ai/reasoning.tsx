@@ -2,7 +2,8 @@
 
 import { Reasoning as ReasoningPrimitive, useReasoning } from "@intentface/chat/reasoning";
 import { Brain, ChevronDown } from "@keyline-icons/react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { type ComponentProps, memo, type ReactNode } from "react";
 import { Markdown } from "@/components/ui/markdown";
 import { splitReasoningByHeaders } from "@/lib/ai/message-info";
@@ -77,7 +78,7 @@ const ReasoningTrigger = memo(
             <div className="flex items-center gap-1.5">
               <Brain className="size-[15px]" />
               <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span
+                <m.span
                   key={key}
                   initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
                   animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -86,7 +87,7 @@ const ReasoningTrigger = memo(
                   className="whitespace-nowrap"
                 >
                   {component}
-                </motion.span>
+                </m.span>
               </AnimatePresence>
             </div>
             <ChevronDown

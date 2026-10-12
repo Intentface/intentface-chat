@@ -1,6 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import type { ComponentProps } from "react";
 import { useLoop } from "@/hooks/use-loop";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ const TextLoop = ({
       {...props}
     >
       <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
+        <m.span
           key={key}
           initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -27,7 +28,7 @@ const TextLoop = ({
           className="whitespace-nowrap text-gray-11/60 text-md"
         >
           {currentItem}
-        </motion.span>
+        </m.span>
       </AnimatePresence>
     </div>
   );

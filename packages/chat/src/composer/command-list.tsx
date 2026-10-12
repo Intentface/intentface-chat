@@ -184,7 +184,7 @@ export const ComposerCommand = ({
 
   // Renders while this prefix is the active one AND through its close animation. `active`
   // flips false the instant the trigger closes, but the store keeps `present` sticky until
-  // the Panel's exit animation finishes (finalizePanelClose). `wasActiveRef` marks that this
+  // the Panel's exit animation finishes (finalizePanelClose). `wasActive` marks that this
   // prefix — not a sibling — is the one closing, so only it keeps rendering during the window.
   const isActive = useComposer(
     (composer) => composer.commands.active && composer.commands.trigger === prefix,
@@ -192,10 +192,13 @@ export const ComposerCommand = ({
   const present = useComposer((composer) => composer.commands.present);
   const query = useComposer((composer) => composer.commands.query);
 
-  const wasActiveRef = useRef(false);
-  if (isActive) wasActiveRef.current = true;
-  else if (!present) wasActiveRef.current = false;
-  const isPresent = isActive || (present && wasActiveRef.current);
+  // State adjusted during render (not a ref React might keep from a discarded
+  // render); it only flips at open and at the end of the close, so it costs a
+  // re-render at those two moments and nowhere else.
+  const [wasActive, setWasActive] = useState(false);
+  if (isActive && !wasActive) setWasActive(true);
+  else if (!isActive && !present && wasActive) setWasActive(false);
+  const isPresent = isActive || (present && wasActive);
 
   const config = internals.commands[prefix];
   const itemsProp = config?.items ?? EMPTY_ITEMS;

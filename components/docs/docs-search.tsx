@@ -269,6 +269,7 @@ export const DocsSearch = ({ suggestions = [] }: { suggestions?: SearchSuggestio
             onChange={(event) => setSearch(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search documentation…"
+            aria-label="Search documentation"
             role="combobox"
             aria-expanded={flat.length > 0}
             aria-controls={listId}

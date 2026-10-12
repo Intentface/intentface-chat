@@ -23,6 +23,11 @@ type CommandToggles = {
 // floating Popover anchored to the active command badge.
 type CommandSurface = "panel" | "popover";
 
+// The thread's smooth-scroll timing (playground Thread card). "default" keeps
+// the styled Thread's own timing, "native" opts back into the browser's smooth
+// scroll, and the rest replace the timing with that easing.
+type ScrollTimingOption = "default" | "native" | "ease-out" | "ease-in-out" | "linear" | "spring";
+
 type SettingsStore = {
   themeOverrides: Record<ThemeMode, ThemeOverrides>;
   setThemeOverride: (mode: ThemeMode, key: keyof ThemeOverrides, value: string | number) => void;
@@ -30,6 +35,17 @@ type SettingsStore = {
   resetThemeOverrides: (mode: ThemeMode) => void;
   scrollMode: ThreadAutoScrollMode;
   setScrollMode: (mode: ThreadAutoScrollMode) => void;
+  scrollTiming: ScrollTimingOption;
+  setScrollTiming: (scrollTiming: ScrollTimingOption) => void;
+  /** Milliseconds; the cap when a speed is set. */
+  scrollDuration: number;
+  setScrollDuration: (scrollDuration: number) => void;
+  /** Pixels per second; 0 leaves the duration fixed. */
+  scrollSpeed: number;
+  setScrollSpeed: (scrollSpeed: number) => void;
+  /** Animate the follow with the scroll timing instead of pinning it. */
+  animateFollow: boolean;
+  setAnimateFollow: (animateFollow: boolean) => void;
   stickyMessages: boolean;
   setStickyMessages: (stickyMessages: boolean) => void;
   showScrollButton: boolean;
@@ -52,7 +68,7 @@ type SettingsStore = {
   setSubmitOn: (submitOn: ComposerSubmitOn) => void;
 };
 
-export type { ThemeOverrides, ThemeMode, CommandToggles, CommandSurface };
+export type { ThemeOverrides, ThemeMode, CommandToggles, CommandSurface, ScrollTimingOption };
 
 export const useSettingsStore = create<SettingsStore>()(
   persist(
@@ -60,6 +76,14 @@ export const useSettingsStore = create<SettingsStore>()(
       themeOverrides: { light: {}, dark: {} },
       scrollMode: "follow",
       setScrollMode: (mode) => set({ scrollMode: mode }),
+      scrollTiming: "default",
+      setScrollTiming: (scrollTiming) => set({ scrollTiming }),
+      scrollDuration: 450,
+      setScrollDuration: (scrollDuration) => set({ scrollDuration }),
+      scrollSpeed: 0,
+      setScrollSpeed: (scrollSpeed) => set({ scrollSpeed }),
+      animateFollow: false,
+      setAnimateFollow: (animateFollow) => set({ animateFollow }),
       stickyMessages: false,
       setStickyMessages: (stickyMessages) => set({ stickyMessages }),
       showScrollButton: true,

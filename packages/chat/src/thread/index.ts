@@ -10,6 +10,7 @@ export type {
   ThreadOverlayState,
   ThreadPlaceholderProps,
   ThreadRootProps,
+  ThreadScrollKind,
   ThreadScrollToMessageOptions,
   ThreadViewportProps,
 } from "./thread";

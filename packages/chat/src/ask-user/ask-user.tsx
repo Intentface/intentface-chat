@@ -21,6 +21,7 @@ import {
 import { useComposer } from "../composer/store";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useRenderElement } from "../internal/render/useRenderElement";
+import { scrollIntoViewWithin } from "../internal/scroll-into-view-within";
 
 // Shared ids so Options can label itself from the question text and describe
 // itself from the step indicator without any consumer wiring: Root mints both,
@@ -230,9 +231,16 @@ export const AskUserOptions = ({
   }, []);
 
   // Roving tabindex: DOM focus follows the highlight for keyboard navigation.
+  // Focus without the browser's scroll, which would also move the page around
+  // an embedded question; bring the option into view within the question's
+  // own scroll area instead.
   const focusValue = useCallback((itemValue: string | null) => {
     if (itemValue === null) return;
-    itemElements.current.get(itemValue)?.()?.focus();
+    const element = itemElements.current.get(itemValue)?.();
+    if (!element) return;
+    element.focus({ preventScroll: true });
+    const boundary = element.closest("[data-ask-user]") ?? element;
+    scrollIntoViewWithin(element.getBoundingClientRect(), element, boundary);
   }, []);
 
   useImperativeHandle(

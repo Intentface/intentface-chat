@@ -139,6 +139,14 @@ describe("alignedScrollTop", () => {
     expect(alignedScrollTop(scroller, row, "start")).toBe(1776);
   });
 
+  test("resolves a percentage scroll-padding against the viewport's height", () => {
+    // 400px viewport: 10% = 40px at the top, 25% = 100px at the bottom.
+    const padded = "scroll-padding-top: 10%; scroll-padding-bottom: 25%";
+    expect(alignedScrollTop(...pair(setup(1800, 100, "", padded)), "start")).toBe(1760);
+    // The row's bottom (1900) at the band's bottom: 1900 - 40 - (400 - 40 - 100).
+    expect(alignedScrollTop(...pair(setup(1800, 100, "", padded)), "end")).toBe(1600);
+  });
+
   test("clamps to the scroll range", () => {
     expect(alignedScrollTop(...pair(setup(2900, 100)), "start")).toBe(2600);
     expect(alignedScrollTop(...pair(setup(50, 100)), "end")).toBe(0);
@@ -411,21 +419,44 @@ describe("Thread scripted scroll", () => {
     }
   });
 
-  test("scrollToMessage on the native path leaves the alignment to scrollIntoView", () => {
-    const { row } = renderThread({});
-    let measured = 0;
-    const measure = row.getBoundingClientRect.bind(row);
-    row.getBoundingClientRect = () => {
-      measured++;
-      return measure();
-    };
-    let intoView: ScrollIntoViewOptions | undefined;
-    row.scrollIntoView = ((options: ScrollIntoViewOptions) => {
-      intoView = options;
+  // CHAT-40: scrollIntoView scrolls every scrollable ancestor, so a thread
+  // embedded in a page moved the page too. The native path now computes the
+  // row's position itself and scrolls only the thread's own viewport.
+  const placeRow = (scroller: HTMLElement, row: HTMLElement) => {
+    scroller.getBoundingClientRect = () => ({ top: 100, bottom: 400, height: 300 }) as DOMRect;
+    Object.defineProperty(scroller, "clientHeight", { value: 300, configurable: true });
+    Object.defineProperty(scroller, "scrollHeight", { value: 1000, configurable: true });
+    row.getBoundingClientRect = () => ({ top: 500, bottom: 540, height: 40 }) as DOMRect;
+    let intoView = false;
+    row.scrollIntoView = (() => {
+      intoView = true;
     }) as never;
+    const calls: ScrollToOptions[] = [];
+    scroller.scrollTo = ((options: ScrollToOptions) => calls.push(options)) as never;
+    return { calls, usedScrollIntoView: () => intoView };
+  };
+
+  test("scrollToMessage without a timing scrolls only the thread's viewport", () => {
+    const { scroller, row } = renderThread({});
+    const { calls, usedScrollIntoView } = placeRow(scroller, row);
     act(() => screen.getByRole("button", { name: "Greeting" }).click());
-    expect(measured).toBe(0);
-    expect(intoView).toEqual({ block: "start", inline: "nearest", behavior: "smooth" });
+    expect(usedScrollIntoView()).toBe(false);
+    // align "start": the row's top (400px into the content) at the viewport's top.
+    expect(calls.at(-1)).toEqual({ top: 400, behavior: "smooth" });
+  });
+
+  test("scrollToMessage under reduced motion jumps, still only within the thread", () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ matches: query.includes("reduce") })) as never;
+    try {
+      const { scroller, row } = renderThread({});
+      const { calls, usedScrollIntoView } = placeRow(scroller, row);
+      act(() => screen.getByRole("button", { name: "Greeting" }).click());
+      expect(usedScrollIntoView()).toBe(false);
+      expect(calls.at(-1)).toEqual({ top: 400, behavior: "instant" });
+    } finally {
+      window.matchMedia = matchMedia;
+    }
   });
 
   test("scrollToMessage with a timing animates, stamped as a message scroll", () => {

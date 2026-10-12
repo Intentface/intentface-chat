@@ -76,6 +76,11 @@ export type ScrollAlign = "start" | "center" | "end" | "nearest";
 
 const px = (value: string) => Number.parseFloat(value) || 0;
 
+// scroll-padding's computed value keeps percentages, which resolve against the
+// scroll container's own height. (scroll-margin takes lengths only.)
+const paddingPx = (value: string, height: number) =>
+  value.trim().endsWith("%") ? (px(value) / 100) * height : px(value);
+
 /**
  * The scrollTop that aligns `row` inside `scroller` the way scrollIntoView
  * would: honoring the row's scroll-margin and the scroller's scroll-padding,
@@ -97,8 +102,9 @@ export const alignedScrollTop = (
   const rowBottom =
     rect.bottom - scrollerTop + scroller.scrollTop + px(rowStyle.scrollMarginBottom);
   // The visible band, shrunk by the scroller's scroll-padding.
-  const paddingTop = px(scrollerStyle.scrollPaddingTop);
-  const band = scroller.clientHeight - paddingTop - px(scrollerStyle.scrollPaddingBottom);
+  const paddingTop = paddingPx(scrollerStyle.scrollPaddingTop, scroller.clientHeight);
+  const paddingBottom = paddingPx(scrollerStyle.scrollPaddingBottom, scroller.clientHeight);
+  const band = scroller.clientHeight - paddingTop - paddingBottom;
   const viewTop = scroller.scrollTop + paddingTop;
   const viewBottom = viewTop + band;
 

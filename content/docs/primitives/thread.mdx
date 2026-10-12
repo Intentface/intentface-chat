@@ -134,6 +134,17 @@ long transcript adds no per-row setup, only the lookup when you jump.
 `useThreadVisibility` reads the same attribute to report which rows are on
 screen, and creates its observers only once something subscribes.
 
+Only the thread's own viewport scrolls, so a thread embedded in a scrolling page
+never moves the page. Where the row lands follows the same CSS as the browser's
+own scroll-into-view: `scroll-padding` on `Thread.Viewport` keeps room at its
+edges (lengths or percentages of its height), and `scroll-margin` on a row adds
+room around that row. To land rows clear of the overlays, pad the viewport by
+their heights:
+
+```tsx
+<Thread.Viewport className="scroll-pt-(--thread-overlay-top-height) scroll-pb-(--thread-overlay-bottom-height)">
+```
+
 <Demo component={<Jump />} file="primitives/thread/demos/jump.tsx" />
 
 ### Timing the scroll

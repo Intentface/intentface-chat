@@ -458,8 +458,10 @@ const useThreadScroll = (
 
   // Resolve a row by its consumer-provided data-message-id and jump to it.
   // Resolved lazily at call time — no per-row registration, nothing on the hot
-  // path. The native path is scrollIntoView; a scripted animation computes the
-  // same destination itself, honoring the row's scroll-margin either way.
+  // path. The destination is computed by hand (alignedScrollTop: scrollIntoView's
+  // block semantics, the row's scroll-margin included) and only the thread's
+  // own viewport scrolls, on every path. Never scrollIntoView: it scrolls every
+  // scrollable ancestor, so a thread embedded in a page would move the page too.
   const resolveMessageJump = useCallback(
     (messageId: string, options: ThreadScrollToMessageOptions = {}) => {
       const row = contentRef.current?.querySelector<HTMLElement>(
@@ -473,7 +475,7 @@ const useThreadScroll = (
         "message",
         options.behavior ?? "smooth",
         { getTop: () => alignedScrollTop(scroller, row, align), tracksEnd: false },
-        (resolved) => row.scrollIntoView({ block: align, inline: "nearest", behavior: resolved }),
+        (resolved) => scrollContainerTo(scroller, alignedScrollTop(scroller, row, align), resolved),
       );
       return true;
     },

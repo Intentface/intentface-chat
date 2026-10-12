@@ -15,5 +15,6 @@
 Nothing changes without the variables: smooth scrolls stay native.
 
 **Fixes along the way.**
+- `scrollToMessage` no longer scrolls the page around an embedded thread. It used `scrollIntoView`, which scrolls every scrollable ancestor; it now computes the row's position itself (same `align` values, the row's `scroll-margin` and the viewport's `scroll-padding` included, percentages too) and scrolls only the thread's viewport.
 - `isAtBottom` / `data-at-bottom` no longer stay stuck after `scrollToTop` or `scrollToMessage` moves away from the bottom: the bottom edge leaving view is no longer swallowed as a scroll of the thread's own.
 - Under `prefers-reduced-motion`, scrolls are instant even when the scroller's CSS sets `scroll-behavior: smooth` (they resolved to `auto`, which defers to it).

@@ -41,9 +41,11 @@ jobs:
     steps:
       # The full history lets React Doctor find the merge base, so a PR reports
       # only the issues it introduced rather than every issue in its files.
+      # The token isn't left in .git/config for the third-party action to reuse.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # Pinned to a commit, not the floating v2 tag: a third-party action runs
       # with write access to PRs, issues and statuses. Bump the SHA and the

@@ -28,6 +28,8 @@ bun dev              # http://localhost:3000
 bun run lint         # biome check
 bunx tsc --noEmit    # typecheck
 bun run build        # production build
+bun run doctor       # React Doctor: new issues vs main (what CI reports on a PR)
+bun run doctor:full  # React Doctor: every finding in the project
 ```
 
 No environment variables are needed. The playground chat runs on your own OpenAI key, which you paste into the Key tab of the playground settings (top right of the chat) — it is held in an HttpOnly cookie and forwarded to OpenAI per request, never stored server-side.

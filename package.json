@@ -12,7 +12,9 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "doctor": "npx -y react-doctor@0.9.17 . --yes --scope changed --no-score",
+    "doctor:full": "npx -y react-doctor@0.9.17 . --yes --no-score"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.80",

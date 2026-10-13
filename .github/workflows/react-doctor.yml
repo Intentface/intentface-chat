@@ -1,0 +1,55 @@
+# React Doctor — finds bug, performance, accessibility and bundle-size issues
+# in React code. Advisory: it reports, it never fails the check.
+#
+# Docs: https://www.react.doctor/ci
+# Source: https://github.com/millionco/react-doctor
+#
+# What it sends off-machine is set in doctor.config.json (no score API,
+# no Socket.dev supply-chain lookups) and by REACT_DOCTOR_NO_TELEMETRY below
+# (no Axiom / Sentry telemetry). Everything else stays on the runner.
+
+name: React Doctor
+
+on:
+  # Scans the PR's changed files and posts a sticky summary comment listing
+  # only the issues the PR introduces relative to the merge base. Existing,
+  # triaged findings never show up here.
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  # Scans `main` on every push, surfacing the counts as a commit status.
+  push:
+    branches: ["main"]
+
+# Exactly what the three outputs need: the sticky summary comment and inline
+# review comments (pull-requests, issues) and the commit status (statuses).
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  statuses: write
+
+# A new commit cancels the in-flight scan for the same PR (or branch).
+concurrency:
+  group: react-doctor-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  react-doctor:
+    runs-on: ubuntu-latest
+    env:
+      REACT_DOCTOR_NO_TELEMETRY: "1"
+    steps:
+      # The full history lets React Doctor find the merge base, so a PR reports
+      # only the issues it introduced rather than every issue in its files.
+      # The token isn't left in .git/config for the third-party action to reuse.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Pinned to a commit, not the floating v2 tag: a third-party action runs
+      # with write access to PRs, issues and statuses. Bump the SHA and the
+      # CLI version together (they match the `doctor` script in package.json).
+      - uses: millionco/react-doctor@673ce802a375eeb4c3c5cb9a96d21eaeb7eafd93 # v2.3.1
+        with:
+          version: "0.9.17"

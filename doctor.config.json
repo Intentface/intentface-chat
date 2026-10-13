@@ -1,0 +1,7 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "blocking": "none",
+  "noScore": true,
+  "share": false,
+  "supplyChain": { "enabled": false }
+}

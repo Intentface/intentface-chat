@@ -1,8 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act, render, screen } from "@testing-library/react";
 import { Activity, StrictMode, useState } from "react";
 import { Composer } from "../src/composer";
-import { useComposer } from "../src/composer/store";
+import { type ComposerStore, useComposer } from "../src/composer/store";
 
 // React runs effect cleanups without a real unmount: StrictMode's simulated
 // unmount in development, and an <Activity> hidden then shown again. The
@@ -86,5 +86,42 @@ describe("a composer hidden and shown again with <Activity>", () => {
 
     expect(screen.getByRole("button", { name: "Attach (1)" })).toBeTruthy();
     expect(placeholder()).toBeNull();
+  });
+});
+
+// A real unmount, unlike the cases above, abandons the attachments for good.
+describe("a composer that really unmounts", () => {
+  const revokeObjectURL = URL.revokeObjectURL;
+  let revoked: string[] = [];
+  beforeEach(() => {
+    revoked = [];
+    URL.revokeObjectURL = (url) => void revoked.push(url);
+  });
+  afterEach(() => {
+    URL.revokeObjectURL = revokeObjectURL;
+  });
+
+  const AttachingComposer = ({ store }: { store?: ComposerStore }) => (
+    <Composer.Root store={store} onSubmit={() => {}}>
+      <Composer.Textarea aria-label="Message" />
+      <AttachmentProbe />
+    </Composer.Root>
+  );
+
+  test("releases its unsent attachments' blob URLs", () => {
+    const { unmount } = render(<AttachingComposer />);
+    act(() => screen.getByRole("button", { name: "Attach (0)" }).click());
+    unmount();
+    expect(revoked).toHaveLength(1);
+    expect(revoked[0]?.startsWith("blob:")).toBe(true);
+  });
+
+  test("leaves an explicit store's attachments to its owner", () => {
+    const store = Composer.createStore();
+    const { unmount } = render(<AttachingComposer store={store} />);
+    act(() => screen.getByRole("button", { name: "Attach (0)" }).click());
+    unmount();
+    expect(revoked).toHaveLength(0);
+    expect(store.getSnapshot().attachments.items).toHaveLength(1);
   });
 });

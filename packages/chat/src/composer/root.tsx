@@ -68,10 +68,10 @@ export const ComposerRoot = ({
   // Resolved once at mount (lazy-init ref, not reactive state): an explicit
   // handle, or an instance this mount creates and owns. Swapping the store
   // prop after mount is not supported.
-  const store = useRefWithInit(() => {
+  const { store, ownsStore } = useRefWithInit(() => {
     const resolved = storeProp ?? createComposerStore();
     resolved.listboxId = listboxId;
-    return resolved;
+    return { store: resolved, ownsStore: !storeProp };
   }).current;
 
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -79,19 +79,18 @@ export const ComposerRoot = ({
   const onSubmitRef = useAsRef(onSubmit);
 
   // Register this mount on the store: answers submit through this mount's
-  // onSubmit. The cleanup undoes exactly that and nothing more — never a
-  // store.reset(). React runs it without a real unmount too (StrictMode's
-  // simulated one, an <Activity> hidden and shown again), and the component's
-  // state lives on: resetting the snapshot there wiped hasContent, the command
-  // popup, attachments and ask-user progress while the editor kept its text.
-  // A store this mount owns goes away with it on a real unmount.
+  // onSubmit. React also runs the cleanup without a real unmount (StrictMode,
+  // a hidden <Activity>), where the state lives on, so it only resets an owned
+  // store once React has removed the form — that happens on a real unmount only.
   useEffect(() => {
+    const form = formRef.current;
     store.submitAnswersRef.current = (answers) =>
       onSubmitRef.current?.({ kind: "answers", answers });
     return () => {
       store.submitAnswersRef.current = null;
+      if (ownsStore && form && !form.isConnected) store.reset();
     };
-  }, [store]);
+  }, [store, ownsStore]);
 
   // Prop → store bridges. Actions and refs on the snapshot are identity-stable,
   // so reading them here without subscribing is safe.

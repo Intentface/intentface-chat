@@ -100,8 +100,7 @@
     "prepack": "bun run build"
   },
   "dependencies": {
-    "@floating-ui/dom": "^1.7.6",
-    "nanoid": "^5.1.11"
+    "@floating-ui/dom": "^1.7.6"
   },
   "peerDependencies": {
     "react": "^19.0.0",

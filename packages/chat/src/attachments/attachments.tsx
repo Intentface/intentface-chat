@@ -1,13 +1,12 @@
 "use client";
 
 // Headless attachments: generic structural parts, accept matching, and the
-// platform-default ingestion (blob URL + generated id — the browser-native way
-// to reference a picked File; override via Composer.Attachments' create/destroy
-// for upload-to-storage etc.). Policy (accepted types, counts, sizes), media
-// taxonomy, send serialization, and copy are the consumer's. Card visuals
-// belong to the styled layer.
+// platform-default ingestion (a blob URL that doubles as the id — the
+// browser-native way to reference a picked File; override via
+// Composer.Attachments' create/destroy for upload-to-storage etc.). Policy
+// (accepted types, counts, sizes), media taxonomy, send serialization, and copy
+// are the consumer's. Card visuals belong to the styled layer.
 
-import { nanoid } from "nanoid";
 import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { PrimitiveProps } from "../internal/primitive-props";
@@ -37,13 +36,12 @@ export type AttachmentErrorCode = "accept" | "max_file_size" | "max_files";
 // item referencing it by blob URL. Overridable per composer (create/destroy).
 // ---------------------------------------------------------------------------
 
-export const toAttachmentItem = (file: File): AttachmentItem => ({
-  id: nanoid(),
-  url: URL.createObjectURL(file),
-  filename: file.name,
-  mediaType: file.type,
-  fileSize: file.size,
-});
+// Every createObjectURL call mints a fresh `blob:<origin>/<uuid>`, so the URL
+// is also a unique id — even for the same File added twice.
+export const toAttachmentItem = (file: File): AttachmentItem => {
+  const url = URL.createObjectURL(file);
+  return { id: url, url, filename: file.name, mediaType: file.type, fileSize: file.size };
+};
 
 export const revokeAttachmentUrl = (item: Pick<AttachmentItem, "url">) => {
   if (item.url?.startsWith("blob:")) {

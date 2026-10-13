@@ -58,8 +58,8 @@ bun add @intentface/chat
 ```
 
 `react` and `react-dom` (v19+) are peer dependencies. Nothing else ships with
-it beyond two small runtime deps (`@floating-ui/dom` for anchored positioning,
-`nanoid` for attachment ids) — no editor framework, no animation library.
+it beyond one small runtime dep (`@floating-ui/dom` for anchored positioning) —
+no editor framework, no animation library.
 
 ## What's inside
 

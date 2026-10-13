@@ -523,11 +523,16 @@ const measureCaret = (range: Range): DOMRect | null => {
 };
 
 // Native typing auto-scrolls; programmatic writes don't. Scroll the caret into
-// view within the composer's own scroll areas, never the page around it.
+// view within the composer's own scroll areas, never the page around it. The
+// caret is the selection's focus end: a restored selection can be taller than
+// the view, and its top edge would win.
 export const scrollCaretIntoView = (root: HTMLElement): void => {
   const selection = root.ownerDocument.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-  const rect = measureCaret(selection.getRangeAt(0));
+  if (!selection?.focusNode) return;
+  const caret = root.ownerDocument.createRange();
+  caret.setStart(selection.focusNode, selection.focusOffset);
+  caret.collapse(true);
+  const rect = measureCaret(caret);
   if (!rect) return;
   scrollIntoViewWithin(rect, root, root.closest("[data-composer-root]") ?? root);
 };

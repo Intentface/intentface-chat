@@ -40,23 +40,44 @@ const embeddedComposer = ({ textAreaOverflows }: { textAreaOverflows: boolean })
   place(composer, { top: 400, height: 140 });
   place(textArea, { top: 410, height: 100, scrollHeight: textAreaOverflows ? 400 : 100 });
   place(editor, { top: 410, height: textAreaOverflows ? 400 : 100 });
-  return { page, textArea, editor };
+  return { page, composer, textArea, editor };
 };
 
 const rectOf = (rect: Partial<DOMRect>) =>
   ({ top: 0, bottom: 0, height: 0, left: 0, right: 0, width: 0, ...rect }) as DOMRect;
 
-// The selection's collapsed range: its own box, and the DOM point it sits at.
+// A range with a stubbed box that records where it was placed.
+const fakeRange = (rect: Partial<DOMRect>) => {
+  const range = {
+    startContainer: document.body as Node,
+    startOffset: 0,
+    selectedNode: null as Node | null,
+    setStart: (container: Node, offset: number) => {
+      range.startContainer = container;
+      range.startOffset = offset;
+    },
+    collapse: () => {},
+    selectNode: (node: Node) => {
+      range.selectedNode = node;
+    },
+    getBoundingClientRect: () => rectOf(rect),
+  };
+  return range;
+};
+
+// The selection's focus point, and the boxes measured there: the caret's own,
+// then — when that is empty — the line's.
 const caretAt = (
   rect: Partial<DOMRect>,
   point: { container: Node; offset: number } = { container: document.body, offset: 0 },
+  lineRect: Partial<DOMRect> = {},
 ) => {
-  const range = {
-    getBoundingClientRect: () => rectOf(rect),
-    startContainer: point.container,
-    startOffset: point.offset,
-  };
-  document.getSelection = () => ({ rangeCount: 1, getRangeAt: () => range }) as never;
+  const ranges = [fakeRange(rect), fakeRange(lineRect)];
+  let created = 0;
+  document.getSelection = () =>
+    ({ rangeCount: 1, focusNode: point.container, focusOffset: point.offset }) as never;
+  document.createRange = () => ranges[created++] as never;
+  return { caret: ranges[0], line: ranges[1] };
 };
 
 describe("scrollCaretIntoView", () => {
@@ -88,17 +109,13 @@ describe("scrollCaretIntoView", () => {
     // "text\n" renders as text, a line break, and the padding break that gives
     // the empty last line its box. The caret sits before that padding break.
     editor.append("text", document.createElement("br"), document.createElement("br"));
-    caretAt({ top: 0, bottom: 0, height: 0 }, { container: editor, offset: 2 });
-    let measured = null as Node | null;
-    document.createRange = () =>
-      ({
-        selectNode: (node: Node) => {
-          measured = node;
-        },
-        getBoundingClientRect: () => rectOf({ top: 530, bottom: 550, height: 20 }),
-      }) as never;
+    const { line } = caretAt(
+      { top: 0, bottom: 0, height: 0 },
+      { container: editor, offset: 2 },
+      { top: 530, bottom: 550, height: 20 },
+    );
     scrollCaretIntoView(editor);
-    expect(measured).toBe(editor.childNodes[2] as Node);
+    expect(line.selectedNode).toBe(editor.childNodes[2] as Node);
     expect(textArea.scrollTop).toBe(40);
     expect(page.scrollTop).toBe(0);
   });
@@ -109,6 +126,19 @@ describe("scrollCaretIntoView", () => {
     scrollCaretIntoView(editor);
     expect(textArea.scrollTop).toBe(40);
     expect(page.scrollTop).toBe(0);
+  });
+
+  test("a selection is measured at its focus end, not across its full extent", () => {
+    const { editor } = embeddedComposer({ textAreaOverflows: true });
+    editor.append("first line", "last line");
+    const focusNode = editor.childNodes[1] as Node;
+    const { caret } = caretAt(
+      { top: 530, bottom: 550, height: 20 },
+      { container: focusNode, offset: 4 },
+    );
+    scrollCaretIntoView(editor);
+    expect(caret.startContainer).toBe(focusNode);
+    expect(caret.startOffset).toBe(4);
   });
 });
 
@@ -121,6 +151,18 @@ describe("scrollIntoViewWithin", () => {
     const { textArea, editor } = embeddedComposer({ textAreaOverflows: true });
     scrollIntoViewWithin({ top: 380, bottom: 400, height: 20 } as DOMRect, editor, textArea);
     expect(textArea.scrollTop).toBe(-30);
+  });
+
+  test("nested scroll areas inside the boundary each scroll their share", () => {
+    const { page, composer, textArea, editor } = embeddedComposer({ textAreaOverflows: true });
+    // The text area sits partly below the scrollable composer's view (400–540).
+    composer.style.overflowY = "auto";
+    place(composer, { top: 400, height: 140, scrollHeight: 300 });
+    place(textArea, { top: 520, height: 100, scrollHeight: 400 });
+    scrollIntoViewWithin({ top: 700, bottom: 720, height: 20 } as DOMRect, editor, composer);
+    expect(textArea.scrollTop).toBe(100);
+    expect(composer.scrollTop).toBe(80);
+    expect(page.scrollTop).toBe(0);
   });
 
   test("an element with no scrollable ancestor inside the boundary scrolls nothing", () => {

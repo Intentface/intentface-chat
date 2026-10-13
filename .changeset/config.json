@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
-  "changelog": ["@changesets/changelog-github", { "repo": "Intentface/intentface-chat" }],
+  "changelog": "./changelog.cjs",
   "commit": false,
   "fixed": [],
   "linked": [],

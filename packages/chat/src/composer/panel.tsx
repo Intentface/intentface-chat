@@ -21,7 +21,7 @@
 // data-ending-style (+ data-side/data-align when positioned) — animate with CSS or Motion.
 
 import { Children, type ReactNode, type RefObject, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
+import { Portal } from "../internal/portal";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import {
   type AnchorAlign,
@@ -121,9 +121,5 @@ export const ComposerPanel = ({
     },
   );
 
-  if (positioned) {
-    if (typeof document === "undefined") return null;
-    return createPortal(element, document.body);
-  }
-  return element;
+  return positioned ? <Portal>{element}</Portal> : element;
 };

@@ -12,7 +12,7 @@
 // a flip, and a --anchor-available-height var so the list caps height + scrolls.
 
 import { Children, type ReactNode, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
+import { Portal } from "../internal/portal";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import { useAnchorPositioning } from "../internal/render/positioning";
 import { useRenderElement } from "../internal/render/useRenderElement";
@@ -88,6 +88,5 @@ export const ComposerPopover = ({
   // Stays mounted (positioning only runs while open, so a closed popover just
   // holds its last position). Open/closed is exposed as data-open/data-closed
   // for the styled layer to animate against — same as the other parts.
-  if (typeof document === "undefined") return null;
-  return createPortal(element, document.body);
+  return <Portal>{element}</Portal>;
 };

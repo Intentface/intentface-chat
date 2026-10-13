@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import { createContext, use, useCallback, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useIsomorphicLayoutEffect } from "../internal/iso-layout-effect";
+import { Portal } from "../internal/portal";
 import type { PrimitiveProps } from "../internal/primitive-props";
 import type { AnchorAlign, AnchorSide } from "../internal/render/positioning";
 import { useAnchorPositioning } from "../internal/render/positioning";
@@ -81,11 +81,6 @@ export const TabsPortal = ({ children, container, keepMounted = false }: TabsPor
   const store = useTabsContextStore();
   const open = useTabsStore(store, selectValue) !== null;
 
-  // There is no document to portal into during a server render, and reaching
-  // for one during the first client render would not match it.
-  const [hydrated, setHydrated] = useState(false);
-  useIsomorphicLayoutEffect(() => setHydrated(true), []);
-
   // Kept mounted through the exit, so the surface can animate away instead of
   // blinking out. Popup reports when that has finished.
   const { mounted, setMounted, transitionStatus } = useTransitionStatus(open);
@@ -96,11 +91,12 @@ export const TabsPortal = ({ children, container, keepMounted = false }: TabsPor
     onExitFinished: () => setMounted(false),
   };
 
-  if (!hydrated || (!mounted && !keepMounted)) return null;
+  if (!mounted && !keepMounted) return null;
 
-  return createPortal(
-    <SurfaceTransitionContext value={transition}>{children}</SurfaceTransitionContext>,
-    container ?? document.body,
+  return (
+    <Portal container={container}>
+      <SurfaceTransitionContext value={transition}>{children}</SurfaceTransitionContext>
+    </Portal>
   );
 };
 

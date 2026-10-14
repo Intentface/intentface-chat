@@ -465,3 +465,119 @@ describe("Thread scripted scroll", () => {
     expect(root.getAttribute("data-scrolling")).toBe("message");
   });
 });
+
+// A gesture that interrupts a timed scroll hands the follow to the user: what
+// it released stays released, and the bottom edge leaving view while the
+// thread's own scroll held that off is acted on as soon as the user takes over.
+describe("Thread scroll interrupt", () => {
+  useFakeTiming();
+
+  const observers = {
+    edge: null as { callback: IntersectionObserverCallback; observed: Element[] } | null,
+    growth: [] as ResizeObserverCallback[],
+  };
+  const saved = {
+    IntersectionObserver: globalThis.IntersectionObserver,
+    ResizeObserver: globalThis.ResizeObserver,
+  };
+
+  beforeEach(() => {
+    observers.edge = null;
+    observers.growth = [];
+    // happy-dom has no document timeline; the follow names frames by it.
+    Object.defineProperty(document, "timeline", { value: { currentTime: 0 }, configurable: true });
+    globalThis.IntersectionObserver = class {
+      observed: Element[] = [];
+      constructor(callback: IntersectionObserverCallback) {
+        observers.edge = { callback, observed: this.observed };
+      }
+      observe(target: Element) {
+        this.observed.push(target);
+      }
+      disconnect() {}
+    } as unknown as typeof IntersectionObserver;
+    globalThis.ResizeObserver = class {
+      constructor(callback: ResizeObserverCallback) {
+        observers.growth.push(callback);
+      }
+      observe() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+  });
+
+  afterEach(() => {
+    Object.assign(globalThis, saved);
+    Reflect.deleteProperty(document, "timeline");
+  });
+
+  // The edge observer watches the top sentinel, then the bottom one.
+  const reportBottom = (inView: boolean) => {
+    const edge = observers.edge;
+    const bottomSentinel = edge?.observed[1];
+    if (!edge || !bottomSentinel) throw new Error("no edge observer");
+    act(() =>
+      edge.callback([{ target: bottomSentinel, isIntersecting: inView }] as never, edge as never),
+    );
+  };
+
+  // The first resize after mount is the land's own and is skipped.
+  const grow = () =>
+    act(() => {
+      for (let i = 0; i < 2; i++) {
+        for (const callback of observers.growth) callback([], {} as never);
+      }
+    });
+
+  const LatestButton = () => {
+    const { scrollToBottom } = useThread();
+    return (
+      <button type="button" onClick={() => scrollToBottom()}>
+        Latest
+      </button>
+    );
+  };
+
+  // A following thread at the bottom, mid-way through a timed scroll to it.
+  const renderScrolling = () => {
+    const { container } = render(
+      <Thread.Root autoScroll="follow" style={{ "--thread-scroll-duration": "400ms" } as never}>
+        <Thread.Viewport>
+          <Thread.Content>
+            <p>Hello</p>
+          </Thread.Content>
+        </Thread.Viewport>
+        <LatestButton />
+      </Thread.Root>,
+    );
+    const root = container.querySelector("[data-thread-root]") as HTMLElement;
+    const scroller = container.querySelector("[data-thread-scroller]") as HTMLElement;
+    reportBottom(true);
+    act(() => screen.getByRole("button", { name: "Latest" }).click());
+    expect(root.getAttribute("data-scrolling")).toBe("bottom");
+    return { root, scroller };
+  };
+
+  test("a wheel up releases the follow, so growth is no longer followed", () => {
+    const { root, scroller } = renderScrolling();
+    fireEvent.wheel(scroller, { deltaY: -40 });
+    grow();
+    expect(root.hasAttribute("data-scrolling")).toBe(false);
+  });
+
+  test("a wheel down keeps the follow, so growth is still followed", () => {
+    const { root, scroller } = renderScrolling();
+    fireEvent.wheel(scroller, { deltaY: 40 });
+    grow();
+    expect(root.getAttribute("data-scrolling")).toBe("follow");
+  });
+
+  test("the bottom leaving view mid-scroll is held off, then acted on when a gesture takes over", () => {
+    const { root, scroller } = renderScrolling();
+    reportBottom(false);
+    expect(root.hasAttribute("data-at-bottom")).toBe(true);
+    fireEvent.wheel(scroller, { deltaY: 40 });
+    expect(root.hasAttribute("data-at-bottom")).toBe(false);
+    grow();
+    expect(root.hasAttribute("data-scrolling")).toBe(false);
+  });
+});

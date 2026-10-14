@@ -272,26 +272,29 @@ const useThreadScroll = (
     rootRef.current?.removeAttribute("data-scrolling");
   }, [rootRef]);
 
-  // The edge observer, kept so an interrupt can re-read the bottom edge.
-  const edgeObserverRef = useRef<IntersectionObserver | null>(null);
+  // Whether the bottom sentinel is in view, as the observer last reported it —
+  // kept even while the guard holds off acting on it.
+  const bottomInViewRef = useRef(true);
+
+  // The bottom edge left view: the scroll button shows and the follow lets go.
+  const leaveBottom = useCallback(() => {
+    atBottomStore.setSnapshot(false);
+    followingRef.current = false;
+    rootRef.current?.toggleAttribute("data-at-bottom", false);
+  }, [atBottomStore, rootRef]);
 
   // A user gesture took the scroll over mid-animation. End our guard rather
-  // than re-arming it, then re-read the bottom edge: the sentinel usually left
-  // view while the guard was up (a land moves it out at once), and the
-  // observer reports a crossing only once. Re-observing delivers a fresh entry,
-  // so a drag away from the bottom releases the follow exactly as it would
-  // with no animation running.
+  // than re-arming it, and act on the edge it held off: the sentinel usually
+  // left view while the guard was up (a land moves it out at once), and the
+  // observer reports a crossing only once. A drag away from the bottom then
+  // releases the follow exactly as it would with no animation running.
   const interruptScroll = useCallback(() => {
     if (!animationRef.current) return;
     stopAnimation();
     autoScrollingRef.current = false;
     clearAutoScrollingTimeout();
-    const observer = edgeObserverRef.current;
-    const sentinel = bottomSentinelRef.current;
-    if (!observer || !sentinel) return;
-    observer.unobserve(sentinel);
-    observer.observe(sentinel);
-  }, [stopAnimation, clearAutoScrollingTimeout]);
+    if (!bottomInViewRef.current) leaveBottom();
+  }, [stopAnimation, clearAutoScrollingTimeout, leaveBottom]);
 
   // Every scroll the thread starts goes through here. "smooth" uses the timing
   // the styled layer configured (see scroll-animation.ts) and falls back to
@@ -378,6 +381,7 @@ const useThreadScroll = (
             continue;
           }
           const atBottom = entry.isIntersecting;
+          bottomInViewRef.current = atBottom;
           if (atBottom) {
             atBottomStore.setSnapshot(true);
             followingRef.current = true;
@@ -388,9 +392,7 @@ const useThreadScroll = (
             // non-following mode. A scroll *we* started (send landing / followed
             // stream) keeps autoScrollingRef set, so its transient off-screen
             // frame is ignored — that's what stops the button flashing on send.
-            atBottomStore.setSnapshot(false);
-            followingRef.current = false;
-            rootElement?.toggleAttribute("data-at-bottom", false);
+            leaveBottom();
           }
         }
       },
@@ -398,7 +400,6 @@ const useThreadScroll = (
     );
     io.observe(topSentinel);
     io.observe(bottomSentinel);
-    edgeObserverRef.current = io;
 
     // A finished scroll means nothing of ours is in flight anymore; clear
     // early instead of waiting out the timeout fallback.
@@ -413,13 +414,12 @@ const useThreadScroll = (
 
     return () => {
       io.disconnect();
-      edgeObserverRef.current = null;
       scroller.removeEventListener("scrollend", settle);
       animationRef.current?.cancel();
       animationRef.current = null;
       clearAutoScrollingTimeout();
     };
-  }, [atTopStore, atBottomStore, rootRef, clearAutoScrollingTimeout]);
+  }, [atTopStore, atBottomStore, rootRef, clearAutoScrollingTimeout, leaveBottom]);
 
   // The live end. Tracked by default — re-read per frame, so streaming growth
   // moves the destination along with it.

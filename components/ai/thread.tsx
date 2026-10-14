@@ -23,12 +23,31 @@ export type { ThreadAutoScrollMode, ThreadVisibilityState };
 // Root
 // ---------------------------------------------------------------------------
 
-export type ThreadRootProps = ComponentProps<typeof ThreadPrimitive.Root>;
+export type ThreadRootProps = ComponentProps<typeof ThreadPrimitive.Root> & {
+  /**
+   * Animate the follow with the thread's scroll timing instead of pinning it.
+   * Off by default: see SCROLL_TIMING.
+   */
+  animateFollow?: boolean;
+};
 
-const ThreadRoot = ({ className, ...props }: ThreadRootProps) => (
+// Scroll timing: every smooth scroll eases out over 400ms, except the follow,
+// which pins instantly. A reply grows a line at a time, so pinning reads as
+// smooth already, and it leaves no animation on the main thread while it is
+// busiest rendering the stream. The follow rule is !important so a timing set
+// inline (`style`) can't animate it by accident; `animateFollow` lifts it, and
+// `--thread-scroll: none` opts the whole thread back into the native scroll.
+const SCROLL_TIMING = [
+  "[--thread-scroll:400ms_cubic-bezier(0.2,0.8,0.2,1)]",
+  "not-data-animate-follow:data-[scrolling=follow]:[--thread-scroll-duration:0ms]!",
+];
+
+const ThreadRoot = ({ animateFollow = false, className, ...props }: ThreadRootProps) => (
   <ThreadPrimitive.Root
+    data-animate-follow={animateFollow ? "" : undefined}
     className={cn(
       "relative flex h-full w-full overflow-hidden [--thread-overlay-top-height:4rem] [--thread-overlay-bottom-height:8rem]",
+      SCROLL_TIMING,
       className,
     )}
     {...props}
@@ -74,7 +93,10 @@ ThreadOverlay.displayName = "ThreadOverlay";
 export type ThreadViewportProps = ComponentProps<"div">;
 
 const ThreadViewport = ({ children, className, ...props }: ThreadViewportProps) => (
-  <ThreadPrimitive.Viewport className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] scrollbar-gutter-stable scrollbar-thin [scrollbar-color:var(--color-ink-tertiary)_transparent] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-bg/40">
+  // scroll-padding keeps the overlays' insets clear wherever something is
+  // scrolled into view: scrollToMessage, keyboard paging, focus moves. A row
+  // jumped to lands below the top fade and above the composer, not under them.
+  <ThreadPrimitive.Viewport className="h-full w-full overflow-y-auto overflow-x-hidden [overflow-anchor:auto] scroll-pt-(--thread-overlay-top-height) scroll-pb-(--thread-overlay-bottom-height) scrollbar-gutter-stable scrollbar-thin [scrollbar-color:var(--color-ink-tertiary)_transparent] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-bg/40">
     <div
       data-slot="thread-viewport"
       className={cn(

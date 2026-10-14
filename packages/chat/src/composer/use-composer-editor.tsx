@@ -333,10 +333,13 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     mirrorCommandState();
   };
 
-  const focusEditor = () => {
+  const focusEditor = (options?: FocusOptions) => {
     if (!root) return;
-    root.focus();
+    root.focus(options);
     writeCaretToDom(root, caret.start, caret.end);
+    // Focus scrolls the editor box into view (unless prevented), not the
+    // caret: keep the caret visible inside the composer's own scroll area.
+    scrollCaretIntoView(root);
   };
 
   // --- Event handlers (attached as native listeners — React synthetics
@@ -658,7 +661,8 @@ const createEditorEngine = (getDependencies: () => EngineDependencies) => {
     },
     closeCommands,
     dismissCommands: () => {
-      root?.focus();
+      // The editor is on screen already: moving focus back must not scroll the page.
+      root?.focus({ preventScroll: true });
       closeCommands();
     },
   };

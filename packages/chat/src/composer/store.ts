@@ -61,7 +61,7 @@ export type ComposerEditorState = ComposerEditorHandle & {
 const createEditorController = (
   editorRef: RefObject<RegisteredEditor | null>,
 ): ComposerEditorState => ({
-  focus: () => editorRef.current?.focus(),
+  focus: (options) => editorRef.current?.focus(options),
   blur: () => editorRef.current?.blur(),
   clear: () => editorRef.current?.clear(),
   insertText: (text) => editorRef.current?.insertText(text),
@@ -193,6 +193,11 @@ export type ComposerStore = {
 // the store factory so activateAskUser reads as just "blur, listen, unlisten".
 // ---------------------------------------------------------------------------
 
+// Focus moves the ask-user flow makes itself — back to the input, or in from
+// an option. The composer is on screen already, and the browser's
+// focus-scroll would also move the page around an embedded composer.
+const FOCUS_IN_PLACE: FocusOptions = { preventScroll: true };
+
 // Scope a document-level listener to this composer: keystrokes aimed at
 // another editable or inside another composer's options are theirs; our own
 // options/editor and unclaimed targets (body — e.g. after a click on panel
@@ -253,7 +258,7 @@ const createAskUserKeydownHandler =
         return;
       case "navigate-options": {
         const newValue = optionsHandle?.navigate(action.direction);
-        if (newValue === null) controller.focus();
+        if (newValue === null) controller.focus(FOCUS_IN_PLACE);
         return;
       }
       case "select-option": {
@@ -269,7 +274,7 @@ const createAskUserKeydownHandler =
         return;
       case "insert-character":
         optionsHandle?.clearHighlight();
-        controller.focus();
+        controller.focus(FOCUS_IN_PLACE);
         controller.insertText(action.character);
         return;
     }
@@ -424,7 +429,7 @@ export const createComposerStore = (): ComposerStore => {
           controller.setText(effect.text);
           break;
         case "focus-input":
-          controller.focus();
+          controller.focus(FOCUS_IN_PLACE);
           break;
         case "focus-options":
           // Step advance / navigation: focus lands on the new step's

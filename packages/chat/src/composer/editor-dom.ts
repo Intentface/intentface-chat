@@ -20,6 +20,7 @@
 // Round-trips: "" ↔ <br·pad>, "a\n" ↔ a<br><br·pad>, "a\n\n" ↔ a<br><br><br·pad>.
 
 import type { ChipData } from "../chip-markdown";
+import { scrollIntoViewWithin } from "../internal/scroll-into-view-within";
 import { nextChipId, type SegmentDoc } from "./segments";
 
 // ---------------------------------------------------------------------------
@@ -504,29 +505,36 @@ export const writeCaretToDom = (root: HTMLElement, start: number, end: number = 
   selection.setBaseAndExtent(anchor.node, anchor.offset, focus.node, focus.offset);
 };
 
-// Native typing auto-scrolls; programmatic writes don't. Nudge only the nearest
-// scrollable ancestor (never scrollIntoView — it yanks the whole page).
+// The caret's box. A collapsed caret on an empty line has none of its own —
+// browsers return an all-zero rect, which would read as "above the view" — so
+// measure the line instead: the <br> that follows it (a line break, or the
+// padding break that gives an empty document its line). Null if neither has
+// a box.
+const measureCaret = (range: Range): DOMRect | null => {
+  const rect = range.getBoundingClientRect();
+  if (rect.height > 0) return rect;
+  const next = range.startContainer.childNodes[range.startOffset];
+  if (next?.nodeName !== "BR") return null;
+  const line = next.ownerDocument?.createRange();
+  if (!line) return null;
+  line.selectNode(next);
+  const lineRect = line.getBoundingClientRect();
+  return lineRect.height > 0 ? lineRect : null;
+};
+
+// Native typing auto-scrolls; programmatic writes don't. Scroll the caret into
+// view within the composer's own scroll areas, never the page around it. The
+// caret is the selection's focus end: a restored selection can be taller than
+// the view, and its top edge would win.
 export const scrollCaretIntoView = (root: HTMLElement): void => {
   const selection = root.ownerDocument.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-  const rect = selection.getRangeAt(0).getBoundingClientRect();
-
-  let scroller: HTMLElement | null = root;
-  while (scroller && scroller !== root.ownerDocument.body) {
-    const { overflowY } = getComputedStyle(scroller);
-    if (
-      (overflowY === "auto" || overflowY === "scroll") &&
-      scroller.scrollHeight > scroller.clientHeight
-    ) {
-      break;
-    }
-    scroller = scroller.parentElement;
-  }
-  if (!scroller || scroller === root.ownerDocument.body) return;
-
-  const view = scroller.getBoundingClientRect();
-  if (rect.top < view.top) scroller.scrollTop -= view.top - rect.top;
-  else if (rect.bottom > view.bottom) scroller.scrollTop += rect.bottom - view.bottom;
+  if (!selection?.focusNode) return;
+  const caret = root.ownerDocument.createRange();
+  caret.setStart(selection.focusNode, selection.focusOffset);
+  caret.collapse(true);
+  const rect = measureCaret(caret);
+  if (!rect) return;
+  scrollIntoViewWithin(rect, root, root.closest("[data-composer-root]") ?? root);
 };
 
 // ---------------------------------------------------------------------------

@@ -240,7 +240,9 @@ export const rootAttrs = [
 Returns a `ComposerStore` handle. Pass it to `store`, read it with
 `useComposerStore(store, selector)`, and drive it imperatively through
 `store.controller` (`focus`, `blur`, `clear`, `insertText`, `insertChip`,
-`getText`, `setText`, `serialize`, `ensureFocus`).
+`getText`, `setText`, `serialize`, `ensureFocus`). `focus` takes the same
+options as `HTMLElement.focus()`: pass `{ preventScroll: true }` to focus a
+composer that's already on screen without scrolling the page around it.
 
 ```tsx
 import { Composer, useComposerStore } from "@intentface/chat/composer";

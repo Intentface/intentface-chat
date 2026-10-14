@@ -35,7 +35,8 @@ export type TriggerRule = "doc-start" | "word-boundary";
 export type { ChipData };
 
 export type ComposerEditorHandle = {
-  focus: () => void;
+  /** Focus the editor. Takes `HTMLElement.focus()`'s options: pass `{ preventScroll: true }` to leave the page where it is. */
+  focus: (options?: FocusOptions) => void;
   blur: () => void;
   clear: () => void;
   insertText: (text: string) => void;

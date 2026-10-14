@@ -72,12 +72,14 @@ const caretAt = (
   point: { container: Node; offset: number } = { container: document.body, offset: 0 },
   lineRect: Partial<DOMRect> = {},
 ) => {
-  const ranges = [fakeRange(rect), fakeRange(lineRect)];
+  const caret = fakeRange(rect);
+  const line = fakeRange(lineRect);
+  const ranges = [caret, line];
   let created = 0;
   document.getSelection = () =>
     ({ rangeCount: 1, focusNode: point.container, focusOffset: point.offset }) as never;
   document.createRange = () => ranges[created++] as never;
-  return { caret: ranges[0], line: ranges[1] };
+  return { caret, line };
 };
 
 describe("scrollCaretIntoView", () => {
@@ -226,12 +228,13 @@ describe("ask-user focus moves keep the page in place", () => {
     HTMLElement.prototype.focus = focus;
   });
 
-  const renderQuestion = async () => {
+  const renderQuestion = async (container?: HTMLElement) => {
     render(
       <Composer.Root questions={QUESTIONS} onSubmit={() => {}}>
         <Composer.Textarea aria-label="Message" />
         <AskUserOptions />
       </Composer.Root>,
+      { container },
     );
     await flushFrames();
   };
@@ -252,6 +255,27 @@ describe("ask-user focus moves keep the page in place", () => {
     const second = screen.getByRole("radio", { name: "SQLite" });
     expect(document.activeElement).toBe(second);
     expect(focusesOf(second).at(-1)?.options).toEqual({ preventScroll: true });
+  });
+
+  test("arrowing to an option outside its list's view scrolls the list, not the page", async () => {
+    const page = document.createElement("div");
+    page.style.overflowY = "auto";
+    document.body.append(page);
+    await renderQuestion(page);
+    // The list shows one option at a time; the second sits just below its view,
+    // and the list runs past the page's view, so a boundary that leaked out of
+    // the question would scroll the page too.
+    const list = screen.getByRole("radiogroup");
+    list.style.overflowY = "auto";
+    place(page, { top: 0, height: 420, scrollHeight: 2000 });
+    place(list, { top: 400, height: 40, scrollHeight: 80 });
+    place(screen.getByRole("radio", { name: "SQLite" }), { top: 440, height: 40 });
+
+    act(
+      () => void fireEvent.keyDown(document.activeElement ?? document.body, { key: "ArrowDown" }),
+    );
+    expect(list.scrollTop).toBe(40);
+    expect(page.scrollTop).toBe(0);
   });
 
   test("typing to answer moves focus back to the input without scrolling", async () => {

@@ -8,7 +8,8 @@ import {
   useThreadVisibility,
 } from "@intentface/chat/thread";
 import { ArrowDown } from "@keyline-icons/react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import type { ComponentProps } from "react";
 import { memo, useCallback } from "react";
 import Button from "@/components/ui/button";
@@ -121,7 +122,7 @@ const ThreadComposer = ({ className, children, ...props }: ThreadComposerProps) 
 // package's useThread hook so the motion enter/exit stays exactly as designed.
 // ---------------------------------------------------------------------------
 
-export type ThreadScrollButtonProps = ComponentProps<typeof motion.div>;
+export type ThreadScrollButtonProps = ComponentProps<typeof m.div>;
 
 const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) => {
   const { isAtBottom, scrollToBottom } = useThread();
@@ -135,7 +136,7 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
       <div className="z-2 flex h-0 w-full max-w-(--thread-width) items-end justify-center">
         <AnimatePresence>
           {!isAtBottom && (
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 8, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.9 }}
@@ -146,7 +147,7 @@ const ThreadScrollButton = ({ className, ...props }: ThreadScrollButtonProps) =>
                 <ArrowDown />
                 Latest
               </Button>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>

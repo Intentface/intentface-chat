@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { createContext, use, useCallback, useRef, useState } from "react";
+import { createContext, use, useCallback, useMemo, useRef, useState } from "react";
 import { useIsomorphicLayoutEffect } from "../internal/iso-layout-effect";
 import { Portal } from "../internal/portal";
 import type { PrimitiveProps } from "../internal/primitive-props";
@@ -85,11 +85,10 @@ export const TabsPortal = ({ children, container, keepMounted = false }: TabsPor
   // blinking out. Popup reports when that has finished.
   const { mounted, setMounted, transitionStatus } = useTransitionStatus(open);
 
-  const transition: SurfaceTransition = {
-    transitionStatus,
-    open,
-    onExitFinished: () => setMounted(false),
-  };
+  const transition = useMemo<SurfaceTransition>(
+    () => ({ transitionStatus, open, onExitFinished: () => setMounted(false) }),
+    [transitionStatus, open, setMounted],
+  );
 
   if (!mounted && !keepMounted) return null;
 

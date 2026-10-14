@@ -17,6 +17,7 @@ import {
   use,
   useCallback,
   useId,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -81,7 +82,8 @@ const CollapsibleRoot = ({
     },
   );
 
-  return <CollapsibleContext value={{ open, setOpen, panelId }}>{element}</CollapsibleContext>;
+  const context = useMemo(() => ({ open, setOpen, panelId }), [open, setOpen, panelId]);
+  return <CollapsibleContext value={context}>{element}</CollapsibleContext>;
 };
 
 export type CollapsibleTriggerProps = PrimitiveProps<"button", CollapsibleState>;

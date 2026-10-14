@@ -1,7 +1,8 @@
 "use client";
 
 import { RotateCcw } from "@keyline-icons/react";
-import { motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import { type ReactNode, useState } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { useMeasure } from "@/hooks/use-measure";
@@ -65,7 +66,7 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
         ))}
       </div>
       {/* Clips only mid-switch, so a demo's own popups can spill out otherwise. */}
-      <motion.div
+      <m.div
         initial={false}
         animate={{ height: height || "auto" }}
         transition={switching ? paneTransition : INSTANT}
@@ -75,7 +76,7 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
           switching && "overflow-hidden",
         )}
       >
-        <motion.div
+        <m.div
           ref={previewRef}
           inert={tab !== "preview"}
           initial={false}
@@ -99,8 +100,8 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
           <div key={run} className="flex w-full items-center justify-center">
             {preview}
           </div>
-        </motion.div>
-        <motion.div
+        </m.div>
+        <m.div
           ref={codeRef}
           inert={tab !== "code"}
           initial={false}
@@ -109,8 +110,8 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
           className={cn(paneClass(tab === "code"), "[&_pre]:max-h-[32rem]")}
         >
           {code}
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </div>
   );
 };

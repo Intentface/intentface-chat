@@ -2,7 +2,8 @@
 
 import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
 import { File, Paperclip, X } from "@keyline-icons/react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
 import { useEffect, useState } from "react";
@@ -41,7 +42,7 @@ type AttachmentsRootProps = {
 const AttachmentsRoot = ({ children, className, show = true }: AttachmentsRootProps) => (
   <AnimatePresence initial={false}>
     {show && (
-      <motion.div
+      <m.div
         initial={{ height: 0, opacity: 0 }}
         animate={{ height: "auto", opacity: 1 }}
         exit={{ height: 0, opacity: 0 }}
@@ -51,7 +52,7 @@ const AttachmentsRoot = ({ children, className, show = true }: AttachmentsRootPr
         <div data-slot="attachments" className={cn("flex flex-wrap gap-2 px-2 pt-2", className)}>
           <AnimatePresence initial={false}>{children}</AnimatePresence>
         </div>
-      </motion.div>
+      </m.div>
     )}
   </AnimatePresence>
 );
@@ -73,7 +74,7 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
   const filename = item.filename ?? "Attachment";
   const Icon = getFileIcon(mediaType);
   return (
-    <motion.div
+    <m.div
       layout
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -115,7 +116,7 @@ const AttachmentsItem = ({ item, children, className }: AttachmentsItemProps) =>
         )}
       </div>
       {children}
-    </motion.div>
+    </m.div>
   );
 };
 
@@ -172,7 +173,7 @@ const AttachmentsDropzone = ({
   const content = (
     <AnimatePresence>
       {show && (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -181,7 +182,7 @@ const AttachmentsDropzone = ({
           className={cn(dropzoneVariants[variant], className)}
         >
           {children ?? <span className="text-sm font-medium">Drop files here</span>}
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

@@ -14,7 +14,9 @@ import {
   useCallback,
   useId,
   useImperativeHandle,
+  useInsertionEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -41,7 +43,8 @@ export const AskUserRoot = ({ className, render, style, ...elementProps }: AskUs
     { className, render, style },
     { props: [{ "data-ask-user": "" }, elementProps] },
   );
-  return <AskUserIdsContext value={{ labelId, stepLabelId }}>{element}</AskUserIdsContext>;
+  const ids = useMemo(() => ({ labelId, stepLabelId }), [labelId, stepLabelId]);
+  return <AskUserIdsContext value={ids}>{element}</AskUserIdsContext>;
 };
 
 /** Question heading text. Carries the id `Options` uses as its accessible name. */
@@ -199,9 +202,14 @@ export const AskUserOptions = ({
   const { labelId, stepLabelId } = use(AskUserIdsContext);
   const [highlightedValue, setHighlightedValue] = useState<string | null>(null);
 
-  // Track highlight in a ref so imperative methods see latest value without re-binding
+  // Track highlight in a ref so imperative methods see latest value without re-binding.
+  // Mirrored after commit, not during a render React may discard, and in an
+  // insertion effect: it runs before every layout effect in the tree, and the
+  // options register in theirs, where they may seed the highlight imperatively.
   const highlightedValueRef = useRef(highlightedValue);
-  highlightedValueRef.current = highlightedValue;
+  useInsertionEffect(() => {
+    highlightedValueRef.current = highlightedValue;
+  });
 
   const register = useCallback((itemValue: string, getElement: () => HTMLElement | null) => {
     registeredItems.current = [...registeredItems.current, itemValue];
@@ -315,20 +323,19 @@ export const AskUserOptions = ({
     },
   );
 
-  return (
-    <OptionsContext
-      value={{
-        multiSelect,
-        groupName,
-        highlightedValue,
-        items: registeredItems,
-        register,
-        onItemHover,
-      }}
-    >
-      {element}
-    </OptionsContext>
+  const options = useMemo(
+    () => ({
+      multiSelect,
+      groupName,
+      highlightedValue,
+      items: registeredItems,
+      register,
+      onItemHover,
+    }),
+    [multiSelect, groupName, highlightedValue, register, onItemHover],
   );
+
+  return <OptionsContext value={options}>{element}</OptionsContext>;
 };
 
 /** Selectable card. Self-registers with parent `Options` on mount (cmdk pattern). Derives highlight state from context. */
@@ -378,7 +385,9 @@ export const AskUserOption = ({
 
   // Self-register on mount, deregister on unmount (true subscription side effect)
   const registerRef = useRef(register);
-  registerRef.current = register;
+  useInsertionEffect(() => {
+    registerRef.current = register;
+  });
   useItemRegistration(value, registerRef, optionRef);
 
   const element = useRenderElement(
@@ -420,7 +429,11 @@ export const AskUserOption = ({
     },
   );
 
-  return <OptionContext value={{ id, value, selected, onSelect }}>{element}</OptionContext>;
+  const option = useMemo(
+    () => ({ id, value, selected, onSelect }),
+    [id, value, selected, onSelect],
+  );
+  return <OptionContext value={option}>{element}</OptionContext>;
 };
 
 /** Registers an item value + element with the parent Options container synchronously before paint and deregisters on unmount. */

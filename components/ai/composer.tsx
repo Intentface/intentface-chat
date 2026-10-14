@@ -16,7 +16,8 @@ import {
   useComposerStore,
   useComposerSubmit,
 } from "@intentface/chat/composer";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { Children, type ComponentProps, type ReactNode, useMemo, useRef } from "react";
 import { AskUser } from "@/components/ai/ask-user";
 import { Attachments } from "@/components/ai/attachments";
@@ -129,7 +130,7 @@ const ComposerAttachments = ({
     >
       <AnimatePresence initial={false}>
         {(attachments.isDragging || attachments.items.length > 0) && (
-          <motion.div
+          <m.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -155,7 +156,7 @@ const ComposerAttachments = ({
               )}
               <Attachments.Dropzone visible={attachments.isDragging} variant="inline" />
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
       <Attachments.Error code={attachments.error} />
@@ -255,7 +256,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
   return (
     <div className="pointer-events-none flex min-h-lh">
       <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
+        <m.span
           key={key}
           initial={{ opacity: 0, y: "100%", filter: "blur(4px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -264,7 +265,7 @@ const ComposerPlaceholder = ({ placeholder, children, className }: ComposerPlace
           className={cn("text-ink-tertiary font-book leading-6", className)}
         >
           {typeof items[0] === "string" ? currentItem : items[key % items.length]}
-        </motion.span>
+        </m.span>
       </AnimatePresence>
     </div>
   );
@@ -331,7 +332,7 @@ const ComposerSubmit = ({
       {...props}
     >
       <AnimatePresence mode="wait" initial={false}>
-        <motion.span
+        <m.span
           key={isGenerating ? "stop" : "send"}
           initial={{ opacity: 0, scale: 0.8, filter: "blur(4px)" }}
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
@@ -340,7 +341,7 @@ const ComposerSubmit = ({
           className="flex items-center justify-center"
         >
           {isGenerating ? <Stop /> : (children ?? <ArrowUp />)}
-        </motion.span>
+        </m.span>
       </AnimatePresence>
     </IconButton>
   );

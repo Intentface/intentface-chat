@@ -8,7 +8,7 @@ import {
   useMessageSelectionScope,
 } from "@intentface/chat/message";
 import { Check, Copy, File, MessageSquare, Paperclip, Stop } from "@keyline-icons/react";
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 import Image from "next/image";
 import { type ComponentProps, useMemo } from "react";
 import { Chip } from "@/components/ai/chip";
@@ -29,7 +29,7 @@ type MessageRootProps = ComponentProps<typeof MessagePrimitive.Root>;
 const MessageRoot = ({ className, ...props }: MessageRootProps) => (
   <MessagePrimitive.Root
     render={
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

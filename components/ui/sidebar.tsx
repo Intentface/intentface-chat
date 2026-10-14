@@ -4,7 +4,8 @@ import { useRender } from "@base-ui/react/use-render";
 import { Shell, useShell } from "@intentface/chat/shell";
 import { PanelLeft } from "@keyline-icons/react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, useReducedMotion } from "motion/react";
+import * as m from "motion/react-m";
 import {
   type ComponentProps,
   createContext,
@@ -382,8 +383,13 @@ const SidebarViews = ({
     if (!order.current.includes(view)) order.current.push(view);
   }, []);
 
+  const views = useMemo(
+    () => ({ value, direction: shown.direction, register }),
+    [value, shown.direction, register],
+  );
+
   return (
-    <SidebarViewsContext.Provider value={{ value, direction: shown.direction, register }}>
+    <SidebarViewsContext.Provider value={views}>
       <div
         data-slot="sidebar-views"
         // Bleeds 4px each side like Content, so raised rows keep their ring.
@@ -422,7 +428,7 @@ const SidebarView = ({
     // Each view owns its presence, so the leaving one still reads the direction.
     <AnimatePresence custom={direction} initial={false}>
       {shown === value ? (
-        <motion.div
+        <m.div
           data-slot="sidebar-view"
           custom={direction}
           variants={variants}
@@ -433,7 +439,7 @@ const SidebarView = ({
           className={cn("absolute inset-0 flex flex-col gap-4 px-1", className)}
         >
           {children}
-        </motion.div>
+        </m.div>
       ) : null}
     </AnimatePresence>
   );

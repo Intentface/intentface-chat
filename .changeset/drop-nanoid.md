@@ -2,4 +2,5 @@
 "@intentface/chat": patch
 ---
 
-- Remove the `nanoid` dependency; attachment ids are now the file's blob URL.
+- Remove the `nanoid` dependency.
+- [Attachments] Use the file's blob URL as the attachment id.

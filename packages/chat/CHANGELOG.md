@@ -1,5 +1,23 @@
 # @intentface/chat
 
+## 0.5.3
+
+### Patch Changes
+
+- [Composer] Fix `Composer.Root` losing its state under StrictMode or a hidden `<Activity>`, which drew the placeholder over a controlled `value`.
+- [Composer] Fix an embedded composer scrolling the page around it on `clear()`, `setText()` and ask-user step changes.
+- [Composer] Fix a trailing empty line in an overflowing composer not scrolling into view.
+- [AskUser] Fix moving focus between options scrolling the page around an embedded question.
+- [Composer] Add focus options to the controller's `focus()`, such as `{ preventScroll: true }`.
+- Remove the `nanoid` dependency.
+- [Attachments] Use the file's blob URL as the attachment id.
+- [Composer] Fix a hydration mismatch when `Composer.Popover` or an overlay `Composer.Panel` is server-rendered.
+- [AskUser] Fix `AskUser.Options` and `AskUser.Option` writing to refs during render.
+- [Composer] Fix `Composer.Command` writing to a ref during render.
+- [AskUser] Improve re-renders: `AskUser.Root`, `AskUser.Options` and `AskUser.Option` memoize their context values.
+- [Reasoning] [Steps] Improve re-renders: their collapsible context is memoized.
+- [Tabs] Improve re-renders: the anchored surface memoizes its context value.
+
 ## 0.5.2
 
 ### Patch Changes

@@ -79,14 +79,16 @@ export const ComposerRoot = ({
   const onSubmitRef = useAsRef(onSubmit);
 
   // Register this mount on the store: answers submit through this mount's
-  // onSubmit. Only a store this mount created gets reset on unmount — an
-  // explicit handle's state belongs to its owner and survives remounts.
+  // onSubmit. React also runs the cleanup without a real unmount (StrictMode,
+  // a hidden <Activity>), where the state lives on, so it only resets an owned
+  // store once React has removed the form — that happens on a real unmount only.
   useEffect(() => {
+    const form = formRef.current;
     store.submitAnswersRef.current = (answers) =>
       onSubmitRef.current?.({ kind: "answers", answers });
     return () => {
       store.submitAnswersRef.current = null;
-      if (ownsStore) store.reset();
+      if (ownsStore && form && !form.isConnected) store.reset();
     };
   }, [store, ownsStore]);
 

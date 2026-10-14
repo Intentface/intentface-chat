@@ -122,6 +122,7 @@ export const ScrollTiming = () => {
           <button
             key={candidate}
             type="button"
+            aria-pressed={candidate === preset}
             onClick={() => {
               stopStream();
               setPreset(candidate);
@@ -151,7 +152,7 @@ export const ScrollTiming = () => {
             direction="top"
             className="inset-x-0 top-0 z-1 h-(--thread-overlay-top-height) bg-linear-to-b from-white to-transparent dark:from-zinc-900"
           />
-          <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto]">
+          <Thread.Viewport className="h-full w-full overflow-x-hidden overflow-y-auto outline-none [overflow-anchor:auto] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#0169cc]/60">
             <div className="relative flex min-h-full w-full flex-col pt-(--thread-overlay-top-height) pb-(--thread-overlay-bottom-height)">
               <Thread.Content className="flex min-h-full w-full flex-col gap-5 px-4 [&>*:last-child]:min-h-(--thread-turn-min-height,0px)">
                 {exchanges.map((exchange, index) => (

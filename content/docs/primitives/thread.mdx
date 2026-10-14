@@ -343,7 +343,7 @@ export const cssVars = [
   { attribute: "--thread-width", values: "672px", description: "Max width of the content column and overlays." },
   { attribute: "--thread-overlay-top-height", values: "4rem", description: "Top overlay height and top inset." },
   { attribute: "--thread-overlay-bottom-height", values: "8rem", description: "Bottom overlay height and bottom inset (measured from the Thread.Composer slot at runtime)." },
-  { attribute: "--thread-scroll", values: "<duration> <easing> | none", description: "Times every smooth scroll. Unset or none keeps the browser's native smooth scroll (none wins over the longhands); 0ms makes them instant. Takes a Motion spring() string as-is." },
+  { attribute: "--thread-scroll", values: "<duration> <easing> | none", description: "Times every smooth scroll; the two parts go in either order, like transition. Unset or none keeps the browser's native smooth scroll (none wins over the longhands); 0ms makes them instant. Takes a Motion spring() string as-is." },
   { attribute: "--thread-scroll-duration", values: "<duration>", description: "Longhand; overrides the shorthand. The cap when a speed is set." },
   { attribute: "--thread-scroll-easing", values: "<easing-function>", description: "Longhand; overrides the shorthand. Defaults to ease." },
   { attribute: "--thread-scroll-speed", values: "<number>", description: "Pixels per second; the duration follows the distance." },

@@ -26,13 +26,37 @@ export const parseTime = (value: string): number | null => {
   return match[2]?.toLowerCase() === "s" ? amount * 1000 : amount;
 };
 
-// The shorthand reads like `transition`'s <duration> <easing>, so a Motion
-// `spring()` string ("900ms linear(…)") drops straight in.
+// Splits on whitespace outside parentheses, so a function easing such as
+// `cubic-bezier(0.2, 0.8, 0.2, 1)` stays one token.
+const topLevelTokens = (value: string): string[] => {
+  const tokens: string[] = [];
+  let token = "";
+  let depth = 0;
+  for (const char of value) {
+    if (char === "(") depth++;
+    if (char === ")") depth = Math.max(0, depth - 1);
+    if (depth === 0 && /\s/.test(char)) {
+      if (token) tokens.push(token);
+      token = "";
+    } else {
+      token += char;
+    }
+  }
+  if (token) tokens.push(token);
+  return tokens;
+};
+
+// The shorthand reads like `transition`'s <duration> <easing>, in either
+// order, so a Motion `spring()` string ("900ms linear(…)") drops straight in.
+// The duration is the token that is a <time>; the rest is the easing.
 const parseShorthand = (value: string): { duration: number | null; easing: string } => {
-  const [first = "", ...rest] = value.trim().split(/\s+/);
-  const duration = parseTime(first);
-  if (duration === null) return { duration: null, easing: value.trim() };
-  return { duration, easing: rest.join(" ") };
+  const tokens = topLevelTokens(value);
+  const index = tokens.findIndex((token) => parseTime(token) !== null);
+  if (index === -1) return { duration: null, easing: tokens.join(" ") };
+  return {
+    duration: parseTime(tokens[index] ?? ""),
+    easing: tokens.filter((_, other) => other !== index).join(" "),
+  };
 };
 
 type TimingStyle = Pick<CSSStyleDeclaration, "getPropertyValue">;

@@ -55,6 +55,22 @@ describe("readScrollTiming", () => {
     });
   });
 
+  test("the shorthand takes its parts in either order, like transition", () => {
+    const curve = "cubic-bezier(0.2, 0.8, 0.2, 1)";
+    const expected = { duration: 400, speed: null, easing: curve };
+    expect(readScrollTiming(style({ "--thread-scroll": `400ms ${curve}` }))).toEqual(expected);
+    expect(readScrollTiming(style({ "--thread-scroll": `${curve} 0.4s` }))).toEqual(expected);
+    expect(readScrollTiming(style({ "--thread-scroll": "ease-out 300ms" }))).toEqual({
+      duration: 300,
+      speed: null,
+      easing: "ease-out",
+    });
+  });
+
+  test("a shorthand without a duration leaves the native scroll", () => {
+    expect(readScrollTiming(style({ "--thread-scroll": "ease-out" }))).toBeNull();
+  });
+
   test("longhands override the shorthand", () => {
     const timing = readScrollTiming(
       style({ "--thread-scroll": "900ms ease-in", "--thread-scroll-duration": "200ms" }),

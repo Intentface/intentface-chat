@@ -26,35 +26,17 @@ export const parseTime = (value: string): number | null => {
   return match[2]?.toLowerCase() === "s" ? amount * 1000 : amount;
 };
 
-// Splits on whitespace outside parentheses, so a function easing such as
-// `cubic-bezier(0.2, 0.8, 0.2, 1)` stays one token.
-const topLevelTokens = (value: string): string[] => {
-  const tokens: string[] = [];
-  let token = "";
-  let depth = 0;
-  for (const char of value) {
-    if (char === "(") depth++;
-    if (char === ")") depth = Math.max(0, depth - 1);
-    if (depth === 0 && /\s/.test(char)) {
-      if (token) tokens.push(token);
-      token = "";
-    } else {
-      token += char;
-    }
-  }
-  if (token) tokens.push(token);
-  return tokens;
-};
-
 // The shorthand reads like `transition`'s <duration> <easing>, in either
 // order, so a Motion `spring()` string ("900ms linear(…)") drops straight in.
-// The duration is the token that is a <time>; the rest is the easing.
+// No easing function takes a <time>, so the token that is one is the duration
+// and the rest is the easing.
 const parseShorthand = (value: string): { duration: number | null; easing: string } => {
-  const tokens = topLevelTokens(value);
-  const index = tokens.findIndex((token) => parseTime(token) !== null);
-  if (index === -1) return { duration: null, easing: tokens.join(" ") };
+  const tokens = value.trim().split(/\s+/);
+  const times = tokens.map(parseTime);
+  const index = times.findIndex((time) => time !== null);
+  if (index === -1) return { duration: null, easing: value.trim() };
   return {
-    duration: parseTime(tokens[index] ?? ""),
+    duration: times[index] ?? null,
     easing: tokens.filter((_, other) => other !== index).join(" "),
   };
 };

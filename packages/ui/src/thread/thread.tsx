@@ -32,6 +32,7 @@ import type { PrimitiveProps } from "../internal/primitive-props";
 import type { StateAttributesMapping } from "../internal/render/getStateAttributesProps";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
 import { useRenderElement } from "../internal/render/useRenderElement";
+import { alignedScrollTop } from "../internal/scroll-into-view-within";
 import {
   DEFAULT_BOTTOM_OFFSET,
   measureDockInset,
@@ -45,7 +46,6 @@ import {
   wasPrepended,
 } from "./geometry";
 import {
-  alignedScrollTop,
   animateScroll,
   readScrollTiming,
   resolveDuration,

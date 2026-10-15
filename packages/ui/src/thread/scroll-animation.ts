@@ -77,63 +77,6 @@ export const resolveDuration = ({ duration, speed }: ScrollTiming, distance: num
   return Math.max(0, resolved ?? 0);
 };
 
-// scrollIntoView's `block` alignment.
-export type ScrollAlign = "start" | "center" | "end" | "nearest";
-
-const px = (value: string) => Number.parseFloat(value) || 0;
-
-// scroll-padding's computed value keeps percentages, which resolve against the
-// scroll container's own height. (scroll-margin takes lengths only.)
-const paddingPx = (value: string, height: number) =>
-  value.trim().endsWith("%") ? (px(value) / 100) * height : px(value);
-
-/**
- * The scrollTop that aligns `row` inside `scroller` the way scrollIntoView
- * would: honoring the row's scroll-margin and the scroller's scroll-padding,
- * clamped to the scroll range. Computed once — a scripted animation needs the
- * destination up front, which scrollIntoView never exposes.
- */
-export const alignedScrollTop = (
-  scroller: HTMLElement,
-  row: HTMLElement,
-  align: ScrollAlign,
-): number => {
-  const rowStyle = getComputedStyle(row);
-  const scrollerStyle = getComputedStyle(scroller);
-  const scrollerTop = scroller.getBoundingClientRect().top + scroller.clientTop;
-  const rect = row.getBoundingClientRect();
-
-  // Row edges in scroll coordinates, expanded by its scroll-margin.
-  const rowTop = rect.top - scrollerTop + scroller.scrollTop - px(rowStyle.scrollMarginTop);
-  const rowBottom =
-    rect.bottom - scrollerTop + scroller.scrollTop + px(rowStyle.scrollMarginBottom);
-  // The visible band, shrunk by the scroller's scroll-padding.
-  const paddingTop = paddingPx(scrollerStyle.scrollPaddingTop, scroller.clientHeight);
-  const paddingBottom = paddingPx(scrollerStyle.scrollPaddingBottom, scroller.clientHeight);
-  const band = scroller.clientHeight - paddingTop - paddingBottom;
-  const viewTop = scroller.scrollTop + paddingTop;
-  const viewBottom = viewTop + band;
-
-  const toStart = rowTop - paddingTop;
-  const toEnd = rowBottom - paddingTop - band;
-  const target = (() => {
-    if (align === "start") return toStart;
-    if (align === "end") return toEnd;
-    if (align === "center") return (rowTop + rowBottom) / 2 - paddingTop - band / 2;
-    // "nearest", per the CSSOM View rules: leave a row that is fully in view —
-    // or that overflows the band at both edges — where it is; otherwise bring
-    // in the edge that is out of view, or the top edge of a row too tall to fit.
-    const fits = rowBottom - rowTop <= band;
-    const above = rowTop < viewTop;
-    const below = rowBottom > viewBottom;
-    if (above === below) return scroller.scrollTop;
-    return above === fits ? toStart : toEnd;
-  })();
-
-  const max = scroller.scrollHeight - scroller.clientHeight;
-  return Math.min(Math.max(0, target), Math.max(0, max));
-};
-
 // The easing curve is evaluated by the browser: a target-less effect runs on
 // the document timeline, and its computed progress is the eased progress — so
 // every CSS easing works, linear() springs included, with no parser here. An

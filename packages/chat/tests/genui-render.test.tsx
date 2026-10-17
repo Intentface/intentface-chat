@@ -1,16 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { defaultCatalog } from "../src/genui/catalog";
+import { z } from "zod";
+import { defaultCatalog, defineCatalog } from "../src/genui/catalog";
+import { defineElement } from "../src/genui/define";
 import {
+  copyWithGenUi,
+  defineComponents,
   GenUi,
   type GenUiComponents,
   type GenUiRootProps,
   useGenUiElement,
   useGenUiLive,
 } from "../src/genui-render";
+import { rangeText } from "../src/genui-render/copy";
 
 // Bare components: the package draws with whatever it is handed.
 const Box = ({ children, title }: { children?: ReactNode; title?: string }) => (
@@ -26,9 +31,9 @@ const components: GenUiComponents = {
     Grid: Box,
     Heading: ({ text }) => <h4>{text}</h4>,
     Text: ({ text }) => <p>{text}</p>,
-    Metric: ({ label, value }) => (
+    Metric: ({ label, text }) => (
       <p>
-        {label}: {value}
+        {label}: {text}
       </p>
     ),
     KeyValue: ({ items }) => <dl>{items.length}</dl>,
@@ -102,7 +107,7 @@ describe("GenUi, while the input streams", () => {
         { id: "t", type: "Text", props: { text: "Here already" } },
       ],
     };
-    expect(draw(<GenUi.Spec input={partial} />, { complete: false })).toBe(
+    expect(draw(<GenUi.Spec input={partial} />, { phase: "streaming" })).toBe(
       '<div data-genui-pending="" data-genui-type="Card"><p>Here already</p></div>',
     );
     // Whole, the same spec draws nothing for the card, and so nothing under it.
@@ -111,7 +116,7 @@ describe("GenUi, while the input streams", () => {
 
   test("shows the placeholder until there is a root, and nothing once whole", () => {
     const Placeholder = ({ title }: { title?: string }) => <i>{title ?? "…"}</i>;
-    const root = { complete: false, components: { ...components, Placeholder } };
+    const root = { phase: "streaming" as const, components: { ...components, Placeholder } };
     expect(draw(<GenUi.Spec input={{ root: "c" }} />, root)).toBe("<i>…</i>");
     expect(draw(<GenUi.View input={{ view: "table", title: "Deals" }} />, root)).toBe(
       "<i>Deals</i>",
@@ -140,7 +145,7 @@ describe("GenUi, while the input streams", () => {
       ],
     });
     const tree = (kind: string) => (
-      <GenUi.Root complete={false} components={components}>
+      <GenUi.Root components={components} phase="streaming">
         <GenUi.Spec input={input(kind)} />
       </GenUi.Root>
     );
@@ -154,7 +159,7 @@ describe("GenUi, while the input streams", () => {
   test("settles when the parent re-renders with the same input", () => {
     // Held in state, the steady props must not be stored anew on every render.
     const tree = (input: unknown) => (
-      <GenUi.Root complete={false} components={components}>
+      <GenUi.Root components={components} phase="streaming">
         <GenUi.Spec input={input} />
         <GenUi.View input={{ view: "record", props: defaultCatalog.views.record.example }} />
       </GenUi.Root>
@@ -222,6 +227,286 @@ describe("what a drawn component may ask", () => {
     expect(draw(<GenUi.Spec input={input} />, { components: probed, live: true })).toBe(
       '<p data-live="true">t:Text:x</p>',
     );
+  });
+});
+
+describe("render props", () => {
+  // Captures what a component is handed, and draws nothing.
+  const capture = () => {
+    const seen: Record<string, unknown>[] = [];
+    const Probe = (render: Record<string, unknown>) => {
+      seen.push(render);
+      return null;
+    };
+    return { seen, Probe };
+  };
+  const one = (type: string, props: object) => ({
+    root: "x",
+    elements: [{ id: "x", type, props }],
+  });
+
+  test("hand a component its values formatted at the root's locale, beside its schema props", () => {
+    const { seen, Probe } = capture();
+    const metric = {
+      label: "Open",
+      value: 240000,
+      format: "currency",
+      currency: "EUR",
+      delta: -2,
+      deltaLabel: "vs last week",
+    };
+    draw(<GenUi.Spec input={one("Metric", metric)} />, {
+      components: { ...components, elements: { ...components.elements, Metric: Probe } },
+      locale: "en-GB",
+    });
+    expect(seen[0]).toMatchObject({
+      label: "Open",
+      text: "€240,000",
+      delta: { text: "−2%", label: "vs last week", direction: "down", tone: "negative" },
+      tone: "negative",
+      props: metric,
+    });
+  });
+
+  test("give a table its cells formatted, in column order, with alignment worked out", () => {
+    const { seen, Probe } = capture();
+    const table = {
+      columns: [
+        { label: "Account" },
+        { label: "Value", format: "currency", currency: "EUR" },
+        { label: "Value" },
+      ],
+      rows: [
+        ["Northwind", 42000, 140],
+        ["Globex", null, 12],
+      ],
+    };
+    draw(<GenUi.Spec input={one("DataTable", table)} />, {
+      components: { ...components, elements: { ...components.elements, DataTable: Probe } },
+      locale: "en-GB",
+    });
+    expect(seen[0]).toMatchObject({
+      columns: [
+        { key: "Account", label: "Account", align: "left", display: "text", sortable: false },
+        { key: "Value", align: "right", format: "currency" },
+        { key: "Value 2", align: "right" },
+      ],
+      rows: [
+        {
+          key: "0",
+          cells: [{ value: "Northwind", text: "Northwind" }, { text: "€42,000" }, { text: "140" }],
+        },
+        { key: "1", cells: [{ text: "Globex" }, { value: null, text: "—" }, { text: "12" }] },
+      ],
+      count: { total: 2, matching: 2 },
+    });
+  });
+
+  test("give a view its render props, its caption and its schema props", () => {
+    const { seen, Probe } = capture();
+    draw(
+      <GenUi.View
+        input={{ view: "record", title: "Account", props: defaultCatalog.views.record.example }}
+      />,
+      {
+        components: { ...components, views: { ...components.views, record: Probe } } as never,
+        locale: "en-GB",
+      },
+    );
+    expect(seen[0]).toMatchObject({
+      name: "Northwind Traders",
+      status: { label: "At risk", tone: "warning" },
+      fields: [
+        { label: "Owner", text: "Minna Laine" },
+        { label: "ARR", value: 86000, text: "€86,000" },
+        { label: "Renewal", text: "30 Nov 2026" },
+        { label: "Seats", text: "140" },
+      ],
+      title: "Account",
+      props: { name: "Northwind Traders" },
+    });
+  });
+
+  test("are checked against the catalog by defineComponents", () => {
+    // @ts-expect-error every element of the catalog needs a component
+    defineComponents(defaultCatalog, { elements: { Card: Box } });
+    // A metric is drawn from its formatted text, not a value to format.
+    const Metric = ({ value }: { value: number }) => <p>{value}</p>;
+    defineComponents(defaultCatalog, {
+      ...components,
+      // @ts-expect-error the component's props don't match the metric's render props
+      elements: { ...components.elements, Metric },
+    });
+  });
+});
+
+describe("Fallback", () => {
+  test("draws a piece with no component from its Markdown", () => {
+    const { Metric: _, ...elements } = components.elements;
+    expect(draw(<GenUi.Spec input={layout} />, { components: { ...components, elements } })).toBe(
+      '<section><h3>Q3</h3><div data-genui-fallback="" data-genui-type="Metric" style="white-space:pre-wrap">- **Socks:** 47</div><p>Up a lot.</p></section>',
+    );
+  });
+
+  test("takes the host's own component, for a view too", () => {
+    const Fallback = ({ markdown, type }: { markdown: string; type: string }) => (
+      <pre title={type}>{markdown}</pre>
+    );
+    const { views: _, ...noViews } = components;
+    const view = {
+      view: "steps",
+      title: "Plan",
+      props: { items: [{ title: "Call", status: "done" }] },
+    };
+    expect(draw(<GenUi.View input={view} />, { components: { ...noViews, Fallback } })).toBe(
+      '<pre title="steps">**Plan**\n\n- [x] Call</pre>',
+    );
+  });
+});
+
+describe("phase", () => {
+  test("draws a whole input the same once complete as once accepted", () => {
+    const partial = { root: "t", elements: [{ id: "t", type: "Text", props: { text: 7 } }] };
+    expect(draw(<GenUi.Spec input={partial} />, { phase: "complete" })).toBe("");
+    expect(draw(<GenUi.Spec input={layout} />, { phase: "complete" })).toBe(
+      draw(<GenUi.Spec input={layout} />),
+    );
+  });
+});
+
+describe("UI state", () => {
+  // A disclosure written for the test: its open state is the piece's own.
+  const Disclosure = defineElement({
+    description: "A section that opens.",
+    container: true,
+    props: z.object({ title: z.string() }),
+    toMarkdown: (props, { children }) => [props.title, ...children].join("\n\n"),
+    toRender: (props, { state, update }) => ({
+      title: props.title,
+      open: state.open ?? false,
+      onOpenChange: (open: boolean) => update({ open }, "trigger-press"),
+    }),
+    example: { title: "More" },
+  });
+  const catalog = defineCatalog({
+    version: 1,
+    elements: { Disclosure, Text: defaultCatalog.elements.Text },
+  });
+  const map = defineComponents(catalog, {
+    elements: {
+      Disclosure: ({ title, open, onOpenChange, children }) => (
+        <section>
+          <button onClick={() => onOpenChange(!open)} type="button">
+            {title}
+          </button>
+          {open ? children : null}
+        </section>
+      ),
+      Text: ({ text }) => <p>{text}</p>,
+    },
+  });
+  const spec = {
+    root: "d",
+    elements: [
+      { id: "d", type: "Disclosure", props: { title: "More" }, children: ["t"] },
+      { id: "t", type: "Text", props: { text: "Hidden" } },
+    ],
+  };
+  const mount = (root: Partial<GenUiRootProps<typeof catalog>> = {}) =>
+    render(
+      <GenUi.Root catalog={catalog} components={map} {...root}>
+        <GenUi.Spec input={spec} />
+      </GenUi.Root>,
+    );
+
+  test("changes through the piece's render props, and tells the host why", () => {
+    const changes: unknown[] = [];
+    const { container } = mount({
+      onStateChange: (next, details) => changes.push([next, details.reason, details.piece]),
+    });
+    expect(container.textContent).toBe("More");
+    fireEvent.click(container.querySelector("button") as HTMLElement);
+    expect(container.textContent).toBe("MoreHidden");
+    expect(changes).toEqual([
+      [
+        { keys: {}, elements: { d: { open: true } } },
+        "trigger-press",
+        { id: "d", type: "Disclosure" },
+      ],
+    ]);
+  });
+
+  test("doesn't land a change the host cancels", () => {
+    const { container } = mount({ onStateChange: (_, details) => details.cancel() });
+    fireEvent.click(container.querySelector("button") as HTMLElement);
+    expect(container.textContent).toBe("More");
+  });
+
+  test("starts from defaultState, or follows a controlled state", () => {
+    const open = { keys: {}, elements: { d: { open: true } } };
+    expect(mount({ defaultState: open }).container.textContent).toBe("MoreHidden");
+    const controlled = mount({ state: { keys: {}, elements: {} } });
+    fireEvent.click(controlled.container.querySelector("button") as HTMLElement);
+    expect(controlled.container.textContent).toBe("More");
+  });
+});
+
+describe("copying", () => {
+  const page = () =>
+    render(
+      <div>
+        <p>Before</p>
+        <GenUi.Root components={components} locale="en-GB">
+          <GenUi.Part>
+            <GenUi.Spec input={layout} />
+          </GenUi.Part>
+        </GenUi.Root>
+        <p>After</p>
+      </div>,
+    ).container;
+  const markdown = "### Q3\n\n- **Socks:** 47\n\nUp a lot.";
+
+  test("a selection that touches a UI takes its whole Markdown", () => {
+    const container = page();
+    const [before, , , after] = Array.from(container.querySelectorAll("p"));
+    const range = document.createRange();
+    range.setStart(before?.firstChild as Node, 2);
+    range.setEnd(after?.firstChild as Node, 3);
+    expect(rangeText(range)).toBe(`fore\n\n${markdown}\n\nAft`);
+  });
+
+  test("a selection inside a UI takes all of it, and one outside leaves the copy alone", () => {
+    const container = page();
+    const metric = container.querySelector("section p") as HTMLElement;
+    const inside = document.createRange();
+    inside.selectNodeContents(metric);
+    expect(rangeText(inside)).toBe(markdown);
+
+    const outside = document.createRange();
+    outside.selectNodeContents(container.querySelector("p") as HTMLElement);
+    expect(rangeText(outside)).toBeNull();
+  });
+
+  test("copyWithGenUi writes plain text only when the selection touches a UI", () => {
+    const container = page();
+    const range = document.createRange();
+    range.selectNodeContents(container.querySelector("section p") as HTMLElement);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+    const written: Record<string, string> = {};
+    let prevented = false;
+    copyWithGenUi({
+      clipboardData: {
+        setData: (type: string, text: string) => {
+          written[type] = text;
+        },
+      } as never,
+      preventDefault: () => {
+        prevented = true;
+      },
+    });
+    expect(written).toEqual({ "text/plain": markdown });
+    expect(prevented).toBe(true);
   });
 });
 

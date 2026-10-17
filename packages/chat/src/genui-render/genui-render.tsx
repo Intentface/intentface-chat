@@ -2,24 +2,30 @@
 
 // Headless renderer for generative UI: a spec or a view, drawn with the
 // consumer's components. The package owns reading the input — while it
-// streams, after it is whole, and when part of it breaks — and owns no pixels:
-// every element, view, placeholder and entrance is a component from the map
-// the consumer passes to Root. Nothing here reads a thread, a message or a
-// chat; it mounts wherever a spec does (a document node, a slide, a share).
+// streams, after it is whole, and when part of it breaks — and the logic of
+// every piece (formatted values, state, callbacks), handed over as render
+// props. It owns no pixels: every element, view, placeholder and entrance is a
+// component from the map the consumer passes to Root. Nothing here reads a
+// thread, a message or a chat; it mounts wherever a spec does (a document
+// node, a slide, a share).
 //
 // Root renders no element. Spec and View render no wrapper around what they
 // draw either, so a Grid's children are the grid's children: anything the
 // package put between them would be in the consumer's layout. Only the
-// package's own defaults (Pending, Placeholder) render DOM, and those carry
-// bespoke data-genui-* attributes for styling.
+// package's own defaults (Pending, Placeholder, Fallback) and Part render DOM,
+// and those carry bespoke data-genui-* attributes for styling.
 
 import {
   Component,
   type ComponentType,
+  type CSSProperties,
   createContext,
   type ErrorInfo,
   type ReactNode,
   use,
+  useCallback,
+  useEffect,
+  useId,
   useMemo,
   useState,
 } from "react";
@@ -31,33 +37,46 @@ import {
   defaultCatalog,
   type ElementName,
   type ElementProps,
+  type ElementRender,
   isViewName,
   type ViewName,
   type ViewProps,
+  type ViewRender,
 } from "../genui/catalog";
-import type { UnboundPiece } from "../genui/export";
-import { resolveSpec } from "../genui/export";
+import type { Phase } from "../genui/define";
+import { exportSpec, exportView, resolveSpec, type UnboundPiece } from "../genui/export";
+import type { FormatOptions } from "../genui/format";
 import { type LooseSpec, normaliseView, readSpec } from "../genui/spec";
+import { type ElementUiState, initialState, type UiState, VIEW_STATE_ID } from "../genui/state";
+import {
+  type ChangeEventDetails,
+  createChangeEventDetails,
+} from "../internal/change-event-details";
+import type { PrimitiveProps } from "../internal/primitive-props";
+import { useRenderElement } from "../internal/render/useRenderElement";
+import { useControlled } from "../internal/use-controlled";
+import { registerPart } from "./copy";
 
 // ---------------------------------------------------------------------------
 // The component map
 // ---------------------------------------------------------------------------
 
-/** How a view is drawn: its props, and the caption the model gave it. */
-export type GenUiViewComponentProps<Props> = { props: Props; title?: string };
+/** What an element's component is drawn with: its render props, its schema props, its children. */
+export type GenUiElementProps<
+  C extends Catalog = DefaultCatalog,
+  Name extends ElementName<C> = ElementName<C>,
+> = ElementRender<C, Name> & { props: ElementProps<C, Name>; children?: ReactNode };
 
-/**
- * Names to components, typed against the catalog as mapped types: an element
- * the catalog declares with no component here — or a component whose props
- * don't match its schema — is a type error, not a blank space in a reply.
- */
-export type GenUiComponents<C extends Catalog = DefaultCatalog> = {
-  elements: {
-    [Name in ElementName<C>]: ComponentType<ElementProps<C, Name> & { children?: ReactNode }>;
-  };
-  views?: {
-    [Name in ViewName<C>]: ComponentType<GenUiViewComponentProps<ViewProps<C, Name>>>;
-  };
+/** What a view's component is drawn with: its render props, its schema props, its caption. */
+export type GenUiViewComponentProps<
+  C extends Catalog = DefaultCatalog,
+  Name extends ViewName<C> = ViewName<C>,
+> = ViewRender<C, Name> & { props: ViewProps<C, Name>; title?: string };
+
+/** A piece with no component in the map, drawn from its Markdown. */
+export type GenUiFallbackProps = { markdown: string; id?: string; type: string };
+
+type Slots = {
   /**
    * Nothing drawable yet: the view or the root hasn't arrived. Only while
    * streaming — a whole input with nothing to draw draws nothing.
@@ -77,6 +96,13 @@ export type GenUiComponents<C extends Catalog = DefaultCatalog> = {
    */
   Unbound?: ComponentType<UnboundPiece>;
   /**
+   * A piece the map has no component for — a spec written against a wider
+   * catalog than this host draws — given its Markdown, the subtree's for a
+   * container. Drawn as plain text by default; a host with a Markdown
+   * renderer passes its own.
+   */
+  Fallback?: ComponentType<GenUiFallbackProps>;
+  /**
    * Wraps each drawn piece while `live`: the place for an entrance. Keyed so
    * that a view replacing its placeholder arrives as a new piece, rather than
    * swapping silently inside a wrapper that has already arrived.
@@ -84,15 +110,57 @@ export type GenUiComponents<C extends Catalog = DefaultCatalog> = {
   Arrive?: ComponentType<{ children: ReactNode }>;
 };
 
+/**
+ * Names to components, typed against the catalog as mapped types: an element
+ * the catalog declares with no component here — or a component whose props
+ * don't match its render props — is a type error. Build one with
+ * `defineComponents`.
+ */
+export type GenUiComponents<C extends Catalog = DefaultCatalog> = Slots & {
+  elements: { [Name in ElementName<C>]: ComponentType<GenUiElementProps<C, Name>> };
+  views?: { [Name in ViewName<C>]: ComponentType<GenUiViewComponentProps<C, Name>> };
+};
+
+/**
+ * What Root takes: any part of a map for the catalog it reads. A reader reads
+ * against the widest catalog, so a host may lack a component; that piece is
+ * drawn through `Fallback`.
+ */
+export type GenUiComponentMap<C extends Catalog = DefaultCatalog> = Slots & {
+  elements: Partial<GenUiComponents<C>["elements"]>;
+  views?: Partial<NonNullable<GenUiComponents<C>["views"]>>;
+};
+
+/**
+ * A component map, checked against the catalog it draws: every element
+ * needs a component, and each component's props must match its entry's.
+ */
+export const defineComponents = <C extends Catalog>(
+  _catalog: C,
+  components: GenUiComponents<C>,
+): GenUiComponents<C> => components;
+
 // ---------------------------------------------------------------------------
 // Root
 // ---------------------------------------------------------------------------
 
+/** A state change, with the piece it came from. `cancel()` keeps it from landing. */
+export type GenUiStateChangeDetails = ChangeEventDetails<string> & {
+  piece: { id?: string; type: string };
+};
+
 type RootContextValue = {
   catalog: Catalog;
-  components: GenUiComponents<Catalog>;
-  complete: boolean;
+  components: GenUiComponentMap<Catalog>;
+  phase: Phase;
   live: boolean;
+  format: FormatOptions;
+  state: UiState;
+  update: (
+    piece: { id: string; type: string },
+    patch: Partial<ElementUiState>,
+    reason: string,
+  ) => void;
   onError: (error: unknown, piece: { id?: string; type: string }) => void;
 };
 
@@ -105,15 +173,22 @@ const useRoot = (part: string) => {
 };
 
 export type GenUiRootProps<C extends Catalog = DefaultCatalog> = {
-  /** The catalog the input was written against. The default catalog when omitted. */
-  catalog?: C;
-  components: GenUiComponents<C>;
   /**
-   * Whether the input is whole. While it isn't, props that don't parse yet
-   * are pending rather than dropped, and long arrays are settled. True by
-   * default: a stored spec is whole.
+   * The catalog to read the input against: the widest the host knows, so a
+   * spec written under a wider preset still loads. The default catalog when
+   * omitted.
    */
-  complete?: boolean;
+  catalog?: C;
+  /** Components by name. A piece without one is drawn through `Fallback`. */
+  components: GenUiComponentMap<C>;
+  /**
+   * How far the input has got: `streaming` while it is written, `complete`
+   * once whole, `accepted` once `canonicalSpec` or `canonicalView` passed it.
+   * While streaming, props that don't parse yet are pending rather than
+   * dropped, and long arrays are settled. `accepted` by default: a stored
+   * spec has been.
+   */
+  phase?: Phase;
   /**
    * Whether the input is being written as it is drawn. Pieces that arrive
    * then go through `Arrive`, and `useGenUiLive()` is true for components
@@ -122,6 +197,21 @@ export type GenUiRootProps<C extends Catalog = DefaultCatalog> = {
    * rising in at once would be motion about nothing.
    */
   live?: boolean;
+  /** BCP 47 tag for formatting values, e.g. "en-GB". The runtime's when omitted. */
+  locale?: string;
+  /** IANA zone for timestamps, e.g. "Europe/Helsinki". UTC when omitted. */
+  timeZone?: string;
+  /**
+   * The reader's UI state, controlled: the open tab, the ticked items. One
+   * Root is one UI, so this is one tool call's state. Persist
+   * `persistedState(state)` beside the call and hand it back through
+   * `readState`.
+   */
+  state?: UiState;
+  /** The UI state to start from, uncontrolled. Nothing is persisted then. */
+  defaultState?: UiState;
+  /** The state is changing. Call `details.cancel()` to keep it from landing. */
+  onStateChange?: (next: UiState, details: GenUiStateChangeDetails) => void;
   /**
    * One element failed to render. It is dropped and the rest drawn — whatever
    * data a source handed back, the rest of the answer stays readable. Logged
@@ -135,28 +225,60 @@ const logError = (error: unknown, piece: { id?: string; type: string }) =>
   console.error(`genui: ${piece.id ? `"${piece.id}" (${piece.type})` : piece.type} failed`, error);
 
 /**
- * Holds the catalog, your component map and how whole the input is, for the
- * specs and views inside it. Reads no thread or message, so it mounts
- * wherever a spec does: a reply, a document, a slide, a share.
+ * Holds the catalog, your component map, how far the input has got and the
+ * reader's state, for the spec or view inside it. One Root is one UI: phase
+ * and state belong to a single tool call. Reads no thread or message, so it
+ * mounts wherever a spec does: a reply, a document, a slide, a share.
  * Renders no element.
  */
 export const GenUiRoot = <C extends Catalog = DefaultCatalog>({
   catalog,
   components,
-  complete = true,
+  phase = "accepted",
   live = false,
+  locale,
+  timeZone,
+  state: controlledState,
+  defaultState,
+  onStateChange,
   onError = logError,
   children,
 }: GenUiRootProps<C>) => {
+  const [state, setState] = useControlled({
+    controlled: controlledState,
+    default: defaultState ?? initialState(),
+    name: "GenUi.Root",
+    state: "state",
+  });
+
+  const update = useCallback<RootContextValue["update"]>(
+    (piece, patch, reason) => {
+      const next: UiState = {
+        ...state,
+        elements: { ...state.elements, [piece.id]: { ...state.elements[piece.id], ...patch } },
+      };
+      const details = Object.assign(createChangeEventDetails(reason), {
+        piece: piece.id === VIEW_STATE_ID ? { type: piece.type } : piece,
+      });
+      onStateChange?.(next, details);
+      if (!details.isCanceled) setState(next);
+    },
+    [state, onStateChange, setState],
+  );
+
+  const format = useMemo(() => ({ locale, timeZone }), [locale, timeZone]);
   const value = useMemo<RootContextValue>(
     () => ({
       catalog: catalog ?? defaultCatalog,
-      components: components as unknown as GenUiComponents<Catalog>,
-      complete,
+      components: components as unknown as GenUiComponentMap<Catalog>,
+      phase,
       live,
+      format,
+      state,
+      update,
       onError,
     }),
-    [catalog, components, complete, live, onError],
+    [catalog, components, phase, live, format, state, update, onError],
   );
   return <RootContext value={value}>{children}</RootContext>;
 };
@@ -174,7 +296,7 @@ export const useGenUiLive = () => use(RootContext)?.live ?? false;
  * The piece being drawn: an element's id and type, or a view's name with no
  * id. For a component that needs to know which piece it is — to look itself
  * up in state its consumer keeps beside the spec — without that state having
- * to be smuggled through its props, which are exactly its schema's.
+ * to be smuggled through its props.
  */
 export const useGenUiElement = () => use(ElementContext);
 
@@ -203,14 +325,44 @@ export const useSteady = <T,>(next: T | undefined): T | undefined => {
   return next !== undefined ? next : last;
 };
 
-const parse = (
-  definition: { props: z.ZodType; settle?(loose: unknown, complete: boolean): unknown },
-  loose: unknown,
-  complete: boolean,
-) => {
+type Entry = {
+  props: z.ZodType;
+  settle?(loose: unknown, complete: boolean): unknown;
+  toRender?(props: unknown, context: never): unknown;
+};
+
+const parse = (definition: Entry, loose: unknown, complete: boolean) => {
   const settled = definition.settle ? definition.settle(loose, complete) : loose;
   const parsed = definition.props.safeParse(settled ?? {});
   return parsed.success ? parsed.data : undefined;
+};
+
+const EMPTY_SLICE: ElementUiState = {};
+
+/**
+ * A piece's render props, from its steady schema props: its entry's
+ * `toRender` with the root's phase, format and the piece's own state, or the
+ * schema props themselves.
+ */
+const useRender = (
+  definition: Entry | undefined,
+  props: unknown,
+  piece: { id: string; type: string } | null,
+) => {
+  const { phase, format, state, update } = useRoot("Spec");
+  const slice = (piece && state.elements[piece.id]) || EMPTY_SLICE;
+  const updateSlice = useCallback(
+    (patch: Partial<ElementUiState>, reason: string) => {
+      if (piece) update(piece, patch, reason);
+    },
+    [piece, update],
+  );
+  return useMemo(() => {
+    if (props === undefined || !definition) return undefined;
+    if (!definition.toRender) return props as Record<string, unknown>;
+    const context = { ...format, phase, state: slice, update: updateSlice };
+    return definition.toRender(props, context as never) as Record<string, unknown>;
+  }, [definition, props, format, phase, slice, updateSlice]);
 };
 
 const Arrive = ({ children }: { children: ReactNode }) => {
@@ -226,6 +378,47 @@ const DefaultPending = ({ type, children }: { type: string; children?: ReactNode
     {children}
   </div>
 );
+
+// A functional style, as Steps uses one: Markdown is lines, and collapsing
+// them would lose the structure that makes the fallback readable.
+const fallbackStyle: CSSProperties = { whiteSpace: "pre-wrap" };
+
+const DefaultFallback = ({ markdown, type }: GenUiFallbackProps) => (
+  <div data-genui-fallback="" data-genui-type={type} style={fallbackStyle}>
+    {markdown}
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Part: where a UI sits, for copying
+// ---------------------------------------------------------------------------
+
+const PartContext = createContext<((markdown: () => string) => () => void) | null>(null);
+
+/** Registers how the drawn UI reads as Markdown with the `GenUi.Part` around it, if any. */
+const usePartMarkdown = (markdown: () => string) => {
+  const register = use(PartContext);
+  useEffect(() => register?.(markdown), [register, markdown]);
+};
+
+export type GenUiPartProps = PrimitiveProps<"div">;
+
+/**
+ * Marks where one UI sits, so copying a selection that touches it copies the
+ * UI's whole Markdown at the reader's state (`copyWithGenUi`). The spec or
+ * view inside registers itself; put it around one, inside or outside Root.
+ * Renders a `<div>` element.
+ */
+export const GenUiPart = ({ className, render, style, ...elementProps }: GenUiPartProps) => {
+  const id = useId();
+  const register = useCallback((markdown: () => string) => registerPart(id, markdown), [id]);
+  const element = useRenderElement(
+    "div",
+    { className, render, style },
+    { props: [{ "data-genui-part": id }, elementProps] },
+  );
+  return <PartContext value={register}>{element}</PartContext>;
+};
 
 // ---------------------------------------------------------------------------
 // Spec
@@ -247,17 +440,24 @@ export type GenUiSpecProps = {
  * failure means it outlived a change to the catalog, and a blank is better
  * than a guess.
  * Wraps what it draws in nothing, so a grid's children are the grid's
- * children. Only the default `Placeholder` and `Pending` render a `<div>`.
+ * children. Only the default `Placeholder`, `Pending` and `Fallback` render a
+ * `<div>`.
  */
 export const GenUiSpec = ({ input, data }: GenUiSpecProps) => {
-  const { catalog, complete, components } = useRoot("Spec");
+  const { catalog, phase, components, format, state } = useRoot("Spec");
   const spec = useMemo(
     () => readSpec(data ? resolveSpec(input, data) : input, catalog),
     [input, data, catalog],
   );
+  const markdown = useCallback(
+    () => exportSpec(input, { catalog, data, state, ...format })?.markdown ?? "",
+    [input, catalog, data, state, format],
+  );
+  usePartMarkdown(markdown);
+
   const root = spec.root ? spec.elements[spec.root] : undefined;
   if (!spec.root || !root) {
-    if (complete) return null;
+    if (phase !== "streaming") return null;
     const Placeholder = components.Placeholder ?? DefaultPlaceholder;
     return (
       <Arrive>
@@ -277,7 +477,8 @@ export const GenUiSpec = ({ input, data }: GenUiSpecProps) => {
  * guards against a cycle in a spec nobody has checked yet.
  */
 const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string[] }) => {
-  const { catalog, complete, components } = useRoot("Spec");
+  const { catalog, phase, components, format, state } = useRoot("Spec");
+  const complete = phase !== "streaming";
   const element = path.includes(id) ? undefined : spec.elements[id];
   const definition = element ? catalog.elements[element.type] : undefined;
   // Memoised on the element, which `readSpec` makes once per input, so a
@@ -288,6 +489,7 @@ const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string
   );
   const props = useSteady(parsed);
   const piece = useMemo(() => (element ? { id, type: element.type } : null), [id, element]);
+  const rendered = useRender(definition, props, piece);
   if (!element || !definition || !piece) return null;
 
   const children = definition.container
@@ -296,7 +498,7 @@ const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string
       ))
     : undefined;
 
-  if (props === undefined) {
+  if (props === undefined || rendered === undefined) {
     if (complete) {
       return hasBinding(element.props) ? (
         <Unbound id={id} props={element.props} type={element.type} />
@@ -313,13 +515,25 @@ const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string
   const Drawn = (components.elements as Record<string, ComponentType<Record<string, unknown>>>)[
     element.type
   ];
-  if (!Drawn) return null;
+  if (!Drawn) {
+    const Fallback = components.Fallback ?? DefaultFallback;
+    const markdown = exportSpec(spec, { catalog, from: id, state, ...format })?.markdown ?? "";
+    return (
+      <Arrive>
+        <Boundary piece={piece}>
+          <Fallback id={id} markdown={markdown} type={element.type} />
+        </Boundary>
+      </Arrive>
+    );
+  }
 
   return (
     <Arrive>
       <Boundary piece={piece}>
         <ElementContext value={piece}>
-          <Drawn {...(props as Record<string, unknown>)}>{children}</Drawn>
+          <Drawn {...rendered} props={props}>
+            {children}
+          </Drawn>
         </ElementContext>
       </Boundary>
     </Arrive>
@@ -346,15 +560,22 @@ export type GenUiViewProps = {
 /**
  * A view, filled with its props and captioned with its title. Steady and
  * pending exactly as an element is.
- * Wraps the view's component in nothing. Only the default `Placeholder`
- * renders a `<div>`.
+ * Wraps the view's component in nothing. Only the default `Placeholder` and
+ * `Fallback` render a `<div>`.
  */
 export const GenUiView = ({ input, data }: GenUiViewProps) => {
-  const { catalog, complete, components } = useRoot("View");
+  const { catalog, phase, components, format, state } = useRoot("View");
+  const complete = phase !== "streaming";
   const normal = useMemo(() => {
     const view = normaliseView(input);
     return data ? (withData(view, data) as typeof view) : view;
   }, [input, data]);
+  const markdown = useCallback(
+    () => exportView(normal, { catalog, state, ...format })?.markdown ?? "",
+    [normal, catalog, state, format],
+  );
+  usePartMarkdown(markdown);
+
   const title = useSteady(typeof normal.title === "string" ? normal.title : undefined);
   const name = isViewName(catalog, normal.view) ? normal.view : undefined;
   const definition = name ? catalog.views[name] : undefined;
@@ -363,12 +584,17 @@ export const GenUiView = ({ input, data }: GenUiViewProps) => {
     [definition, normal.props, complete],
   );
   const props = useSteady(parsed);
-  const piece = useMemo(() => (name ? { type: name } : null), [name]);
+  const piece = useMemo(() => (name ? { id: VIEW_STATE_ID, type: name } : null), [name]);
+  // What a view's component and its boundary are told it is: a name, no id.
+  const shown = useMemo(() => (name ? { type: name } : null), [name]);
+  const rendered = useRender(definition, props, piece);
   const Drawn = name
-    ? (components.views as Record<string, ComponentType<GenUiViewComponentProps<unknown>>>)?.[name]
+    ? (components.views as Record<string, ComponentType<Record<string, unknown>>> | undefined)?.[
+        name
+      ]
     : undefined;
 
-  if (!name || !piece || props === undefined) {
+  if (!name || !shown || props === undefined || rendered === undefined) {
     if (complete) {
       return name && hasBinding(normal.props) ? <Unbound props={normal.props} type={name} /> : null;
     }
@@ -379,13 +605,23 @@ export const GenUiView = ({ input, data }: GenUiViewProps) => {
       </Arrive>
     );
   }
-  if (!Drawn) return null;
+
+  if (!Drawn) {
+    const Fallback = components.Fallback ?? DefaultFallback;
+    return (
+      <Arrive key="view">
+        <Boundary piece={shown}>
+          <Fallback markdown={markdown()} type={name} />
+        </Boundary>
+      </Arrive>
+    );
+  }
 
   return (
     <Arrive key="view">
-      <Boundary piece={piece}>
-        <ElementContext value={piece}>
-          <Drawn props={props} title={title} />
+      <Boundary piece={shown}>
+        <ElementContext value={shown}>
+          <Drawn {...rendered} props={props} title={title} />
         </ElementContext>
       </Boundary>
     </Arrive>

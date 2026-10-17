@@ -81,6 +81,9 @@ are app-shell parts rather than chat parts, and are useful on their own:
 | `@intentface/chat/types` | The structural message contract + part type guards. |
 | `@intentface/chat/message-utils` | Part segmentation, turn grouping, reasoning/source derivation. |
 | `@intentface/chat/chip-markdown` | The self-describing chip wire format. |
+| `@intentface/chat/genui` | **Experimental.** Generative UI's headless core: the catalog and its zod schemas, spec checks, render props, UI state, the tool helper, streaming reads, `$data` bindings, Markdown export. No React. Needs `zod` 4. |
+| `@intentface/chat/genui-render` | **Experimental.** Draws a spec or a view with your components from render props, steady while it streams. |
+| `@intentface/chat/genui-testing` | **Experimental.** Fixtures and conformance checks for your genui components. Needs a DOM and `@testing-library/dom`. |
 
 ## AI SDK, structurally
 
@@ -134,8 +137,8 @@ export const Chat = () => (
 ```
 
 Hooks (`useComposer`, `useThread`, `useReasoning`, …) are client-only, as usual.
-The pure modules — `/types`, `/message-utils`, `/chip-markdown` — carry no
-directive and import fine anywhere.
+The pure modules — `/types`, `/message-utils`, `/chip-markdown`, `/genui` —
+carry no directive and import fine anywhere, a server with no DOM included.
 
 ## Docs
 

@@ -1,0 +1,13 @@
+{
+  // The pure entries must run anywhere: a server, a worker, an MCP handler.
+  // Checked here without the DOM lib, so a stray `document`, `window` or
+  // `getComputedStyle` in them fails the typecheck instead of a consumer's
+  // server at runtime. React is kept out by the same rule as the directive:
+  // nothing under src/genui imports it.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "include": ["src/genui"]
+}

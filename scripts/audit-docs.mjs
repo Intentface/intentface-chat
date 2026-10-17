@@ -26,15 +26,20 @@ const NAMESPACES = {
   reasoning: "Reasoning",
   chip: "Chip",
   attachments: "Attachments",
+  genui: "GenUi",
 };
+// A page whose parts live in another folder: the genui page documents the
+// renderer, whose parts are in genui-render.
+const SOURCES = { genui: "genui-render" };
 const SRC = "packages/chat/src";
+const partsModule = (slug) => path.resolve(SRC, SOURCES[slug] ?? slug, "index.parts.ts");
 const DOCS = "content/docs/primitives";
 
 // ---------------------------------------------------------------------------
 // Resolve each part's props and state from the type checker
 // ---------------------------------------------------------------------------
 
-const roots = Object.keys(NAMESPACES).map((ns) => path.resolve(SRC, ns, "index.parts.ts"));
+const roots = Object.keys(NAMESPACES).map(partsModule);
 const config = ts.readConfigFile("packages/chat/tsconfig.json", ts.sys.readFile).config;
 const parsed = ts.parseJsonConfigFileContent(config, ts.sys, "packages/chat");
 const program = ts.createProgram(roots, { ...parsed.options, noEmit: true });
@@ -119,7 +124,7 @@ const attributesFor = ({ state }) => {
 
 let failures = 0;
 for (const [slug, namespace] of Object.entries(NAMESPACES)) {
-  const parts = resolveParts(path.resolve(SRC, slug, "index.parts.ts"));
+  const parts = resolveParts(partsModule(slug));
   const page = readFileSync(path.join(DOCS, `${slug}.mdx`), "utf8");
   const findings = [];
 

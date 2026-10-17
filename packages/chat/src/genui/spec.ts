@@ -30,6 +30,26 @@ export type Spec = { v?: number; root: string; elements: Record<string, SpecElem
 // Schemas, built from a catalog
 // ---------------------------------------------------------------------------
 
+/**
+ * Keys that belong to an element itself rather than to its props, beyond the
+ * `type`, `props` and `children` every catalog reads. Each is reserved for a
+ * later catalog version (`when`, a condition on UI state) and refused until
+ * then, never read as a prop: the props schema would drop it without a word,
+ * and an element whose condition went missing would show what was meant to be
+ * hidden.
+ */
+const RESERVED_ELEMENT_KEYS: readonly string[] = ["when"];
+
+const unreadKeys = Object.fromEntries(
+  RESERVED_ELEMENT_KEYS.map((key) => [
+    key,
+    z.never({ error: "not read by this version of the catalog; remove it." }).optional(),
+  ]),
+);
+
+const hasReservedKey = (element: Record<string, unknown>) =>
+  RESERVED_ELEMENT_KEYS.some((key) => element[key] !== undefined);
+
 /** Capped by the catalog's limit, which the model is told through the schema. */
 const childrenSchema = (max: number) =>
   z.array(z.string()).max(max).optional().describe("Ids of the elements inside this one, in order.");
@@ -62,12 +82,18 @@ const build = (catalog: Catalog) => {
   if (arms.length === 0) throw new Error("genui: a catalog needs at least one element.");
   const tuple = arms as [(typeof arms)[number], ...(typeof arms)[number][]];
 
+  /**
+   * An element as read back from storage, refusing the keys a later catalog
+   * version reads. Not in `SpecInputSchema`: the model is never offered them.
+   */
+  const readArms = tuple.map((arm) => arm.extend(unreadKeys)) as unknown as typeof tuple;
+
   /** An element whose props may still hold bindings, where its entry takes them. */
-  const boundArms = tuple.map((arm) =>
+  const boundArms = readArms.map((arm) =>
     arm.extend({ props: catalog.elements[arm.shape.type.value]?.input ?? arm.shape.props }),
   ) as unknown as typeof tuple;
 
-  const ElementSchema = z.discriminatedUnion("type", tuple);
+  const ElementSchema = z.discriminatedUnion("type", readArms);
 
   /**
    * The spec as stored: elements by id, bindings in place.
@@ -246,13 +272,22 @@ export const describeIssues = (
  * `props` object around them. Neither is ambiguous, so both are read as meant
  * rather than refused. A refusal costs a whole retry, and the reader watches
  * the UI vanish and come back while it happens.
+ *
+ * A reserved element-level key (`when`) is never one of those props: it stays
+ * on the element, where the schema can refuse it by name.
  */
 const normaliseElement = (raw: Record<string, unknown>) => {
   const { type, component, props, children, id: _id, ...rest } = raw;
+  const loose: Record<string, unknown> = {};
+  const reserved: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rest)) {
+    (RESERVED_ELEMENT_KEYS.includes(key) ? reserved : loose)[key] = value;
+  }
   return {
     type: type ?? component,
-    props: { ...rest, ...(isObject(props) ? props : {}) },
+    props: { ...loose, ...(isObject(props) ? props : {}) },
     children,
+    ...reserved,
   };
 };
 
@@ -402,14 +437,16 @@ export type LooseSpec = { root?: string; elements: Record<string, LooseElement> 
  *
  * Never throws and never guesses. An element whose type the catalog doesn't
  * know (yet: `"Car"` on its way to `"Card"`) is left out; the renderer draws
- * what is there and nothing it would have to take back.
+ * what is there and nothing it would have to take back. So is one carrying a
+ * key only a later catalog version reads: drawn without its condition, it
+ * could show what was meant to be hidden.
  */
 export const readSpec = (input: unknown, catalog: Catalog = defaultCatalog): LooseSpec => {
   const normal = normaliseSpec(input);
   const elements: Record<string, LooseElement> = {};
 
   for (const [id, raw] of Object.entries(normal.elements)) {
-    if (!isObject(raw)) continue;
+    if (!isObject(raw) || hasReservedKey(raw)) continue;
     const { type, props, children } = raw;
     if (!isElementName(catalog, type)) continue;
     elements[id] = {

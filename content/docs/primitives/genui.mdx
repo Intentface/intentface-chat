@@ -120,6 +120,11 @@ newer catalog rather than guessing at it, and parses strictly: the leniency
 `canonicalSpec` gives model input never applies to something already stored.
 `migrateSpec(spec, fromVersion, catalog)` runs only the migration steps.
 
+`when` is reserved as an element-level key for conditions in a later catalog
+version. Until then, it is refused by name rather than read as a prop, and an
+element that carries it is left out of what is drawn: shown without its
+condition, it could reveal what was meant to be hidden.
+
 ## Data by reference
 
 A table's rows, or a chart's categories and series, can name their data instead

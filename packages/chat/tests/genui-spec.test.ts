@@ -185,6 +185,47 @@ describe("canonicalSpec", () => {
   });
 });
 
+describe("element-level keys a later catalog reads", () => {
+  // `when` is a condition on UI state. Read as a prop, the schema would drop it
+  // and the element would show unconditionally.
+  const when = { state: "showDetail", is: true };
+  const conditioned = (element: object) => ({
+    root: "s",
+    elements: [
+      { id: "s", ...stack("d", "t") },
+      { id: "d", ...element },
+      { id: "t", ...text("always") },
+    ],
+  });
+
+  test("are refused by name, never read as props", () => {
+    for (const element of [
+      { ...text("detail"), when },
+      { type: "Text", text: "detail", when }, // props beside type: still not a prop
+    ]) {
+      const result = canonicalSpec(conditioned(element));
+      expect(result).toEqual({
+        ok: false,
+        errors: ["elements.d.when: not read by this version of the catalog; remove it."],
+      });
+    }
+  });
+
+  test("are refused in a stored spec", () => {
+    const stored = { v: 1, root: "t", elements: { t: { ...text("x"), when } } };
+    expect(readStoredSpec(stored).ok).toBe(false);
+  });
+
+  test("leave their element out of what is drawn, rather than drawn without its condition", () => {
+    const read = readSpec(conditioned({ ...text("detail"), when }));
+    expect(Object.keys(read.elements)).toEqual(["s", "t"]);
+  });
+
+  test("are never offered to the model", () => {
+    expect(JSON.stringify(specSchemas().SpecInputSchema.toJSONSchema())).not.toContain('"when"');
+  });
+});
+
 describe("stored specs", () => {
   const stored = { v: 1, root: "t", elements: { t: text("Kept for years") } };
 

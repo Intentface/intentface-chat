@@ -1,0 +1,392 @@
+"use client";
+
+// Headless renderer for generative UI: a spec or a view, drawn with the
+// consumer's components. The package owns reading the input — while it
+// streams, after it is whole, and when part of it breaks — and owns no pixels:
+// every element, view, placeholder and entrance is a component from the map
+// the consumer passes to Root. Nothing here reads a thread, a message or a
+// chat; it mounts wherever a spec does (a document node, a slide, a share).
+//
+// Root renders no element. Spec and View render no wrapper around what they
+// draw either, so a Grid's children are the grid's children: anything the
+// package put between them would be in the consumer's layout. Only the
+// package's own defaults (Pending, Placeholder) render DOM, and those carry
+// bespoke data-genui-* attributes for styling.
+
+import {
+  Component,
+  type ComponentType,
+  createContext,
+  type ErrorInfo,
+  type ReactNode,
+  use,
+  useMemo,
+  useRef,
+} from "react";
+import type { z } from "zod";
+import { type BoundData, bindingRefs, hasBinding, withData } from "../genui/bindings";
+import {
+  type Catalog,
+  type DefaultCatalog,
+  defaultCatalog,
+  type ElementName,
+  type ElementProps,
+  isViewName,
+  type ViewName,
+  type ViewProps,
+} from "../genui/catalog";
+import type { UnboundPiece } from "../genui/export";
+import { resolveSpec } from "../genui/export";
+import { type LooseSpec, normaliseView, readSpec } from "../genui/spec";
+
+// ---------------------------------------------------------------------------
+// The component map
+// ---------------------------------------------------------------------------
+
+/** How a view is drawn: its props, and the caption the model gave it. */
+export type GenUiViewComponentProps<Props> = { props: Props; title?: string };
+
+/**
+ * Names to components, typed against the catalog as mapped types: an element
+ * the catalog declares with no component here — or a component whose props
+ * don't match its schema — is a type error, not a blank space in a reply.
+ */
+export type GenUiComponents<C extends Catalog = DefaultCatalog> = {
+  elements: {
+    [Name in ElementName<C>]: ComponentType<ElementProps<C, Name> & { children?: ReactNode }>;
+  };
+  views?: {
+    [Name in ViewName<C>]: ComponentType<GenUiViewComponentProps<ViewProps<C, Name>>>;
+  };
+  /**
+   * Nothing drawable yet: the view or the root hasn't arrived. Only while
+   * streaming — a whole input with nothing to draw draws nothing.
+   */
+  Placeholder?: ComponentType<{ title?: string }>;
+  /**
+   * One element whose props haven't parsed yet, while it streams. A container
+   * is given the children that have arrived, so a card still being written
+   * doesn't hide everything under it.
+   */
+  Pending?: ComponentType<{ type: string; container: boolean; children?: ReactNode }>;
+  /**
+   * A whole piece whose data is bound and wasn't resolved. Null by default —
+   * a chat that refuses unresolved calls never gets here — but a document
+   * that stores bindings should say the data is elsewhere rather than leave a
+   * gap that reads as "nothing". See `ExportOptions.onUnbound`.
+   */
+  Unbound?: ComponentType<UnboundPiece>;
+  /**
+   * Wraps each drawn piece while `live`: the place for an entrance. Keyed so
+   * that a view replacing its placeholder arrives as a new piece, rather than
+   * swapping silently inside a wrapper that has already arrived.
+   */
+  Arrive?: ComponentType<{ children: ReactNode }>;
+};
+
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
+
+type RootContextValue = {
+  catalog: Catalog;
+  components: GenUiComponents<Catalog>;
+  complete: boolean;
+  live: boolean;
+  onError: (error: unknown, piece: { id?: string; type: string }) => void;
+};
+
+const RootContext = createContext<RootContextValue | null>(null);
+
+const useRoot = (part: string) => {
+  const context = use(RootContext);
+  if (!context) throw new Error(`GenUi.${part} must be inside GenUi.Root.`);
+  return context;
+};
+
+export type GenUiRootProps<C extends Catalog = DefaultCatalog> = {
+  /** The catalog the input was written against. The default catalog when omitted. */
+  catalog?: C;
+  components: GenUiComponents<C>;
+  /**
+   * Whether the input is whole. While it isn't, props that don't parse yet
+   * are pending rather than dropped, and long arrays are settled. True by
+   * default: a stored spec is whole.
+   */
+  complete?: boolean;
+  /**
+   * Whether the input is being written as it is drawn. Pieces that arrive
+   * then go through `Arrive`, and `useGenUiLive()` is true for components
+   * that animate on arrival. False by default — decide it once, at mount: a
+   * stream finishing mid-view doesn't make it history, and a page of history
+   * rising in at once would be motion about nothing.
+   */
+  live?: boolean;
+  /**
+   * One element failed to render. It is dropped and the rest drawn — whatever
+   * data a source handed back, the rest of the answer stays readable. Logged
+   * to the console when omitted.
+   */
+  onError?: (error: unknown, piece: { id?: string; type: string }) => void;
+  children?: ReactNode;
+};
+
+const logError = (error: unknown, piece: { id?: string; type: string }) =>
+  console.error(`genui: ${piece.id ? `"${piece.id}" (${piece.type})` : piece.type} failed`, error);
+
+export const GenUiRoot = <C extends Catalog = DefaultCatalog>({
+  catalog,
+  components,
+  complete = true,
+  live = false,
+  onError = logError,
+  children,
+}: GenUiRootProps<C>) => {
+  const value = useMemo<RootContextValue>(
+    () => ({
+      catalog: catalog ?? defaultCatalog,
+      components: components as unknown as GenUiComponents<Catalog>,
+      complete,
+      live,
+      onError,
+    }),
+    [catalog, components, complete, live, onError],
+  );
+  return <RootContext value={value}>{children}</RootContext>;
+};
+
+// ---------------------------------------------------------------------------
+// What a drawn component may ask
+// ---------------------------------------------------------------------------
+
+const ElementContext = createContext<{ id?: string; type: string } | null>(null);
+
+/** True under an input being written as it is drawn (`GenUiRootProps.live`). */
+export const useGenUiLive = () => use(RootContext)?.live ?? false;
+
+/**
+ * The piece being drawn: an element's id and type, or a view's name with no
+ * id. For a component that needs to know which piece it is — to look itself
+ * up in state its consumer keeps beside the spec — without that state having
+ * to be smuggled through its props, which are exactly its schema's.
+ */
+export const useGenUiElement = () => use(ElementContext);
+
+// ---------------------------------------------------------------------------
+// Reading while it streams
+// ---------------------------------------------------------------------------
+
+/**
+ * The newest value that was defined, held across renders.
+ *
+ * Streamed JSON is valid, then invalid, then valid again, many times a
+ * second: an enum mid-word (`"ba"` on its way to `"bar"`) fails its schema for
+ * exactly one chunk. Drawn literally, a piece blinks back to pending on every
+ * one of those chunks. So each piece keeps the last props that parsed and
+ * draws those until newer ones do — it only ever moves forward.
+ *
+ * Written during render on purpose: the write is idempotent for a given
+ * `next`, so a render React discards leaves nothing wrong behind.
+ */
+export const useSteady = <T,>(next: T | undefined): T | undefined => {
+  const last = useRef<T | undefined>(undefined);
+  if (next !== undefined) last.current = next;
+  return last.current;
+};
+
+const parse = (
+  definition: { props: z.ZodType; settle?(loose: unknown, complete: boolean): unknown },
+  loose: unknown,
+  complete: boolean,
+) => {
+  const settled = definition.settle ? definition.settle(loose, complete) : loose;
+  const parsed = definition.props.safeParse(settled ?? {});
+  return parsed.success ? parsed.data : undefined;
+};
+
+const Arrive = ({ children }: { children: ReactNode }) => {
+  const { live, components } = useRoot("Spec");
+  const Wrap = live ? components.Arrive : undefined;
+  return Wrap ? <Wrap>{children}</Wrap> : children;
+};
+
+const DefaultPlaceholder = () => <div aria-busy="true" data-genui-placeholder="" />;
+
+const DefaultPending = ({ type, children }: { type: string; children?: ReactNode }) => (
+  <div data-genui-pending="" data-genui-type={type}>
+    {children}
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Spec
+// ---------------------------------------------------------------------------
+
+export type GenUiSpecProps = {
+  /** Model input, partial or whole, or a canonical spec. */
+  input: unknown;
+  /** Bound values to swap in, filed by where each binding sits (`withData`). */
+  data?: BoundData;
+};
+
+/**
+ * A spec, drawn from its root down.
+ *
+ * Draws only what parses. While the input streams, what doesn't parse yet is
+ * pending; once it is whole, an element that still doesn't is dropped — a
+ * whole spec that got this far was accepted against the same schemas, so a
+ * failure means it outlived a change to the catalog, and a blank is better
+ * than a guess.
+ */
+export const GenUiSpec = ({ input, data }: GenUiSpecProps) => {
+  const { catalog, complete, components } = useRoot("Spec");
+  const spec = useMemo(
+    () => readSpec(data ? resolveSpec(input, data) : input, catalog),
+    [input, data, catalog],
+  );
+  const root = spec.root ? spec.elements[spec.root] : undefined;
+  if (!spec.root || !root) {
+    if (complete) return null;
+    const Placeholder = components.Placeholder ?? DefaultPlaceholder;
+    return (
+      <Arrive>
+        <Placeholder />
+      </Arrive>
+    );
+  }
+  return <Element id={spec.root} path={[]} spec={spec} />;
+};
+
+/**
+ * One element and, if it holds any, its children.
+ *
+ * A child that hasn't arrived is skipped rather than outlined: it may never
+ * come (the model writes parents first), and a row of outlines that resolves
+ * into fewer elements would have promised more than it delivered. The path
+ * guards against a cycle in a spec nobody has checked yet.
+ */
+const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string[] }) => {
+  const { catalog, complete, components } = useRoot("Spec");
+  const element = path.includes(id) ? undefined : spec.elements[id];
+  const definition = element ? catalog.elements[element.type] : undefined;
+  const props = useSteady(definition ? parse(definition, element?.props, complete) : undefined);
+  const piece = useMemo(() => (element ? { id, type: element.type } : null), [id, element]);
+  if (!element || !definition || !piece) return null;
+
+  const children = definition.container
+    ? element.children.map((child) => (
+        <Element id={child} key={child} path={[...path, id]} spec={spec} />
+      ))
+    : undefined;
+
+  if (props === undefined) {
+    if (complete) {
+      return hasBinding(element.props) ? (
+        <Unbound id={id} props={element.props} type={element.type} />
+      ) : null;
+    }
+    const Pending = components.Pending ?? DefaultPending;
+    return (
+      <Pending container={definition.container} type={element.type}>
+        {children}
+      </Pending>
+    );
+  }
+
+  const Drawn = (components.elements as Record<string, ComponentType<Record<string, unknown>>>)[
+    element.type
+  ];
+  if (!Drawn) return null;
+
+  return (
+    <Arrive>
+      <Boundary piece={piece}>
+        <ElementContext value={piece}>
+          <Drawn {...(props as Record<string, unknown>)}>{children}</Drawn>
+        </ElementContext>
+      </Boundary>
+    </Arrive>
+  );
+};
+
+const Unbound = ({ id, type, props }: { id?: string; type: string; props: unknown }) => {
+  const { components } = useRoot("Spec");
+  const Drawn = components.Unbound;
+  return Drawn ? <Drawn id={id} props={props} refs={bindingRefs(props)} type={type} /> : null;
+};
+
+// ---------------------------------------------------------------------------
+// View
+// ---------------------------------------------------------------------------
+
+export type GenUiViewProps = {
+  /** `{ view, title?, props }`, partial or whole. Props beside `view` are its props. */
+  input: unknown;
+  /** Bound values to swap in, filed by where each binding sits (`withData`). */
+  data?: BoundData;
+};
+
+/** A view, filled with its props. Steady and pending exactly as an element is. */
+export const GenUiView = ({ input, data }: GenUiViewProps) => {
+  const { catalog, complete, components } = useRoot("View");
+  const normal = useMemo(() => {
+    const view = normaliseView(input);
+    return data ? (withData(view, data) as typeof view) : view;
+  }, [input, data]);
+  const title = useSteady(typeof normal.title === "string" ? normal.title : undefined);
+  const name = isViewName(catalog, normal.view) ? normal.view : undefined;
+  const definition = name ? catalog.views[name] : undefined;
+  const props = useSteady(definition ? parse(definition, normal.props, complete) : undefined);
+  const piece = useMemo(() => (name ? { type: name } : null), [name]);
+  const Drawn = name
+    ? (components.views as Record<string, ComponentType<GenUiViewComponentProps<unknown>>>)?.[name]
+    : undefined;
+
+  if (!name || !piece || props === undefined) {
+    if (complete) {
+      return name && hasBinding(normal.props) ? <Unbound props={normal.props} type={name} /> : null;
+    }
+    const Placeholder = components.Placeholder ?? DefaultPlaceholder;
+    return (
+      <Arrive key="placeholder">
+        <Placeholder title={title} />
+      </Arrive>
+    );
+  }
+  if (!Drawn) return null;
+
+  return (
+    <Arrive key="view">
+      <Boundary piece={piece}>
+        <ElementContext value={piece}>
+          <Drawn props={props} title={title} />
+        </ElementContext>
+      </Boundary>
+    </Arrive>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// One broken piece must not take the rest down with it
+// ---------------------------------------------------------------------------
+
+class Boundary extends Component<
+  { piece: { id?: string; type: string }; children: ReactNode },
+  { failed: boolean }
+> {
+  static contextType = RootContext;
+  declare context: RootContextValue | null;
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown, _info: ErrorInfo) {
+    (this.context?.onError ?? logError)(error, this.props.piece);
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}

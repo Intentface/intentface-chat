@@ -46,7 +46,7 @@
     },
     "packages/chat": {
       "name": "@intentface/chat",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "dependencies": {
         "@floating-ui/dom": "^1.7.6",
       },
@@ -59,11 +59,16 @@
         "axe-core": "^4.12.1",
         "publint": "0.3.23",
         "typescript": "^5",
+        "zod": "4.3.6",
       },
       "peerDependencies": {
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
+        "zod": "^4.3.0",
       },
+      "optionalPeers": [
+        "zod",
+      ],
     },
   },
   "packages": {
@@ -1200,6 +1205,8 @@
     "@antfu/install-pkg/package-manager-detector": ["package-manager-detector@1.7.0", "", {}, "sha512-xg1eHpwYL/D/HEdWw2goFZP6vV0FH7W+PZ5rFkGjdIDLtxq7EkzBUeT3m+lndYCt8wKbmofUu1MUdMCXkCk9ZQ=="],
 
     "@changesets/parse/js-yaml": ["js-yaml@4.3.0", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q=="],
+
+    "@intentface/chat/zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
 
     "@manypkg/find-root/@types/node": ["@types/node@12.20.55", "", {}, "sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ=="],
 

@@ -27,7 +27,9 @@
     "shell",
     "sidebar",
     "tabs",
-    "nav"
+    "nav",
+    "generative-ui",
+    "genui"
   ],
   "files": [
     "dist",
@@ -90,12 +92,20 @@
     "./chip-markdown": {
       "types": "./dist/chip-markdown.d.ts",
       "default": "./dist/chip-markdown.js"
+    },
+    "./genui": {
+      "types": "./dist/genui/index.d.ts",
+      "default": "./dist/genui/index.js"
+    },
+    "./genui-render": {
+      "types": "./dist/genui-render/index.d.ts",
+      "default": "./dist/genui-render/index.js"
     }
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.build.json && node scripts/add-dist-extensions.mjs && node scripts/smoke-dist.mjs",
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.pure.json",
     "verify:release": "bun run typecheck && bun test && bun run build && publint",
     "prepack": "bun run build"
   },
@@ -104,7 +114,13 @@
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.3.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.10.6",
@@ -114,7 +130,8 @@
     "@types/react-dom": "^19",
     "axe-core": "^4.12.1",
     "publint": "0.3.23",
-    "typescript": "^5"
+    "typescript": "^5",
+    "zod": "4.3.6"
   },
   "publishConfig": {
     "access": "public"

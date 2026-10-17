@@ -17,6 +17,8 @@ const chatSourceAliases = {
   "@intentface/chat/message": "./packages/chat/src/message/index.ts",
   "@intentface/chat/message-utils": "./packages/chat/src/message-utils.ts",
   "@intentface/chat/chip-markdown": "./packages/chat/src/chip-markdown.ts",
+  "@intentface/chat/genui": "./packages/chat/src/genui/index.ts",
+  "@intentface/chat/genui-render": "./packages/chat/src/genui-render/index.ts",
 };
 
 const nextConfig: NextConfig = {

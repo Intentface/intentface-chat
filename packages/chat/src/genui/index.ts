@@ -1,0 +1,117 @@
+// Public surface of @intentface/chat/genui: the headless core of generative
+// UI. Pure — no React, no DOM, no directive — so a server can validate,
+// store and write Markdown from specs without pulling a renderer into its
+// import graph. The renderer is @intentface/chat/genui-render.
+//
+// One barrel for the folder, like a primitive's index.ts, because the subpath
+// is one entry: consumers import from here, never from the modules below.
+
+export {
+  type Binding,
+  type BoundData,
+  bindingRefs,
+  bindingSchemas,
+  DEFAULT_REF_DESCRIPTION,
+  hasBinding,
+  isBinding,
+  withData,
+} from "./bindings";
+export {
+  type Catalog,
+  createDefaultCatalog,
+  DEFAULT_CATALOG_VERSION,
+  DEFAULT_LIMITS,
+  type DefaultCatalog,
+  defaultCatalog,
+  defineCatalog,
+  type ElementMap,
+  type ElementName,
+  type ElementProps,
+  isElementName,
+  isViewName,
+  type Limits,
+  type Migration,
+  type ViewMap,
+  type ViewName,
+  type ViewProps,
+} from "./catalog";
+export {
+  defineElement,
+  defineView,
+  type ElementDefinition,
+  type MarkdownContext,
+  type ViewDefinition,
+} from "./define";
+export {
+  type ExportOptions,
+  exportSpec,
+  exportView,
+  type GenUiExport,
+  resolveSpec,
+  toMarkdown,
+  type UnboundPiece,
+  viewToMarkdown,
+} from "./export";
+export {
+  type Cell,
+  CellSchema,
+  CHART_KINDS,
+  type ChartProps,
+  ChartPropsSchema,
+  type Column,
+  ColumnSchema,
+  CurrencySchema,
+  DEFAULT_MAX_ROWS,
+  FORMATS,
+  type Format,
+  FormatSchema,
+  type KeyValueItem,
+  KeyValueItemSchema,
+  type Metric,
+  MetricSchema,
+  settleChart,
+  settleTable,
+  type TableProps,
+  TablePropsSchema,
+  type Tone,
+  ToneSchema,
+  tablePropsSchema,
+} from "./fields";
+export {
+  categoryLabel,
+  type FormatOptions,
+  formatTick,
+  formatValue,
+  isNumeric,
+  signedPercent,
+} from "./format";
+export {
+  blocks,
+  chartMarkdown,
+  chartRows,
+  keyValueLines,
+  markdownTable,
+  metricLine,
+  quote,
+  type Rows,
+  tableMarkdown,
+  tableRows,
+  toCsv,
+  toTsv,
+} from "./markdown";
+export {
+  canonicalSpec,
+  checkSpec,
+  describeIssues,
+  type LooseElement,
+  type LooseSpec,
+  migrateSpec,
+  normaliseSpec,
+  normaliseView,
+  readSpec,
+  readStoredSpec,
+  type Spec,
+  type SpecElement,
+  type SpecResult,
+  specSchemas,
+} from "./spec";

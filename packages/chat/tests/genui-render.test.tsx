@@ -214,6 +214,34 @@ describe("GenUi, when a piece can't be drawn", () => {
       "<em>DataTable from file_1</em>",
     );
   });
+
+  test("lets go of what it drew once whole, when the data goes away", () => {
+    // Holding the last props that parsed is for a stream. A whole input that
+    // stops parsing (its data taken back) must not stay drawn as it was.
+    const Unbound = ({ refs }: { refs: string[] }) => <em>from {refs.join()}</em>;
+    const withUnbound = { ...components, Unbound };
+    const spec = {
+      root: "t",
+      elements: [
+        {
+          id: "t",
+          type: "DataTable",
+          props: { columns: [{ label: "A" }], rows: { $data: "file_1", columns: ["a"] } },
+        },
+      ],
+    };
+    const view = { view: "table", props: spec.elements[0]?.props };
+    const tree = (data?: Record<string, unknown>) => (
+      <GenUi.Root components={withUnbound}>
+        <GenUi.Spec data={data && { "elements.t.props.rows": data.rows }} input={spec} />
+        <GenUi.View data={data && { "props.rows": data.rows }} input={view} />
+      </GenUi.Root>
+    );
+    const { container, rerender } = render(tree({ rows: [["x"]] }));
+    expect(container.innerHTML).toBe('<table data-rows="1"></table><table data-rows="1"></table>');
+    rerender(tree());
+    expect(container.innerHTML).toBe("<em>from file_1</em><em>from file_1</em>");
+  });
 });
 
 describe("what a drawn component may ask", () => {

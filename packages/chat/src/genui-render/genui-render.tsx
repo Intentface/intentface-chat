@@ -487,7 +487,10 @@ const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string
     () => (element && definition ? parse(definition, element.props, complete) : undefined),
     [element, definition, complete],
   );
-  const props = useSteady(parsed);
+  // Held only while it streams: once whole, props that stop parsing (bound
+  // data taken back) are dropped or Unbound, never drawn as they were.
+  const steady = useSteady(parsed);
+  const props = complete ? parsed : steady;
   const piece = useMemo(() => (element ? { id, type: element.type } : null), [id, element]);
   const rendered = useRender(definition, props, piece);
   if (!element || !definition || !piece) return null;
@@ -599,14 +602,18 @@ export const GenUiView = ({ input, data }: GenUiViewProps) => {
   );
   usePartMarkdown(markdown);
 
-  const title = useSteady(typeof normal.title === "string" ? normal.title : undefined);
+  const caption = typeof normal.title === "string" ? normal.title : undefined;
+  const steadyTitle = useSteady(caption);
+  const title = complete ? caption : steadyTitle;
   const name = isViewName(catalog, normal.view) ? normal.view : undefined;
   const definition = name ? catalog.views[name] : undefined;
   const parsed = useMemo(
     () => (definition ? parse(definition, normal.props, complete) : undefined),
     [definition, normal.props, complete],
   );
-  const props = useSteady(parsed);
+  // Held only while it streams, as an element's are.
+  const steady = useSteady(parsed);
+  const props = complete ? parsed : steady;
   const piece = useMemo(() => (name ? { id: VIEW_STATE_ID, type: name } : null), [name]);
   // What a view's component and its boundary are told it is: a name, no id.
   const shown = useMemo(() => (name ? { type: name } : null), [name]);

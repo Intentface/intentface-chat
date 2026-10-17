@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createDefaultCatalog, defaultCatalog, defineCatalog } from "../src/genui/catalog";
 import {
   canonicalSpec,
+  canonicalView,
   checkSpec,
   migrateSpec,
   readSpec,
@@ -182,6 +183,53 @@ describe("canonicalSpec", () => {
       elements: [{ id: "t", type: "Text", props: { text: 3 } }],
     });
     expect(result.ok ? [] : result.errors.join()).toContain("elements.t.props.text");
+  });
+});
+
+describe("canonicalView", () => {
+  test("reads props beside `view`, keeps bindings, and stamps the catalog version", () => {
+    const result = canonicalView({
+      view: "table",
+      title: "Paid",
+      columns: [{ label: "Branch" }],
+      rows: { $data: "queries/paid", columns: ["branch"] },
+    });
+    expect(result).toEqual({
+      ok: true,
+      view: {
+        v: 1,
+        view: "table",
+        title: "Paid",
+        props: {
+          columns: [{ label: "Branch" }],
+          rows: { $data: "queries/paid", columns: ["branch"] },
+        },
+      },
+    });
+  });
+
+  test("reads a null caption as none", () => {
+    const result = canonicalView({ view: "steps", title: null, props: { items: [{ title: "A" }] } });
+    expect(result.ok && "title" in result.view).toBe(false);
+  });
+
+  test("refuses a view the catalog doesn't have, listing the ones it does", () => {
+    expect(canonicalView({ view: "gallery", props: {} })).toEqual({
+      ok: false,
+      errors: ['view: "gallery" is not one of the views. Views: table, chart, metrics, record, email, steps.'],
+    });
+    expect(canonicalView({ props: {} }).ok).toBe(false);
+  });
+
+  test("names the field that is wrong, under props or title", () => {
+    const result = canonicalView({
+      view: "steps",
+      title: "x".repeat(121),
+      props: { items: [{ title: 3 }] },
+    });
+    const errors = result.ok ? "" : result.errors.join("\n");
+    expect(errors).toContain("title:");
+    expect(errors).toContain("props.items.0.title:");
   });
 });
 

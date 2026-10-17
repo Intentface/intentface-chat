@@ -99,6 +99,16 @@ if (!result.ok) return { ok: false, errors: result.errors };
 await save(result.spec); // { v: 1, root, elements: { … } }
 ```
 
+A view takes the same path through `canonicalView(input)`. It reads props
+written beside `view`, refuses a view the catalog lacks (listing the ones it
+has), validates the caption and the props, and stamps the catalog version:
+
+```ts
+const result = canonicalView(toolInput, { catalog });
+if (!result.ok) return { ok: false, errors: result.errors };
+await save(result.view); // { v: 1, view: "table", title?, props }
+```
+
 ### Keeping specs
 
 A spec can outlive the code that drew it by years. Never change an entry
@@ -234,7 +244,8 @@ export const defaultAttrs = [
 | --- | --- |
 | `defineCatalog`, `createDefaultCatalog`, `defineElement`, `defineView` | Build catalogs and entries. |
 | `specSchemas(catalog)` | `SpecInputSchema`, `SpecSchema`, `ResolvedSpecSchema`, `ElementSchema`, built once per catalog. |
-| `canonicalSpec`, `readStoredSpec`, `migrateSpec` | Model input to stored spec; stored spec back, brought forward. |
+| `canonicalSpec`, `canonicalView` | Model input to the spec or view to store, or errors that name the field. |
+| `readStoredSpec`, `migrateSpec` | A stored spec back, brought forward to the catalog's version. |
 | `checkSpec(spec, { catalog?, limits? })` | Tree rules a schema can't state: dangling, shared and cyclic children, size and depth. |
 | `readSpec`, `normaliseSpec`, `normaliseView` | Read partial input without throwing. |
 | `toMarkdown`, `viewToMarkdown`, `exportSpec`, `exportView` | Markdown and tables. |

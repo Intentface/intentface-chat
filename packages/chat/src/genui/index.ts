@@ -100,7 +100,9 @@ export {
   toTsv,
 } from "./markdown";
 export {
+  type CanonicalView,
   canonicalSpec,
+  canonicalView,
   checkSpec,
   describeIssues,
   type LooseElement,
@@ -114,4 +116,5 @@ export {
   type SpecElement,
   type SpecResult,
   specSchemas,
+  type ViewResult,
 } from "./spec";

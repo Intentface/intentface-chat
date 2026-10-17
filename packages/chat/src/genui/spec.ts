@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type Catalog, defaultCatalog, isElementName, type Limits } from "./catalog";
+import { type Catalog, defaultCatalog, isElementName, isViewName, type Limits } from "./catalog";
 
 /**
  * The spec: a layout the model composes from a catalog's elements.
@@ -367,6 +367,62 @@ const parseSpec = (
   const spec = { ...parsed.data, v: catalog.version } as Spec;
   const errors = checkSpec(spec, { catalog, limits });
   return errors.length > 0 ? { ok: false, errors } : { ok: true, spec };
+};
+
+/** A view as stored: which view, its caption, and its props with bindings in place. */
+export type CanonicalView = { v: number; view: string; title?: string; props: unknown };
+
+export type ViewResult = { ok: true; view: CanonicalView } | { ok: false; errors: string[] };
+
+/** A view's caption. `null` reads as none: a model leaving it out says so. */
+const TitleSchema = z.string().max(120).nullish();
+
+/** Issues found under one key, with the key in front of their paths. */
+const under = (key: string, issues: readonly { path: PropertyKey[]; message: string }[]) =>
+  issues.map((issue) => ({ ...issue, path: [key, ...issue.path] }));
+
+/**
+ * Model input for a view as the canonical view to store, or the errors to
+ * send back: the view tier's `canonicalSpec`.
+ *
+ * Normalises (`normaliseView`: props beside `view` are its props), refuses a
+ * view the catalog doesn't have, validates the caption and the props with
+ * bindings allowed, and stamps the catalog's version. Errors name the field,
+ * so they can go straight back to the model as the tool's answer.
+ */
+export const canonicalView = (input: unknown, options: { catalog?: Catalog } = {}): ViewResult => {
+  const catalog: Catalog = options.catalog ?? defaultCatalog;
+  const { view, title, props } = normaliseView(input);
+  if (!isViewName(catalog, view)) {
+    const names = Object.keys(catalog.views).join(", ");
+    return {
+      ok: false,
+      errors: [
+        typeof view === "string"
+          ? `view: "${view}" is not one of the views. Views: ${names}.`
+          : `view: name one of the views: ${names}.`,
+      ],
+    };
+  }
+
+  const definition = catalog.views[view];
+  const caption = TitleSchema.safeParse(title);
+  const parsed = (definition?.input ?? definition?.props)?.safeParse(props);
+  const errors = [
+    ...(caption.success ? [] : describeIssues(under("title", caption.error.issues))),
+    ...(parsed && !parsed.success ? describeIssues(under("props", parsed.error.issues)) : []),
+  ];
+  if (errors.length > 0 || !parsed?.success) return { ok: false, errors };
+
+  return {
+    ok: true,
+    view: {
+      v: catalog.version,
+      view,
+      ...(caption.data == null ? {} : { title: caption.data }),
+      props: parsed.data,
+    },
+  };
 };
 
 // ---------------------------------------------------------------------------

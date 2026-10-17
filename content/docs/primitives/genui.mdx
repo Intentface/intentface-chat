@@ -271,6 +271,10 @@ nothing.
 
 ## Markdown
 
+The same spec, on screen and as Markdown. Its table's rows are bound with
+`$data`, so switch to "Not loaded yet" to see what a reader gets before the
+host has fetched them: a line saying where the data lives, never a gap.
+
 <Demo component={<MarkdownExport />} file="primitives/genui/demos/markdown.tsx" />
 
 `toMarkdown(spec, options)` and `viewToMarkdown(view, options)` walk the input

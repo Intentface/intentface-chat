@@ -4,12 +4,12 @@ import { defaultCatalog, viewToMarkdown } from "@intentface/chat/genui";
 import { GenUi } from "@intentface/chat/genui-render";
 import { useState } from "react";
 import { components } from "./components";
+import { formatJson } from "./format-json";
 import {
   CodeSection,
   CodeSide,
   CodeTitle,
   DrawnPane,
-  formatJson,
   Json,
   MarkdownText,
   SplitWindow,

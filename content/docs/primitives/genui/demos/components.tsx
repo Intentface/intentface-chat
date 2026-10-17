@@ -83,12 +83,13 @@ const Table = ({ columns, rows }: DataTableRender) => (
         ) : (
           rows.map((row) => (
             <tr className="border-ink-primary/6 border-t" key={row.key}>
-              {row.cells.map((cell, index) => (
+              {/* Cells come in column order, so each is keyed by its column. */}
+              {columns.map((column, index) => (
                 <td
-                  className={`px-2 py-1.5 text-ink-body tabular-nums first:pl-0 last:pr-0 ${columns[index]?.align === "right" ? "text-right" : ""}`}
-                  key={columns[index]?.key ?? index}
+                  className={`px-2 py-1.5 text-ink-body tabular-nums first:pl-0 last:pr-0 ${column.align === "right" ? "text-right" : ""}`}
+                  key={column.key}
                 >
-                  {cell.text}
+                  {row.cells[index]?.text}
                 </td>
               ))}
             </tr>

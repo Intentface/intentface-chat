@@ -4,16 +4,8 @@ import { defaultCatalog, type RenderContext } from "@intentface/chat/genui";
 import { GenUi } from "@intentface/chat/genui-render";
 import { useState } from "react";
 import { components } from "./components";
-import {
-  CodeSection,
-  CodeSide,
-  CodeTitle,
-  DrawnPane,
-  formatJson,
-  Json,
-  SplitWindow,
-  Switch,
-} from "./frame";
+import { formatJson } from "./format-json";
+import { CodeSection, CodeSide, CodeTitle, DrawnPane, Json, SplitWindow, Switch } from "./frame";
 
 /*
  * What the model writes is shaped for the model: raw numbers, rows as arrays,

@@ -6,6 +6,7 @@ import { Message } from "@intentface/chat/message";
 import { parsePartialJson } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { components } from "./components";
+import { formatJson } from "./format-json";
 import {
   BarButton,
   Caret,
@@ -13,7 +14,6 @@ import {
   CodeSide,
   CodeTabs,
   DrawnPane,
-  formatJson,
   Json,
   SplitWindow,
   ToolChip,

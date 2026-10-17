@@ -3,6 +3,7 @@ import { type Catalog, defaultCatalog, isViewName } from "./catalog";
 import type { FormatOptions } from "./format";
 import type { Rows } from "./markdown";
 import { normaliseSpec, normaliseView, readSpec } from "./spec";
+import { type UiState, VIEW_STATE_ID } from "./state";
 
 /**
  * A spec or a view as what can be taken out of it: its Markdown, and each of
@@ -32,6 +33,13 @@ export type ExportOptions = FormatOptions & {
   catalog?: Catalog;
   /** Bound values, filed by where each binding sits (`withData`). */
   data?: BoundData;
+  /** The reader's UI state: the Markdown follows what they did, a ticked item reads ticked. */
+  state?: UiState;
+  /**
+   * Walk from this element instead of the root: one piece and what it holds,
+   * as the renderer's `Fallback` draws a piece it has no component for.
+   */
+  from?: string;
   /**
    * What a piece with unresolved data reads as. Null (the default) leaves it
    * out, which suits a chat's "copy as text": the reader saw it drawn, and
@@ -60,7 +68,8 @@ type Parseable = { safeParse: (value: unknown) => { success: boolean; data?: unk
 export const exportSpec = (input: unknown, options: ExportOptions = {}): GenUiExport | null => {
   const catalog: Catalog = options.catalog ?? defaultCatalog;
   const spec = readSpec(options.data ? resolveSpec(input, options.data) : input, catalog);
-  if (!spec.root || !spec.elements[spec.root]) return null;
+  const start = options.from ?? spec.root;
+  if (!start || !spec.elements[start]) return null;
 
   const tables: GenUiExport["tables"] = [];
   let heading: string | undefined;
@@ -99,10 +108,11 @@ export const exportSpec = (input: unknown, options: ExportOptions = {}): GenUiEx
       children: children.filter((child) => child !== ""),
       locale: options.locale,
       timeZone: options.timeZone,
+      state: options.state?.elements[id],
     });
   };
 
-  const markdown = walk(spec.root, []);
+  const markdown = walk(start, []);
   return markdown ? { markdown, tables: distinctNames(tables) } : null;
 };
 
@@ -131,6 +141,7 @@ export const exportView = (input: unknown, options: ExportOptions = {}): GenUiEx
       title: caption,
       locale: options.locale,
       timeZone: options.timeZone,
+      state: options.state?.elements[VIEW_STATE_ID],
     }),
     tables: definition.toRows
       ? [{ name: caption ?? definition.label, rows: definition.toRows(parsed.data) }]

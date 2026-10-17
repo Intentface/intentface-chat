@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { FormatOptions } from "./format";
 import type { Rows } from "./markdown";
+import type { ElementUiState } from "./state";
 
 /**
  * What a catalog entry is: data and zod, no React.
@@ -27,13 +28,38 @@ export type MarkdownContext = FormatOptions & {
   children: string[];
   /** A view's caption, when the model gave one. Never set for an element. */
   title?: string;
+  /** This piece's UI state, when the export was given one: a ticked item reads ticked. */
+  state?: ElementUiState;
+};
+
+/**
+ * How far the input has got.
+ *
+ * - `streaming`: still being written. What doesn't parse yet is pending.
+ * - `complete`: whole, but not yet accepted; a refused call is replaced by its
+ *   retry, so nothing a person sets on it should be kept.
+ * - `accepted`: passed `canonicalSpec` or `canonicalView`. A stored spec is.
+ */
+export type Phase = "streaming" | "complete" | "accepted";
+
+/** What an entry's `toRender` is given besides its props. Pure: no React. */
+export type RenderContext = FormatOptions & {
+  phase: Phase;
+  /** This piece's own UI state. */
+  state: ElementUiState;
+  /**
+   * Asks for this piece's state to change. The host may refuse it (a
+   * controlled state, a cancelled change), so a render reads `state`, never
+   * what it asked for.
+   */
+  update(patch: Partial<ElementUiState>, reason: string): void;
 };
 
 // Callbacks are written as methods, not arrow-typed properties, on purpose:
 // methods are checked bivariantly, so an entry typed against its own props
 // still fits a catalog typed against `z.ZodType`. As properties, every entry
 // would need a cast to sit in a map.
-type Shared<Props extends z.ZodType> = {
+type Shared<Props extends z.ZodType, Render> = {
   /** What the model is told: WHEN to use it, in a line. */
   description: string;
   /** What is validated and drawn: the props with every value in place. */
@@ -62,11 +88,21 @@ type Shared<Props extends z.ZodType> = {
   toMarkdown(props: z.infer<Props>, context: MarkdownContext): string;
   /** Its data as a spreadsheet, when it has rows: raw values, header first. */
   toRows?(props: z.infer<Props>): Rows;
+  /**
+   * The props its component is given, when they aren't simply its schema
+   * props: values formatted, state read, callbacks wired. Pure, so the
+   * logic stays here and the component only draws. Its component also gets
+   * the schema props as `props`.
+   */
+  toRender?(props: z.infer<Props>, context: RenderContext): Render;
   /** Realistic props. Tests parse and render every one, and docs show them. */
   example: z.input<Props>;
 };
 
-export type ElementDefinition<Props extends z.ZodType = z.ZodType> = Shared<Props> & {
+export type ElementDefinition<
+  Props extends z.ZodType = z.ZodType,
+  Render = z.infer<Props>,
+> = Shared<Props, Render> & {
   /** Whether it holds other elements, by id. */
   container: boolean;
   /**
@@ -80,9 +116,18 @@ export type ElementDefinition<Props extends z.ZodType = z.ZodType> = Shared<Prop
    * that no heading named. "Where the socks went", not "Chart 2".
    */
   names?: { scope: "next" | "within"; text(props: z.infer<Props>): string | undefined };
+  /**
+   * A few words for a model's history: what this piece showed. A spec's
+   * summary is its pieces' summaries, so an element without one (a layout,
+   * a heading) adds nothing to it.
+   */
+  summarise?(props: z.infer<Props>): string;
 };
 
-export type ViewDefinition<Props extends z.ZodType = z.ZodType> = Shared<Props> & {
+export type ViewDefinition<Props extends z.ZodType = z.ZodType, Render = z.infer<Props>> = Shared<
+  Props,
+  Render
+> & {
   /** What people call it. Also an exported table's name when it has no title. */
   label: string;
   /** One line for a model's history and for search: what was shown. */
@@ -92,10 +137,12 @@ export type ViewDefinition<Props extends z.ZodType = z.ZodType> = Shared<Props> 
 /**
  * Identity functions, there for inference: `props` types every callback in
  * the entry, so a `toMarkdown` that reads a prop the schema lacks fails to
- * compile.
+ * compile, and `toRender`'s return types the entry's component.
  */
-export const defineElement = <Props extends z.ZodType>(definition: ElementDefinition<Props>) =>
-  definition;
+export const defineElement = <Props extends z.ZodType, Render = z.infer<Props>>(
+  definition: ElementDefinition<Props, Render>,
+) => definition;
 
-export const defineView = <Props extends z.ZodType>(definition: ViewDefinition<Props>) =>
-  definition;
+export const defineView = <Props extends z.ZodType, Render = z.infer<Props>>(
+  definition: ViewDefinition<Props, Render>,
+) => definition;

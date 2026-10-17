@@ -24,6 +24,15 @@ import {
   tableMarkdown,
   tableRows,
 } from "./markdown";
+import {
+  chartRender,
+  keyValueItems,
+  type MetricsRender,
+  metricRender,
+  type RecordRender,
+  type StepsRender,
+  tableRender,
+} from "./render";
 
 /**
  * A catalog: the elements a model may compose, the views it may fill, and the
@@ -111,6 +120,14 @@ export type ElementProps<C extends Catalog, Name extends ElementName<C>> = z.inf
 >;
 export type ViewProps<C extends Catalog, Name extends ViewName<C>> = z.infer<
   C["views"][Name]["props"]
+>;
+/** What an element's component is drawn with: its `toRender` output, else its schema props. */
+export type ElementRender<C extends Catalog, Name extends ElementName<C>> = ReturnType<
+  NonNullable<C["elements"][Name]["toRender"]>
+>;
+/** What a view's component is drawn with: its `toRender` output, else its schema props. */
+export type ViewRender<C extends Catalog, Name extends ViewName<C>> = ReturnType<
+  NonNullable<C["views"][Name]["toRender"]>
 >;
 
 export const isElementName = <C extends Catalog>(
@@ -226,6 +243,8 @@ export const createDefaultCatalog = ({
       container: false,
       props: MetricSchema,
       toMarkdown: (props, context) => metricLine(props, context),
+      toRender: (props, context) => metricRender(props, context),
+      summarise: (props) => `${props.label} ${props.value}`,
       example: {
         label: "Open pipeline",
         value: 240000,
@@ -239,6 +258,12 @@ export const createDefaultCatalog = ({
       container: false,
       props: z.object({ items: z.array(KeyValueItemSchema).min(1).max(24) }),
       toMarkdown: (props, context) => keyValueLines(props.items, context),
+      toRender: (props, context) => ({ items: keyValueItems(props.items, context) }),
+      summarise: (props) =>
+        list(
+          props.items.map((item) => `${item.label}: ${item.value ?? "—"}`),
+          3,
+        ),
       example: {
         items: [
           { label: "Owner", value: "Minna Laine" },
@@ -255,6 +280,9 @@ export const createDefaultCatalog = ({
       settle: settleTable,
       toMarkdown: (props, context) => tableMarkdown(props, context),
       toRows: tableRows,
+      toRender: (props, context) => tableRender(props, context),
+      summarise: (props) =>
+        `table of ${props.rows.length} rows (${list(props.columns.map((c) => c.label))})`,
       example: {
         columns: [{ label: "Account" }, { label: "Value", format: "currency", currency: "EUR" }],
         rows: [
@@ -272,6 +300,9 @@ export const createDefaultCatalog = ({
       settle: settleChart,
       toMarkdown: (props, context) => chartMarkdown(props, context),
       toRows: chartRows,
+      toRender: (props, context) => chartRender(props, context),
+      summarise: (props) =>
+        `${props.kind} chart of ${list(props.series.map((s) => s.label))} over ${props.categories.length} ${props.kind === "pie" ? "slices" : "points"}`,
       example: {
         kind: "line",
         categories: ["W1", "W2", "W3", "W4"],
@@ -292,6 +323,7 @@ export const createDefaultCatalog = ({
             ? `**${escapeMarkdownInline(props.title)}** ${escapeMarkdown(props.text)}`
             : escapeMarkdown(props.text),
         ),
+      summarise: (props) => `${props.tone}: ${props.title ?? props.text}`.slice(0, 120),
       example: { tone: "warning", title: "No owner", text: "The Globex renewal is due Friday." },
     }),
   };
@@ -308,6 +340,7 @@ export const createDefaultCatalog = ({
         `${title ?? "Table"}: ${props.rows.length} rows (${list(props.columns.map((c) => c.label))})`,
       toMarkdown: (props, context) => blocks(caption(context.title), tableMarkdown(props, context)),
       toRows: tableRows,
+      toRender: (props, context) => tableRender(props, context),
       example: {
         columns: [
           { label: "Account" },
@@ -333,6 +366,7 @@ export const createDefaultCatalog = ({
         `${title ?? "Chart"}: ${props.kind} chart of ${list(props.series.map((s) => s.label))} over ${props.categories.length} ${props.kind === "pie" ? "slices" : "points"}`,
       toMarkdown: (props, context) => blocks(caption(context.title), chartMarkdown(props, context)),
       toRows: chartRows,
+      toRender: (props, context) => chartRender(props, context),
       example: {
         kind: "bar",
         categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -355,6 +389,9 @@ export const createDefaultCatalog = ({
           caption(context.title),
           props.items.map((item) => metricLine(item, context)).join("\n"),
         ),
+      toRender: (props, context): MetricsRender => ({
+        items: props.items.map((item) => metricRender(item, context)),
+      }),
       example: {
         items: [
           {
@@ -392,6 +429,15 @@ export const createDefaultCatalog = ({
           keyValueLines(props.fields, context),
           props.note ? escapeMarkdown(props.note) : undefined,
         ),
+      toRender: (props, context): RecordRender => ({
+        name: props.name,
+        ...(props.subtitle ? { subtitle: props.subtitle } : {}),
+        ...(props.status
+          ? { status: { label: props.status.label, tone: props.status.tone ?? "neutral" } }
+          : {}),
+        fields: keyValueItems(props.fields, context),
+        ...(props.note ? { note: props.note } : {}),
+      }),
       example: {
         name: "Northwind Traders",
         subtitle: "Wholesale · Helsinki",
@@ -469,6 +515,14 @@ export const createDefaultCatalog = ({
             )
             .join("\n"),
         ),
+      toRender: (props): StepsRender => ({
+        items: props.items.map((item, index) => ({
+          key: String(index),
+          title: item.title,
+          ...(item.detail ? { detail: item.detail } : {}),
+          status: item.status ?? "todo",
+        })),
+      }),
       example: {
         items: [
           { title: "Confirm the new seat count", status: "done" },

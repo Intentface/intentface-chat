@@ -97,6 +97,12 @@ type Shared<Props extends z.ZodType, Render> = {
   toRender?(props: z.infer<Props>, context: RenderContext): Render;
   /** Realistic props. Tests parse and render every one, and docs show them. */
   example: z.input<Props>;
+  /**
+   * More realistic props, in the states worth drawing besides the example: an
+   * empty table, a missing value, a falling number. `fixtures(catalog)` hands
+   * them to a test or a story, and the conformance checks draw every one.
+   */
+  fixtures?: Record<string, z.input<Props>>;
 };
 
 export type ElementDefinition<

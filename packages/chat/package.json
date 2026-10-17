@@ -100,6 +100,10 @@
     "./genui-render": {
       "types": "./dist/genui-render/index.d.ts",
       "default": "./dist/genui-render/index.js"
+    },
+    "./genui-testing": {
+      "types": "./dist/genui-testing/index.d.ts",
+      "default": "./dist/genui-testing/index.js"
     }
   },
   "scripts": {
@@ -113,17 +117,22 @@
     "@floating-ui/dom": "^1.7.6"
   },
   "peerDependencies": {
+    "@testing-library/dom": "^10.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zod": "^4.3.0"
   },
   "peerDependenciesMeta": {
+    "@testing-library/dom": {
+      "optional": true
+    },
     "zod": {
       "optional": true
     }
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.10.6",
+    "@testing-library/dom": "10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/bun": "^1",
     "@types/react": "^19",

@@ -194,6 +194,7 @@ export const createDefaultCatalog = ({
           ...children,
         ),
       example: { title: "This week" },
+      fixtures: { untitled: {}, described: { title: "Q3", description: "Paid orders only." } },
     }),
     Stack: defineElement({
       description: "Lays children out in a column (default) or a row.",
@@ -204,6 +205,7 @@ export const createDefaultCatalog = ({
       }),
       toMarkdown: (_, { children }) => blocks(...children),
       example: { direction: "column", gap: "md" },
+      fixtures: { row: { direction: "row", gap: "sm" }, bare: {} },
     }),
     Grid: defineElement({
       description:
@@ -216,6 +218,7 @@ export const createDefaultCatalog = ({
           ? children.join("\n")
           : blocks(...children),
       example: { columns: 3 },
+      fixtures: { two: { columns: 2 }, four: { columns: 4 } },
     }),
     Heading: defineElement({
       description: "A section title inside a card.",
@@ -224,6 +227,9 @@ export const createDefaultCatalog = ({
       names: { scope: "next", text: (props) => props.text },
       toMarkdown: (props) => markdownHeading(4, props.text),
       example: { text: "Renewals" },
+      fixtures: {
+        long: { text: "Renewals due before the end of the quarter, by owner and region" },
+      },
     }),
     Text: defineElement({
       description: "A sentence or two. Keep longer prose in the reply itself.",
@@ -234,6 +240,12 @@ export const createDefaultCatalog = ({
       }),
       toMarkdown: (props) => escapeMarkdown(props.text),
       example: { text: "Two deals moved forward; one renewal has no owner." },
+      fixtures: {
+        long: {
+          text: "Renewals slipped in three regions this month. Two accounts have no owner since the reorganisation, and the largest, Northwind, moved its decision to the next quarter after their admin left; usage there has fallen for three weeks in a row.",
+        },
+        muted: { text: "Figures exclude refunds.", tone: "muted" },
+      },
     }),
     Metric: defineElement({
       description:
@@ -252,6 +264,17 @@ export const createDefaultCatalog = ({
         currency: "EUR",
         delta: 8,
       },
+      fixtures: {
+        falling: {
+          label: "Win rate",
+          value: 27.5,
+          format: "percent",
+          delta: -4.2,
+          deltaLabel: "vs last month",
+        },
+        words: { label: "Status", value: "On track" },
+        missing: { label: "Last order", value: "", format: "date" },
+      },
     }),
     KeyValue: defineElement({
       description: "A few labelled fields of one thing.",
@@ -269,6 +292,14 @@ export const createDefaultCatalog = ({
           { label: "Owner", value: "Minna Laine" },
           { label: "Renewal", value: "2026-11-30", format: "date" },
         ],
+      },
+      fixtures: {
+        missing: {
+          items: [
+            { label: "Owner", value: null },
+            { label: "Seats", value: 140, format: "number" },
+          ],
+        },
       },
     }),
     DataTable: defineElement({
@@ -290,6 +321,20 @@ export const createDefaultCatalog = ({
           ["Globex", 18500],
         ],
       },
+      fixtures: {
+        empty: { columns: [{ label: "Account" }, { label: "Value" }], rows: [] },
+        missing: {
+          columns: [
+            { label: "Account" },
+            { label: "Closed", format: "date" },
+            { label: "Value", format: "currency", currency: "EUR" },
+          ],
+          rows: [
+            ["Northwind", null, -1200],
+            ["Globex", "2026-09-30", null],
+          ],
+        },
+      },
     }),
     Chart: defineElement({
       description: "A bar, line, area or pie chart.",
@@ -308,6 +353,23 @@ export const createDefaultCatalog = ({
         categories: ["W1", "W2", "W3", "W4"],
         series: [{ label: "Pipeline", values: [180, 205, 222, 240] }],
       },
+      fixtures: {
+        gaps: {
+          kind: "bar",
+          categories: ["Jan", "Feb", "Mar"],
+          series: [
+            { label: "New", values: [12, null, 15] },
+            { label: "Renewed", values: [8, 9, null] },
+          ],
+          stacked: true,
+        },
+        pie: {
+          kind: "pie",
+          categories: ["Direct", "Partner", "Online"],
+          series: [{ label: "Share", values: [52, 30, 18] }],
+          format: "percent",
+        },
+      },
     }),
     Callout: defineElement({
       description: "Something the reader must not miss: a risk, a gap in the data, a success.",
@@ -325,6 +387,7 @@ export const createDefaultCatalog = ({
         ),
       summarise: (props) => `${props.tone}: ${props.title ?? props.text}`.slice(0, 120),
       example: { tone: "warning", title: "No owner", text: "The Globex renewal is due Friday." },
+      fixtures: { untitled: { tone: "info", text: "Figures are from Monday's export." } },
     }),
   };
 
@@ -353,6 +416,7 @@ export const createDefaultCatalog = ({
           ["Initech", "Negotiation", 67000],
         ],
       },
+      fixtures: { empty: { columns: [{ label: "Account" }, { label: "Stage" }], rows: [] } },
     }),
 
     chart: defineView({
@@ -375,6 +439,14 @@ export const createDefaultCatalog = ({
           { label: "Renewed", values: [8, 9, 11, 10, 14, 13] },
         ],
         format: "number",
+      },
+      fixtures: {
+        pie: {
+          kind: "pie",
+          categories: ["Direct", "Partner"],
+          series: [{ label: "Share", values: [64, 36] }],
+          format: "percent",
+        },
       },
     }),
 
@@ -406,6 +478,7 @@ export const createDefaultCatalog = ({
           { label: "Win rate", value: 31, format: "percent" },
         ],
       },
+      fixtures: { one: { items: [{ label: "Open tickets", value: 0, delta: -100 }] } },
     }),
 
     record: defineView({
@@ -450,6 +523,7 @@ export const createDefaultCatalog = ({
         ],
         note: "Usage has fallen for three weeks since their admin left.",
       },
+      fixtures: { bare: { name: "Globex", fields: [] } },
     }),
 
     email: defineView({
@@ -482,6 +556,14 @@ export const createDefaultCatalog = ({
         to: ["jonas@northwind.example"],
         subject: "Your renewal on 30 November",
         body: "Hi Jonas,\n\nYour renewal comes up on 30 November. Could we find half an hour next week to go through the new seat count?\n\nBest,\nMinna",
+      },
+      fixtures: {
+        copied: {
+          to: ["jonas@northwind.example", "Aino Virtanen"],
+          cc: ["minna@sales.example"],
+          subject: "Seat count before the renewal",
+          body: "Hi both,\n\nCould you confirm the seat count by Friday?\n\nThanks,\nMinna",
+        },
       },
     }),
 
@@ -533,6 +615,14 @@ export const createDefaultCatalog = ({
           },
           { title: "Book the handover with their new admin" },
         ],
+      },
+      fixtures: {
+        done: {
+          items: [
+            { title: "Export the list", status: "done" },
+            { title: "Remove duplicates", status: "done" },
+          ],
+        },
       },
     }),
   };

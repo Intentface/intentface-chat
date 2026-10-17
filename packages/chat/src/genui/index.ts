@@ -81,6 +81,7 @@ export {
   ToneSchema,
   tablePropsSchema,
 } from "./fields";
+export { type Fixture, fixtures } from "./fixtures";
 export {
   categoryLabel,
   type FormatOptions,

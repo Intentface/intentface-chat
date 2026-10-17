@@ -55,7 +55,9 @@ type Shared<Props extends z.ZodType> = {
    * wherever it can't be drawn — pasted, stored in a document, served to an
    * MCP client, indexed — so an entry without one would vanish from all of
    * those. Values formatted as the reader saw them, with the context's locale
-   * and time zone.
+   * and time zone. Text from the model or a source must read literally:
+   * escape it (`escapeMarkdown`, `escapeMarkdownInline`, `markdownHeading`),
+   * so it can't format, link or break the structure around it.
    */
   toMarkdown(props: z.infer<Props>, context: MarkdownContext): string;
   /** Its data as a spreadsheet, when it has rows: raw values, header first. */

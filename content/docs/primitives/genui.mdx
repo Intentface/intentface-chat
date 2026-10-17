@@ -50,13 +50,21 @@ realistic `example`. Extend or narrow a catalog by spreading it into
 `defineCatalog`:
 
 ```ts
-import { defaultCatalog, defineCatalog, defineElement } from "@intentface/chat/genui";
+import {
+  defaultCatalog,
+  defineCatalog,
+  defineElement,
+  escapeMarkdownInline,
+} from "@intentface/chat/genui";
 
 const Timeline = defineElement({
   description: "Dated events in order. For a history, not a plan.",
   container: false,
   props: z.object({ events: z.array(z.object({ date: z.string(), text: z.string() })) }),
-  toMarkdown: (props) => props.events.map((event) => `- ${event.date}: ${event.text}`).join("\n"),
+  toMarkdown: (props) =>
+    props.events
+      .map((event) => `- ${escapeMarkdownInline(event.date)}: ${escapeMarkdownInline(event.text)}`)
+      .join("\n"),
   example: { events: [{ date: "2026-10-01", text: "Signed" }] },
 });
 
@@ -160,6 +168,7 @@ timeZone })` decides how it reads. `exportSpec` and `exportView` return the
 same Markdown plus every table as raw rows (`toCsv`, `toTsv`), named by the
 heading before it or the card it sits in.
 
+- **Literal text** — whatever the model wrote or a source returned reads as written: nothing in it can format, link, or break the structure around it, and a bare address is not turned into a link. Links come only from you. A custom entry escapes its text the same way, with `escapeMarkdown`, `escapeMarkdownInline` and `markdownHeading`. The `email` view is the exception: it stays plain text for pasting into a mail client.
 - **`locale`, `timeZone`** — both default to the runtime's. Pass both on a server: stored Markdown must not change with the host that wrote it. A calendar date (`2026-11-30`) is always read in UTC, so it never becomes the evening before; `timeZone` applies to timestamps.
 - **`onUnbound`** — what a piece reads as when its data is bound and wasn't resolved. The default is `null`, which leaves the piece out. That suits copying from a chat, where the reader saw what was drawn. A document should return a line saying where the data lives: an agent reading a gap later would take it to mean there is no data.
 
@@ -249,5 +258,6 @@ export const defaultAttrs = [
 | `checkSpec(spec, { catalog?, limits? })` | Tree rules a schema can't state: dangling, shared and cyclic children, size and depth. |
 | `readSpec`, `normaliseSpec`, `normaliseView` | Read partial input without throwing. |
 | `toMarkdown`, `viewToMarkdown`, `exportSpec`, `exportView` | Markdown and tables. |
+| `escapeMarkdown`, `escapeMarkdownInline`, `markdownHeading` | Literal text for a custom entry's `toMarkdown`. |
 | `withData`, `hasBinding`, `bindingRefs`, `bindingSchemas` | Bindings. |
 | `formatValue`, `formatTick`, `categoryLabel` | Values as a reader sees them, with optional `locale` and `timeZone`. |

@@ -15,7 +15,10 @@ import {
   blocks,
   chartMarkdown,
   chartRows,
+  escapeMarkdown,
+  escapeMarkdownInline,
   keyValueLines,
+  markdownHeading,
   metricLine,
   quote,
   tableMarkdown,
@@ -125,7 +128,7 @@ export const isViewName = <C extends Catalog>(catalog: C, name: unknown): name i
 /** The default catalog's version. 1 until an entry changes shape. */
 export const DEFAULT_CATALOG_VERSION = 1;
 
-const caption = (title?: string) => (title ? `**${title}**` : undefined);
+const caption = (title?: string) => (title ? `**${escapeMarkdownInline(title)}**` : undefined);
 
 const list = (items: readonly string[], max = 4) =>
   items.length <= max
@@ -168,7 +171,11 @@ export const createDefaultCatalog = ({
       }),
       names: { scope: "within", text: (props) => props.title },
       toMarkdown: (props, { children }) =>
-        blocks(props.title ? `### ${props.title}` : undefined, props.description, ...children),
+        blocks(
+          props.title ? markdownHeading(3, props.title) : undefined,
+          props.description ? escapeMarkdown(props.description) : undefined,
+          ...children,
+        ),
       example: { title: "This week" },
     }),
     Stack: defineElement({
@@ -198,7 +205,7 @@ export const createDefaultCatalog = ({
       container: false,
       props: z.object({ text: z.string().max(120) }),
       names: { scope: "next", text: (props) => props.text },
-      toMarkdown: (props) => `#### ${props.text}`,
+      toMarkdown: (props) => markdownHeading(4, props.text),
       example: { text: "Renewals" },
     }),
     Text: defineElement({
@@ -208,7 +215,7 @@ export const createDefaultCatalog = ({
         text: z.string().max(1200),
         tone: z.enum(["default", "muted"]).optional(),
       }),
-      toMarkdown: (props) => props.text,
+      toMarkdown: (props) => escapeMarkdown(props.text),
       example: { text: "Two deals moved forward; one renewal has no owner." },
     }),
     Metric: defineElement({
@@ -279,7 +286,12 @@ export const createDefaultCatalog = ({
         title: z.string().max(120).optional(),
         text: z.string().max(600),
       }),
-      toMarkdown: (props) => quote(props.title ? `**${props.title}** ${props.text}` : props.text),
+      toMarkdown: (props) =>
+        quote(
+          props.title
+            ? `**${escapeMarkdownInline(props.title)}** ${escapeMarkdown(props.text)}`
+            : escapeMarkdown(props.text),
+        ),
       example: { tone: "warning", title: "No owner", text: "The Globex renewal is due Friday." },
     }),
   };
@@ -374,11 +386,11 @@ export const createDefaultCatalog = ({
         `Record: ${props.name}${props.status ? ` (${props.status.label})` : ""} — ${list(props.fields.map((f) => f.label))}`,
       toMarkdown: (props, context) =>
         blocks(
-          `### ${props.name}`,
-          props.subtitle,
-          props.status ? `Status: ${props.status.label}` : undefined,
+          markdownHeading(3, props.name),
+          props.subtitle ? escapeMarkdownInline(props.subtitle) : undefined,
+          props.status ? `Status: ${escapeMarkdownInline(props.status.label)}` : undefined,
           keyValueLines(props.fields, context),
-          props.note,
+          props.note ? escapeMarkdown(props.note) : undefined,
         ),
       example: {
         name: "Northwind Traders",
@@ -406,8 +418,9 @@ export const createDefaultCatalog = ({
       }),
       summarise: (props) =>
         `Email draft to ${list(props.to, 3) || "no one yet"}: "${props.subject}"`,
-      // Plain text rather than Markdown: this is pasted into a mail client,
-      // where asterisks would arrive as asterisks. It is still valid Markdown.
+      // Plain text rather than Markdown, and deliberately not escaped: this is
+      // pasted into a mail client, where a backslash before every asterisk
+      // would arrive as written. It is still valid Markdown.
       toMarkdown: (props) =>
         blocks(
           [
@@ -452,7 +465,7 @@ export const createDefaultCatalog = ({
           props.items
             .map(
               (item) =>
-                `- [${item.status === "done" ? "x" : " "}] ${item.title}${item.detail ? ` — ${item.detail}` : ""}`,
+                `- [${item.status === "done" ? "x" : " "}] ${escapeMarkdownInline(item.title)}${item.detail ? ` — ${escapeMarkdownInline(item.detail)}` : ""}`,
             )
             .join("\n"),
         ),

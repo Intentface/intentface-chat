@@ -15,13 +15,71 @@ import { type FormatOptions, formatValue, signedPercent } from "./format";
 /** A table of raw values: the first row is the header. */
 export type Rows = Cell[][];
 
-const cellText = (cell: Cell | undefined) =>
-  cell === null || cell === undefined ? "" : String(cell).replace(/\s*\n\s*/g, " ");
+// ---------------------------------------------------------------------------
+// Literal text
+// ---------------------------------------------------------------------------
+//
+// Every string here was written by the model or came from a source, so it
+// must read as written: it may not format, link, or break the structure
+// around it. A cell that says `[click](https://…)` is text, not a link: links
+// come only from the consumer, never from the content. That matters most
+// where the Markdown outlives the screen — stored beside a spec, served to an
+// agent, indexed.
 
-/** A GitHub-flavoured Markdown table. Pipes are escaped so a cell can't split a column. */
+// What opens emphasis, code, a link or image, an autolink or HTML,
+// strikethrough, or a table cell; and `@`, which GFM turns into a mailto link.
+const INLINE = /[\\`*_[\]<>|~@]/g;
+// An entity reference (`&amp;`) would be decoded, so its ampersand is escaped.
+const ENTITY = /&(?=#?[a-zA-Z0-9]+;)/g;
+// GFM links a bare address too: `https://…`, `www.…`. Escaping the colon or
+// the dot breaks the pattern and leaves the text as it was.
+const SCHEME = /(https?|mailto|xmpp):/gi;
+const WWW = /\b(www)\./gi;
+
+const escapeChars = (text: string) =>
+  text
+    .replace(INLINE, "\\$&")
+    .replace(ENTITY, "\\&")
+    .replace(SCHEME, "$1\\:")
+    .replace(WWW, "$1\\.");
+
+/**
+ * One line of literal text, for a label, a cell or a heading: line breaks
+ * become spaces, and nothing in it can format or link.
+ */
+export const escapeMarkdownInline = (text: string) => escapeChars(text.replace(/\s*\n\s*/g, " "));
+
+/**
+ * Literal text that may run over several lines, such as a paragraph. Each
+ * line is escaped as `escapeMarkdownInline` escapes one, and a line that
+ * would open a block (a heading, a list item, a rule, a setext underline) has
+ * its marker escaped. Indentation is dropped, since four spaces would open a
+ * code block; blank lines stay paragraph breaks.
+ */
+export const escapeMarkdown = (text: string) =>
+  text
+    .split("\n")
+    .map((line) =>
+      escapeChars(line.trim())
+        .replace(/^([#+=-])/, "\\$1")
+        .replace(/^(\d{1,9})([.)])/, "$1\\$2"),
+    )
+    .join("\n");
+
+/** A heading of literal text. A trailing `#` stays text rather than closing the heading. */
+export const markdownHeading = (level: number, text: string) =>
+  `${"#".repeat(level)} ${escapeMarkdownInline(text).replace(/(^|\s)(#+)$/, "$1\\$2")}`;
+
+/** A raw value as text, unescaped: `markdownTable` escapes what it is given. */
+const plain = (cell: Cell | undefined) => (cell === null || cell === undefined ? "" : String(cell));
+
+/**
+ * A GitHub-flavoured Markdown table. Every cell is literal text: pipes can't
+ * split a column, and nothing in a cell can format or link.
+ */
 export const markdownTable = (header: readonly string[], rows: readonly (readonly string[])[]) => {
   const line = (cells: readonly string[]) =>
-    `| ${header.map((_, index) => cellText(cells[index]).replace(/\|/g, "\\|")).join(" | ")} |`;
+    `| ${header.map((_, index) => escapeMarkdownInline(cells[index] ?? "")).join(" | ")} |`;
   return [line(header), `| ${header.map(() => "---").join(" | ")} |`, ...rows.map(line)].join("\n");
 };
 
@@ -75,20 +133,23 @@ export const quote = (text: string) =>
 // The shared pieces: what a metric, a table and a chart read as
 // ---------------------------------------------------------------------------
 
+/** A labelled value as a list item: `- **Label:** value`, both literal. */
+const labelled = (label: string, value: string) =>
+  `- **${escapeMarkdownInline(label)}:** ${escapeMarkdownInline(value)}`;
+
 export const metricLine = (metric: Metric, options: FormatOptions = {}) => {
   const value = formatValue(metric.value, metric.format, metric.currency, options);
   const change =
     metric.delta === undefined
       ? ""
       : ` (${signedPercent(metric.delta, options)}${metric.deltaLabel ? ` ${metric.deltaLabel}` : ""})`;
-  return `- **${metric.label}:** ${value}${change}`;
+  return labelled(metric.label, `${value}${change}`);
 };
 
 export const keyValueLines = (items: readonly KeyValueItem[], options: FormatOptions = {}) =>
   items
-    .map(
-      (item) =>
-        `- **${item.label}:** ${formatValue(item.value, item.format, item.currency, options)}`,
+    .map((item) =>
+      labelled(item.label, formatValue(item.value, item.format, item.currency, options)),
     )
     .join("\n");
 
@@ -100,7 +161,7 @@ export const tableMarkdown = ({ columns, rows }: TableProps, options: FormatOpti
       columns.map((column, index) =>
         column.format
           ? formatValue(row[index], column.format, column.currency, options)
-          : cellText(row[index]),
+          : plain(row[index]),
       ),
     ),
   );
@@ -129,9 +190,9 @@ export const chartRows = ({ kind, categories, series }: ChartProps): Rows => {
 export const chartMarkdown = (props: ChartProps, options: FormatOptions = {}) => {
   const [header = [], ...rows] = chartRows(props);
   return markdownTable(
-    header.map((cell) => cellText(cell)),
+    header.map((cell) => plain(cell)),
     rows.map(([category, ...values]) => [
-      cellText(category),
+      plain(category),
       ...values.map((value) => formatValue(value, props.format, props.currency, options)),
     ]),
   );

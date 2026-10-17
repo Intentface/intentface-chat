@@ -3,7 +3,7 @@ import { bindingRefs, hasBinding, withData } from "../src/genui/bindings";
 import { defaultCatalog } from "../src/genui/catalog";
 import type { ElementDefinition } from "../src/genui/define";
 import { exportSpec, exportView, toMarkdown, viewToMarkdown } from "../src/genui/export";
-import { markdownTable, toCsv } from "../src/genui/markdown";
+import { escapeMarkdown, markdownHeading, markdownTable, toCsv } from "../src/genui/markdown";
 import { specSchemas } from "../src/genui/spec";
 
 const { elements, views } = defaultCatalog;
@@ -205,6 +205,69 @@ describe("locale and time zone", () => {
     for (const timeZone of ["UTC", "America/New_York", "Pacific/Honolulu"]) {
       expect(viewToMarkdown(record, { locale: "en-GB", timeZone })).toContain("30 Nov 2026");
     }
+  });
+});
+
+describe("Markdown is literal", () => {
+  // Text from the model or a source may not format, link or break structure:
+  // the Markdown is stored and served where nothing checks it again.
+  test("a paragraph keeps its words and loses every construct", () => {
+    expect(
+      escapeMarkdown(
+        "*not bold* and [a link](https://x.example)\n# not a heading\n1. not a list\n    indented\n\nnew paragraph & &amp; done",
+      ),
+    ).toBe(
+      "\\*not bold\\* and \\[a link\\](https\\://x.example)\n\\# not a heading\n1\\. not a list\nindented\n\nnew paragraph & \\&amp; done",
+    );
+  });
+
+  test("a bare address stays text, where GFM would link it", () => {
+    expect(escapeMarkdown("Mail minna@x.example or see www.x.example and HTTPS://x.example")).toBe(
+      "Mail minna\\@x.example or see www\\.x.example and HTTPS\\://x.example",
+    );
+  });
+
+  test("a heading stays one line, and keeps a trailing #", () => {
+    expect(markdownHeading(4, "Ranked #")).toBe("#### Ranked \\#");
+    expect(markdownHeading(3, "Q3 <b>\nsplit")).toBe("### Q3 \\<b\\> split");
+  });
+
+  test("every element writes its text literally", () => {
+    const markdown = toMarkdown({
+      root: "c",
+      elements: [
+        { id: "c", type: "Card", props: { title: "Q3 *draft*" }, children: ["m", "x", "t", "w"] },
+        { id: "m", type: "Metric", props: { label: "**Net** sales", value: 47 } },
+        { id: "x", type: "Text", props: { text: "- not a list item" } },
+        {
+          id: "t",
+          type: "DataTable",
+          props: {
+            columns: [{ label: "Name" }, { label: "Note" }],
+            rows: [["[x](javascript:alert(1))", "<img src=x> a|b"]],
+          },
+        },
+        { id: "w", type: "Callout", props: { tone: "warning", text: "Line one\n> not nested" } },
+      ],
+    });
+    expect(markdown).toBe(
+      [
+        "### Q3 \\*draft\\*",
+        "- **\\*\\*Net\\*\\* sales:** 47",
+        "\\- not a list item",
+        "| Name | Note |\n| --- | --- |\n| \\[x\\](javascript:alert(1)) | \\<img src=x\\> a\\|b |",
+        // `javascript:` is no GFM autolink; only the brackets needed escaping.
+        "> Line one\n> \\> not nested",
+      ].join("\n\n"),
+    );
+  });
+
+  test("leaves an email as the plain text a mail client expects", () => {
+    const email = {
+      view: "email",
+      props: { to: ["a@x.example"], subject: "Hi", body: "*Two* things" },
+    };
+    expect(viewToMarkdown(email)).toContain("*Two* things");
   });
 });
 

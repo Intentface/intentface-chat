@@ -1,24 +1,40 @@
 ---
 title: Generative UI
-description: Layouts and views a model composes from a catalog, validated on the server, drawn with your components, and readable as Markdown anywhere they can't be drawn.
+description: The model answers with UI by calling a tool. Its input names pieces from your catalog; your server checks it, your components draw it, and it reads as Markdown wherever it can't be drawn.
 source: genui
 ---
 
-import { Basic } from './genui/demos/basic';
-import { Streaming } from './genui/demos/streaming';
-import { MarkdownExport } from './genui/demos/markdown';
+import { Chat } from './genui/demos/chat';
+import { RenderProps } from './genui/demos/render-props';
+import { Views } from './genui/demos/views';
 
-<Demo component={<Basic />} file="primitives/genui/demos/basic.tsx" />
+<Demo component={<Chat />} file="primitives/genui/demos/chat.tsx" bleed />
+
+## How it works
+
+Generative UI is a tool call. The model never writes markup or code: it calls
+a tool whose input is JSON naming pieces from your catalog, and your chat draws
+that JSON with your own components. The demo above plays one turn:
+
+1. **The agent fetches data** with a tool it already has. Here `query_deals` returns four deals, with a short `ref` (`deals_1`) in its result.
+2. **The model answers with UI** by calling `show_ui`. The input names elements from the catalog: a `Card` holding a `Grid` of two `Metric`s and a `DataTable`. The table doesn't copy the four rows. It points at the query's result by its ref.
+3. **Your chat draws the call while it streams.** Each piece appears once its props parse, drawn by your component for it.
+4. **Your server checks the whole call** with `accept`. A mistake is refused with a message that names it, the message goes back to the model as the tool's result, and the model calls again. Play the demo with a mistake to see it.
+5. **The model is told what was shown,** in one line, and its reply adds only what the UI doesn't say.
+6. **You keep the call.** It is plain JSON, so you can store it, draw it again later, or read it as Markdown wherever it can't be drawn.
+
+Two kinds of tool cover most answers. `show_ui` composes a layout from
+elements, as above. `show_view` picks one ready-made view and fills it in (see
+[Views](#views)). Offer either or both; each is its own tool.
 
 ## Usage guidelines
 
-- **Experimental** — the entries may change in any minor release while the API settles. Pin an exact version, and check the changelog when upgrading.
-- **Three entries** — `@intentface/chat/genui` is the headless core: the catalog, its zod schemas, spec checks, streaming reads, bindings, render props, the tool helper and Markdown. It imports no React and touches no DOM, so a server can validate, store and index specs with it. `@intentface/chat/genui-render` draws them, and `@intentface/chat/genui-testing` checks your components.
-- **Bring your own components** — the package works out the logic of every piece and hands your components *render props*: values formatted, alignment and tone decided. Your components own markup, interaction and styling. Nothing the package ships is styled, so a stored spec re-skins itself when your theme changes: it never held a colour.
-- **Two tiers** — a *spec* is a layout the model composes from elements (`Card`, `Grid`, `Metric`…). A *view* is a precomposed piece it picks and fills (`table`, `email`…). Offer either or both.
-- **Every entry reads as Markdown** — `toMarkdown` is required on every catalog entry. It is what the UI turns into in a clipboard, a model's history, a search index, a document an agent reads later, and on screen for a piece your map has no component for.
-- **One Root per UI** — how far the input has got and what the reader did to it belong to one tool call, so render a `GenUi.Root` for each.
-- **Not tied to a chat** — the renderer reads no thread or message context. Mount it in a reply, a document node, a slide or a read-only share.
+- **Experimental** — the entry points may change in any minor release while the API settles. Pin an exact version, and check the changelog when upgrading.
+- **Three entry points** — `@intentface/chat/genui` is the headless core: the catalog, its zod schemas, the checks, the tool helper and Markdown. It imports no React, so your server uses it to check and store calls. `@intentface/chat/genui-render` draws them, and `@intentface/chat/genui-testing` checks your components.
+- **Bring your own components** — the package works out the logic of every piece and hands your components *render props*: values formatted, alignment and tone decided. Your components own markup, interaction and styling. Nothing the package ships is styled, so a stored call re-skins itself when your theme changes: it never held a colour. The demos on this page draw with one component map, `components.tsx` in their code, which you can copy.
+- **Every piece reads as Markdown** — `toMarkdown` is required on every catalog entry. It is what the UI becomes on a clipboard, in a model's history, in a search index, in a document an agent reads later, and on screen for a piece your map has no component for.
+- **One Root per tool call** — how far a call has got and what the reader did to it belong to that call, so render a `GenUi.Root` for each.
+- **Not tied to a chat** — the renderer reads no thread or message context. Mount it in a reply, a document, a slide or a read-only share.
 - **No AI SDK dependency** — the tool helper hands you a description, a JSON schema and validation; wrap them with whichever SDK you use. `zod` 4 is a peer dependency.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
@@ -35,27 +51,43 @@ import { GenUi } from "@intentface/chat/genui-render";
 </GenUi.Root>
 ```
 
-`GenUi.Root` renders no element; it holds the catalog, the component map, the
+`GenUi.Root` renders no element; it holds the catalog, your component map, the
 phase and the reader's state. `GenUi.Spec` and `GenUi.View` render no wrapper
 around what they draw either, so a `Grid`'s children are the grid's children.
 
 ## The catalog
 
-`defaultCatalog` holds ten elements and six views:
+The catalog is the list of pieces the model may use, and it is also the
+tool's documentation: the model is sent every piece's description and schema
+with the tool, so it never has to look anything up. `defaultCatalog` holds ten
+elements and six views:
 
 | Elements | Views |
 | --- | --- |
 | `Card`, `Stack`, `Grid` (containers) | `table`, `chart`, `metrics` |
 | `Heading`, `Text`, `Metric`, `KeyValue`, `DataTable`, `Chart`, `Callout` | `record`, `email`, `steps` |
 
-Each entry is plain data: a `description` written for the model (*when* to use
-it), zod `props`, an optional bindable `input` schema, `toMarkdown`, and a
-realistic `example`. Optionally, `toRender` shapes its render props,
-`summarise` describes it in a few words for a model's history, and `fixtures`
-holds props in other states worth drawing. Extend or narrow a catalog by
-spreading it into `defineCatalog`:
+An entry is plain data, read four ways: the model is sent its description and
+schema; your server checks calls against the schema; the renderer draws only
+what parses; and its `toMarkdown` is how it reads everywhere else. Every entry
+has:
+
+- `description` — when to use it, written for the model.
+- `props` — a zod schema.
+- `toMarkdown(props, context)` — how it reads as Markdown.
+- `example` — realistic props. The tool shows them to the model, and tests draw them.
+- `container` (elements only) — whether it holds other elements.
+- `label` and `summarise` (views only) — what people call it, and one line for the model's history.
+
+Optionally, `toRender` shapes its [render props](#render-props), an element's
+`summarise` describes it for the model's history, `input` lets its data be
+[bound by reference](#data-by-reference), `settle` trims a long array while it
+streams, `toRows` exports its data as a table, and `fixtures` holds props in
+other states worth drawing. Extend or narrow a catalog by spreading it into
+`defineCatalog`:
 
 ```ts
+import { z } from "zod";
 import {
   defaultCatalog,
   defineCatalog,
@@ -90,37 +122,43 @@ export const documents = defineCatalog({
 });
 ```
 
-`limits` (40 elements, 6 deep and 24 children per container by default) are
-what `checkSpec` enforces, and a single call can override them. The children cap
-is also part of the schema the model is sent, built from the catalog, so a call
-can lower it but only the catalog can raise it. The table row cap (500) is part
-of that schema too, so it is set where the schema is built:
-`createDefaultCatalog({ maxRows })`. That function also takes `refDescription`,
-the one model-facing description only you can write: what your `$data` refs look
-like.
+`limits` cap a layout at 40 elements, 6 levels deep and 24 children per
+container by default. `checkSpec`, `canonicalSpec` and the tool helper enforce
+them, and each takes its own `limits` to tighten them. The children cap is also
+part of the schema the model is sent, so only the catalog can raise it. The
+table row cap (500) is part of that schema too, so it is set where the schema
+is built: `createDefaultCatalog({ maxRows })`. That function also takes
+`refDescription`, the one description for the model only you can write: what
+your refs look like.
 
 ## Render props
 
-Schema props are shaped for the model: rows as arrays, raw numbers, no
-handlers, because they cost output tokens. Your components get render props
-instead, shaped for a design system, plus the schema props as `props` and, for
-a container, its drawn `children`:
+What the model writes is shaped for the model: raw numbers, rows as arrays, as
+few tokens as possible. Your components get *render props* instead, shaped for
+drawing. Pick an element to see one turned into the other:
+
+<Demo component={<RenderProps />} file="primitives/genui/demos/render-props.tsx" bleed />
 
 | Entry | Render props |
 | --- | --- |
 | `Card`, `Stack`, `Grid`, `Heading`, `Text`, `Callout`, `email` | The schema props |
 | `Metric` | `label`, `text` (formatted), `delta?: { text, label?, direction, tone }`, `tone` |
 | `KeyValue` | `items: { label, value, text }[]` |
-| `DataTable`, `table` | `columns: { key, label, align, display, sortable, format? }[]`, `rows: { key, cells: { value, text }[] }[]`, `count` |
-| `Chart`, `chart` | `kind`, `categories` (labels as shown), `series`, `stacked`, `formatValue(v)`, `formatTick(v)` |
+| `DataTable`, `table` | `columns: { key, label, align, display, sortable, format? }[]`, `rows: { key, cells: { value, text }[] }[]`, `count: { total, matching }` |
+| `Chart`, `chart` | `kind`, `categories` (labels as shown), `series`, `stacked`, `format?`, `formatValue(v)`, `formatTick(v)` |
 | `metrics` | `items` of `Metric`'s render props |
 | `record` | `name`, `subtitle?`, `status?: { label, tone }`, `fields`, `note?` |
 | `steps` | `items: { key, title, detail?, status }[]` |
 
-A view's component also gets its `title`. Values are formatted with Root's
-`locale` and `timeZone`. Build the map with `defineComponents`, which checks it
-against the catalog: an element without a component, or a component whose props
-don't match its render props, is a type error.
+Every component also gets the schema props as `props`, a container gets its
+drawn `children`, and a view gets its `title`. A table column's `display` is
+always `"text"` and `sortable` always `false` for now; they are there so
+components written today keep working when those arrive. Values are formatted
+with Root's `locale` and `timeZone`.
+
+Build the map with `defineComponents`, which checks it against the catalog: an
+element without a component, or a component whose props don't match its
+render props, is a type error.
 
 ```tsx
 const components = defineComponents(catalog, {
@@ -138,7 +176,22 @@ const components = defineComponents(catalog, {
 Root reads against the widest catalog you know, so it takes any part of a map:
 a piece without a component is drawn through `Fallback` from its Markdown.
 
-## Specs
+## Specs and views
+
+A call to a layout tool like `show_ui` is a *spec*: a tree of elements the
+model composes. A call to a view tool like `show_view` is a *view*: one
+ready-made piece the model picks and fills.
+
+### Views
+
+<Demo component={<Views />} file="primitives/genui/demos/views.tsx" bleed />
+
+A view is `{ view, title?, props }`. Its layout is fixed, so the model only
+chooses which one and fills its props, which makes a view cheaper and harder to
+get wrong than a layout. Use a view when one fits the answer, and a layout when
+the answer needs several pieces together.
+
+### Specs
 
 A spec is flat: `{ root, elements }`, with containers listing their children
 by id. It comes in three forms:
@@ -149,11 +202,16 @@ by id. It comes in three forms:
 | `SpecSchema` | Elements **by id**, `v`, bindings in place | What you **store**. |
 | `ResolvedSpecSchema` | The same, every bound value in place | What is drawn and written as Markdown. |
 
-Get all three from `specSchemas(catalog)`. Call `canonicalSpec(input)` on model
-input: it normalises the two slips models make (`component` written for `type`,
-props written beside `type`), refuses duplicate ids, validates, checks the
-tree, and stamps the catalog version. The errors come back in words a model
-can act on, so they can be returned as the tool's answer.
+Get all three from `specSchemas(catalog)`.
+
+### Accepting a call
+
+`canonicalSpec(input)` turns a layout call into the spec to store, or into
+errors. It normalises the two slips models make (`component` written for
+`type`, props written beside `type`), refuses duplicate ids, validates, checks
+the tree, and stamps the catalog version. The errors are written for the
+model, so they can be returned as the tool's result. The tool helper's
+`accept` calls it for you.
 
 ```ts
 const result = canonicalSpec(toolInput, { catalog });
@@ -170,6 +228,11 @@ const result = canonicalView(toolInput, { catalog });
 if (!result.ok) return { ok: false, errors: result.errors };
 await save(result.view); // { v: 1, view: "table", title?, props }
 ```
+
+`when` is reserved as an element key for conditions in a later catalog
+version. Until then it is refused by name rather than read as a prop, and an
+element that carries it is left out of what is drawn: drawn without its
+condition, it could show what was meant to be hidden.
 
 ### Keeping specs
 
@@ -190,21 +253,18 @@ const result = readStoredSpec(stored, { catalog }); // migrated, then validated
 `readStoredSpec` reads a spec with no `v` as version 1. It refuses a spec from a
 newer catalog rather than guessing at it, and parses strictly: the leniency
 `canonicalSpec` gives model input never applies to something already stored.
-`migrateSpec(spec, fromVersion, catalog)` runs only the migration steps.
-
-`when` is reserved as an element-level key for conditions in a later catalog
-version. Until then, it is refused by name rather than read as a prop, and an
-element that carries it is left out of what is drawn: shown without its
-condition, it could reveal what was meant to be hidden.
+`migrateSpec(spec, fromVersion, catalog)` runs only the migration steps. There
+is no stored-view reader yet: a stored view is read back by passing it to
+`canonicalView` again.
 
 ## The tool helper
 
-`genUiTool(catalog, options)` gives a host everything a generative-UI tool
-needs, with no SDK in it: a description that tells the model when to use UI and
-the rules a call keeps, the JSON schema it is shown, an example, validation
-with a summary, and what to tell the model afterwards. The schema is shown but
-not enforced by the SDK: `accept` validates, so a refusal names the field and
-the model can fix it.
+`genUiTool(catalog, options)` gives your server everything a generative-UI
+tool needs, with no SDK in it: a description that tells the model when to use
+UI and the rules a call must follow, the JSON schema it is shown, an example,
+`accept` to check a call, and `modelText` for what to tell the model
+afterwards. The SDK doesn't enforce the schema; `accept` does, so a refusal
+names the field and reaches the model as something it can fix.
 
 ```ts
 import { genUiTool } from "@intentface/chat/genui";
@@ -217,50 +277,103 @@ export const showUi = tool({
   inputSchema: jsonSchema(layout.inputSchema),
   execute: async (input) => {
     const result = layout.accept(input);
-    if (result.ok) await save(result.spec);
-    return layout.modelText(result); // "Shown to the user: …" or what to fix
+    if (result.ok && "spec" in result) await save(result.spec);
+    // The chat reads `ok`; the model reads only the text.
+    return { ok: result.ok, text: layout.modelText(result) };
   },
+  toModelOutput: ({ output }) => ({ type: "text", value: output.text }),
 });
 ```
 
 A view tool takes `kind: "view"` and, optionally, the `views` it offers; its
-schema is `{ view, title?, props }`, an object at the top as providers require.
-The helper is built once per catalog and options, so the definition stays
-stable for a provider's prompt cache. Before sending history back to the
-model, `compactHistory(messages, { tools })` replaces earlier large UI inputs
-with what they showed.
+schema is `{ view, title?, props }`. The helper is built once per catalog and
+options, so the tool definition stays the same from turn to turn and a
+provider's prompt cache holds. Before sending history back to the model,
+`compactHistory(messages, { tools })` replaces earlier large UI inputs with a
+line saying what they showed.
 
 ## Data by reference
 
-A table's rows, or a chart's categories and series, can name their data instead
-of copying it:
+A table's rows, a chart's categories, or a chart series' values can point at
+data instead of copying it. Copying is where the tokens and the typos are: a
+model that read 200 rows would retype every cell, and nothing would catch a
+mistyped one.
 
-```json
-{ "$data": "queries/paid-by-branch", "columns": ["branch", "paid"] }
-```
+In a chat, the data is already there: it is the result of a tool the agent ran
+earlier in the turn. The demo at the top of this page does this in three steps:
 
-The ref is an **opaque string**. No schema here constrains its format, and
-nothing here resolves it. A chat might resolve it against a tool result and a
-document against a saved query. You resolve each binding and file the values
-by where the binding sits (`elements.paid.props.rows`); then `withData`, the
-renderer's `data` prop or the export's `data` option swaps them in.
+1. **Your data tool puts a short `ref` in its result.** The model sees the result, ref included.
+
+   ```json
+   { "ref": "deals_1", "rows": [{ "company": "Aalto Labs", "stage": "Proposal", "amount": 62400 }, …] }
+   ```
+
+2. **The model binds the table to that ref** and names the columns to pick, in order:
+
+   ```json
+   "rows": { "$data": "deals_1", "columns": ["company", "stage", "amount"] }
+   ```
+
+   A chart binds one column at a time: `"categories": { "$data": "deals_1", "column": "month" }`.
+
+3. **Your chat resolves the binding.** It finds the result with that ref in the message history, picks the columns, and passes the rows to `GenUi.Spec` as `data`, filed by where the binding sits:
+
+   ```ts
+   // `results` maps each ref to its tool result, collected from the messages.
+   const resolve = (spec: { elements: { id: string; props: { rows?: unknown } }[] }) => {
+     const data: Record<string, unknown> = {};
+     for (const element of spec.elements) {
+       const rows = element.props.rows;
+       if (!isBinding(rows) || !Array.isArray(rows.columns)) continue;
+       const result = results[rows.$data];
+       if (!result) continue;
+       const columns = rows.columns.map(String);
+       data[`elements.${element.id}.props.rows`] = result.rows.map((row) =>
+         columns.map((column) => row[column] ?? null),
+       );
+     }
+     return data;
+   };
+
+   <GenUi.Spec input={part.input} data={resolve(part.input)} />;
+   ```
+
+Resolve a call once it is whole; while it streams, a bound table is drawn as
+pending. Pass the same values to your server's `accept(input, { data })` so the
+model's summary counts the rows. Tell the model what your refs look like with
+`createDefaultCatalog({ refDescription })`.
+
+The package never reads a ref: what it names is up to you. A chat resolves it
+against a tool result, a document could resolve it against a saved query. A
+binding only picks, never computes, so every number on screen is one the
+source returned. If a ref can't be resolved, the piece is drawn through the
+`Unbound` slot, and its Markdown comes from `onUnbound`.
 
 ## UI state
 
-What the reader does to a drawn UI (the open tab, the ticked items, the sort)
-is kept beside the spec, never in it: an accepted spec is immutable. Root holds
-it uncontrolled from `defaultState`, or controlled through `state` and
-`onStateChange`. A change carries the package's change details, and
-`details.cancel()` keeps it from landing.
+What the reader does to a drawn UI (an open tab, a ticked item, a sort) is kept
+beside the spec, never in it: an accepted spec never changes. Nothing in the
+default catalog keeps state yet. A custom entry does it in its `toRender`,
+whose context carries the piece's `state` and `update(patch, reason)`; it
+hands your component a callback that calls `update`.
+
+Root holds the state uncontrolled from `defaultState`, or controlled through
+`state` and `onStateChange`. A change carries the package's change details,
+and `details.cancel()` keeps it from landing.
 
 ```tsx
+const [state, setState] = useState(() => readState(spec, stored));
+
 <GenUi.Root
   components={components}
   state={state}
-  onStateChange={(next) => save(callId, persistedState(next))}
+  onStateChange={(next) => {
+    setState(next);
+    save(callId, persistedState(next));
+  }}
 >
   <GenUi.Spec input={spec} />
-</GenUi.Root>
+</GenUi.Root>;
 ```
 
 `persistedState` keeps what outlives the session (open tabs and disclosures,
@@ -271,32 +384,28 @@ nothing.
 
 ## Markdown
 
-The same spec, on screen and as Markdown. Its table's rows are bound with
-`$data`, so switch to "Not loaded yet" to see what a reader gets before the
-host has fetched them: a line saying where the data lives, never a gap.
-
-<Demo component={<MarkdownExport />} file="primitives/genui/demos/markdown.tsx" />
-
-`toMarkdown(spec, options)` and `viewToMarkdown(view, options)` walk the input
-in reading order. Each entry's `toMarkdown(props, { children, title, state,
-locale, timeZone })` decides how it reads. `exportSpec` and `exportView` return
-the same Markdown plus every table as raw rows (`toCsv`, `toTsv`), named by the
-heading before it or the card it sits in.
+Every spec and view also reads as Markdown: switch the [views](#views) demo to
+**Markdown** to see one. `toMarkdown(spec, options)` and
+`viewToMarkdown(view, options)` write it, each entry deciding how it reads with
+its own `toMarkdown(props, { children, title, state, locale, timeZone })`.
+`exportSpec` and `exportView` return the same Markdown plus every table's data
+as rows, named by the heading before it or the card it sits in; `toCsv` and
+`toTsv` turn those rows into a file.
 
 - **Literal text** — whatever the model wrote or a source returned reads as written: nothing in it can format, link, or break the structure around it, and a bare address is not turned into a link. Links come only from you. A custom entry escapes its text the same way, with `escapeMarkdown`, `escapeMarkdownInline` and `markdownHeading`. The `email` view is the exception: it stays plain text for pasting into a mail client.
 - **`state`** — the reader's UI state, so the Markdown follows what they did.
-- **`locale`, `timeZone`** — both default to the runtime's. Pass both on a server: stored Markdown must not change with the host that wrote it. A calendar date (`2026-11-30`) is always read in UTC, so it never becomes the evening before; `timeZone` applies to timestamps.
+- **`locale`, `timeZone`** — `locale` defaults to the runtime's, so pass it on a server: stored Markdown must not change with the host that wrote it. `timeZone` defaults to UTC and applies to timestamps; a calendar date (`2026-11-30`) is always read in UTC, so it never becomes the evening before.
 - **`onUnbound`** — what a piece reads as when its data is bound and wasn't resolved. The default is `null`, which leaves the piece out. That suits copying from a chat, where the reader saw what was drawn. A document should return a line saying where the data lives: an agent reading a gap later would take it to mean there is no data.
 
 ## Copying
 
-Copying never loses a UI. A message's copy action reads each part with
-`partToMarkdown(part, { tools, state })`: text as written, each UI as its
-Markdown at the reader's state. For a selection, wrap each UI in `GenUi.Part`
-and put `copyWithGenUi` on the container's `onCopy`. A selection that touches a
-UI copies that UI's whole Markdown in place of its on-screen text, since half a
-table isn't meaningful Markdown; any other selection copies as the browser
-always does.
+A message's copy action reads each part with `partToMarkdown(part, { tools,
+state })`: text as written, each UI call as its Markdown at the reader's state.
+For a selection, wrap each UI in `GenUi.Part` and put `copyWithGenUi` on the
+container's `onCopy`. A selection that touches a UI copies that UI's whole
+Markdown in place of its on-screen text, since half a table isn't meaningful
+Markdown, and the clipboard then holds plain text only. Any other selection
+copies as the browser always does.
 
 ```tsx
 <div onCopy={copyWithGenUi}>
@@ -311,16 +420,27 @@ always does.
 
 ## Streaming
 
-<Demo component={<Streaming />} file="primitives/genui/demos/streaming.tsx" />
+While a call streams, the AI SDK hands your chat its input parsed as far as it
+has arrived (`part.input`). Pass that to `GenUi.Spec` or `GenUi.View` as it is,
+with a `phase` that says how far the call has got:
 
-Tool input streams as half-written JSON. Pass it as it is, with
-`phase="streaming"` until it is whole, `"complete"` once it is, and
-`"accepted"` once `canonicalSpec` or `canonicalView` has passed it:
+```ts
+const phase =
+  part.state === "input-streaming" ? "streaming"
+  : part.state === "output-available" && part.output.ok ? "accepted"
+  : "complete";
+```
 
-- **Only what parses is drawn.** An element whose type isn't known yet is skipped, and one whose props don't parse yet is `Pending`. A container still pending keeps its children on screen.
-- **Steady.** Streamed JSON goes valid, invalid, valid again many times a second: an enum caught mid-word fails for one chunk. Each piece keeps the last props that parsed until newer ones do, so it never blinks back. `useSteady` is exported for your own pieces.
+`complete` means the input is whole but not yet accepted. It draws like
+`accepted`, and an entry's `toRender` gets the phase, so a piece can hold off
+anything a person would set until the call is accepted: a refused call is
+replaced by its retry. Keep drawing a refused call until the retry starts
+streaming, then drop it, so the UI doesn't vanish and come back.
+
+- **Only what parses is drawn.** An element whose type isn't known yet is skipped, and one whose props don't parse yet is drawn by `Pending`. A container still pending keeps its children on screen.
+- **Steady.** Streamed JSON goes valid, invalid, valid again many times a second: an enum caught mid-word fails for one chunk. While streaming, each piece keeps the last props that parsed until newer ones do, so it never blinks back. `useSteady` is exported for your own pieces.
 - **Settled.** An entry with long arrays can define `settle` to drop the row still being written, rather than draw it short.
-- **Live.** With `live`, each piece goes through `Arrive` as it lands. Decide it once, at mount: a spec reopened from history should draw still.
+- **Live.** With `live`, each piece goes through `Arrive` as it lands. Decide it once, at mount: a call reopened from history should draw still.
 
 Once whole, a piece that still doesn't parse is dropped, or drawn by
 `Unbound` when the reason is unresolved data. A piece that throws while
@@ -343,11 +463,13 @@ test("our components draw every piece", async () => {
 });
 ```
 
-It checks what a reader gets, not markup: every text the render props carry is
-on screen, a table has its header and row roles, a heading has the heading
-role, a container draws its children, and no piece throws. `fixtures(catalog)`
-hands the same inputs to your own stories. It needs a DOM (happy-dom, jsdom)
-and `@testing-library/dom`.
+It checks what a reader gets, not markup: no piece throws or draws nothing, a
+container draws its children, and every piece has a component. For the
+built-in entries it also checks that every text the render props carry is on
+screen, that a table has its header and row roles, and that a heading has the
+heading role. Pass the catalog you actually offer: a piece you leave to
+`Fallback` is reported as missing. `fixtures(catalog)` hands the same inputs to
+your own stories. It needs a DOM (happy-dom, jsdom) and `@testing-library/dom`.
 
 ## API reference
 
@@ -358,7 +480,7 @@ Holds the catalog, components, phase and state of one UI. Renders no element.
 export const rootProps = [
   { name: "components", type: "GenUiComponentMap<C>", description: "Elements and views by name, plus optional Placeholder, Pending, Unbound, Fallback and Arrive. A piece without a component draws through Fallback." },
   { name: "catalog", type: "Catalog", default: "defaultCatalog", description: "The catalog to read the input against: the widest you know." },
-  { name: "phase", type: '"streaming" | "complete" | "accepted"', default: '"accepted"', description: "How far the input has got. While streaming, unparsed props are pending and long arrays are settled." },
+  { name: "phase", type: '"streaming" | "complete" | "accepted"', default: '"accepted"', description: "How far the input has got. While streaming, unparsed props are pending, the last props that parsed are held, and long arrays are settled." },
   { name: "live", type: "boolean", default: "false", description: "Whether the input is being written as it is drawn. Routes arriving pieces through Arrive; read by useGenUiLive()." },
   { name: "locale", type: "string", description: "BCP 47 tag for formatting values. The runtime's when omitted." },
   { name: "timeZone", type: "string", default: '"UTC"', description: "IANA zone for timestamps." },
@@ -375,7 +497,7 @@ export const rootProps = [
 A layout, drawn from its root down.
 
 export const specProps = [
-  { name: "input", type: "unknown", description: "Model input, partial or whole, or a canonical spec." },
+  { name: "input", type: "unknown", description: "The call's input, partial or whole, or a stored spec." },
   { name: "data", type: "BoundData", description: "Bound values to swap in, by where each binding sits." },
 ];
 
@@ -389,7 +511,8 @@ beside `view` are read as its props. Same props as `GenUi.Spec`.
 ### GenUi.Part
 
 Marks where one UI sits, so copying a selection that touches it takes the
-UI's whole Markdown. Renders a `<div>` element.
+UI's whole Markdown. Renders a `<div>` element, and accepts `className`,
+`style` and `render` (see [Styling](/handbook/styling)).
 
 export const partAttrs = [
   { attribute: "data-genui-part", description: "Always present; its value identifies the part." },
@@ -433,15 +556,15 @@ export const defaultAttrs = [
 | --- | --- |
 | `defineCatalog`, `createDefaultCatalog`, `defineElement`, `defineView` | Build catalogs and entries. |
 | `specSchemas(catalog)` | `SpecInputSchema`, `SpecSchema`, `ResolvedSpecSchema`, `ElementSchema`, built once per catalog. |
-| `canonicalSpec`, `canonicalView` | Model input to the spec or view to store, or errors that name the field. |
+| `canonicalSpec`, `canonicalView` | A call's input as the spec or view to store, or errors that name the field. |
 | `readStoredSpec`, `migrateSpec` | A stored spec back, brought forward to the catalog's version. |
 | `checkSpec(spec, { catalog?, limits? })` | Tree rules a schema can't state: dangling, shared and cyclic children, size and depth. |
 | `readSpec`, `normaliseSpec`, `normaliseView` | Read partial input without throwing. |
 | `genUiTool`, `compactHistory`, `partToMarkdown` | The tool helper, history compaction, a message part as Markdown. |
 | `initialState`, `readState`, `persistedState` | UI state: fresh, read back, the part worth storing. |
 | `metricRender`, `tableRender`, `chartRender`, `keyValueItems` | The built-in render props, for a custom entry that reuses them. |
-| `toMarkdown`, `viewToMarkdown`, `exportSpec`, `exportView` | Markdown and tables. |
+| `toMarkdown`, `viewToMarkdown`, `exportSpec`, `exportView`, `toCsv`, `toTsv` | Markdown, and tables as rows or files. |
 | `escapeMarkdown`, `escapeMarkdownInline`, `markdownHeading` | Literal text for a custom entry's `toMarkdown`. |
-| `withData`, `hasBinding`, `bindingRefs`, `bindingSchemas` | Bindings. |
+| `withData`, `isBinding`, `hasBinding`, `bindingRefs`, `bindingSchemas` | Bindings. |
 | `formatValue`, `formatTick`, `categoryLabel` | Values as a reader sees them, with optional `locale` and `timeZone`. |
 | `fixtures(catalog)` | Every piece in every state worth drawing, as inputs. |

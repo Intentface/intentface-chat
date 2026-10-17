@@ -21,7 +21,7 @@ import {
   type ReactNode,
   use,
   useMemo,
-  useRef,
+  useState,
 } from "react";
 import type { z } from "zod";
 import { type BoundData, bindingRefs, hasBinding, withData } from "../genui/bindings";
@@ -185,13 +185,16 @@ export const useGenUiElement = () => use(ElementContext);
  * one of those chunks. So each piece keeps the last props that parsed and
  * draws those until newer ones do — it only ever moves forward.
  *
- * Written during render on purpose: the write is idempotent for a given
- * `next`, so a render React discards leaves nothing wrong behind.
+ * Kept in state, updated during render the way React documents for
+ * information from previous renders, so nothing is written to a ref that a
+ * discarded render could leave behind. Values are compared by identity: pass
+ * one that changes only when its input does (memoised), or every render would
+ * store a new one.
  */
 export const useSteady = <T,>(next: T | undefined): T | undefined => {
-  const last = useRef<T | undefined>(undefined);
-  if (next !== undefined) last.current = next;
-  return last.current;
+  const [last, setLast] = useState(next);
+  if (next !== undefined && next !== last) setLast(next);
+  return next !== undefined ? next : last;
 };
 
 const parse = (
@@ -269,7 +272,13 @@ const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string
   const { catalog, complete, components } = useRoot("Spec");
   const element = path.includes(id) ? undefined : spec.elements[id];
   const definition = element ? catalog.elements[element.type] : undefined;
-  const props = useSteady(definition ? parse(definition, element?.props, complete) : undefined);
+  // Memoised on the element, which `readSpec` makes once per input, so a
+  // render with the same input hands `useSteady` the same props.
+  const parsed = useMemo(
+    () => (element && definition ? parse(definition, element.props, complete) : undefined),
+    [element, definition, complete],
+  );
+  const props = useSteady(parsed);
   const piece = useMemo(() => (element ? { id, type: element.type } : null), [id, element]);
   if (!element || !definition || !piece) return null;
 
@@ -336,7 +345,11 @@ export const GenUiView = ({ input, data }: GenUiViewProps) => {
   const title = useSteady(typeof normal.title === "string" ? normal.title : undefined);
   const name = isViewName(catalog, normal.view) ? normal.view : undefined;
   const definition = name ? catalog.views[name] : undefined;
-  const props = useSteady(definition ? parse(definition, normal.props, complete) : undefined);
+  const parsed = useMemo(
+    () => (definition ? parse(definition, normal.props, complete) : undefined),
+    [definition, normal.props, complete],
+  );
+  const props = useSteady(parsed);
   const piece = useMemo(() => (name ? { type: name } : null), [name]);
   const Drawn = name
     ? (components.views as Record<string, ComponentType<GenUiViewComponentProps<unknown>>>)?.[name]

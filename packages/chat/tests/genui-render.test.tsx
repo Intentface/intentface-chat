@@ -150,6 +150,21 @@ describe("GenUi, while the input streams", () => {
     rerender(tree("line"));
     expect(container.innerHTML).toBe('<figure data-kind="line"></figure>');
   });
+
+  test("settles when the parent re-renders with the same input", () => {
+    // Held in state, the steady props must not be stored anew on every render.
+    const tree = (input: unknown) => (
+      <GenUi.Root complete={false} components={components}>
+        <GenUi.Spec input={input} />
+        <GenUi.View input={{ view: "record", props: defaultCatalog.views.record.example }} />
+      </GenUi.Root>
+    );
+    const { container, rerender } = render(tree(layout));
+    for (let pass = 0; pass < 3; pass++) rerender(tree(layout));
+    expect(container.innerHTML).toBe(
+      "<section><h3>Q3</h3><p>Socks: 47</p><p>Up a lot.</p></section><h3>Northwind Traders</h3>",
+    );
+  });
 });
 
 describe("GenUi, when a piece can't be drawn", () => {

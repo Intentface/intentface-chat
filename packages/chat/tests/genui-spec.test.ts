@@ -78,9 +78,7 @@ describe("checkSpec", () => {
     const roomy = defineCatalog({ ...defaultCatalog, limits: { elements: 120, children: 60 } });
 
     // The default allows 24, and tells the model so.
-    expect(JSON.stringify(specSchemas().SpecInputSchema.toJSONSchema())).toContain(
-      '"maxItems":24',
-    );
+    expect(JSON.stringify(specSchemas().SpecInputSchema.toJSONSchema())).toContain('"maxItems":24');
     expect(canonicalSpec(input).ok).toBe(false);
     expect(canonicalSpec(input, { catalog: roomy }).ok).toBe(true);
     // A single check can lower it.
@@ -209,14 +207,20 @@ describe("canonicalView", () => {
   });
 
   test("reads a null caption as none", () => {
-    const result = canonicalView({ view: "steps", title: null, props: { items: [{ title: "A" }] } });
+    const result = canonicalView({
+      view: "steps",
+      title: null,
+      props: { items: [{ title: "A" }] },
+    });
     expect(result.ok && "title" in result.view).toBe(false);
   });
 
   test("refuses a view the catalog doesn't have, listing the ones it does", () => {
     expect(canonicalView({ view: "gallery", props: {} })).toEqual({
       ok: false,
-      errors: ['view: "gallery" is not one of the views. Views: table, chart, metrics, record, email, steps.'],
+      errors: [
+        'view: "gallery" is not one of the views. Views: table, chart, metrics, record, email, steps.',
+      ],
     });
     expect(canonicalView({ props: {} }).ok).toBe(false);
   });

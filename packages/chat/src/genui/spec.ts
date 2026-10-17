@@ -52,7 +52,11 @@ const hasReservedKey = (element: Record<string, unknown>) =>
 
 /** Capped by the catalog's limit, which the model is told through the schema. */
 const childrenSchema = (max: number) =>
-  z.array(z.string()).max(max).optional().describe("Ids of the elements inside this one, in order.");
+  z
+    .array(z.string())
+    .max(max)
+    .optional()
+    .describe("Ids of the elements inside this one, in order.");
 
 const VersionSchema = z
   .number()

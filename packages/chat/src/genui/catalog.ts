@@ -40,10 +40,16 @@ export type Limits = {
   elements: number;
   /** Deepest nesting from the root, the root counting as 1. */
   depth: number;
+  /**
+   * Most children one container may list. Also part of the schema the model
+   * is sent, built from the catalog's limit, so a single check can lower it
+   * but only the catalog can raise it.
+   */
+  children: number;
 };
 
 /** Sized for a chat answer: past this, a reply is a report and should be one. */
-export const DEFAULT_LIMITS: Limits = { elements: 40, depth: 6 };
+export const DEFAULT_LIMITS: Limits = { elements: 40, depth: 6, children: 24 };
 
 /** One version's spec as the next version's. Given whatever was stored; returns the same. */
 export type Migration = (spec: unknown) => unknown;

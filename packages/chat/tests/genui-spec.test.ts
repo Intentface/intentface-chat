@@ -69,6 +69,23 @@ describe("checkSpec", () => {
       "the limit is 50",
     );
   });
+
+  test("caps a container's children from the catalog, which the model's schema carries", () => {
+    const ids = Array.from({ length: 30 }, (_, i) => `t${i}`);
+    const elements = [{ id: "s", ...stack(...ids) }, ...ids.map((id) => ({ id, ...text(id) }))];
+    const input = { root: "s", elements };
+    const roomy = defineCatalog({ ...defaultCatalog, limits: { elements: 120, children: 60 } });
+
+    // The default allows 24, and tells the model so.
+    expect(JSON.stringify(specSchemas().SpecInputSchema.toJSONSchema())).toContain(
+      '"maxItems":24',
+    );
+    expect(canonicalSpec(input).ok).toBe(false);
+    expect(canonicalSpec(input, { catalog: roomy }).ok).toBe(true);
+    // A single check can lower it.
+    const tight = canonicalSpec(input, { catalog: roomy, limits: { children: 10 } });
+    expect(tight.ok ? "" : tight.errors.join()).toContain('"s" lists 30 children; the limit is 10');
+  });
 });
 
 describe("readSpec", () => {

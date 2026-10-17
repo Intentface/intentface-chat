@@ -67,9 +67,11 @@ export const documents = defineCatalog({
 });
 ```
 
-`limits` (40 elements, 6 deep by default) are what `checkSpec` enforces, and a
-single call can override them. The table row cap (500) is part of the schema the
-model is sent, so it is set where the schema is built:
+`limits` (40 elements, 6 deep and 24 children per container by default) are
+what `checkSpec` enforces, and a single call can override them. The children cap
+is also part of the schema the model is sent, built from the catalog, so a call
+can lower it but only the catalog can raise it. The table row cap (500) is part
+of that schema too, so it is set where the schema is built:
 `createDefaultCatalog({ maxRows })`. That function also takes `refDescription`,
 the one model-facing description only you can write: what your `$data` refs look
 like.

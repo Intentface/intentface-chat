@@ -30,11 +30,9 @@ export type Spec = { v?: number; root: string; elements: Record<string, SpecElem
 // Schemas, built from a catalog
 // ---------------------------------------------------------------------------
 
-const ChildrenSchema = z
-  .array(z.string())
-  .max(24)
-  .optional()
-  .describe("Ids of the elements inside this one, in order.");
+/** Capped by the catalog's limit, which the model is told through the schema. */
+const childrenSchema = (max: number) =>
+  z.array(z.string()).max(max).optional().describe("Ids of the elements inside this one, in order.");
 
 const VersionSchema = z
   .number()
@@ -44,6 +42,8 @@ const VersionSchema = z
   .describe("The catalog version the spec was written against.");
 
 const build = (catalog: Catalog) => {
+  const ChildrenSchema = childrenSchema(catalog.limits.children);
+
   /**
    * One arm per element, so the schema says exactly which props go with which
    * type. `id` is optional here and required in `SpecInputSchema`: the model
@@ -178,6 +178,12 @@ export const checkSpec = (
 
   const parents = new Map<string, string>();
   for (const [id, element] of Object.entries(spec.elements)) {
+    const count = childrenOf(element).length;
+    if (count > limits.children) {
+      errors.push(
+        `Element "${id}" lists ${count} children; the limit is ${limits.children}. Group them into more containers.`,
+      );
+    }
     for (const child of childrenOf(element)) {
       if (!spec.elements[child]) {
         errors.push(`Element "${id}" lists child "${child}", which is not one of the elements.`);

@@ -13,6 +13,7 @@ const LEADING_TAGS = /^(?:\[\w+\] )+/;
 // Each tag's dot colour as an OKLCH hue. A tag missing here gets a grey dot.
 const TAG_HUES: Record<string, number> = {
   Breaking: 25,
+  GenUi: 45,
   Nav: 65,
   Shell: 95,
   AskUser: 125,

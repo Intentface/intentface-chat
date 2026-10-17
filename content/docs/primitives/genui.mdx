@@ -12,6 +12,7 @@ import { MarkdownExport } from './genui/demos/markdown';
 
 ## Usage guidelines
 
+- **Experimental** — both entries may change in any minor release while the API settles. Pin an exact version, and check the changelog when upgrading.
 - **Two entries** — `@intentface/chat/genui` is the headless core: the catalog, its zod schemas, spec checks, streaming reads, bindings and Markdown. It imports no React and touches no DOM, so a server can validate, store and index specs with it. `@intentface/chat/genui-render` draws them.
 - **You own every pixel** — the renderer takes a component map typed against the catalog. Nothing it ships is styled; a stored spec re-skins itself when your theme changes, because it never held a colour.
 - **Two tiers** — a *spec* is a layout the model composes from elements (`Card`, `Grid`, `Metric`…). A *view* is a precomposed piece it picks and fills (`table`, `email`…). Offer either or both.

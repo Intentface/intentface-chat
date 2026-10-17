@@ -134,6 +134,12 @@ export type GenUiRootProps<C extends Catalog = DefaultCatalog> = {
 const logError = (error: unknown, piece: { id?: string; type: string }) =>
   console.error(`genui: ${piece.id ? `"${piece.id}" (${piece.type})` : piece.type} failed`, error);
 
+/**
+ * Holds the catalog, your component map and how whole the input is, for the
+ * specs and views inside it. Reads no thread or message, so it mounts
+ * wherever a spec does: a reply, a document, a slide, a share.
+ * Renders no element.
+ */
 export const GenUiRoot = <C extends Catalog = DefaultCatalog>({
   catalog,
   components,
@@ -240,6 +246,8 @@ export type GenUiSpecProps = {
  * whole spec that got this far was accepted against the same schemas, so a
  * failure means it outlived a change to the catalog, and a blank is better
  * than a guess.
+ * Wraps what it draws in nothing, so a grid's children are the grid's
+ * children. Only the default `Placeholder` and `Pending` render a `<div>`.
  */
 export const GenUiSpec = ({ input, data }: GenUiSpecProps) => {
   const { catalog, complete, components } = useRoot("Spec");
@@ -335,7 +343,12 @@ export type GenUiViewProps = {
   data?: BoundData;
 };
 
-/** A view, filled with its props. Steady and pending exactly as an element is. */
+/**
+ * A view, filled with its props and captioned with its title. Steady and
+ * pending exactly as an element is.
+ * Wraps the view's component in nothing. Only the default `Placeholder`
+ * renders a `<div>`.
+ */
 export const GenUiView = ({ input, data }: GenUiViewProps) => {
   const { catalog, complete, components } = useRoot("View");
   const normal = useMemo(() => {

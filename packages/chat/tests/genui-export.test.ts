@@ -3,7 +3,13 @@ import { bindingRefs, hasBinding, withData } from "../src/genui/bindings";
 import { defaultCatalog } from "../src/genui/catalog";
 import type { ElementDefinition } from "../src/genui/define";
 import { exportSpec, exportView, toMarkdown, viewToMarkdown } from "../src/genui/export";
-import { escapeMarkdown, markdownHeading, markdownTable, toCsv } from "../src/genui/markdown";
+import {
+  escapeMarkdown,
+  escapeMarkdownInline,
+  markdownHeading,
+  markdownTable,
+  toCsv,
+} from "../src/genui/markdown";
 import { specSchemas } from "../src/genui/spec";
 
 const { elements, views } = defaultCatalog;
@@ -230,6 +236,15 @@ describe("Markdown is literal", () => {
   test("a heading stays one line, and keeps a trailing #", () => {
     expect(markdownHeading(4, "Ranked #")).toBe("#### Ranked \\#");
     expect(markdownHeading(3, "Q3 <b>\nsplit")).toBe("### Q3 \\<b\\> split");
+  });
+
+  test("one line of text joins its lines with one space, and stays fast on long runs", () => {
+    expect(escapeMarkdownInline("Paid \n\n  orders")).toBe("Paid orders");
+    expect(escapeMarkdownInline("  two  spaces\tstay ")).toBe("  two  spaces\tstay ");
+    // A long run of spaces with no line break once took quadratic time.
+    const start = performance.now();
+    escapeMarkdownInline(`${" ".repeat(100_000)}x`);
+    expect(performance.now() - start).toBeLessThan(100);
   });
 
   test("every element writes its text literally", () => {

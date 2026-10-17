@@ -47,7 +47,14 @@ const escapeChars = (text: string) =>
  * One line of literal text, for a label, a cell or a heading: line breaks
  * become spaces, and nothing in it can format or link.
  */
-export const escapeMarkdownInline = (text: string) => escapeChars(text.replace(/\s*\n\s*/g, " "));
+export const escapeMarkdownInline = (text: string) => escapeChars(oneLine(text));
+
+/**
+ * A run of whitespace that holds a line break, as one space. Each run is
+ * matched once, whole, so this stays linear on text a model or a source
+ * wrote: `\s*\n\s*` backtracks across a long run of spaces at every start.
+ */
+const oneLine = (text: string) => text.replace(/\s+/g, (run) => (run.includes("\n") ? " " : run));
 
 /**
  * Literal text that may run over several lines, such as a paragraph. Each

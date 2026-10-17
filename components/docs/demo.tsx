@@ -8,12 +8,14 @@ type DemoProps = {
   component: ReactNode;
   /** Path under content/docs, e.g. "primitives/composer/demos/basic.tsx". */
   file: string;
+  /** Fill the card edge to edge, for a demo that is a whole window of its own. */
+  bleed?: boolean;
 };
 
 // Server component: renders a colocated demo and shows its source, read from
 // disk at build time — the files that run are the files displayed. A demo split
 // across local imports shows one tab per file.
-export const Demo = async ({ component, file }: DemoProps) => {
+export const Demo = async ({ component, file, bleed }: DemoProps) => {
   const files = await readDemoFiles(file);
   const entries = await Promise.all(
     files.map(async ({ name, file: filePath, source }) => ({
@@ -23,5 +25,7 @@ export const Demo = async ({ component, file }: DemoProps) => {
     })),
   );
 
-  return <ComponentPreviewFrame preview={component} code={<CodeFiles files={entries} />} />;
+  return (
+    <ComponentPreviewFrame bleed={bleed} preview={component} code={<CodeFiles files={entries} />} />
+  );
 };

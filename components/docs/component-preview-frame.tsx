@@ -11,6 +11,12 @@ import { cn } from "@/lib/utils";
 type ComponentPreviewFrameProps = {
   preview: ReactNode;
   code: ReactNode;
+  /**
+   * Let the demo fill the card edge to edge instead of sitting centred in its
+   * padding: for a demo that is a whole window of its own. It keeps clear of
+   * the replay button in its top-right corner.
+   */
+  bleed?: boolean;
 };
 
 type View = "preview" | "code";
@@ -24,7 +30,7 @@ const HIDDEN = { opacity: 0, filter: "blur(4px)" };
 // source and renders the demo; this owns the tab state and the replay remount.
 // One card holds both views: they cross-dissolve inside it while the card eases
 // between their heights, and the demo stays mounted, keeping its state.
-export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFrameProps) => {
+export const ComponentPreviewFrame = ({ preview, code, bleed }: ComponentPreviewFrameProps) => {
   const [tab, setTab] = useState<View>("preview");
   const [run, setRun] = useState(0);
   // Both views are measured, so a switch knows its target height up front.
@@ -84,7 +90,8 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
           transition={paneTransition}
           className={cn(
             paneClass(tab === "preview"),
-            "flex min-h-60 items-center justify-center p-8",
+            "flex min-h-60",
+            bleed ? "overflow-hidden rounded-xl" : "items-center justify-center p-8",
           )}
         >
           {/* Replay remounts the demo, so animations and seeded state start over. */}
@@ -93,11 +100,11 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
             size="sm"
             aria-label="Replay demo"
             onClick={() => setRun((current) => current + 1)}
-            className="absolute top-2 right-2"
+            className="absolute top-2 right-2 z-10"
           >
             <RotateCcw />
           </IconButton>
-          <div key={run} className="flex w-full items-center justify-center">
+          <div key={run} className={cn("flex w-full", !bleed && "items-center justify-center")}>
             {preview}
           </div>
         </m.div>

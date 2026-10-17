@@ -477,7 +477,7 @@ export const GenUiSpec = ({ input, data }: GenUiSpecProps) => {
  * guards against a cycle in a spec nobody has checked yet.
  */
 const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string[] }) => {
-  const { catalog, phase, components, format, state } = useRoot("Spec");
+  const { catalog, phase, components } = useRoot("Spec");
   const complete = phase !== "streaming";
   const element = path.includes(id) ? undefined : spec.elements[id];
   const definition = element ? catalog.elements[element.type] : undefined;
@@ -499,45 +499,68 @@ const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string
     : undefined;
 
   if (props === undefined || rendered === undefined) {
-    if (complete) {
-      return hasBinding(element.props) ? (
-        <Unbound id={id} props={element.props} type={element.type} />
-      ) : null;
-    }
-    const Pending = components.Pending ?? DefaultPending;
     return (
-      <Pending container={definition.container} type={element.type}>
+      <NotDrawn container={definition.container} id={id} props={element.props} type={element.type}>
         {children}
-      </Pending>
+      </NotDrawn>
     );
   }
 
   const Drawn = (components.elements as Record<string, ComponentType<Record<string, unknown>>>)[
     element.type
   ];
-  if (!Drawn) {
-    const Fallback = components.Fallback ?? DefaultFallback;
-    const markdown = exportSpec(spec, { catalog, from: id, state, ...format })?.markdown ?? "";
-    return (
-      <Arrive>
-        <Boundary piece={piece}>
-          <Fallback id={id} markdown={markdown} type={element.type} />
-        </Boundary>
-      </Arrive>
-    );
-  }
-
   return (
     <Arrive>
       <Boundary piece={piece}>
-        <ElementContext value={piece}>
-          <Drawn {...rendered} props={props}>
-            {children}
-          </Drawn>
-        </ElementContext>
+        {Drawn ? (
+          <ElementContext value={piece}>
+            <Drawn {...rendered} props={props}>
+              {children}
+            </Drawn>
+          </ElementContext>
+        ) : (
+          <ElementFallback id={id} spec={spec} type={element.type} />
+        )}
       </Boundary>
     </Arrive>
   );
+};
+
+/**
+ * An element whose props don't parse: pending while the input streams; once
+ * it is whole, `Unbound` when the reason is unresolved data, else nothing.
+ */
+const NotDrawn = ({
+  id,
+  type,
+  props,
+  container,
+  children,
+}: {
+  id: string;
+  type: string;
+  props: unknown;
+  container: boolean;
+  children?: ReactNode;
+}) => {
+  const { phase, components } = useRoot("Spec");
+  if (phase !== "streaming") {
+    return hasBinding(props) ? <Unbound id={id} props={props} type={type} /> : null;
+  }
+  const Pending = components.Pending ?? DefaultPending;
+  return (
+    <Pending container={container} type={type}>
+      {children}
+    </Pending>
+  );
+};
+
+/** An element the map has no component for, drawn from its subtree's Markdown. */
+const ElementFallback = ({ spec, id, type }: { spec: LooseSpec; id: string; type: string }) => {
+  const { catalog, components, format, state } = useRoot("Spec");
+  const Fallback = components.Fallback ?? DefaultFallback;
+  const markdown = exportSpec(spec, { catalog, from: id, state, ...format })?.markdown ?? "";
+  return <Fallback id={id} markdown={markdown} type={type} />;
 };
 
 const Unbound = ({ id, type, props }: { id?: string; type: string; props: unknown }) => {

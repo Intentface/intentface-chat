@@ -151,6 +151,106 @@ const draw = async (
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+/** Text the render props promise that isn't on screen: the first few, then a count. */
+const missingText = (fixture: Fixture, render: Render, text: string) => {
+  const absent = expectedText(fixture, render).filter(
+    (expected) => !text.includes(normal(expected)),
+  );
+  const lines = absent
+    .slice(0, 3)
+    .map((expected) => `${fixture.name}: "${normal(expected).slice(0, 60)}" isn't on screen.`);
+  if (absent.length > 3) lines.push(`${fixture.name}: …and ${absent.length - 3} more texts.`);
+  return lines;
+};
+
+/** A table's header and row roles, which a screen reader navigates by. */
+const tableRoles = (fixture: Fixture, render: Render, container: HTMLElement) => {
+  const isTable = fixture.type === (fixture.kind === "view" ? "table" : "DataTable");
+  const columns = (render.columns as unknown[] | undefined)?.length ?? 0;
+  const rows = (render.rows as unknown[] | undefined)?.length ?? 0;
+  if (!isTable || rows === 0) return [];
+  const lines: string[] = [];
+  const headers = queryAllByRole(container, "columnheader").length;
+  if (headers < columns) {
+    lines.push(
+      `${fixture.name}: ${columns} columns need ${columns} column headers (role columnheader); found ${headers}.`,
+    );
+  }
+  const drawnRows = queryAllByRole(container, "row").length;
+  if (drawnRows < rows + 1) {
+    lines.push(
+      `${fixture.name}: ${rows} rows and a header need ${rows + 1} rows (role row); found ${drawnRows}.`,
+    );
+  }
+  return lines;
+};
+
+/** A heading's text in an element with the heading role. */
+const headingRole = (fixture: Fixture, render: Render, container: HTMLElement) => {
+  if (fixture.kind !== "element" || fixture.type !== "Heading") return [];
+  const wanted = normal(String(render.text ?? ""));
+  const headings = queryAllByRole(container, "heading").map((heading) =>
+    normal(heading.textContent ?? ""),
+  );
+  return headings.some((heading) => heading.includes(wanted))
+    ? []
+    : [`${fixture.name}: its text isn't a heading (role heading).`];
+};
+
+/** A container's fixture holds one child; its text must be on screen. */
+const drawsChildren = (catalog: Catalog, fixture: Fixture, text: string, format: FormatOptions) => {
+  if (fixture.kind !== "element" || !catalog.elements[fixture.type]?.container) return [];
+  const { elements } = fixture.input as { elements: { id: string; type: string }[] };
+  const child = elements.find((element) => element.id === "child");
+  const entry = child ? catalog.elements[child.type] : undefined;
+  if (!child || !entry) return [];
+  const piece = {
+    ...fixture,
+    type: child.type,
+    input: { elements: [{ id: "piece", props: entry.example }] },
+  };
+  const render = renderOf(catalog, piece, format);
+  const wanted = render ? expectedText(piece, render) : [];
+  return wanted.every((expected) => text.includes(normal(expected)))
+    ? []
+    : [`${fixture.name}: it doesn't draw its children.`];
+};
+
+/** Draws one fixture and returns what fails. */
+const checkFixture = async (
+  catalog: Catalog,
+  map: GenUiComponentMap<Catalog>,
+  fixture: Fixture,
+  format: FormatOptions,
+): Promise<string[]> => {
+  const { container, errors, done } = await draw(catalog, map, fixture, format);
+  try {
+    if (errors.length > 0) return [`${fixture.name}: the component threw: ${message(errors[0])}`];
+    const text = normal(container.textContent ?? "");
+    if (text === "" && container.querySelector("*") === null) {
+      return [`${fixture.name}: drew nothing.`];
+    }
+    const render = renderOf(catalog, fixture, format);
+    return [
+      ...(render
+        ? [
+            ...missingText(fixture, render, text),
+            ...tableRoles(fixture, render, container),
+            ...headingRole(fixture, render, container),
+          ]
+        : []),
+      ...drawsChildren(catalog, fixture, text, format),
+    ];
+  } finally {
+    await done();
+  }
+};
+
+const hasComponent = (map: GenUiComponentMap<Catalog>, fixture: Fixture) =>
+  fixture.kind === "view"
+    ? Boolean((map.views as Record<string, unknown> | undefined)?.[fixture.type])
+    : Boolean((map.elements as Record<string, unknown>)[fixture.type]);
+
 /**
  * Draws every fixture of the catalog through the map and returns what fails,
  * one line each: a piece that throws or draws nothing, text the render props
@@ -166,105 +266,21 @@ export const checkComponents = async <C extends Catalog = DefaultCatalog>(
   const map = components as unknown as GenUiComponentMap<Catalog>;
   const format = { locale, timeZone };
   const failures: string[] = [];
+  const missing = new Set<string>();
 
   const scope = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const wasActEnvironment = scope.IS_REACT_ACT_ENVIRONMENT;
   scope.IS_REACT_ACT_ENVIRONMENT = true;
-
   try {
-    const missing = new Set<string>();
     for (const fixture of fixtures(catalog)) {
-      const drawn =
-        fixture.kind === "view"
-          ? (map.views as Record<string, unknown> | undefined)?.[fixture.type]
-          : (map.elements as Record<string, unknown>)[fixture.type];
-      const label = fixture.kind === "view" ? `${fixture.type} view` : fixture.type;
-      if (!drawn) {
-        if (!missing.has(label))
-          failures.push(`${label}: no component; it would draw through Fallback.`);
-        missing.add(label);
+      if (hasComponent(map, fixture)) {
+        failures.push(...(await checkFixture(catalog, map, fixture, format)));
         continue;
       }
-
-      const { container, errors, done } = await draw(catalog, map, fixture, format);
-      try {
-        if (errors.length > 0) {
-          failures.push(`${fixture.name}: the component threw: ${message(errors[0])}`);
-          continue;
-        }
-        const text = normal(container.textContent ?? "");
-        if (text === "" && container.querySelector("*") === null) {
-          failures.push(`${fixture.name}: drew nothing.`);
-          continue;
-        }
-
-        const render = renderOf(catalog, fixture, format);
-        if (render) {
-          const absent = expectedText(fixture, render).filter(
-            (expected) => !text.includes(normal(expected)),
-          );
-          for (const expected of absent.slice(0, 3)) {
-            failures.push(`${fixture.name}: "${normal(expected).slice(0, 60)}" isn't on screen.`);
-          }
-          if (absent.length > 3)
-            failures.push(`${fixture.name}: …and ${absent.length - 3} more texts.`);
-
-          const isTable =
-            fixture.type === "DataTable" || (fixture.kind === "view" && fixture.type === "table");
-          const columns = (render.columns as unknown[] | undefined)?.length ?? 0;
-          const rows = (render.rows as unknown[] | undefined)?.length ?? 0;
-          if (isTable && rows > 0) {
-            const headers = queryAllByRole(container, "columnheader").length;
-            if (headers < columns) {
-              failures.push(
-                `${fixture.name}: ${columns} columns need ${columns} column headers (role columnheader); found ${headers}.`,
-              );
-            }
-            const drawnRows = queryAllByRole(container, "row").length;
-            if (drawnRows < rows + 1) {
-              failures.push(
-                `${fixture.name}: ${rows} rows and a header need ${rows + 1} rows (role row); found ${drawnRows}.`,
-              );
-            }
-          }
-          if (fixture.kind === "element" && fixture.type === "Heading") {
-            const headingText = normal(String(render.text ?? ""));
-            const found = queryAllByRole(container, "heading").some((heading) =>
-              normal(heading.textContent ?? "").includes(headingText),
-            );
-            if (!found) failures.push(`${fixture.name}: its text isn't a heading (role heading).`);
-          }
-        }
-
-        const definition = fixture.kind === "element" ? catalog.elements[fixture.type] : undefined;
-        if (definition?.container) {
-          const child = (
-            fixture.input as { elements: { id: string; type: string }[] }
-          ).elements.find((element) => element.id === "child");
-          const childEntry = child ? catalog.elements[child.type] : undefined;
-          const childRender = childEntry
-            ? renderOf(
-                catalog,
-                {
-                  ...fixture,
-                  type: child?.type ?? "",
-                  input: {
-                    elements: [{ id: "piece", props: childEntry.example }],
-                  },
-                },
-                format,
-              )
-            : undefined;
-          const childText = childRender
-            ? expectedText({ ...fixture, type: child?.type ?? "" }, childRender)
-            : [];
-          if (childText.some((expected) => !text.includes(normal(expected)))) {
-            failures.push(`${fixture.name}: it doesn't draw its children.`);
-          }
-        }
-      } finally {
-        await done();
-      }
+      const label = fixture.kind === "view" ? `${fixture.type} view` : fixture.type;
+      if (!missing.has(label))
+        failures.push(`${label}: no component; it would draw through Fallback.`);
+      missing.add(label);
     }
   } finally {
     scope.IS_REACT_ACT_ENVIRONMENT = wasActEnvironment;

@@ -21,6 +21,9 @@ describe("genUiTool, for a layout", () => {
     expect(layout.description).toContain("Never invent");
     expect(layout.description).toContain('"$data"');
     expect(layout.description).toContain("don't repeat it");
+    // In a chat, UI is always a call: never a spec written into the reply.
+    expect(layout.description).toContain("Show UI only by calling this tool.");
+    expect(views.description).toContain("Show UI only by calling this tool.");
   });
 
   test("offers an example that it accepts", () => {

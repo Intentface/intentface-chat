@@ -85,9 +85,12 @@ type Parseable = { safeParse: (value: unknown) => { success: boolean; data?: unk
 // What the model is told
 // ---------------------------------------------------------------------------
 
+// Only a call gets the schema, acceptance and a refusal it can fix, so UI is
+// never written into a reply, fenced or not.
 const RULES = [
   "Every value comes from the conversation or a tool result. Never invent, estimate or calculate one.",
   "The user sees it as soon as it is accepted, so don't repeat it in your reply: add only what it doesn't show.",
+  "Show UI only by calling this tool. Never write its input, or any UI as JSON, into your reply.",
 ];
 
 const BINDING_RULE =
@@ -105,7 +108,9 @@ const describe = (catalog: Catalog, kind: GenUiToolKind, views: readonly string[
       : `Shows one ready-made view, filled with its props. Use it when one of these fits the answer:\n${views
           .map((name) => `- ${name}: ${catalog.views[name]?.description ?? ""}`)
           .join("\n")}`;
-  const rules = isBindable(catalog, kind, views) ? [RULES[0], BINDING_RULE, RULES[1]] : RULES;
+  const rules = isBindable(catalog, kind, views)
+    ? [RULES[0], BINDING_RULE, ...RULES.slice(1)]
+    : RULES;
   return `${lead}\n\n${rules.map((rule) => `- ${rule}`).join("\n")}`;
 };
 

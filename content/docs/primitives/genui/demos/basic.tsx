@@ -1,18 +1,19 @@
 "use client";
 
-import { defaultCatalog, defineCatalog, formatValue } from "@intentface/chat/genui";
-import { GenUi, type GenUiComponents } from "@intentface/chat/genui-render";
-import type { ReactNode } from "react";
+import { defaultCatalog, defineCatalog } from "@intentface/chat/genui";
+import { defineComponents, GenUi } from "@intentface/chat/genui-render";
 
 /*
  * A spec, drawn. The package reads it — which elements exist, which props
- * parse, what goes inside what — and every pixel comes from the components
- * below. Swap them and the same spec takes on another product's look; that is
- * also why a stored spec re-skins itself when the theme changes.
+ * parse, what goes inside what — and works out every value: the components
+ * below get render props, already formatted (`text`, `delta.text`, each
+ * cell's `text`), with alignment decided. Every pixel is theirs. Swap them
+ * and the same spec takes on another product's look; that is also why a
+ * stored spec re-skins itself when the theme changes.
  *
  * The catalog is narrowed to the four elements this page draws: a catalog is
- * plain data, and the component map is typed against it, so leaving one of
- * the four out of `components` is a type error rather than a gap on screen.
+ * plain data, and `defineComponents` checks the map against it, so leaving
+ * one of the four out is a type error rather than a gap on screen.
  */
 const catalog = defineCatalog({
   version: defaultCatalog.version,
@@ -55,9 +56,9 @@ const spec = {
   ],
 };
 
-const components: GenUiComponents<typeof catalog> = {
+const components = defineComponents(catalog, {
   elements: {
-    Card: ({ title, children }: { title?: string; children?: ReactNode }) => (
+    Card: ({ title, children }) => (
       <section className="flex w-full max-w-xl flex-col gap-4 rounded-xl border border-[#f0f0f0] bg-white p-4 dark:border-[#262626] dark:bg-[#181818]">
         {title ? <h3 className="font-medium text-sm">{title}</h3> : null}
         {children}
@@ -68,14 +69,18 @@ const components: GenUiComponents<typeof catalog> = {
         {children}
       </div>
     ),
-    Metric: ({ label, value, format, currency, delta }) => (
+    Metric: ({ label, text, delta }) => (
       <div className="rounded-lg bg-[#fafafa] p-3 dark:bg-[#111111]">
         <div className="text-[#686868] text-xs dark:text-[#9b9b9b]">{label}</div>
         <div className="font-medium text-lg tabular-nums">
-          {formatValue(value, format, currency)}
-          {delta === undefined ? null : (
-            <span className="ml-2 text-[#2f8a4a] text-xs">+{delta}%</span>
-          )}
+          {text}
+          {delta ? (
+            <span
+              className={`ml-2 text-xs ${delta.tone === "negative" ? "text-[#c0392b]" : "text-[#2f8a4a]"}`}
+            >
+              {delta.text}
+            </span>
+          ) : null}
         </div>
       </div>
     ),
@@ -84,7 +89,10 @@ const components: GenUiComponents<typeof catalog> = {
         <thead className="text-[#686868] text-xs dark:text-[#9b9b9b]">
           <tr>
             {columns.map((column) => (
-              <th className="py-1 font-normal" key={column.label}>
+              <th
+                className={`py-1 font-normal ${column.align === "right" ? "text-right" : ""}`}
+                key={column.key}
+              >
                 {column.label}
               </th>
             ))}
@@ -92,10 +100,13 @@ const components: GenUiComponents<typeof catalog> = {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr className="border-[#f0f0f0] border-t dark:border-[#262626]" key={String(row[0])}>
-              {columns.map((column, index) => (
-                <td className="py-1.5 tabular-nums" key={column.label}>
-                  {formatValue(row[index], column.format, column.currency)}
+            <tr className="border-[#f0f0f0] border-t dark:border-[#262626]" key={row.key}>
+              {row.cells.map((cell, index) => (
+                <td
+                  className={`py-1.5 tabular-nums ${columns[index]?.align === "right" ? "text-right" : ""}`}
+                  key={columns[index]?.key}
+                >
+                  {cell.text}
                 </td>
               ))}
             </tr>
@@ -104,7 +115,7 @@ const components: GenUiComponents<typeof catalog> = {
       </table>
     ),
   },
-};
+});
 
 export const Basic = () => (
   <GenUi.Root catalog={catalog} components={components}>

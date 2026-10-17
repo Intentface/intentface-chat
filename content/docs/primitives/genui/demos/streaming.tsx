@@ -1,8 +1,8 @@
 "use client";
 
-import { defaultCatalog, defineCatalog, formatValue } from "@intentface/chat/genui";
-import { GenUi, type GenUiComponents } from "@intentface/chat/genui-render";
-import { type ReactNode, useEffect, useState } from "react";
+import { defaultCatalog, defineCatalog } from "@intentface/chat/genui";
+import { defineComponents, GenUi } from "@intentface/chat/genui-render";
+import { useEffect, useState } from "react";
 
 /*
  * A spec as it streams in, replayed from the snapshots a model's tool input
@@ -67,20 +67,18 @@ const frames = [
   },
 ];
 
-const components: GenUiComponents<typeof catalog> = {
+const components = defineComponents(catalog, {
   elements: {
-    Card: ({ title, children }: { title?: string; children?: ReactNode }) => (
+    Card: ({ title, children }) => (
       <section className="flex flex-col gap-3 rounded-xl border border-[#f0f0f0] bg-white p-4 dark:border-[#262626] dark:bg-[#181818]">
         <h3 className="h-5 font-medium text-sm">{title}</h3>
         {children}
       </section>
     ),
-    Metric: ({ label, value, format, currency }) => (
+    Metric: ({ label, text }) => (
       <div>
         <div className="text-[#686868] text-xs dark:text-[#9b9b9b]">{label}</div>
-        <div className="font-medium text-lg tabular-nums">
-          {formatValue(value, format, currency)}
-        </div>
+        <div className="font-medium text-lg tabular-nums">{text}</div>
       </div>
     ),
     Text: ({ text }) => <p className="text-sm">{text}</p>,
@@ -95,7 +93,7 @@ const components: GenUiComponents<typeof catalog> = {
       <div className="h-12 rounded-lg bg-[#f5f5f5] dark:bg-[#1f1f1f]" />
     ),
   Arrive: ({ children }) => <div className="fade-in-0 animate-in duration-300">{children}</div>,
-};
+});
 
 const Replay = () => {
   const [frame, setFrame] = useState(0);
@@ -108,7 +106,12 @@ const Replay = () => {
   }, [frame, complete]);
 
   return (
-    <GenUi.Root catalog={catalog} complete={complete} components={components} live>
+    <GenUi.Root
+      catalog={catalog}
+      components={components}
+      live
+      phase={complete ? "accepted" : "streaming"}
+    >
       <GenUi.Spec input={frames[frame]} />
     </GenUi.Root>
   );

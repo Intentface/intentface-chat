@@ -325,6 +325,16 @@ export const useSteady = <T,>(next: T | undefined): T | undefined => {
   return next !== undefined ? next : last;
 };
 
+/**
+ * A piece's value, held steady only while the input streams. Once it is
+ * whole, the value as it is: props that stop parsing (bound data taken back)
+ * are dropped or Unbound, never drawn as they were.
+ */
+const useHeld = <T,>(value: T | undefined, complete: boolean): T | undefined => {
+  const steady = useSteady(value);
+  return complete ? value : steady;
+};
+
 type Entry = {
   props: z.ZodType;
   settle?(loose: unknown, complete: boolean): unknown;
@@ -487,10 +497,7 @@ const Element = ({ spec, id, path }: { spec: LooseSpec; id: string; path: string
     () => (element && definition ? parse(definition, element.props, complete) : undefined),
     [element, definition, complete],
   );
-  // Held only while it streams: once whole, props that stop parsing (bound
-  // data taken back) are dropped or Unbound, never drawn as they were.
-  const steady = useSteady(parsed);
-  const props = complete ? parsed : steady;
+  const props = useHeld(parsed, complete);
   const piece = useMemo(() => (element ? { id, type: element.type } : null), [id, element]);
   const rendered = useRender(definition, props, piece);
   if (!element || !definition || !piece) return null;
@@ -590,7 +597,7 @@ export type GenUiViewProps = {
  * `Fallback` render a `<div>`.
  */
 export const GenUiView = ({ input, data }: GenUiViewProps) => {
-  const { catalog, phase, components, format, state } = useRoot("View");
+  const { catalog, phase, format, state } = useRoot("View");
   const complete = phase !== "streaming";
   const normal = useMemo(() => {
     const view = normaliseView(input);
@@ -602,57 +609,82 @@ export const GenUiView = ({ input, data }: GenUiViewProps) => {
   );
   usePartMarkdown(markdown);
 
-  const caption = typeof normal.title === "string" ? normal.title : undefined;
-  const steadyTitle = useSteady(caption);
-  const title = complete ? caption : steadyTitle;
+  const title = useHeld(typeof normal.title === "string" ? normal.title : undefined, complete);
   const name = isViewName(catalog, normal.view) ? normal.view : undefined;
   const definition = name ? catalog.views[name] : undefined;
   const parsed = useMemo(
     () => (definition ? parse(definition, normal.props, complete) : undefined),
     [definition, normal.props, complete],
   );
-  // Held only while it streams, as an element's are.
-  const steady = useSteady(parsed);
-  const props = complete ? parsed : steady;
+  const props = useHeld(parsed, complete);
   const piece = useMemo(() => (name ? { id: VIEW_STATE_ID, type: name } : null), [name]);
-  // What a view's component and its boundary are told it is: a name, no id.
-  const shown = useMemo(() => (name ? { type: name } : null), [name]);
   const rendered = useRender(definition, props, piece);
-  const Drawn = name
-    ? (components.views as Record<string, ComponentType<Record<string, unknown>>> | undefined)?.[
-        name
-      ]
-    : undefined;
 
-  if (!name || !shown || props === undefined || rendered === undefined) {
-    if (complete) {
-      return name && hasBinding(normal.props) ? <Unbound props={normal.props} type={name} /> : null;
-    }
-    const Placeholder = components.Placeholder ?? DefaultPlaceholder;
-    return (
-      <Arrive key="placeholder">
-        <Placeholder title={title} />
-      </Arrive>
-    );
+  if (!name || props === undefined || rendered === undefined) {
+    return <ViewNotDrawn name={name} props={normal.props} title={title} />;
   }
+  return (
+    <ViewDrawn markdown={markdown} name={name} props={props} rendered={rendered} title={title} />
+  );
+};
 
-  if (!Drawn) {
-    const Fallback = components.Fallback ?? DefaultFallback;
-    return (
-      <Arrive key="view">
-        <Boundary piece={shown}>
-          <Fallback markdown={markdown()} type={name} />
-        </Boundary>
-      </Arrive>
-    );
+/**
+ * A view whose props don't parse: the placeholder while the input streams;
+ * once it is whole, `Unbound` when the reason is unresolved data, else nothing.
+ */
+const ViewNotDrawn = ({
+  name,
+  props,
+  title,
+}: {
+  name?: string;
+  props: unknown;
+  title?: string;
+}) => {
+  const { phase, components } = useRoot("View");
+  if (phase !== "streaming") {
+    return name && hasBinding(props) ? <Unbound props={props} type={name} /> : null;
   }
+  const Placeholder = components.Placeholder ?? DefaultPlaceholder;
+  return (
+    <Arrive key="placeholder">
+      <Placeholder title={title} />
+    </Arrive>
+  );
+};
 
+/** A view drawn by its component, or from its Markdown when the map has none. */
+const ViewDrawn = ({
+  name,
+  props,
+  rendered,
+  title,
+  markdown,
+}: {
+  name: string;
+  props: unknown;
+  rendered: Record<string, unknown>;
+  title?: string;
+  markdown: () => string;
+}) => {
+  const { components } = useRoot("View");
+  // What a view's component and its boundary are told it is: a name, no id.
+  const shown = useMemo(() => ({ type: name }), [name]);
+  const views = components.views as
+    | Record<string, ComponentType<Record<string, unknown>>>
+    | undefined;
+  const Drawn = views?.[name];
+  const Fallback = components.Fallback ?? DefaultFallback;
   return (
     <Arrive key="view">
       <Boundary piece={shown}>
-        <ElementContext value={shown}>
-          <Drawn {...rendered} props={props} title={title} />
-        </ElementContext>
+        {Drawn ? (
+          <ElementContext value={shown}>
+            <Drawn {...rendered} props={props} title={title} />
+          </ElementContext>
+        ) : (
+          <Fallback markdown={markdown()} type={name} />
+        )}
       </Boundary>
     </Arrive>
   );

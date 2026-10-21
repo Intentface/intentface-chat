@@ -13,7 +13,6 @@ const packageSourceAliases = {
   "@intentface/ui/reasoning": "./packages/ui/src/reasoning/index.ts",
   "@intentface/ui/steps": "./packages/ui/src/steps/index.ts",
   "@intentface/ui/attachments": "./packages/ui/src/attachments/index.ts",
-  "@intentface/ui/ask": "./packages/ui/src/ask/index.ts",
   "@intentface/ui/message": "./packages/ui/src/message/index.ts",
   "@intentface/ui/message-utils": "./packages/ui/src/message-utils.ts",
   "@intentface/ui/chip-markdown": "./packages/ui/src/chip-markdown.ts",

@@ -136,7 +136,7 @@ export const ComposerTextarea = ({
     <div style={{ position: "relative" }}>
       <div
         ref={attachRoot}
-        // contenteditable="true" is load-bearing: the store's request-mode event
+        // contenteditable="true" is load-bearing: the store's question-mode event
         // scoping and the container's click-passthrough both key off it.
         contentEditable={!disabled}
         suppressContentEditableWarning

@@ -8,8 +8,8 @@ export type EditorKeyAction =
   | { type: "command-close" }
   | { type: "command-navigate"; direction: 1 | -1 }
   | { type: "command-caret"; direction: 1 | -1 }
-  | { type: "request-arrow"; direction: 1 | -1 }
-  | { type: "request-dismiss" }
+  | { type: "question-arrow"; direction: 1 | -1 }
+  | { type: "question-dismiss" }
   | { type: "remove-last-attachment" }
   | { type: "submit-form" }
   | { type: "soft-break" };
@@ -19,7 +19,7 @@ export type ComposerSubmitOn = "enter" | "shift-enter";
 
 export type EditorKeyContext = {
   isCommandListOpen: boolean;
-  hasActiveRequests: boolean;
+  hasActiveQuestions: boolean;
   isEditorEmpty: boolean;
   hasAttachments: boolean;
   /** Defaults to "enter" (Enter sends, Shift+Enter breaks). */
@@ -31,7 +31,7 @@ export const interpretEditorKey = (
   context: EditorKeyContext,
 ): EditorKeyAction | null => {
   const { key, shiftKey } = event;
-  const { isCommandListOpen, hasActiveRequests } = context;
+  const { isCommandListOpen, hasActiveQuestions } = context;
 
   switch (true) {
     case isCommandListOpen && key === "Tab":
@@ -49,14 +49,14 @@ export const interpretEditorKey = (
     case isCommandListOpen && key === "Enter" && !shiftKey:
       return { type: "command-select" };
 
-    case hasActiveRequests && key === "ArrowUp":
-      return { type: "request-arrow", direction: -1 };
-    case hasActiveRequests && key === "ArrowDown":
-      return { type: "request-arrow", direction: 1 };
-    // Request-mode keys now attach to the options container (roving focus),
+    case hasActiveQuestions && key === "ArrowUp":
+      return { type: "question-arrow", direction: -1 };
+    case hasActiveQuestions && key === "ArrowDown":
+      return { type: "question-arrow", direction: 1 };
+    // Question-mode keys now attach to the options container (roving focus),
     // so an editor-focused Escape must dismiss from here.
-    case hasActiveRequests && key === "Escape":
-      return { type: "request-dismiss" };
+    case hasActiveQuestions && key === "Escape":
+      return { type: "question-dismiss" };
 
     case key === "Backspace" && context.isEditorEmpty && context.hasAttachments:
       return { type: "remove-last-attachment" };
@@ -77,7 +77,7 @@ export const interpretEditorKey = (
   }
 };
 
-export type RequestKeyAction =
+export type QuestionKeyAction =
   | { type: "dismiss-step" }
   | { type: "navigate-options"; direction: 1 | -1 }
   | { type: "select-option" }
@@ -85,7 +85,7 @@ export type RequestKeyAction =
   | { type: "go-next" }
   | { type: "insert-character"; character: string };
 
-export type RequestKeyEvent = {
+export type QuestionKeyEvent = {
   key: string;
   ctrlKey: boolean;
   metaKey: boolean;
@@ -93,10 +93,10 @@ export type RequestKeyEvent = {
   defaultPrevented: boolean;
 };
 
-export const interpretRequestKey = (
-  event: RequestKeyEvent,
+export const interpretQuestionKey = (
+  event: QuestionKeyEvent,
   context: { hasHighlight: boolean },
-): RequestKeyAction | null => {
+): QuestionKeyAction | null => {
   const { key } = event;
 
   switch (true) {

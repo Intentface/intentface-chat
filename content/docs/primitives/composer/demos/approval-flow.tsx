@@ -1,20 +1,19 @@
 "use client";
 
-import { Ask } from "@intentface/ui/ask";
 import {
   Composer,
-  type ComposerRequest,
-  type ComposerRequestEntry,
-  type ComposerRequestOption,
+  type ComposerAnswer,
+  type ComposerQuestion,
+  type ComposerQuestionOption,
   type ComposerSubmitData,
   useComposer,
 } from "@intentface/ui/composer";
 import { type ComponentProps, useState } from "react";
 
-// A tool approval is just a request: the id is the tool call id, the option
-// values are your decision vocabulary, and the entry routes back to the tool
+// A tool approval is just a question: the id is the tool call id, the option
+// values are your decision vocabulary, and the answer routes back to the tool
 // in onSubmit. The package never learns the word "approval" — and a single
-// request simply doesn't mount the step-navigation parts.
+// question simply doesn't mount the step-navigation parts.
 const COMMAND = "pnpm test";
 const TOOL_CALL_ID = "call_run_tests";
 
@@ -28,9 +27,9 @@ const OPTIONS = [
     command: COMMAND,
   },
   { value: "no", label: "No" },
-] satisfies readonly (ComposerRequestOption & { command?: string })[];
+] satisfies readonly (ComposerQuestionOption & { command?: string })[];
 
-const REQUESTS: ComposerRequest[] = [
+const QUESTIONS: ComposerQuestion[] = [
   {
     id: TOOL_CALL_ID,
     label: `Do you want to allow me to run ${COMMAND} for this workspace?`,
@@ -45,13 +44,13 @@ const DECISION_COPY: Record<string, string> = {
 };
 
 export const ApprovalFlow = () => {
-  const [entry, setEntry] = useState<ComposerRequestEntry | null>(null);
+  const [entry, setEntry] = useState<ComposerAnswer | null>(null);
 
   const handleSubmit = (data: ComposerSubmitData) => {
-    if (data.kind !== "requests") return;
+    if (data.kind !== "answers") return;
     // Route by the id we minted — this is where a real app resolves the call
     // (e.g. addToolOutput / executing or rejecting the tool).
-    const resolved = data.requests.find((request) => request.id === TOOL_CALL_ID);
+    const resolved = data.answers.find((answer) => answer.id === TOOL_CALL_ID);
     if (resolved) setEntry(resolved);
   };
 
@@ -66,7 +65,7 @@ export const ApprovalFlow = () => {
     // Reserve height and bottom-anchor so the panel opening never shifts the page.
     <div className="flex min-h-100 w-full max-w-xl flex-col items-center justify-end gap-3">
       <Composer.Root
-        requests={entry ? undefined : REQUESTS}
+        questions={entry ? undefined : QUESTIONS}
         onSubmit={handleSubmit}
         className="flex w-full flex-col"
       >
@@ -107,32 +106,32 @@ export const ApprovalFlow = () => {
   );
 };
 
-// Single request: no Navigation, no StepLabel — the label, the command being
-// approved (free-form children inside Ask.Root), and numbered options.
+// Single question: no Navigation, no StepLabel — the label, the command being
+// approved (free-form children inside Composer.Question), and numbered options.
 const Prompt = () => {
-  const requests = useComposer((composer) => composer.requests);
-  const request = requests.items?.[requests.step];
+  const questions = useComposer((composer) => composer.questions);
+  const question = questions.items?.[questions.step];
 
-  if (!request) return null;
+  if (!question) return null;
 
-  const draft = requests.drafts.get(requests.step);
+  const draft = questions.drafts.get(questions.step);
 
   return (
-    <Ask.Root className="flex flex-col gap-1 p-2">
-      <Ask.Header className="flex h-7 items-center gap-2 px-2">
-        <Ask.Label className="text-sm font-medium">
+    <Composer.Question className="flex flex-col gap-1 p-2">
+      <Composer.QuestionHeader className="flex h-7 items-center gap-2 px-2">
+        <Composer.QuestionLabel className="text-sm font-medium">
           Do you want to allow me to run{" "}
           <code className="rounded bg-[#f4f4f4] px-1 py-0.5 text-xs dark:bg-[#111111]">
             {COMMAND}
           </code>{" "}
           for this workspace?
-        </Ask.Label>
-      </Ask.Header>
+        </Composer.QuestionLabel>
+      </Composer.QuestionHeader>
       <div className="rounded-lg bg-[#f4f4f4] px-3 py-2.5 font-mono text-sm text-[#686868] dark:bg-[#111111] dark:text-[#9b9b9b]">
         {COMMAND}
       </div>
-      <Ask.Options
-        ref={requests.optionsRef}
+      <Composer.QuestionOptions
+        ref={questions.optionsRef}
         multiSelect={false}
         groupName="approval"
         className="flex flex-col"
@@ -141,11 +140,11 @@ const Prompt = () => {
           const optionValue = option.value ?? option.label;
           const selected = Boolean(draft?.selected.has(optionValue));
           return (
-            <Ask.Option
+            <Composer.QuestionOption
               key={optionValue}
               value={optionValue}
               selected={selected}
-              onSelect={() => requests.toggleOption(optionValue)}
+              onSelect={() => questions.toggleOption(optionValue)}
               className="group flex cursor-pointer items-start gap-2 rounded-[10px] p-2 outline-none transition-colors data-highlighted:bg-[#f4f4f4] dark:data-highlighted:bg-[#232323]"
             >
               <span
@@ -158,8 +157,8 @@ const Prompt = () => {
               >
                 {index + 1}
               </span>
-              <Ask.OptionContent className="flex flex-col gap-0.5">
-                <Ask.OptionLabel className="text-sm leading-snug">
+              <Composer.QuestionOptionContent className="flex flex-col gap-0.5">
+                <Composer.QuestionOptionLabel className="text-sm leading-snug">
                   {option.label}
                   {"command" in option && (
                     <>
@@ -169,8 +168,8 @@ const Prompt = () => {
                       </code>
                     </>
                   )}
-                </Ask.OptionLabel>
-              </Ask.OptionContent>
+                </Composer.QuestionOptionLabel>
+              </Composer.QuestionOptionContent>
               {/* Enter selects the highlighted row — surface that on it. */}
               <span
                 aria-hidden="true"
@@ -178,11 +177,11 @@ const Prompt = () => {
               >
                 ↵
               </span>
-            </Ask.Option>
+            </Composer.QuestionOption>
           );
         })}
-      </Ask.Options>
-    </Ask.Root>
+      </Composer.QuestionOptions>
+    </Composer.Question>
   );
 };
 
@@ -204,19 +203,19 @@ const SendIcon = (props: ComponentProps<"svg">) => (
 );
 
 const Controls = () => {
-  const requests = useComposer((composer) => composer.requests);
+  const questions = useComposer((composer) => composer.questions);
 
   return (
     <>
-      <Ask.Dismiss
-        onClick={requests.dismissStep}
+      <Composer.QuestionDismiss
+        onClick={questions.dismissStep}
         className="cursor-pointer rounded-full px-3 py-1.5 text-sm text-[#949494] transition-colors hover:bg-[#f4f4f4] hover:text-[#1a1a1a] dark:text-[#6f6f6f] dark:hover:bg-[#232323] dark:hover:text-[#fcfcfc]"
       >
         Skip
-      </Ask.Dismiss>
-      <Ask.Continue className="cursor-pointer rounded-full bg-[#1a1a1a] px-3.5 py-1.5 text-sm font-medium text-white dark:bg-[#fcfcfc] dark:text-[#111111]">
+      </Composer.QuestionDismiss>
+      <Composer.QuestionContinue className="cursor-pointer rounded-full bg-[#1a1a1a] px-3.5 py-1.5 text-sm font-medium text-white dark:bg-[#fcfcfc] dark:text-[#111111]">
         Submit
-      </Ask.Continue>
+      </Composer.QuestionContinue>
     </>
   );
 };

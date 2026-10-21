@@ -1,14 +1,18 @@
 "use client";
 
-import { Composer, type ComposerRequest, type ComposerSubmitData } from "@intentface/ui/composer";
+import {
+  Composer,
+  type ComposerQuestion,
+  type ComposerSubmitData,
+} from "@intentface/ui/composer";
 import { ArrowUp } from "@keyline-icons/react";
 import { useState } from "react";
-import { Controls, Prompt } from "./ask";
+import { Controls, Prompt } from "./question";
 
-// Setting `requests` arms the flow and flips requests.active. Answering or
-// skipping the last one fires onSubmit with { kind: "requests" } — entries
+// Setting `questions` arms the flow and flips questions.active. Answering or
+// skipping the last one fires onSubmit with { kind: "questions" } — entries
 // keyed by the ids minted here, carrying option values (label fallback).
-const REQUESTS: ComposerRequest[] = [
+const QUESTIONS: ComposerQuestion[] = [
   {
     id: "framework",
     label: "Which framework are you deploying to?",
@@ -39,24 +43,24 @@ const REQUESTS: ComposerRequest[] = [
   },
 ];
 
-export const AskFlow = () => {
-  const [requests, setRequests] = useState<ComposerRequest[]>(REQUESTS);
+export const QuestionFlow = () => {
+  const [questions, setQuestions] = useState<ComposerQuestion[]>(QUESTIONS);
   const [done, setDone] = useState(false);
 
   const handleSubmit = (data: ComposerSubmitData) => {
-    if (data.kind === "requests") setDone(true);
+    if (data.kind === "answers") setDone(true);
   };
 
   const reset = () => {
     setDone(false);
-    setRequests([...REQUESTS]);
+    setQuestions([...QUESTIONS]);
   };
 
   return (
     // Reserve height and bottom-anchor so the panel opening never shifts the page.
     <div className="flex min-h-[440px] w-full max-w-xl flex-col items-center justify-end gap-3">
       <Composer.Root
-        requests={done ? undefined : requests}
+        questions={done ? undefined : questions}
         onSubmit={handleSubmit}
         className="flex w-full flex-col"
       >

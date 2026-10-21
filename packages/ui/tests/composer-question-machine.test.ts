@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
-  compileRequests,
-  INITIAL_REQUEST_STATE,
+  compileAnswers,
+  INITIAL_QUESTIONS_STATE,
   isLastStep,
-  type RequestState,
-  transitionRequests,
-} from "../src/composer/request-machine";
-import type { ComposerRequest } from "../src/composer/types";
+  type QuestionsState,
+  transitionQuestions,
+} from "../src/composer/question-machine";
+import type { ComposerQuestion } from "../src/composer/types";
 
-const requests: ComposerRequest[] = [
+const questions: ComposerQuestion[] = [
   { id: "q1", label: "Q1?", options: [{ label: "A", description: "a" }] },
   {
     id: "q2",
@@ -21,9 +21,9 @@ const requests: ComposerRequest[] = [
   },
 ];
 
-describe("transitionRequests", () => {
+describe("transitionQuestions", () => {
   test("select-option on single-select advances a step and clears input", () => {
-    const { next, effects } = transitionRequests(INITIAL_REQUEST_STATE, requests, {
+    const { next, effects } = transitionQuestions(INITIAL_QUESTIONS_STATE, questions, {
       type: "select-option",
       label: "A",
     });
@@ -34,8 +34,8 @@ describe("transitionRequests", () => {
   });
 
   test("select-option on the last step compiles and submits", () => {
-    const onLast: RequestState = { step: 1, drafts: new Map() };
-    const { next, effects } = transitionRequests(onLast, requests, {
+    const onLast: QuestionsState = { step: 1, drafts: new Map() };
+    const { next, effects } = transitionQuestions(onLast, questions, {
       type: "select-option",
       label: "B",
     });
@@ -46,21 +46,21 @@ describe("transitionRequests", () => {
     expect(next.drafts.get(1)?.selected.has("B")).toBe(true);
   });
 
-  test("continue-step on the last step emits submit-requests with compiled payload", () => {
-    const state: RequestState = {
+  test("continue-step on the last step emits submit-questions with compiled payload", () => {
+    const state: QuestionsState = {
       step: 1,
       drafts: new Map([[0, { selected: new Set(["A"]), freeText: "" }]]),
     };
-    const withToggle = transitionRequests(state, requests, { type: "toggle-option", label: "B" });
-    const { effects } = transitionRequests(withToggle.next, requests, {
+    const withToggle = transitionQuestions(state, questions, { type: "toggle-option", label: "B" });
+    const { effects } = transitionQuestions(withToggle.next, questions, {
       type: "continue-step",
       freeText: "extra context",
     });
 
-    const submit = effects.find((e) => e.type === "submit-requests");
+    const submit = effects.find((e) => e.type === "submit-answers");
     expect(submit).toBeDefined();
-    if (submit?.type !== "submit-requests") throw new Error("unreachable");
-    expect(submit.requests).toEqual([
+    if (submit?.type !== "submit-answers") throw new Error("unreachable");
+    expect(submit.answers).toEqual([
       { id: "q1", selected: ["A"] },
       { id: "q2", selected: ["B"], text: "extra context" },
     ]);
@@ -68,16 +68,19 @@ describe("transitionRequests", () => {
   });
 
   test("multiSelect toggle flips membership and keeps free text", () => {
-    const first = transitionRequests({ step: 1, drafts: new Map() }, requests, {
+    const first = transitionQuestions({ step: 1, drafts: new Map() }, questions, {
       type: "toggle-option",
       label: "B",
     });
-    const second = transitionRequests(first.next, requests, { type: "toggle-option", label: "B" });
+    const second = transitionQuestions(first.next, questions, {
+      type: "toggle-option",
+      label: "B",
+    });
     expect(second.next.drafts.get(1)?.selected.size).toBe(0);
   });
 
   test("dismiss-step skips the draft entirely", () => {
-    const { next } = transitionRequests(INITIAL_REQUEST_STATE, requests, {
+    const { next } = transitionQuestions(INITIAL_QUESTIONS_STATE, questions, {
       type: "dismiss-step",
     });
     expect(next.step).toBe(1);
@@ -85,11 +88,11 @@ describe("transitionRequests", () => {
   });
 
   test("step-back preserves in-progress free text and restores the target's", () => {
-    const state: RequestState = {
+    const state: QuestionsState = {
       step: 1,
       drafts: new Map([[0, { selected: new Set(), freeText: "saved" }]]),
     };
-    const { next, effects } = transitionRequests(state, requests, {
+    const { next, effects } = transitionQuestions(state, questions, {
       type: "step-back",
       currentText: "typing on q2",
     });
@@ -100,43 +103,43 @@ describe("transitionRequests", () => {
   });
 
   test("step navigation clamps at the ends", () => {
-    const atStart = transitionRequests(INITIAL_REQUEST_STATE, requests, {
+    const atStart = transitionQuestions(INITIAL_QUESTIONS_STATE, questions, {
       type: "step-back",
       currentText: "",
     });
-    expect(atStart.next).toBe(INITIAL_REQUEST_STATE);
+    expect(atStart.next).toBe(INITIAL_QUESTIONS_STATE);
     expect(atStart.effects).toEqual([]);
   });
 });
 
-describe("compileRequests", () => {
-  test("skipped requests compile to empty-selection entries keyed by id", () => {
-    expect(compileRequests(INITIAL_REQUEST_STATE, requests)).toEqual([
+describe("compileAnswers", () => {
+  test("skipped questions compile to empty-selection entries keyed by id", () => {
+    expect(compileAnswers(INITIAL_QUESTIONS_STATE, questions)).toEqual([
       { id: "q1", selected: [] },
       { id: "q2", selected: [] },
     ]);
   });
 
   test("free text on single-select compiles to a text entry", () => {
-    const state: RequestState = {
+    const state: QuestionsState = {
       step: 0,
       drafts: new Map([[0, { selected: new Set(), freeText: " custom " }]]),
     };
-    expect(compileRequests(state, requests)[0]).toEqual({ id: "q1", selected: [], text: "custom" });
+    expect(compileAnswers(state, questions)[0]).toEqual({ id: "q1", selected: [], text: "custom" });
   });
 
   test("text is omitted entirely when the user typed nothing", () => {
-    const state: RequestState = {
+    const state: QuestionsState = {
       step: 0,
       drafts: new Map([[0, { selected: new Set(["A"]), freeText: "" }]]),
     };
-    const entry = compileRequests(state, requests)[0];
+    const entry = compileAnswers(state, questions)[0];
     expect(entry).toBeDefined();
     expect(entry && "text" in entry).toBe(false);
   });
 
   test("option values are echoed when present, labels as fallback", () => {
-    const valued: ComposerRequest[] = [
+    const valued: ComposerQuestion[] = [
       {
         id: "framework",
         label: "Which framework?",
@@ -145,18 +148,18 @@ describe("compileRequests", () => {
       },
     ];
     // Toggle keys are labels (how the widget wires Option value today).
-    const state: RequestState = {
+    const state: QuestionsState = {
       step: 0,
       drafts: new Map([[0, { selected: new Set(["Next.js", "Remix"]), freeText: "" }]]),
     };
-    expect(compileRequests(state, valued)[0]).toEqual({
+    expect(compileAnswers(state, valued)[0]).toEqual({
       id: "framework",
       selected: ["next", "Remix"],
     });
   });
 
   test("a label colliding with another option's value resolves to the selected option", () => {
-    const colliding: ComposerRequest[] = [
+    const colliding: ComposerQuestion[] = [
       {
         id: "pick",
         label: "Pick one",
@@ -169,28 +172,28 @@ describe("compileRequests", () => {
     // The widget stores an option's identity (value ?? label) — here, "b" for
     // the second option. A cross-field lookup would match the first option's
     // label instead and wrongly emit "c".
-    const state: RequestState = {
+    const state: QuestionsState = {
       step: 0,
       drafts: new Map([[0, { selected: new Set(["b"]), freeText: "" }]]),
     };
-    expect(compileRequests(state, colliding)[0]).toEqual({ id: "pick", selected: ["b"] });
+    expect(compileAnswers(state, colliding)[0]).toEqual({ id: "pick", selected: ["b"] });
   });
 
   test("keys already stored as values resolve to the same values", () => {
-    const valued: ComposerRequest[] = [
+    const valued: ComposerQuestion[] = [
       { id: "db", label: "Database?", options: [{ value: "pg", label: "PostgreSQL" }] },
     ];
-    const state: RequestState = {
+    const state: QuestionsState = {
       step: 0,
       drafts: new Map([[0, { selected: new Set(["pg"]), freeText: "" }]]),
     };
-    expect(compileRequests(state, valued)[0]).toEqual({ id: "db", selected: ["pg"] });
+    expect(compileAnswers(state, valued)[0]).toEqual({ id: "db", selected: ["pg"] });
   });
 });
 
 describe("isLastStep", () => {
-  test("reports the final request", () => {
-    expect(isLastStep({ step: 0, drafts: new Map() }, requests)).toBe(false);
-    expect(isLastStep({ step: 1, drafts: new Map() }, requests)).toBe(true);
+  test("reports the final question", () => {
+    expect(isLastStep({ step: 0, drafts: new Map() }, questions)).toBe(false);
+    expect(isLastStep({ step: 1, drafts: new Map() }, questions)).toBe(true);
   });
 });

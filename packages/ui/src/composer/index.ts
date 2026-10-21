@@ -12,13 +12,34 @@ export { useComposerController } from "./controller";
 export { filterArrayItems, fuzzyScore, suggestionRemainder } from "./fuzzy";
 export * as Composer from "./index.parts";
 export type { ComposerSubmitOn, EditorKeyAction, EditorKeyContext } from "./keyboard";
-export { interpretEditorKey, interpretRequestKey } from "./keyboard";
+export { interpretEditorKey, interpretQuestionKey } from "./keyboard";
 export type { ComposerPanelProps } from "./panel";
 export type { ComposerPlaceholderProps } from "./placeholder";
 export type { ComposerPopoverProps } from "./popover";
 export type { ActiveTokenState, RegisteredPrefix } from "./prefix-detection";
 export { CLOSED_COMMAND_STATE, detectActivePrefix } from "./prefix-detection";
-export type { RequestDraft } from "./request-machine";
+export type {
+  ComposerQuestionContinueProps,
+  ComposerQuestionDismissProps,
+  ComposerQuestionHeaderProps,
+  ComposerQuestionHintsProps,
+  ComposerQuestionLabelProps,
+  ComposerQuestionNavigationProps,
+  ComposerQuestionNextProps,
+  ComposerQuestionOptionContentProps,
+  ComposerQuestionOptionDescriptionProps,
+  ComposerQuestionOptionLabelProps,
+  ComposerQuestionOptionProps,
+  ComposerQuestionOptionState,
+  ComposerQuestionOptionsHandle,
+  ComposerQuestionOptionsProps,
+  ComposerQuestionPreviousProps,
+  ComposerQuestionProps,
+  ComposerQuestionStepLabelProps,
+  ComposerQuestionStepLabelState,
+} from "./question";
+export { useQuestionOption, useQuestionOptions } from "./question";
+export type { AnswerDraft } from "./question-machine";
 export type { ComposerRootProps } from "./root";
 export type { Segment, SegmentDoc, TextChange } from "./segments";
 export {
@@ -33,7 +54,7 @@ export type {
   ComposerCommandsState,
   ComposerEditorState,
   ComposerPanelSlice,
-  ComposerRequestsState,
+  ComposerQuestionsState,
   ComposerState,
   ComposerStore,
 } from "./store";
@@ -44,15 +65,15 @@ export type {
   ChipData,
   CommandItemData,
   CommandItemKind,
+  ComposerAnswer,
+  ComposerAnswersSubmit,
   ComposerCommandsConfig,
   ComposerCommandsItems,
   ComposerCommandsMap,
   ComposerEditorHandle,
   ComposerMessageSubmit,
-  ComposerRequest,
-  ComposerRequestEntry,
-  ComposerRequestOption,
-  ComposerRequestsSubmit,
+  ComposerQuestion,
+  ComposerQuestionOption,
   ComposerSnapshot,
   ComposerSubmitData,
   PrefixOnSelectContext,

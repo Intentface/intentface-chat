@@ -33,10 +33,9 @@ export type AppPart<Type extends AppUIMessage["parts"][number]["type"]> = Extrac
   { type: Type }
 >;
 
-// The askUser tool's input, from its zod schema; the composer's generic question
-// contract is satisfied structurally (see the assignability lock below).
-export type AskUserInput = sdk.InferToolInput<typeof askUser>;
-export type AskUserQuestion = AskUserInput["questions"][number];
+// The askUser tool's input, from its zod schema.
+export type QuestionsInput = sdk.InferToolInput<typeof askUser>;
+export type Question = QuestionsInput["questions"][number];
 
 // This app's concrete message roles. The headless Message primitive takes an
 // opaque role string; the app owns the set.
@@ -64,7 +63,7 @@ export type FilePartContractCheck = Assert<sdk.FileUIPart extends FilePart ? tru
 
 export type ChatStatusContractCheck = Assert<sdk.ChatStatus extends ChatStatus ? true : false>;
 
-// No assignability lock for the composer's `requests` prop: ComposerRequest
+// No assignability lock for the composer's `questions` prop: ComposerQuestion
 // requires a consumer-minted `id`, so tool questions are mapped explicitly at
-// the boundary (useAskUserPanelState in components/chat.tsx) rather than
+// the boundary (useQuestionsPanelState in components/chat.tsx) rather than
 // passed through structurally.

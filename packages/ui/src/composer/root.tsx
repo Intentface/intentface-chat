@@ -20,7 +20,7 @@ import {
 import { type ComposerStore, ComposerStoreContext, createComposerStore } from "./store";
 import type {
   ComposerCommandsMap,
-  ComposerRequest,
+  ComposerQuestion,
   ComposerSnapshot,
   ComposerSubmitData,
 } from "./types";
@@ -38,7 +38,7 @@ export type ComposerRootProps = Omit<PrimitiveProps<"form", ComposerRootState>, 
   onSubmit?: (data: ComposerSubmitData) => void | Promise<void>;
   isSubmitting?: boolean;
   commands?: ComposerCommandsMap;
-  requests?: ComposerRequest[];
+  questions?: ComposerQuestion[];
   defaultValue?: ComposerSnapshot;
   value?: ComposerSnapshot;
   onValueChange?: (snapshot: ComposerSnapshot) => void;
@@ -50,7 +50,7 @@ export const ComposerRoot = ({
   onSubmit,
   isSubmitting = false,
   commands = EMPTY_COMMANDS,
-  requests,
+  questions,
   defaultValue,
   value,
   onValueChange,
@@ -78,17 +78,17 @@ export const ComposerRoot = ({
 
   const onSubmitRef = useAsRef(onSubmit);
 
-  // Register this mount on the store: request entries submit through this
-  // mount's onSubmit. React also runs the cleanup without a real unmount
+  // Register this mount on the store: answers submit through this mount's
+  // onSubmit. React also runs the cleanup without a real unmount
   // (StrictMode, a hidden <Activity>), where the state lives on, so it only
   // resets an owned store once React has removed the form — that happens on a
   // real unmount only.
   useEffect(() => {
     const form = formRef.current;
-    store.submitRequestsRef.current = (requests) =>
-      onSubmitRef.current?.({ kind: "requests", requests });
+    store.submitAnswersRef.current = (answers) =>
+      onSubmitRef.current?.({ kind: "answers", answers });
     return () => {
-      store.submitRequestsRef.current = null;
+      store.submitAnswersRef.current = null;
       if (ownsStore && form && !form.isConnected) store.reset();
     };
   }, [store, ownsStore]);
@@ -106,16 +106,16 @@ export const ComposerRoot = ({
     store.setIsSubmitting(isSubmitting);
   }, [store, isSubmitting]);
 
-  // Sync the requests prop into the store and arm request mode (editor blur
-  // + document-level keyboard handling) while requests are active. An empty
+  // Sync the questions prop into the store and arm question mode (editor blur
+  // + document-level keyboard handling) while questions are active. An empty
   // array is normalized to null — otherwise the slice reads active with no
   // content to render and no keyboard handler attached.
-  const activeRequests = requests?.length ? requests : null;
+  const activeQuestions = questions?.length ? questions : null;
   useEffect(() => {
-    store.setRequests(activeRequests);
-    if (!activeRequests) return;
-    return store.activateRequests();
-  }, [store, activeRequests]);
+    store.setQuestions(activeQuestions);
+    if (!activeQuestions) return;
+    return store.activateQuestions();
+  }, [store, activeQuestions]);
 
   const { getRegisteredPrefixes } = useCommandRegistry(commands);
 
@@ -135,10 +135,10 @@ export const ComposerRoot = ({
 
   const handleFormSubmit = async (event: React.SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const { requests, attachments } = store.getSnapshot();
+    const { questions, attachments } = store.getSnapshot();
 
-    if (requests.items?.length) {
-      requests.continueStep(store.controller.getText());
+    if (questions.items?.length) {
+      questions.continueStep(store.controller.getText());
       return;
     }
 
@@ -169,8 +169,8 @@ export const ComposerRoot = ({
   const handleKeyDown = (event: React.KeyboardEvent<HTMLFormElement>) => {
     const stopGenerating = store.stopGeneratingRef.current;
     if (event.key !== "Escape" || event.defaultPrevented || !stopGenerating) return;
-    // While a request is open, Escape dismisses its step instead.
-    if (store.getSnapshot().requests.items?.length) return;
+    // While a question is open, Escape dismisses its step instead.
+    if (store.getSnapshot().questions.items?.length) return;
     event.preventDefault();
     stopGenerating();
   };

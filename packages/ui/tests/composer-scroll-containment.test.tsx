@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { Ask } from "../src/ask";
 import { Composer } from "../src/composer";
 import { scrollCaretIntoView } from "../src/composer/editor-dom";
 import { useComposer } from "../src/composer/store";
-import type { ComposerRequest } from "../src/composer/types";
+import type { ComposerQuestion } from "../src/composer/types";
 import { scrollIntoViewWithin } from "../src/internal/scroll-into-view-within";
 
 // A composer embedded in a scrolling page scrolls only its own scroll areas:
-// programmatic writes and the request flow's focus moves must leave the page
+// programmatic writes and the question flow's focus moves must leave the page
 // where it is (CHAT-42).
 
 // happy-dom has no layout, so each element gets a stubbed box.
@@ -175,10 +174,10 @@ describe("scrollIntoViewWithin", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The request flow's own focus moves
+// The question flow's own focus moves
 // ---------------------------------------------------------------------------
 
-const REQUESTS: ComposerRequest[] = [
+const REQUESTS: ComposerQuestion[] = [
   {
     id: "database",
     label: "Which database?",
@@ -187,27 +186,27 @@ const REQUESTS: ComposerRequest[] = [
 ];
 
 const RequestOptions = () => {
-  const requests = useComposer((composer) => composer.requests);
-  const request = requests.items?.[requests.step];
-  if (!request) return null;
+  const questions = useComposer((composer) => composer.questions);
+  const question = questions.items?.[questions.step];
+  if (!question) return null;
   return (
-    <Ask.Root>
-      <Ask.Options ref={requests.optionsRef}>
-        {request.options.map((option) => (
-          <Ask.Option
+    <Composer.Question>
+      <Composer.QuestionOptions ref={questions.optionsRef}>
+        {question.options.map((option) => (
+          <Composer.QuestionOption
             key={option.label}
             value={option.label}
-            onSelect={() => requests.toggleOption(option.label)}
+            onSelect={() => questions.toggleOption(option.label)}
           >
             {option.label}
-          </Ask.Option>
+          </Composer.QuestionOption>
         ))}
-      </Ask.Options>
-    </Ask.Root>
+      </Composer.QuestionOptions>
+    </Composer.Question>
   );
 };
 
-// activateRequests moves focus into the options one frame past the commit.
+// activateQuestions moves focus into the options one frame past the commit.
 const flushFrames = () =>
   act(
     () =>
@@ -216,7 +215,7 @@ const flushFrames = () =>
       }),
   );
 
-describe("request focus moves keep the page in place", () => {
+describe("question focus moves keep the page in place", () => {
   const focus = HTMLElement.prototype.focus;
   let calls: { element: HTMLElement; options?: FocusOptions }[] = [];
 
@@ -234,7 +233,7 @@ describe("request focus moves keep the page in place", () => {
 
   const renderQuestion = async (container?: HTMLElement) => {
     render(
-      <Composer.Root requests={REQUESTS} onSubmit={() => {}}>
+      <Composer.Root questions={REQUESTS} onSubmit={() => {}}>
         <Composer.Textarea aria-label="Message" />
         <RequestOptions />
       </Composer.Root>,

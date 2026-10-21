@@ -33,18 +33,18 @@ describe("composer store: sticky panel presence", () => {
     expect(store.getSnapshot().commands.present).toBe(false);
   });
 
-  test("request presence is sticky the same way", () => {
+  test("question presence is sticky the same way", () => {
     const store = createComposerStore();
-    store.setRequests([{ id: "pick", label: "Pick one", options: [{ label: "A" }] }]);
-    expect(store.getSnapshot().requests.active).toBe(true);
-    expect(store.getSnapshot().requests.present).toBe(true);
+    store.setQuestions([{ id: "pick", label: "Pick one", options: [{ label: "A" }] }]);
+    expect(store.getSnapshot().questions.active).toBe(true);
+    expect(store.getSnapshot().questions.present).toBe(true);
 
-    store.setRequests(null);
-    expect(store.getSnapshot().requests.active).toBe(false);
-    expect(store.getSnapshot().requests.present).toBe(true);
+    store.setQuestions(null);
+    expect(store.getSnapshot().questions.active).toBe(false);
+    expect(store.getSnapshot().questions.present).toBe(true);
 
     store.finalizePanelClose();
-    expect(store.getSnapshot().requests.present).toBe(false);
+    expect(store.getSnapshot().questions.present).toBe(false);
   });
 
   test("reset clears presence", () => {

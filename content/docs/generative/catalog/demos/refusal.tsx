@@ -1,6 +1,6 @@
 "use client";
 
-import { useTree, validateTree } from "@intentface/chat/generative";
+import { tree, useTree } from "@intentface/chat/generative";
 import { useEffect, useRef, useState } from "react";
 import { catalog } from "./catalog";
 import { DrawNode } from "./draw";
@@ -10,8 +10,8 @@ import { Replay } from "./replay";
  * The model's first call uses a component the catalog doesn't have.
  *
  * While it streams, `useTree` skips the node it can't draw. Once the call is
- * whole, `validateTree` names the problem; on a server that runs in the tool's
- * `execute`, and `formatIssues` goes back to the model as the tool's result.
+ * whole, `tree.validate` names the problem; on a server that runs in the tool's
+ * `execute`, and `tree.formatIssues` goes back to the model as the tool's result.
  * The model reads it and calls again, and the second call replaces the first.
  */
 const FIRST_CALL = {
@@ -57,7 +57,7 @@ export const Refusal = () => {
     setBusy(true);
     setInput(FIRST_CALL);
     try {
-      const result = await validateTree(FIRST_CALL, catalog);
+      const result = await tree.validate(FIRST_CALL, catalog);
       await sleep(700);
       if (run !== runs.current) return;
       setSentBack(result.issues?.[0]?.message);

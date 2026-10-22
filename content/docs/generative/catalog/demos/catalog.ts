@@ -1,9 +1,4 @@
-import {
-  defineCatalog,
-  markdownHeading,
-  markdownTable,
-  markdownText,
-} from "@intentface/chat/generative";
+import { defineCatalog, markdown } from "@intentface/chat/generative";
 import { z } from "zod";
 
 /*
@@ -19,19 +14,19 @@ export const catalog = defineCatalog({
       description: "A titled panel that groups related pieces.",
       props: z.object({ title: z.string() }),
       container: true,
-      markdown: (props, children) => `${markdownHeading(3, props.title)}\n\n${children}`,
+      markdown: (props, children) => `${markdown.heading(3, props.title)}\n\n${children}`,
     },
     Metric: {
       description: "One key number with its label.",
       props: z.object({ label: z.string(), value: z.string(), note: z.string().optional() }),
-      markdown: (props) => `- **${markdownText(props.label)}:** ${markdownText(props.value)}`,
+      markdown: (props) => `- **${markdown.text(props.label)}:** ${markdown.text(props.value)}`,
     },
     Table: {
       description: "Rows under named columns.",
       props: z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.string())) }),
       // The model may point `rows` at a data tool's result instead of copying it.
       bind: ["rows"],
-      markdown: (props) => markdownTable(props.columns, props.rows),
+      markdown: (props) => markdown.table(props.columns, props.rows),
     },
   },
 });

@@ -1,21 +1,23 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import * as generative from "../src/generative";
+import { defineCatalog, type TreeNode } from "../src/generative/catalog";
+import { toJSONSchema } from "../src/generative/json-schema";
 import {
-  defineCatalog,
-  findBindings,
-  formatIssues,
   markdownHeading,
   markdownParagraph,
   markdownTable,
   markdownText,
+  toMarkdown,
+} from "../src/generative/markdown";
+import {
+  findBindings,
+  formatIssues,
   readTree,
   resolveBindings,
   type TreeIssue,
-  type TreeNode,
-  toJSONSchema,
-  toMarkdown,
   validateTree,
-} from "../src/generative";
+} from "../src/generative/tree";
 
 const catalog = defineCatalog({
   components: {
@@ -662,5 +664,19 @@ describe("readTree", () => {
     };
     if (root) visit(root);
     expect(ids).toEqual(["root", "a", "shared", "b"]);
+  });
+});
+
+describe("the public groups", () => {
+  test("name each helper by its group", () => {
+    expect(generative.tree).toEqual({ validate: validateTree, read: readTree, formatIssues });
+    expect(generative.bindings).toEqual({ find: findBindings, resolve: resolveBindings });
+    expect(generative.markdown).toEqual({
+      fromTree: toMarkdown,
+      text: markdownText,
+      paragraph: markdownParagraph,
+      heading: markdownHeading,
+      table: markdownTable,
+    });
   });
 });

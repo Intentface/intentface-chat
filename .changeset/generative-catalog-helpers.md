@@ -2,4 +2,4 @@
 "@intentface/chat": minor
 ---
 
-- New `@intentface/chat/generative` entry, experimental: typed helpers that check a model's UI tool call against a catalog (`defineCatalog`, `toJSONSchema`, `validateTree`), read it while it streams (`useTree`, `readTree`), resolve its data bindings (`resolveBindings`) and write it as Markdown (`toMarkdown`).
+- New `@intentface/chat/generative` entry, experimental: typed helpers that check a model's UI tool call against a catalog (`defineCatalog`, `toJSONSchema`, `tree.validate`), read it while it streams (`useTree`, `tree.read`), resolve its data bindings (`bindings.resolve`) and write it as Markdown (`markdown.fromTree`).

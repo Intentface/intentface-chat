@@ -1,6 +1,6 @@
 "use client";
 
-import { toMarkdown, useTree, validateTree } from "@intentface/chat/generative";
+import { markdown, tree, useTree } from "@intentface/chat/generative";
 import { useState } from "react";
 import { catalog } from "./catalog";
 import { DrawNode } from "./draw";
@@ -10,7 +10,7 @@ import { DrawNode } from "./draw";
  * history, a search index, a copy button. Each component writes its part
  * through its `markdown`, and a container writes its children's.
  *
- * `toMarkdown` takes a checked tree, so the call goes through `validateTree`
+ * `markdown.fromTree` takes a checked tree, so the call goes through `tree.validate`
  * first. Text the model wrote is escaped, so it can't format or link itself.
  */
 const CALL = {
@@ -44,15 +44,15 @@ type View = "component" | "markdown";
 
 export const AsMarkdown = () => {
   const [view, setView] = useState<View>("component");
-  const [markdown, setMarkdown] = useState("");
+  const [text, setText] = useState("");
   // Views fade in from the first switch, so the page loads still.
   const [live, setLive] = useState(false);
   const { root } = useTree(CALL, catalog);
 
   const select = async (next: View) => {
-    if (next === "markdown" && !markdown) {
-      const result = await validateTree(CALL, catalog);
-      if (result.value) setMarkdown(toMarkdown(result.value, catalog));
+    if (next === "markdown" && !text) {
+      const result = await tree.validate(CALL, catalog);
+      if (result.value) setText(markdown.fromTree(result.value, catalog));
     }
     setLive(true);
     setView(next);
@@ -66,7 +66,7 @@ export const AsMarkdown = () => {
       <div className="min-h-82 w-full">
         {view === "markdown" ? (
           <pre className="overflow-x-auto rounded-xl bg-zinc-50 px-4.5 py-4 font-mono text-[12.5px] text-zinc-700 leading-5 shadow-[0_0_0_1px_rgb(0_0_0/0.06)] transition-[opacity,translate,filter] duration-400 ease-[cubic-bezier(0.22,1,0.36,1)] in-data-live:starting:translate-y-1 in-data-live:starting:opacity-0 in-data-live:starting:blur-[2px] motion-reduce:transition-none dark:bg-white/3 dark:text-zinc-300 dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.06)]">
-            {markdown}
+            {text}
           </pre>
         ) : root ? (
           <DrawNode node={root} />

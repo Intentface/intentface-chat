@@ -27,6 +27,10 @@ export const DEFAULT_TOOL_LABELS: ToolLabels = {
       i.path && i.path !== "." ? `Reading source: ${i.path}` : "Listing source files",
     complete: (i) => (i.path && i.path !== "." ? `Read source: ${i.path}` : "Listed source files"),
   },
+  renderUi: {
+    active: () => "Rendering a view",
+    complete: () => "Rendered a view",
+  },
   webSearch: {
     active: (i) => `Searching for '${i.query ?? ""}'`,
     complete: (i) => `Searched for '${i.query ?? ""}'`,

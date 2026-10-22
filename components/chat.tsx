@@ -43,6 +43,7 @@ import {
   type ComposerCommandsMap,
   type ComposerSubmitData,
 } from "@/components/ai/composer";
+import { GeneratedUi } from "@/components/ai/generated-ui";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { Steps } from "@/components/ai/steps";
@@ -497,6 +498,10 @@ const ChatMessageItem = memo(
                 }
                 return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
               }
+              case "tool-renderUi":
+                return isToolPart(part) ? (
+                  <GeneratedUi key={part.toolCallId} part={part} parts={parts} />
+                ) : null;
               default:
                 return null;
             }

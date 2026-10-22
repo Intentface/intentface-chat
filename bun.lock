@@ -46,7 +46,7 @@
     },
     "packages/chat": {
       "name": "@intentface/chat",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "dependencies": {
         "@floating-ui/dom": "^1.7.6",
       },
@@ -59,6 +59,7 @@
         "axe-core": "^4.12.1",
         "publint": "0.3.23",
         "typescript": "^5",
+        "zod": "^4.4.3",
       },
       "peerDependencies": {
         "react": "^19.0.0",

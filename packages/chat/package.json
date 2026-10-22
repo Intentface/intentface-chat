@@ -90,6 +90,10 @@
     "./chip-markdown": {
       "types": "./dist/chip-markdown.d.ts",
       "default": "./dist/chip-markdown.js"
+    },
+    "./generative": {
+      "types": "./dist/generative/index.d.ts",
+      "default": "./dist/generative/index.js"
     }
   },
   "scripts": {
@@ -114,7 +118,8 @@
     "@types/react-dom": "^19",
     "axe-core": "^4.12.1",
     "publint": "0.3.23",
-    "typescript": "^5"
+    "typescript": "^5",
+    "zod": "^4.4.3"
   },
   "publishConfig": {
     "access": "public"

@@ -1,5 +1,5 @@
 // The catalog and the shapes the generative helpers read and return: what the
-// model may use, and the tree it writes. Types and plain data only.
+// model may use, the tree it writes, and the small lookups over both.
 
 import type { InferOutput, StandardJSONSchema, StandardSchema } from "../internal/standard-schema";
 
@@ -71,6 +71,15 @@ export type AnyCatalog = {
 
 /** One component of any catalog, as the helpers read it. */
 export type AnyComponent = AnyCatalog["components"][string];
+
+/**
+ * The component a type names, if it's one of the catalog's own. A name the
+ * catalog only inherits, such as `"constructor"`, is not a component.
+ */
+export const componentOf = (catalog: AnyCatalog, type: unknown): AnyComponent | undefined =>
+  typeof type === "string" && Object.hasOwn(catalog.components, type)
+    ? catalog.components[type]
+    : undefined;
 
 // ---------------------------------------------------------------------------
 // Trees

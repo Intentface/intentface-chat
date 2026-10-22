@@ -11,6 +11,7 @@ import {
   readTree,
   resolveBindings,
   type TreeIssue,
+  type TreeNode,
   toJSONSchema,
   toMarkdown,
   validateTree,
@@ -346,6 +347,28 @@ describe("validateTree", () => {
     const invalid = await validateTree({ type: "Note", props: {} }, notes);
     expect(invalid.issues?.[0]?.path).toEqual(["props", "label"]);
   });
+
+  test("walks each element once, however many parents list it", async () => {
+    // Every element lists every element in the layer below, so a walk per path
+    // would reach the leaf nine times.
+    const layers = [["root"], ["a", "b", "c"], ["x", "y", "z"], ["leaf"]];
+    const elements = layers.flatMap((ids, depth) =>
+      ids.map((id) =>
+        depth === layers.length - 1
+          ? { id, type: "Metric", props: { label: id, value: "not a number" } }
+          : { id, type: "Stack", props: {}, children: layers[depth + 1] },
+      ),
+    );
+    const result = await validateTree({ root: "root", elements }, catalog);
+    expect(codes(result.issues)).toContain("shared_child");
+    expect(result.issues?.filter((entry) => entry.code === "invalid_props")).toHaveLength(1);
+  });
+
+  test("treats a name the catalog only inherits as unknown", async () => {
+    const input = { type: "constructor", props: {} };
+    expect(codes((await validateTree(input, catalog)).issues)).toEqual(["unknown_type"]);
+    expect(readTree(input, catalog).root).toBeUndefined();
+  });
 });
 
 describe("formatIssues", () => {
@@ -533,6 +556,11 @@ describe("Markdown is literal", () => {
   test("a pipe can't split a table column", () => {
     expect(markdownTable(["A"], [["x | y"]])).toBe("| A |\n| --- |\n| x \\| y |");
   });
+
+  test("treats a lone carriage return as a line break", () => {
+    expect(markdownHeading(2, "Title\r# Other")).toBe("## Title # Other");
+    expect(escapeMarkdown("One\r# Two")).toBe("One\n\\# Two");
+  });
 });
 
 describe("readTree", () => {
@@ -612,5 +640,27 @@ describe("readTree", () => {
       catalog,
     );
     expect(tree.root?.children[0]?.children).toEqual([]);
+  });
+
+  test("draws each element once, however many parents list it", () => {
+    const { root } = readTree(
+      {
+        root: "root",
+        elements: [
+          { id: "root", type: "Stack", props: {}, children: ["a", "b"] },
+          { id: "a", type: "Stack", props: {}, children: ["shared"] },
+          { id: "b", type: "Stack", props: {}, children: ["shared"] },
+          { id: "shared", type: "Metric", props: { label: "Total", value: 1 } },
+        ],
+      },
+      catalog,
+    );
+    const ids: string[] = [];
+    const visit = (node: TreeNode<typeof catalog>) => {
+      ids.push(node.id);
+      node.children.forEach(visit);
+    };
+    if (root) visit(root);
+    expect(ids).toEqual(["root", "a", "shared", "b"]);
   });
 });

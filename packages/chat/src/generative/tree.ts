@@ -6,6 +6,7 @@ import {
   type AnyCatalog,
   type AnyComponent,
   type Binding,
+  componentOf,
   type FoundBinding,
   isBinding,
   isObject,
@@ -157,7 +158,7 @@ export const resolveBindings = async <C extends AnyCatalog>(
   const settled = await Promise.all(
     entries.map(async ([id, bindings]) => {
       const element = tree.elements[id];
-      const definition = element && catalog.components[element.type];
+      const definition = element && componentOf(catalog, element.type);
       if (!element || !definition) return undefined;
       const values = await Promise.all(bindings.map((binding) => resolve(binding)));
       const { props, missing } = substitute(
@@ -243,10 +244,6 @@ const readInput = (input: unknown): ReadInput => {
   return { root: input.root, elements, pathOf: inElements, issues };
 };
 
-/** The component an element names, if the catalog has it. */
-const definitionOf = (catalog: AnyCatalog, element: LooseElement): AnyComponent | undefined =>
-  typeof element.type === "string" ? catalog.components[element.type] : undefined;
-
 const childIds = (element: LooseElement): string[] =>
   Array.isArray(element.children)
     ? element.children.filter((child): child is string => typeof child === "string")
@@ -268,7 +265,7 @@ const checkElements = (read: ReadInput, catalog: AnyCatalog, limits: Limits): Tr
 
   for (const [id, element] of read.elements) {
     const path = read.pathOf(id);
-    const definition = definitionOf(catalog, element);
+    const definition = componentOf(catalog, element.type);
     if (!definition) {
       const message = `"${String(element.type)}" is not a component. Components: ${types.join(", ")}.`;
       issues.push(issue("unknown_type", message, [...path, "type"]));
@@ -313,7 +310,9 @@ const checkElements = (read: ReadInput, catalog: AnyCatalog, limits: Limits): Tr
  * where it closes.
  */
 const walkFromRoot = (read: ReadInput, root: string, limits: Limits) => {
-  const reached: string[] = [];
+  // In walk order. Each element is walked once, so a child shared between
+  // parents, reported as `shared_child`, can't multiply the work.
+  const reached = new Set<string>();
   const issues: TreeIssue[] = [];
   const walk = (id: string, path: string[]) => {
     if (path.includes(id)) {
@@ -321,6 +320,7 @@ const walkFromRoot = (read: ReadInput, root: string, limits: Limits) => {
       issues.push(issue("cycle", message, [...read.pathOf(id), "children"]));
       return;
     }
+    if (reached.has(id)) return;
     if (path.length + 1 > limits.depth) {
       const message = `"${id}" is nested ${path.length + 1} deep; the limit is ${limits.depth}. Flatten it.`;
       issues.push(issue("too_deep", message, read.pathOf(id)));
@@ -328,11 +328,11 @@ const walkFromRoot = (read: ReadInput, root: string, limits: Limits) => {
     }
     const element = read.elements.get(id);
     if (!element) return;
-    reached.push(id);
+    reached.add(id);
     for (const child of childIds(element)) walk(child, [...path, id]);
   };
   walk(root, []);
-  return { reached, issues };
+  return { reached: [...reached], issues };
 };
 
 const propIssues = (issues: ReadonlyArray<StandardIssue>, path: (string | number)[]): TreeIssue[] =>
@@ -404,7 +404,7 @@ export const validateTree = async <C extends AnyCatalog>(
   const checked = await Promise.all(
     walked.reached.map((id) => {
       const element = read.elements.get(id) as LooseElement;
-      const definition = definitionOf(catalog, element);
+      const definition = componentOf(catalog, element.type);
       const path = [...read.pathOf(id), "props"];
       return definition && checkProps(definition, readBound(definition, element.props, id), path);
     }),
@@ -474,16 +474,17 @@ export const readTree = <C extends AnyCatalog>(
   options: ReadTreeOptions = {},
 ): TreeRead<C> => {
   const read = readInput(input);
-  const build = (id: string, path: string[]): TreeNode<C> | undefined => {
+  // Each element draws once. A cycle, a shared child or a child listed twice
+  // stops at the first, so the work stays linear and React never sees a key twice.
+  const drawn = new Set<string>();
+  const build = (id: string): TreeNode<C> | undefined => {
     const element = read.elements.get(id);
-    const definition = element && definitionOf(catalog, element);
-    if (!element || !definition || path.includes(id)) return undefined;
-    // A child listed twice draws once, so React never sees the same key twice.
-    const children = [...new Set(childIds(element))].flatMap(
-      (child) => build(child, [...path, id]) ?? [],
-    );
+    const definition = element && componentOf(catalog, element.type);
+    if (!element || !definition || drawn.has(id)) return undefined;
+    drawn.add(id);
+    const children = childIds(element).flatMap((child) => build(child) ?? []);
     const props = readProps(definition, readBound(definition, element.props, id), options.resolve);
     return { id, type: element.type, ...props, children } as TreeNode<C>;
   };
-  return typeof read.root === "string" ? { root: build(read.root, []) } : {};
+  return typeof read.root === "string" ? { root: build(read.root) } : {};
 };

@@ -9,7 +9,10 @@ export type UseTreeOptions = ReadTreeOptions & {
   streaming?: boolean;
 };
 
-const NOTHING_HELD: ReadonlyMap<string, unknown> = new Map();
+/** A node's last valid props, and the type they were valid for. */
+type Held = { type: string; props: unknown };
+
+const NOTHING_HELD: ReadonlyMap<string, Held> = new Map();
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && Object.getPrototypeOf(value) === Object.prototype;
@@ -28,35 +31,34 @@ const isEqual = (a: unknown, b: unknown): boolean => {
   return false;
 };
 
-const sameHeld = (a: ReadonlyMap<string, unknown>, b: ReadonlyMap<string, unknown>) =>
-  a.size === b.size && [...a].every(([id, props]) => b.has(id) && isEqual(props, b.get(id)));
+const sameHeld = (a: ReadonlyMap<string, Held>, b: ReadonlyMap<string, Held>) =>
+  a.size === b.size &&
+  [...a].every(([id, entry]) => {
+    const other = b.get(id);
+    return other?.type === entry.type && isEqual(entry.props, other.props);
+  });
 
-/** Ready props by node id, with a held node's props kept while it's pending again. */
-const readyProps = <C extends AnyCatalog>(
-  root: TreeNode<C> | undefined,
-  held: ReadonlyMap<string, unknown>,
-) => {
-  const ready = new Map<string, unknown>();
-  const visit = (node: TreeNode<C>) => {
-    if (node.status === "ready") ready.set(node.id, node.props);
-    else if (held.has(node.id)) ready.set(node.id, held.get(node.id));
-    node.children.forEach(visit);
+/**
+ * The tree with a pending node's held props back in place, and what to hold
+ * next. Props are kept only for the type they were valid for: while a type is
+ * still being written it can read as a shorter one (`Card` on the way to
+ * `CardGrid`).
+ */
+const holdProps = <C extends AnyCatalog>(root: TreeNode<C>, held: ReadonlyMap<string, Held>) => {
+  const next = new Map<string, Held>();
+  const visit = (node: TreeNode<C>): TreeNode<C> => {
+    const entry = held.get(node.id);
+    const kept = node.status === "pending" && entry?.type === node.type ? entry : undefined;
+    if (node.status === "ready") next.set(node.id, { type: node.type, props: node.props });
+    else if (kept) next.set(node.id, kept);
+    return {
+      ...node,
+      ...(kept ? { status: "ready", props: kept.props } : {}),
+      children: node.children.map(visit),
+    } as TreeNode<C>;
   };
-  if (root) visit(root);
-  return ready;
+  return { root: visit(root), next };
 };
-
-const withHeld = <C extends AnyCatalog>(
-  node: TreeNode<C>,
-  held: ReadonlyMap<string, unknown>,
-): TreeNode<C> =>
-  ({
-    ...node,
-    ...(node.status === "pending" && held.has(node.id)
-      ? { status: "ready", props: held.get(node.id) }
-      : {}),
-    children: node.children.map((child) => withHeld(child, held)),
-  }) as TreeNode<C>;
 
 /**
  * `readTree` in a component: the call's input as nodes to draw. While
@@ -71,8 +73,9 @@ export const useTree = <C extends AnyCatalog>(
   const { resolve, streaming = false } = options;
   const read = useMemo(() => readTree(input, catalog, { resolve }), [input, catalog, resolve]);
   const [held, setHeld] = useState(NOTHING_HELD);
-  const next = streaming ? readyProps(read.root, held) : NOTHING_HELD;
+  const holding = streaming && read.root ? holdProps(read.root, held) : undefined;
+  const next = holding?.next ?? NOTHING_HELD;
   // Kept from earlier renders the way React documents: set during render, guarded.
   if (!sameHeld(next, held)) setHeld(next);
-  return streaming && read.root ? { root: withHeld(read.root, next) } : read;
+  return holding ? { root: holding.root } : read;
 };

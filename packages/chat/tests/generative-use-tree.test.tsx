@@ -37,6 +37,17 @@ describe("useTree", () => {
     expect(result.current.root?.props).toEqual({ label: "Total", tone: "negative" });
   });
 
+  test("keeps held props only for the type they were valid for", () => {
+    const { result, rerender } = renderHook(
+      ({ input }) => useTree(input, catalog, { streaming: true }),
+      { initialProps: { input: metric("positive") as unknown } },
+    );
+    // The same id now names another type, whose props don't validate yet.
+    rerender({ input: { type: "Table", props: { rows: "Aalto" } } });
+    expect(result.current.root?.type).toBe("Table");
+    expect(result.current.root?.status).toBe("pending");
+  });
+
   test("holds nothing once the input is whole", () => {
     const { result, rerender } = renderHook(
       ({ input, streaming }) => useTree(input, catalog, { streaming }),

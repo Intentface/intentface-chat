@@ -1,6 +1,6 @@
 // A tree as Markdown, and the escaping that keeps model-written text literal.
 
-import { type AnyCatalog, isBinding, isObject, type Tree } from "./catalog";
+import { type AnyCatalog, componentOf, isBinding, isObject, type Tree } from "./catalog";
 
 // ---------------------------------------------------------------------------
 // Markdown
@@ -25,8 +25,11 @@ const escapeCharacters = (text: string) =>
     .replace(SCHEME, "$1\\:")
     .replace(WWW, "$1\\.");
 
+// A lone `\r` ends a line in Markdown, the same as `\n`.
+const LINE_BREAK = /[\r\n]/;
+
 // Each run of whitespace is matched once, whole, so this stays linear on long runs.
-const oneLine = (text: string) => text.replace(/\s+/g, (run) => (run.includes("\n") ? " " : run));
+const oneLine = (text: string) => text.replace(/\s+/g, (run) => (LINE_BREAK.test(run) ? " " : run));
 
 /** One line of literal text, for a label, a cell or a heading. */
 export const escapeMarkdownInline = (text: string): string => escapeCharacters(oneLine(text));
@@ -37,7 +40,7 @@ export const escapeMarkdownInline = (text: string): string => escapeCharacters(o
  */
 export const escapeMarkdown = (text: string): string =>
   text
-    .split("\n")
+    .split(/\r\n?|\n/)
     .map((line) =>
       escapeCharacters(line.trim())
         .replace(/^([#+=-])/, "\\$1")
@@ -67,18 +70,21 @@ const hasBinding = (props: unknown) => isObject(props) && Object.values(props).s
  * left out: resolve the tree first.
  */
 export const toMarkdown = <C extends AnyCatalog>(tree: Tree<C>, catalog: C): string => {
-  const write = (id: string, path: string[]): string => {
+  // Each element writes once, so a cycle or a shared child in a stored tree stops at the first.
+  const written = new Set<string>();
+  const write = (id: string): string => {
     const element = tree.elements[id];
-    if (!element || path.includes(id) || hasBinding(element.props)) return "";
+    if (!element || written.has(id) || hasBinding(element.props)) return "";
+    written.add(id);
     const children = (element.children ?? [])
-      .map((child) => write(child, [...path, id]))
+      .map((child) => write(child))
       .filter((block) => block.trim() !== "")
       .join("\n\n");
-    const definition = catalog.components[element.type];
+    const definition = componentOf(catalog, element.type);
     // Typed per component in the catalog; the element's props are that component's.
     if (definition?.markdown) return definition.markdown(element.props as never, children);
     if (definition?.container) return children;
     throw new Error(`"${element.type}" has no markdown.`);
   };
-  return write(tree.root, []);
+  return write(tree.root);
 };

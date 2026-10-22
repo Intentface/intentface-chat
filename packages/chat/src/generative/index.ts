@@ -1,5 +1,6 @@
-// Public surface of @intentface/chat/generative. No directive, so the helpers
-// stay importable on a server; the hook arrives there as a client reference.
+// Public surface of @intentface/chat/generative. Experimental: it may change or
+// be removed before 1.0. No directive, so the helpers stay importable on a
+// server; the hook arrives there as a client reference.
 
 export {
   type AnyCatalog,

@@ -14,6 +14,7 @@ import { Single } from './catalog/demos/single';
 
 ## Usage guidelines
 
+- **The API may still change** — this entry is experimental, and may change or be removed before 1.0. Pin the version you build on.
 - **The model writes data, never markup** — it calls a tool whose input names components from your catalog. Nothing it writes runs, and every call is checked before you keep it.
 - **The components are yours** — the helpers return typed nodes and render nothing, so your own React draws each node in your own styles. There are no parts, data attributes or CSS variables here.
 - **A schema has to describe itself** — each component's `props` must validate and convert to JSON Schema: zod 4.2+, ArkType 2.1.28+, or Valibot through `toStandardJsonSchema`. The package installs no validator.

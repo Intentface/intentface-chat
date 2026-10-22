@@ -1,0 +1,230 @@
+---
+title: Catalog
+description: A typed catalog of your components, and the helpers that check a model's UI tool call against it, read the call while it streams, resolve its data by reference and write it as Markdown.
+source: generative
+---
+
+import { AsMarkdown } from './catalog/demos/as-markdown';
+import { Basic } from './catalog/demos/basic';
+import { Binding } from './catalog/demos/binding';
+import { Refusal } from './catalog/demos/refusal';
+import { Single } from './catalog/demos/single';
+
+<Demo component={<Basic />} file="generative/catalog/demos/basic.tsx" replay={false} />
+
+## Usage guidelines
+
+- **The model writes data, never markup** — it calls a tool whose input names components from your catalog. Nothing it writes runs, and every call is checked before you keep it.
+- **The components are yours** — the helpers return typed nodes and render nothing, so your own React draws each node in your own styles. There are no parts, data attributes or CSS variables here.
+- **A schema has to describe itself** — each component's `props` must validate and convert to JSON Schema: zod 4.2+, ArkType 2.1.28+, or Valibot through `toStandardJsonSchema`. The package installs no validator.
+- **Check on the server, draw on the client** — `validateTree` runs in the tool's `execute` on the whole call, and `useTree` draws the call while it streams. Both read the same catalog.
+- **Get started** — see [Quick start](/quick-start) to add the package.
+
+## Anatomy
+
+```ts
+defineCatalog({
+  components: {
+    Name: { description, props, container, bind, markdown },
+  },
+});
+```
+
+A real catalog names each component, describes it for the model, and takes its props schema from any validator that converts to JSON Schema.
+
+```ts
+import { defineCatalog, markdownHeading, markdownTable } from "@intentface/chat/generative";
+import { z } from "zod";
+
+export const catalog = defineCatalog({
+  components: {
+    Card: {
+      description: "A titled panel that groups related pieces.",
+      props: z.object({ title: z.string() }),
+      container: true,
+      markdown: (props, children) => `${markdownHeading(3, props.title)}\n\n${children}`,
+    },
+    Table: {
+      description: "Rows under named columns.",
+      props: z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.string())) }),
+      bind: ["rows"],
+      markdown: (props) => markdownTable(props.columns, props.rows),
+    },
+  },
+});
+```
+
+## Examples
+
+### Defining the tool
+
+The tool runs on your server, so this one is code only. `toJSONSchema` builds its input schema from the catalog, and `validateTree` checks the finished call in `execute`.
+
+```ts
+import { formatIssues, toJSONSchema, validateTree } from "@intentface/chat/generative";
+import { jsonSchema, tool } from "ai";
+import { catalog } from "./catalog";
+
+export const showUi = tool({
+  description: "Show the answer as UI.",
+  inputSchema: jsonSchema(toJSONSchema(catalog)),
+  execute: async (input) => {
+    const result = await validateTree(input, catalog);
+    return result.issues
+      ? { ok: false, text: formatIssues(result.issues) }
+      : { ok: true, text: "Shown to the user." };
+  },
+  // The model reads only the text; the chat keeps the whole output.
+  toModelOutput: ({ output }) => ({ type: "text", value: output.text }),
+});
+```
+
+### Sending issues back to the model
+
+Return `formatIssues` as the tool's result when `validateTree` finds issues. Each line names the field and what's wrong, so the model can fix its next call. While the call streams, `useTree` skips a node whose type isn't in the catalog.
+
+<Demo component={<Refusal />} file="generative/catalog/demos/refusal.tsx" replay={false} />
+
+### Filling a table from a tool result
+
+Use `bind` to let the model point a prop at rows a data tool already returned, instead of copying them into the call. Your `resolve` looks the ref up, and the columns the model named are picked from each row. On the server, `resolveBindings` does the same for a checked tree.
+
+<Demo component={<Binding />} file="generative/catalog/demos/binding.tsx" replay={false} />
+
+### Drawing one component
+
+Use `toJSONSchema(catalog, { single: true })` when one component answers the question. The model writes `{ type, props }`, with no ids and no tree to get wrong.
+
+<Demo component={<Single />} file="generative/catalog/demos/single.tsx" replay={false} />
+
+### Writing the answer as Markdown
+
+Use `toMarkdown` wherever the UI can't be drawn: the model's own history, a search index, a copy button. Each component writes its own part through `markdown`, and text the model wrote is escaped so it can't format or link itself.
+
+<Demo component={<AsMarkdown />} file="generative/catalog/demos/as-markdown.tsx" />
+
+## API reference
+
+Every helper is a plain function over plain data, importable on a server. Only `useTree` is a hook.
+
+### defineCatalog
+
+Types a catalog from each component's schema. The catalog stays plain data, so the server's tool and the client's drawing import the same object. Each component takes these keys:
+
+export const componentKeys = [
+  { name: "description", type: "string", description: "When to use it, written for the model." },
+  { name: "props", type: "StandardSchema & StandardJSONSchema", description: "Validates its props, and converts to the JSON Schema the model is shown." },
+  { name: "container", type: "boolean", default: "false", description: "Whether it holds other components." },
+  { name: "bind", type: "string[]", description: "Props the model may point at data (`{ \"$data\": ref }`) instead of writing out. Typed to the schema's keys." },
+  { name: "markdown", type: "(props, children: string) => string", description: "How it reads as Markdown. `children` is its children's Markdown. A container without one reads as its children." },
+];
+
+<PropsTable rows={componentKeys} />
+
+The catalog itself takes two more keys. Both `toJSONSchema` and `validateTree` read them, so the schema the model is shown and the check it meets can't disagree:
+
+export const catalogKeys = [
+  { name: "limits", type: "{ nodes?: number; depth?: number; children?: number }", default: "{ nodes: 40, depth: 6, children: 24 }", description: "Caps on one call: shown to the model in the tool's schema, and checked." },
+  { name: "refDescription", type: "string", description: "What a ref looks like, in the model's terms." },
+];
+
+<PropsTable rows={catalogKeys} />
+
+### toJSONSchema
+
+The tool's input schema, built from each component's own. Strict, for structured-output modes: every object closed, every property required, and optional props nullable. `validateTree` reads the nulls back as absent. Throws when a component's schema can't convert, or converts with `$ref`.
+
+export const schemaOptions = [
+  { name: "single", type: "boolean", default: "false", description: "The model writes one component as `{ type, props }` instead of a tree." },
+];
+
+<PropsTable rows={schemaOptions} />
+
+### validateTree
+
+A whole call checked against the catalog: its shape read as meant, its structure and limits checked, and each element's props validated. Resolves to `{ value }` with the checked tree, or `{ issues }`. A bound prop keeps its binding until `resolveBindings` replaces it.
+
+Two slips are read as the model meant them: `component` written for `type`, and props written beside `type`. Elements may come as a list or as a map keyed by id. Each issue carries one of these codes:
+
+export const issueCodes = [
+  { value: "invalid_input", description: "The input isn't an object." },
+  { value: "missing_id", description: "An element has no id." },
+  { value: "duplicate_id", description: "Two elements share an id." },
+  { value: "duplicate_child", description: "A container lists the same child twice." },
+  { value: "missing_root", description: "The call names no root." },
+  { value: "root_not_found", description: "The root isn't one of the elements." },
+  { value: "unknown_type", description: "An element's type isn't in the catalog." },
+  { value: "unexpected_children", description: "A component that holds nothing has children." },
+  { value: "dangling_child", description: "A child id isn't one of the elements." },
+  { value: "shared_child", description: "One element is the child of two containers." },
+  { value: "cycle", description: "An element contains itself." },
+  { value: "too_deep", description: "Nesting goes past the depth limit." },
+  { value: "too_many_nodes", description: "The call has more elements than the node limit." },
+  { value: "too_many_children", description: "A container has more children than the limit." },
+  { value: "invalid_props", description: "An element's props don't validate against its schema." },
+  { value: "invalid_binding", description: "A binding's `columns` or `column` has the wrong shape." },
+  { value: "unresolved_binding", description: "`resolveBindings` found no data for a ref." },
+];
+
+<ValuesTable rows={issueCodes} />
+
+### formatIssues
+
+Issues as text for the model, one per line: where, then what's wrong. Takes an optional maximum, 8 by default, and counts the rest.
+
+### findBindings
+
+Every binding in a tree, for the host to resolve. Each comes with the element's `id` and the `prop` it sits in.
+
+### resolveBindings
+
+The tree with every binding replaced by its data, each element validated again with the data in place. `resolve` returns what a ref names, such as a tool result's rows, and may fetch it; the binding's columns are picked from it. `undefined` means not found, which is an `unresolved_binding` issue.
+
+### readTree
+
+Partial or whole input as nodes to draw, without throwing. A node whose type isn't known yet is skipped; one whose props don't validate yet, or whose data isn't resolved, is pending. The pure form of `useTree`, for tests and servers.
+
+### toMarkdown
+
+A tree as Markdown, through each component's `markdown`. A container without one reads as its children. An element still holding a binding is left out: resolve the tree first. Throws for a component that holds nothing and has no `markdown`.
+
+Four helpers keep text the model wrote literal inside your Markdown:
+
+export const markdownHelpers = [
+  { name: "escapeMarkdownInline", type: "(text: string) => string", description: "One line of literal text, for a label, a cell or a heading." },
+  { name: "escapeMarkdown", type: "(text: string) => string", description: "Literal text over several lines, such as a paragraph. A line that would open a block has its marker escaped, and indentation is dropped." },
+  { name: "markdownHeading", type: "(level: number, text: string) => string", description: "A heading of literal text. A trailing `#` stays text." },
+  { name: "markdownTable", type: "(header: string[], rows: unknown[][]) => string", description: "A GitHub-flavoured table. Every cell is literal text, so a pipe can't split a column." },
+];
+
+<PropsTable rows={markdownHelpers} />
+
+## useTree
+
+`readTree` in a component: the call's input as nodes to draw. While `streaming`, a node that was ready keeps its last valid props until newer ones validate, so a value caught mid-word doesn't blink back to pending.
+
+```tsx
+const { root } = useTree(part.input, catalog, {
+  streaming: part.state === "input-streaming",
+  resolve: (binding) => results[binding.$data],
+});
+```
+
+export const treeOptions = [
+  { name: "streaming", type: "boolean", default: "false", description: "The input is still being written, so nodes keep their last valid props." },
+  { name: "resolve", type: "(binding: FoundBinding) => unknown", description: "Returns what a ref names from data already at hand, such as a tool result's rows among the message's parts; the binding's columns are picked from it. It answers within a render, so `undefined`, or a promise, keeps the node pending." },
+];
+
+<PropsTable rows={treeOptions} />
+
+`root` is undefined until the call names a root that's in the catalog. Each node has these fields:
+
+export const nodeFields = [
+  { name: "id", type: "string", description: "The element's id, unique within the call. Use it as the React key." },
+  { name: "type", type: "string", description: "The component's name in the catalog; switch on it to draw." },
+  { name: "status", type: '"ready" | "pending"', description: "Ready once the props validate and their data resolves." },
+  { name: "props", type: "the component's props", description: "Typed from its schema while ready; `unknown` while pending." },
+  { name: "children", type: "TreeNode[]", description: "The nodes inside, in order. A child that isn't drawable yet is left out." },
+];
+
+<PropsTable rows={nodeFields} />

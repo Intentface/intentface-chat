@@ -7,6 +7,7 @@
     "build-a-chat",
     "changelog",
     "handbook",
-    "primitives"
+    "primitives",
+    "generative"
   ]
 }

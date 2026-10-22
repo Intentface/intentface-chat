@@ -2,12 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import {
   defineCatalog,
-  escapeMarkdown,
-  escapeMarkdownInline,
   findBindings,
   formatIssues,
   markdownHeading,
+  markdownParagraph,
   markdownTable,
+  markdownText,
   readTree,
   resolveBindings,
   type TreeIssue,
@@ -33,7 +33,7 @@ const catalog = defineCatalog({
     Metric: {
       description: "One key number with a label.",
       props: z.object({ label: z.string(), value: z.number(), note: z.string().optional() }),
-      markdown: (props) => `**${escapeMarkdownInline(props.label)}:** ${props.value}`,
+      markdown: (props) => `**${markdownText(props.label)}:** ${props.value}`,
     },
     Table: {
       description: "Rows and columns to compare.",
@@ -526,7 +526,7 @@ describe("toMarkdown", () => {
 describe("Markdown is literal", () => {
   test("a paragraph keeps its words and loses every construct", () => {
     expect(
-      escapeMarkdown(
+      markdownParagraph(
         "*not bold* and [a link](https://x.example)\n# not a heading\n1. not a list\n    indented\n\nnew paragraph & &amp; done",
       ),
     ).toBe(
@@ -535,9 +535,9 @@ describe("Markdown is literal", () => {
   });
 
   test("a bare address stays text, where GFM would link it", () => {
-    expect(escapeMarkdown("Mail minna@x.example or see www.x.example and HTTPS://x.example")).toBe(
-      "Mail minna\\@x.example or see www\\.x.example and HTTPS\\://x.example",
-    );
+    expect(
+      markdownParagraph("Mail minna@x.example or see www.x.example and HTTPS://x.example"),
+    ).toBe("Mail minna\\@x.example or see www\\.x.example and HTTPS\\://x.example");
   });
 
   test("a heading stays one line, and keeps a trailing #", () => {
@@ -546,10 +546,10 @@ describe("Markdown is literal", () => {
   });
 
   test("one line of text joins its lines with one space, and stays fast on long runs", () => {
-    expect(escapeMarkdownInline("Paid \n\n  orders")).toBe("Paid orders");
-    expect(escapeMarkdownInline("  two  spaces\tstay ")).toBe("  two  spaces\tstay ");
+    expect(markdownText("Paid \n\n  orders")).toBe("Paid orders");
+    expect(markdownText("  two  spaces\tstay ")).toBe("  two  spaces\tstay ");
     const start = performance.now();
-    escapeMarkdownInline(`${" ".repeat(100_000)}x`);
+    markdownText(`${" ".repeat(100_000)}x`);
     expect(performance.now() - start).toBeLessThan(100);
   });
 
@@ -559,7 +559,7 @@ describe("Markdown is literal", () => {
 
   test("treats a lone carriage return as a line break", () => {
     expect(markdownHeading(2, "Title\r# Other")).toBe("## Title # Other");
-    expect(escapeMarkdown("One\r# Two")).toBe("One\n\\# Two");
+    expect(markdownParagraph("One\r# Two")).toBe("One\n\\# Two");
   });
 });
 

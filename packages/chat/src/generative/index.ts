@@ -20,10 +20,10 @@ export {
 } from "./catalog";
 export { type ToJSONSchemaOptions, toJSONSchema } from "./json-schema";
 export {
-  escapeMarkdown,
-  escapeMarkdownInline,
   markdownHeading,
+  markdownParagraph,
   markdownTable,
+  markdownText,
   toMarkdown,
 } from "./markdown";
 export {

@@ -4,9 +4,9 @@
 
 import {
   defineCatalog,
-  escapeMarkdownInline,
   markdownHeading,
   markdownTable,
+  markdownText,
 } from "@intentface/chat/generative";
 import { z } from "zod";
 
@@ -21,8 +21,7 @@ export const catalog = defineCatalog({
     Metric: {
       description: "One key number or short value with its label, such as a count.",
       props: z.object({ label: z.string(), value: z.string() }),
-      markdown: (props) =>
-        `- **${escapeMarkdownInline(props.label)}:** ${escapeMarkdownInline(props.value)}`,
+      markdown: (props) => `- **${markdownText(props.label)}:** ${markdownText(props.value)}`,
     },
     Table: {
       description: "Rows under named columns, for comparing items side by side.",

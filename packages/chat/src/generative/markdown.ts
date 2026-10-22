@@ -32,13 +32,13 @@ const LINE_BREAK = /[\r\n]/;
 const oneLine = (text: string) => text.replace(/\s+/g, (run) => (LINE_BREAK.test(run) ? " " : run));
 
 /** One line of literal text, for a label, a cell or a heading. */
-export const escapeMarkdownInline = (text: string): string => escapeCharacters(oneLine(text));
+export const markdownText = (text: string): string => escapeCharacters(oneLine(text));
 
 /**
  * Literal text over several lines, such as a paragraph. A line that would open
  * a block has its marker escaped, and indentation is dropped.
  */
-export const escapeMarkdown = (text: string): string =>
+export const markdownParagraph = (text: string): string =>
   text
     .split(/\r\n?|\n/)
     .map((line) =>
@@ -50,7 +50,7 @@ export const escapeMarkdown = (text: string): string =>
 
 /** A heading of literal text. A trailing `#` stays text. */
 export const markdownHeading = (level: number, text: string): string =>
-  `${"#".repeat(level)} ${escapeMarkdownInline(text).replace(/(^|\s)(#+)$/, "$1\\$2")}`;
+  `${"#".repeat(level)} ${markdownText(text).replace(/(^|\s)(#+)$/, "$1\\$2")}`;
 
 /** A GitHub-flavoured table. Every cell is literal text, so a pipe can't split a column. */
 export const markdownTable = (
@@ -58,7 +58,7 @@ export const markdownTable = (
   rows: readonly (readonly unknown[])[],
 ): string => {
   const line = (cells: readonly unknown[]) =>
-    `| ${header.map((_, index) => escapeMarkdownInline(String(cells[index] ?? ""))).join(" | ")} |`;
+    `| ${header.map((_, index) => markdownText(String(cells[index] ?? ""))).join(" | ")} |`;
   return [line(header), `| ${header.map(() => "---").join(" | ")} |`, ...rows.map(line)].join("\n");
 };
 

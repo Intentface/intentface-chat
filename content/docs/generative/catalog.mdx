@@ -92,6 +92,23 @@ Use `bind` to let the model point a prop at rows a data tool already returned, i
 
 <Demo component={<Binding />} file="generative/catalog/demos/binding.tsx" replay={false} />
 
+### Storing a call with its data
+
+Use `resolveBindings` on the server when a call is kept where the data tool's result isn't, such as a saved answer, an export or a search index. It puts the data in place and validates each bound element again. `toMarkdown` needs a resolved tree, since it leaves out anything still holding a binding.
+
+```ts
+const checked = await validateTree(input, catalog);
+if (checked.issues) return { ok: false, text: formatIssues(checked.issues) };
+
+// Your own lookup of a data tool's rows by its ref; it may be async.
+const resolved = await resolveBindings(checked.value, catalog, (binding) =>
+  findRows(binding.$data),
+);
+if (resolved.issues) return { ok: false, text: formatIssues(resolved.issues) };
+
+await saveAnswer({ tree: resolved.value, markdown: toMarkdown(resolved.value, catalog) });
+```
+
 ### Drawing one component
 
 Use `toJSONSchema(catalog, { single: true })` when one component answers the question. The model writes `{ type, props }`, with no ids and no tree to get wrong.
@@ -110,7 +127,13 @@ Every helper is a plain function over plain data, importable on a server. Only `
 
 ### defineCatalog
 
-Types a catalog from each component's schema. The catalog stays plain data, so the server's tool and the client's drawing import the same object. Each component takes these keys:
+Types a catalog from each component's schema. The catalog stays plain data, so the server's tool and the client's drawing import the same object.
+
+```ts
+defineCatalog(catalog: { components; limits?; refDescription? }): Catalog
+```
+
+Each component takes these keys:
 
 export const componentKeys = [
   { name: "description", type: "string", description: "When to use it, written for the model." },
@@ -135,6 +158,10 @@ export const catalogKeys = [
 
 The tool's input schema, built from each component's own. Strict, for structured-output modes: every object closed, every property required, and optional props nullable. `validateTree` reads the nulls back as absent. Throws when a component's schema can't convert, or converts with `$ref`.
 
+```ts
+toJSONSchema(catalog: Catalog, options?: { single?: boolean }): Record<string, unknown>
+```
+
 export const schemaOptions = [
   { name: "single", type: "boolean", default: "false", description: "The model writes one component as `{ type, props }` instead of a tree." },
 ];
@@ -144,6 +171,12 @@ export const schemaOptions = [
 ### validateTree
 
 A whole call checked against the catalog: its shape read as meant, its structure and limits checked, and each element's props validated. Resolves to `{ value }` with the checked tree, or `{ issues }`. A bound prop keeps its binding until `resolveBindings` replaces it.
+
+```ts
+validateTree(input: unknown, catalog: Catalog): Promise<{ value: Tree } | { issues: TreeIssue[] }>
+
+type TreeIssue = { code: string; message: string; path: (string | number)[] };
+```
 
 Two slips are read as the model meant them: `component` written for `type`, and props written beside `type`. Elements may come as a list or as a map keyed by id. Each issue carries one of these codes:
 
@@ -173,36 +206,80 @@ export const issueCodes = [
 
 Issues as text for the model, one per line: where, then what's wrong. Takes an optional maximum, 8 by default, and counts the rest.
 
+```ts
+formatIssues(issues: TreeIssue[], max?: number): string
+```
+
 ### findBindings
 
 Every binding in a tree, for the host to resolve. Each comes with the element's `id` and the `prop` it sits in.
+
+```ts
+findBindings(tree: Tree): FoundBinding[]
+
+type FoundBinding = { $data: string; columns?: string[]; column?: string; id: string; prop: string };
+```
 
 ### resolveBindings
 
 The tree with every binding replaced by its data, each element validated again with the data in place. `resolve` returns what a ref names, such as a tool result's rows, and may fetch it; the binding's columns are picked from it. `undefined` means not found, which is an `unresolved_binding` issue.
 
+```ts
+resolveBindings(
+  tree: Tree,
+  catalog: Catalog,
+  resolve: (binding: FoundBinding) => unknown | Promise<unknown>,
+): Promise<{ value: Tree } | { issues: TreeIssue[] }>
+```
+
 ### readTree
 
 Partial or whole input as nodes to draw, without throwing. A node whose type isn't known yet is skipped; one whose props don't validate yet, or whose data isn't resolved, is pending. The pure form of `useTree`, for tests and servers.
+
+```ts
+readTree(
+  input: unknown,
+  catalog: Catalog,
+  options?: { resolve?: (binding: FoundBinding) => unknown },
+): { root?: TreeNode }
+```
 
 ### toMarkdown
 
 A tree as Markdown, through each component's `markdown`. A container without one reads as its children. An element still holding a binding is left out: resolve the tree first. Throws for a component that holds nothing and has no `markdown`.
 
-Four helpers keep text the model wrote literal inside your Markdown:
+```ts
+toMarkdown(tree: Tree, catalog: Catalog): string
+```
 
-export const markdownHelpers = [
-  { name: "escapeMarkdownInline", type: "(text: string) => string", description: "One line of literal text, for a label, a cell or a heading." },
-  { name: "escapeMarkdown", type: "(text: string) => string", description: "Literal text over several lines, such as a paragraph. A line that would open a block has its marker escaped, and indentation is dropped." },
-  { name: "markdownHeading", type: "(level: number, text: string) => string", description: "A heading of literal text. A trailing `#` stays text." },
-  { name: "markdownTable", type: "(header: string[], rows: unknown[][]) => string", description: "A GitHub-flavoured table. Every cell is literal text, so a pipe can't split a column." },
-];
+Four helpers turn text the model wrote into Markdown that reads as written, so it can't format, link or break the structure around it. Use them inside each component's `markdown`:
 
-<PropsTable rows={markdownHelpers} />
+```ts
+// One line of literal text, for a label, a cell or a heading.
+markdownText(text: string): string
+
+// Several lines of literal text, such as a paragraph. A line that would open
+// a block has its marker escaped, and indentation is dropped.
+markdownParagraph(text: string): string
+
+// A heading of literal text. A trailing `#` stays text.
+markdownHeading(level: number, text: string): string
+
+// A GitHub-flavoured table. Every cell is literal text, so a pipe can't split a column.
+markdownTable(header: string[], rows: unknown[][]): string
+```
 
 ## useTree
 
 `readTree` in a component: the call's input as nodes to draw. While `streaming`, a node that was ready keeps its last valid props until newer ones validate, so a value caught mid-word doesn't blink back to pending.
+
+```ts
+useTree(
+  input: unknown,
+  catalog: Catalog,
+  options?: { streaming?: boolean; resolve?: (binding: FoundBinding) => unknown },
+): { root?: TreeNode }
+```
 
 ```tsx
 const { root } = useTree(part.input, catalog, {

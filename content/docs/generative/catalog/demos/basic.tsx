@@ -72,14 +72,18 @@ export const Basic = () => {
     const run = ++runs.current;
     setLive(true);
     setStreaming(true);
-    for (let end = 0; end < TEXT.length; end += CHARACTERS_PER_TICK) {
-      await sleep(TICK_MS);
-      const { value } = await parsePartialJson(TEXT.slice(0, end));
-      if (run !== runs.current) return;
-      setInput(value);
+    try {
+      for (let end = 0; end < TEXT.length; end += CHARACTERS_PER_TICK) {
+        await sleep(TICK_MS);
+        const { value } = await parsePartialJson(TEXT.slice(0, end));
+        if (run !== runs.current) return;
+        setInput(value);
+      }
+    } finally {
+      // Back at rest however the run ends, so Replay can't stay disabled.
+      setInput(CALL);
+      setStreaming(false);
     }
-    setInput(CALL);
-    setStreaming(false);
   };
 
   return (

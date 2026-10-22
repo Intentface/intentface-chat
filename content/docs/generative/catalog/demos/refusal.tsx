@@ -56,15 +56,18 @@ export const Refusal = () => {
     setLive(true);
     setBusy(true);
     setInput(FIRST_CALL);
-    const result = await validateTree(FIRST_CALL, catalog);
-    await sleep(700);
-    if (run !== runs.current) return;
-    setSentBack(result.issues?.[0]?.message);
-    await sleep(2800);
-    if (run !== runs.current) return;
-    setInput(SECOND_CALL);
-    setSentBack(undefined);
-    setBusy(false);
+    try {
+      const result = await validateTree(FIRST_CALL, catalog);
+      await sleep(700);
+      if (run !== runs.current) return;
+      setSentBack(result.issues?.[0]?.message);
+      await sleep(2800);
+    } finally {
+      // Back at rest however the run ends, so Replay can't stay disabled.
+      setInput(SECOND_CALL);
+      setSentBack(undefined);
+      setBusy(false);
+    }
   };
 
   return (

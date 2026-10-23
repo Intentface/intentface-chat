@@ -14,6 +14,7 @@ import {
   createContext,
   type KeyboardEvent,
   memo,
+  type PointerEvent,
   type ReactNode,
   type RefObject,
   type TouchEvent,
@@ -31,10 +32,12 @@ import type { PrimitiveProps } from "../internal/primitive-props";
 import type { StateAttributesMapping } from "../internal/render/getStateAttributesProps";
 import { useRefWithInit } from "../internal/render/useRefWithInit";
 import { useRenderElement } from "../internal/render/useRenderElement";
+import { alignedScrollTop } from "../internal/scroll-into-view-within";
 import {
   DEFAULT_BOTTOM_OFFSET,
   measureDockInset,
   measureTopInset,
+  prefersReducedMotion,
   queryDock,
   readViewportBox,
   resolveScrollBehavior,
@@ -42,6 +45,12 @@ import {
   scrollContainerTo,
   wasPrepended,
 } from "./geometry";
+import {
+  animateScroll,
+  readScrollTiming,
+  resolveDuration,
+  type ThreadScrollKind,
+} from "./scroll-animation";
 import {
   createEdgeStore,
   createVisibilityStore,
@@ -51,6 +60,7 @@ import {
   type VisibilityStore,
 } from "./stores";
 
+export type { ThreadScrollKind } from "./scroll-animation";
 export type { ThreadVisibilityState } from "./stores";
 
 // Latest-ref: read the current value from long-lived effects/callbacks without
@@ -85,6 +95,7 @@ type ThreadContextValue = {
   scrollToTop: (behavior?: ScrollBehavior) => void;
   scrollToMessage: (messageId: string, options?: ThreadScrollToMessageOptions) => boolean;
   releaseFollow: () => void;
+  interruptScroll: () => void;
   scrollRef: RefObject<HTMLDivElement | null>;
   contentRef: RefObject<HTMLDivElement | null>;
   topSentinelRef: RefObject<HTMLDivElement | null>;
@@ -173,6 +184,10 @@ export const useThreadVisibility = (): ThreadVisibilityState => {
 // the smooth scroll) is not mistaken for the user scrolling away. The release
 // is decisive: follow consults only the intent ref, never the (async, one
 // frame stale) at-bottom snapshot, so a released follow can never scroll.
+//
+// Smooth scrolls are native unless the styled layer sets a timing through the
+// --thread-scroll* variables; then they run as a scripted animation, stamped
+// as data-scrolling on the root, that any user scroll gesture interrupts.
 // ---------------------------------------------------------------------------
 
 export type ThreadAutoScrollMode = "off" | "bottom" | "jump" | "follow";
@@ -182,6 +197,17 @@ export type ThreadAutoScrollMode = "off" | "bottom" | "jump" | "follow";
 // bottom they cause no scroll (and so no re-arming at-bottom transition), so
 // releasing on them would strand the view unfollowed while visually pinned.
 const USER_SCROLL_UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"]);
+
+// Every key that scrolls the focused viewport. Any of them interrupts a
+// scripted scroll animation, whichever way it goes.
+const USER_SCROLL_KEYS = new Set([...USER_SCROLL_UP_KEYS, "ArrowDown", "PageDown", "End", " "]);
+
+// The scroll kinds whose destination is the live end (see scrollWith).
+const SCROLLS_TOWARD_END = new Set<ThreadScrollKind>(["land", "follow", "bottom"]);
+
+// Where a scroll goes. tracksEnd re-reads getTop every animation frame;
+// otherwise the destination is fixed when the scroll starts.
+type ScrollTarget = { getTop: () => number; tracksEnd: boolean };
 
 // How long after a programmatic scroll the sentinel may leave view without
 // releasing the follow. Cleared earlier by scrollend where supported; the
@@ -218,16 +244,122 @@ const useThreadScroll = (
   const autoScrollingRef = useRef(false);
   const autoScrollingTimeoutRef = useRef<number | null>(null);
 
+  const clearAutoScrollingTimeout = useCallback(() => {
+    if (autoScrollingTimeoutRef.current === null) return;
+    window.clearTimeout(autoScrollingTimeoutRef.current);
+    autoScrollingTimeoutRef.current = null;
+  }, []);
+
   const markAutoScrolling = useCallback(() => {
     autoScrollingRef.current = true;
-    if (autoScrollingTimeoutRef.current !== null) {
-      window.clearTimeout(autoScrollingTimeoutRef.current);
-    }
+    clearAutoScrollingTimeout();
     autoScrollingTimeoutRef.current = window.setTimeout(() => {
       autoScrollingTimeoutRef.current = null;
       autoScrollingRef.current = false;
     }, AUTO_SCROLL_SETTLE_MS);
-  }, []);
+  }, [clearAutoScrollingTimeout]);
+
+  // The scripted animation in flight, if any. tracksEnd marks one whose
+  // destination is the live end, re-read every frame: streaming growth is
+  // absorbed by it instead of restarting it.
+  const animationRef = useRef<{ cancel: () => void; tracksEnd: boolean } | null>(null);
+
+  const stopAnimation = useCallback(() => {
+    const animation = animationRef.current;
+    if (!animation) return;
+    animationRef.current = null;
+    animation.cancel();
+    rootRef.current?.removeAttribute("data-scrolling");
+  }, [rootRef]);
+
+  // Whether the bottom sentinel is in view, as the observer last reported it —
+  // kept even while the guard holds off acting on it.
+  const bottomInViewRef = useRef(true);
+
+  // The bottom edge left view: the scroll button shows and the follow lets go.
+  const leaveBottom = useCallback(() => {
+    atBottomStore.setSnapshot(false);
+    followingRef.current = false;
+    rootRef.current?.toggleAttribute("data-at-bottom", false);
+  }, [atBottomStore, rootRef]);
+
+  // A user gesture took the scroll over mid-animation. End our guard rather
+  // than re-arming it, and act on the edge it held off: the sentinel usually
+  // left view while the guard was up (a land moves it out at once), and the
+  // observer reports a crossing only once. A drag away from the bottom then
+  // releases the follow exactly as it would with no animation running.
+  const interruptScroll = useCallback(() => {
+    if (!animationRef.current) return;
+    stopAnimation();
+    autoScrollingRef.current = false;
+    clearAutoScrollingTimeout();
+    if (!bottomInViewRef.current) leaveBottom();
+  }, [stopAnimation, clearAutoScrollingTimeout, leaveBottom]);
+
+  // Every scroll the thread starts goes through here. "smooth" uses the timing
+  // the styled layer configured (see scroll-animation.ts) and falls back to
+  // the native smooth scroll when there is none; anything else — or reduced
+  // motion — jumps. data-scrolling is stamped before the timing is read, so
+  // per-kind selectors resolve, and stays only while a scripted animation runs.
+  // The destination is computed only once a timing is known: the native path
+  // finds its own.
+  const scrollWith = useCallback(
+    (
+      kind: ThreadScrollKind,
+      behavior: ScrollBehavior,
+      target: ScrollTarget,
+      native: (behavior: ScrollBehavior) => void,
+    ) => {
+      const scroller = scrollRef.current;
+      const root = rootRef.current;
+      const towardEnd = SCROLLS_TOWARD_END.has(kind);
+      stopAnimation();
+      // Only a scroll toward the end is guarded. One away from it has released
+      // the follow already, and the sentinel must report the edge leaving: the
+      // observer reports a crossing once, so one swallowed by the guard would
+      // leave isAtBottom stale until the user returned to the bottom.
+      if (towardEnd) markAutoScrolling();
+      if (!scroller || !root || behavior !== "smooth" || prefersReducedMotion()) {
+        native(resolveScrollBehavior(behavior));
+        return;
+      }
+
+      root.setAttribute("data-scrolling", kind);
+      const timing = readScrollTiming(getComputedStyle(root));
+      const from = scroller.scrollTop;
+      const top = timing ? target.getTop() : from;
+      const duration = timing ? resolveDuration(timing, top - from) : 0;
+      if (!timing || duration === 0) {
+        root.removeAttribute("data-scrolling");
+        native(timing ? "instant" : "smooth");
+        return;
+      }
+
+      // A scroll toward the end holds the guard for its whole length, however
+      // long the consumer made it: the settle timeout would otherwise expire
+      // mid-flight and let the sentinel release the follow.
+      if (towardEnd) {
+        autoScrollingRef.current = true;
+        clearAutoScrollingTimeout();
+      }
+      const animation = {
+        tracksEnd: target.tracksEnd,
+        cancel: animateScroll(scroller, {
+          duration,
+          easing: timing.easing,
+          getTarget: target.tracksEnd ? target.getTop : () => top,
+          onFinish: () => {
+            if (animationRef.current !== animation) return;
+            animationRef.current = null;
+            root.removeAttribute("data-scrolling");
+            if (towardEnd) markAutoScrolling();
+          },
+        }),
+      };
+      animationRef.current = animation;
+    },
+    [rootRef, stopAnimation, markAutoScrolling, clearAutoScrollingTimeout],
+  );
 
   useEffect(() => {
     const scroller = scrollRef.current;
@@ -249,6 +381,7 @@ const useThreadScroll = (
             continue;
           }
           const atBottom = entry.isIntersecting;
+          bottomInViewRef.current = atBottom;
           if (atBottom) {
             atBottomStore.setSnapshot(true);
             followingRef.current = true;
@@ -259,9 +392,7 @@ const useThreadScroll = (
             // non-following mode. A scroll *we* started (send landing / followed
             // stream) keeps autoScrollingRef set, so its transient off-screen
             // frame is ignored — that's what stops the button flashing on send.
-            atBottomStore.setSnapshot(false);
-            followingRef.current = false;
-            rootElement?.toggleAttribute("data-at-bottom", false);
+            leaveBottom();
           }
         }
       },
@@ -272,33 +403,43 @@ const useThreadScroll = (
 
     // A finished scroll means nothing of ours is in flight anymore; clear
     // early instead of waiting out the timeout fallback.
+    // A scripted animation lands one instant scroll per frame, and each can
+    // fire its own scrollend; the animation clears the flag when it ends.
     const settle = () => {
+      if (animationRef.current) return;
       autoScrollingRef.current = false;
-      if (autoScrollingTimeoutRef.current !== null) {
-        window.clearTimeout(autoScrollingTimeoutRef.current);
-        autoScrollingTimeoutRef.current = null;
-      }
+      clearAutoScrollingTimeout();
     };
     scroller.addEventListener("scrollend", settle);
 
     return () => {
       io.disconnect();
       scroller.removeEventListener("scrollend", settle);
-      if (autoScrollingTimeoutRef.current !== null) {
-        window.clearTimeout(autoScrollingTimeoutRef.current);
-        autoScrollingTimeoutRef.current = null;
-      }
+      animationRef.current?.cancel();
+      animationRef.current = null;
+      clearAutoScrollingTimeout();
     };
-  }, [atTopStore, atBottomStore, rootRef]);
+  }, [atTopStore, atBottomStore, rootRef, clearAutoScrollingTimeout, leaveBottom]);
 
-  const scrollToBottom = useCallback(
-    (behavior: ScrollBehavior = "smooth") => {
+  // The live end. Tracked by default — re-read per frame, so streaming growth
+  // moves the destination along with it.
+  const scrollToEnd = useCallback(
+    (kind: ThreadScrollKind, behavior: ScrollBehavior, { tracksEnd = true } = {}) => {
       const el = scrollRef.current;
       if (!el) return;
-      markAutoScrolling();
-      scrollContainerTo(el, el.scrollHeight, behavior);
+      scrollWith(
+        kind,
+        behavior,
+        { getTop: () => Math.max(0, el.scrollHeight - el.clientHeight), tracksEnd },
+        (resolved) => scrollContainerTo(el, el.scrollHeight, resolved),
+      );
     },
-    [markAutoScrolling],
+    [scrollWith],
+  );
+
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = "smooth") => scrollToEnd("bottom", behavior),
+    [scrollToEnd],
   );
 
   // Scrolling to the top is a deliberate move away from the live end, so it
@@ -308,32 +449,37 @@ const useThreadScroll = (
       const el = scrollRef.current;
       if (!el) return;
       followingRef.current = false;
-      markAutoScrolling();
-      scrollContainerTo(el, 0, behavior);
+      scrollWith("top", behavior, { getTop: () => 0, tracksEnd: false }, (resolved) =>
+        scrollContainerTo(el, 0, resolved),
+      );
     },
-    [markAutoScrolling],
+    [scrollWith],
   );
 
   // Resolve a row by its consumer-provided data-message-id and jump to it.
   // Resolved lazily at call time — no per-row registration, nothing on the hot
-  // path. scrollIntoView handles the alignment math and honors any
-  // scroll-margin the styled layer sets on rows.
+  // path. The destination is computed by hand (alignedScrollTop: scrollIntoView's
+  // block semantics, the row's scroll-margin included) and only the thread's
+  // own viewport scrolls, on every path. Never scrollIntoView: it scrolls every
+  // scrollable ancestor, so a thread embedded in a page would move the page too.
   const resolveMessageJump = useCallback(
     (messageId: string, options: ThreadScrollToMessageOptions = {}) => {
       const row = contentRef.current?.querySelector<HTMLElement>(
         `[data-message-id="${CSS.escape(messageId)}"]`,
       );
-      if (!row) return false;
+      const scroller = scrollRef.current;
+      if (!row || !scroller) return false;
       followingRef.current = false;
-      markAutoScrolling();
-      row.scrollIntoView({
-        block: options.align ?? "start",
-        inline: "nearest",
-        behavior: resolveScrollBehavior(options.behavior ?? "smooth"),
-      });
+      const align = options.align ?? "start";
+      scrollWith(
+        "message",
+        options.behavior ?? "smooth",
+        { getTop: () => alignedScrollTop(scroller, row, align), tracksEnd: false },
+        (resolved) => scrollContainerTo(scroller, alignedScrollTop(scroller, row, align), resolved),
+      );
       return true;
     },
-    [markAutoScrolling],
+    [scrollWith],
   );
 
   // Pending jump — a scrollToMessage that arrived before the transcript did
@@ -447,7 +593,11 @@ const useThreadScroll = (
       const replaced = mutations.some((m) => m.removedNodes.length > 0);
       skipNextResize = true;
       followingRef.current = true;
-      scrollToBottom(landed && !replaced && !repopulated ? "smooth" : "instant");
+      // An animated land in "jump" freezes its destination: a reply outgrowing
+      // the reserve mid-flight must not turn the land into a follow.
+      scrollToEnd("land", landed && !replaced && !repopulated ? "smooth" : "instant", {
+        tracksEnd: followsStream,
+      });
       landed = true;
     };
 
@@ -480,9 +630,13 @@ const useThreadScroll = (
         return;
       }
       if (!followingRef.current) return;
+      // An animation already headed for the live end re-reads it every frame,
+      // so growth (or a resize) mid-flight is absorbed rather than restarting
+      // it — a long land keeps its own timing while the reply starts streaming.
+      if (animationRef.current?.tracksEnd) return;
 
       const isResizing = resizedFrame === frame;
-      scrollToBottom(isResizing ? "instant" : "smooth");
+      scrollToEnd("follow", isResizing ? "instant" : "smooth");
     };
 
     land();
@@ -500,7 +654,7 @@ const useThreadScroll = (
       growth?.disconnect();
       if (landsAtTop) content.style.removeProperty("--thread-turn-min-height");
     };
-  }, [mode, scrollToBottom, flushPendingJump]);
+  }, [mode, scrollToEnd, flushPendingJump]);
 
   // Prepend preservation — hold the reading position while older history loads
   // in above. Native scroll anchoring (Chrome/Firefox) already keeps the
@@ -678,6 +832,7 @@ const useThreadScroll = (
       scrollToTop,
       scrollToMessage,
       releaseFollow,
+      interruptScroll,
       scrollRef,
       contentRef,
       topSentinelRef,
@@ -693,6 +848,7 @@ const useThreadScroll = (
       scrollToTop,
       scrollToMessage,
       releaseFollow,
+      interruptScroll,
     ],
   );
 };
@@ -844,19 +1000,33 @@ export const ThreadViewport = ({
   style,
   ...elementProps
 }: ThreadViewportProps) => {
-  const { scrollRef, releaseFollow } = useThreadContext();
+  const { scrollRef, releaseFollow, interruptScroll } = useThreadContext();
   const lastTouchYRef = useRef(0);
 
   const handleWheel = useCallback(
     (event: WheelEvent<HTMLDivElement>) => {
+      interruptScroll();
       if (event.deltaY < 0) releaseFollow();
     },
-    [releaseFollow],
+    [releaseFollow, interruptScroll],
   );
 
-  const handleTouchStart = useCallback((event: TouchEvent<HTMLDivElement>) => {
-    lastTouchYRef.current = event.touches[0]?.clientY ?? 0;
-  }, []);
+  const handleTouchStart = useCallback(
+    (event: TouchEvent<HTMLDivElement>) => {
+      interruptScroll();
+      lastTouchYRef.current = event.touches[0]?.clientY ?? 0;
+    },
+    [interruptScroll],
+  );
+
+  // A press on the scroller itself — not on a row — is its scrollbar (or bare
+  // padding): a drag is about to move the scroll position by hand.
+  const handlePointerDown = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      if (event.target === event.currentTarget) interruptScroll();
+    },
+    [interruptScroll],
+  );
 
   // A finger moving down drags the content down — an upward scroll.
   const handleTouchMove = useCallback(
@@ -873,10 +1043,11 @@ export const ThreadViewport = ({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (event.target !== event.currentTarget) return;
+      if (USER_SCROLL_KEYS.has(event.key)) interruptScroll();
       const scrollsUp = USER_SCROLL_UP_KEYS.has(event.key) || (event.key === " " && event.shiftKey);
       if (scrollsUp) releaseFollow();
     },
-    [releaseFollow],
+    [releaseFollow, interruptScroll],
   );
 
   return useRenderElement(
@@ -894,6 +1065,7 @@ export const ThreadViewport = ({
           onWheel: handleWheel,
           onTouchStart: handleTouchStart,
           onTouchMove: handleTouchMove,
+          onPointerDown: handlePointerDown,
           onKeyDown: handleKeyDown,
         },
         elementProps,

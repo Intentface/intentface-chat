@@ -3,8 +3,8 @@
 Headless UI primitives for React — the behavior, state, and wire formats for AI
 chat interfaces and the app shells around them, with no styling of their own.
 
-This is the Base UI model applied to chat: **the package owns behavior, you own
-every class.** There is no styled companion package and no theme to opt out of.
+**The package owns behavior; you own every class.** There is no styled companion
+package and no theme to opt out of.
 The demos on each [docs](https://ui.intentface.com) page are self-contained
 Tailwind, meant to be copied and restyled.
 
@@ -65,8 +65,8 @@ no editor framework, no animation library.
 
 Each primitive is a separate entry point, exporting an unstyled compound
 component that renders semantic DOM with `data-*` state attributes, context
-hooks, and a `render` prop for swapping the underlying element. The last three
-are app-shell parts rather than chat parts, and are useful on their own:
+hooks, and a `render` prop for swapping the underlying element. Shell, nav and
+tabs are app-shell parts rather than chat parts, and are useful on their own:
 
 | Import | What it is |
 | --- | --- |
@@ -78,6 +78,7 @@ are app-shell parts rather than chat parts, and are useful on their own:
 | `@intentface/ui/nav` | A nav tree with roving focus, typeahead, collapsible groups, and a guide ladder down the left edge. |
 | `@intentface/ui/tabs` | An open-ended, closable tab collection whose panel renders in the layout or anchored to its own tab. |
 | `@intentface/ui/chip`, `/attachments`, `/ask-user` | The remaining building blocks. |
+| `@intentface/ui/generative` | Experimental. Typed helpers that check a model's UI tool call against a catalog, read it while it streams, resolve its data bindings, and write it as Markdown. |
 | `@intentface/ui/types` | The structural message contract + part type guards. |
 | `@intentface/ui/message-utils` | Part segmentation, turn grouping, reasoning/source derivation. |
 | `@intentface/ui/chip-markdown` | The self-describing chip wire format. |

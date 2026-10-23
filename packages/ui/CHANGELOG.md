@@ -1,5 +1,11 @@
 # @intentface/ui
 
+## 0.7.0
+
+### Minor Changes
+
+- [Breaking] Renamed from `@intentface/chat`. Swap the dependency for `@intentface/ui` and replace `@intentface/chat/` with `@intentface/ui/` in imports; the rename changes nothing else.
+
 ## 0.6.0
 
 ### Minor Changes

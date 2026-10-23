@@ -59,8 +59,8 @@ jobs:
         id: check
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          name=$(node -p "require('./packages/chat/package.json').name")
-          version=$(node -p "require('./packages/chat/package.json').version")
+          name=$(node -p "require('./packages/ui/package.json').name")
+          version=$(node -p "require('./packages/ui/package.json').version")
           # Exact version, not the latest dist-tag, and a registry error must not
           # read as "unpublished" — that would ask for an approval on every run.
           if output=$(npm view "$name@$version" version 2>&1); then
@@ -99,7 +99,7 @@ jobs:
 
       - name: Verify release candidate
         run: bun run verify:release
-        working-directory: packages/chat
+        working-directory: packages/ui
 
   publish:
     needs: [version, verify-release]

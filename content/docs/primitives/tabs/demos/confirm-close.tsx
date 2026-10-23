@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs } from "@intentface/chat/tabs";
+import { Tabs } from "@intentface/ui/tabs";
 import { type ComponentProps, useRef, useState } from "react";
 import { type Asking, Prompt } from "./confirm-prompt";
 

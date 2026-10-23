@@ -1,6 +1,6 @@
 "use client";
 
-import { Message, useMessageSelection } from "@intentface/chat/message";
+import { Message, useMessageSelection } from "@intentface/ui/message";
 import { useState } from "react";
 
 /*

@@ -5,7 +5,7 @@ import {
   AskUser as AskUserPrimitive,
   useAskUserOption,
   useAskUserOptions,
-} from "@intentface/chat/ask-user";
+} from "@intentface/ui/ask-user";
 import {
   Check,
   ChevronDown,

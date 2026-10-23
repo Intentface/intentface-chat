@@ -6,7 +6,7 @@ A reference for the chat surface in this project — the UI primitives (`Compose
 
 - **Vercel AI SDK** (`ai@^6`) and **`@ai-sdk/react@^3`** — `Chat` class, `useChat()`, `DefaultChatTransport`, `UIMessage` parts as the wire format
 - **`@ai-sdk/openai@^3`** — the only model provider; chat models are selectable demo ids (`gpt-5.5` / `gpt-5.4` / `gpt-5.4-mini` / `gpt-5.4-nano`, default `gpt-5.4-mini`)
-- **No editor framework** — the composer's contenteditable engine (inline chips, prefix-triggered command lists) is hand-rolled in `packages/chat/src/composer/`
+- **No editor framework** — the composer's contenteditable engine (inline chips, prefix-triggered command lists) is hand-rolled in `packages/ui/src/composer/`
 - **Zustand** (`^5`, with `persist`) — chat-list metadata, model selection, and settings
 - **Streamdown** (`^2`) — streaming-safe markdown renderer used by `Message.Markdown`
 - **Base UI** (`@base-ui/react`) + **motion** — popovers, collapsibles, transitions
@@ -248,7 +248,7 @@ Pass a `commands` map to the root:
 
 ### Editor engine
 
-The composer runs on a purpose-built contenteditable engine (`packages/chat/src/composer/`), not an editor framework:
+The composer runs on a purpose-built contenteditable engine (`packages/ui/src/composer/`), not an editor framework:
 
 - **Document model** (`segments.ts`) — a flat list of text and chip segments. Every mutation reduces to one contiguous range replacement (`TextChange`), which makes position mapping a single arithmetic rule.
 - **DOM reconciliation** (`editor-dom.ts`) — renders the canonical child list, reusing chip spans by id so a moved chip keeps its React portal instead of remounting.
@@ -258,7 +258,7 @@ Chips are atomic inline `contenteditable=false` spans carrying `prefix` / `label
 
 #### Chip wire format
 
-A chip segment serializes to a self-describing markdown-link token (`packages/chat/src/chip-markdown.ts`):
+A chip segment serializes to a self-describing markdown-link token (`packages/ui/src/chip-markdown.ts`):
 
 ```
 [Label](chip:prefix:value?variant=…&icon=…)

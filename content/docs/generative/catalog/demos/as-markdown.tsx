@@ -1,6 +1,6 @@
 "use client";
 
-import { markdown, tree, useTree } from "@intentface/chat/generative";
+import { markdown, tree, useTree } from "@intentface/ui/generative";
 import { useState } from "react";
 import { catalog } from "./catalog";
 import { DrawNode } from "./draw";

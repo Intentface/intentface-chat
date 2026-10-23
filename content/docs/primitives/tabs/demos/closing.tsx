@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs } from "@intentface/chat/tabs";
+import { Tabs } from "@intentface/ui/tabs";
 import { Archive, Inbox, Pen, Send, X } from "@keyline-icons/react";
 import { createElement } from "react";
 

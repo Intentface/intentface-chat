@@ -1,6 +1,6 @@
 "use client";
 
-import { Steps as StepsPrimitive } from "@intentface/chat/steps";
+import { Steps as StepsPrimitive } from "@intentface/ui/steps";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 

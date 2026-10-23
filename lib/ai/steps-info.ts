@@ -2,7 +2,7 @@
 // own backend tools (the webSearch findings shape, the askUser output JSON),
 // so it lives in the app, not the generic Steps primitive.
 
-import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
+import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/ui/types";
 import type { ToolLabels } from "@/lib/ai/tool-labels";
 import type { AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
 

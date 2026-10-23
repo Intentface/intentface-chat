@@ -1,6 +1,6 @@
 "use client";
 
-import { Steps } from "@intentface/chat/steps";
+import { Steps } from "@intentface/ui/steps";
 import { Check, ChevronDown, Circle } from "@keyline-icons/react";
 
 // Steps is recursive: an item's panel can hold rows and further items. A nested

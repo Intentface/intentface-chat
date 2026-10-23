@@ -1,7 +1,7 @@
 "use client";
 import { ArrowUp, Stop } from "@keyline-icons/react";
 
-// Styled composer — thin wrappers over @intentface/chat/composer. Behavior
+// Styled composer — thin wrappers over @intentface/ui/composer. Behavior
 // (editor, store, machines, command plumbing) lives in the package; this file
 // carries the Tailwind classes, icons, and motion, and re-exports the public
 // surface so consumers keep importing from "@/components/ai/composer".
@@ -15,7 +15,7 @@ import {
   useComposerController,
   useComposerStore,
   useComposerSubmit,
-} from "@intentface/chat/composer";
+} from "@intentface/ui/composer";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { Children, type ComponentProps, type ReactNode, useMemo, useRef } from "react";
@@ -60,7 +60,7 @@ export type {
   ComposerSubmitOn,
   PrefixOnSelectContext,
   TriggerRule,
-} from "@intentface/chat/composer";
+} from "@intentface/ui/composer";
 
 // ---------------------------------------------------------------------------
 // Root

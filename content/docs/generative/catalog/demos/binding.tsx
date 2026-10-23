@@ -1,6 +1,6 @@
 "use client";
 
-import { type FoundBinding, useTree } from "@intentface/chat/generative";
+import { type FoundBinding, useTree } from "@intentface/ui/generative";
 import { useEffect, useRef, useState } from "react";
 import { catalog } from "./catalog";
 import { DrawNode } from "./draw";

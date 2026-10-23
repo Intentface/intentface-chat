@@ -1,6 +1,6 @@
 "use client";
 
-import { type TreeNode, useTree } from "@intentface/chat/generative";
+import { type TreeNode, useTree } from "@intentface/ui/generative";
 import * as m from "motion/react-m";
 import type { ReactNode } from "react";
 import { catalog } from "@/lib/ai/generative-catalog";

@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, type TabsStore, useTabsStore } from "@intentface/chat/tabs";
+import { Tabs, type TabsStore, useTabsStore } from "@intentface/ui/tabs";
 import { Archive, Inbox, Pen, Send, X } from "@keyline-icons/react";
 import { createElement, useState } from "react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { TreeNode } from "@intentface/chat/generative";
+import type { TreeNode } from "@intentface/ui/generative";
 import { type ReactNode, useCallback, useState } from "react";
 import type { catalog } from "./catalog";
 

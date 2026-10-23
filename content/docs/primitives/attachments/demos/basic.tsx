@@ -1,6 +1,6 @@
 "use client";
 
-import { type AttachmentItem, Attachments } from "@intentface/chat/attachments";
+import { type AttachmentItem, Attachments } from "@intentface/ui/attachments";
 import { File, X } from "@keyline-icons/react";
 import { useState } from "react";
 

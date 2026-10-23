@@ -1,7 +1,7 @@
 "use client";
 
 import { useRender } from "@base-ui/react/use-render";
-import { Shell, useShell } from "@intentface/chat/shell";
+import { Shell, useShell } from "@intentface/ui/shell";
 import { PanelLeft } from "@keyline-icons/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { AnimatePresence, useReducedMotion } from "motion/react";
@@ -27,7 +27,7 @@ import { IconButton } from "./icon-button";
 
 /*
  * Open/collapsed state and the whole hotspot choreography live in `Shell`
- * from @intentface/chat/shell — this file is the styled layer over it. What
+ * from @intentface/ui/shell — this file is the styled layer over it. What
  * stays here is what the package deliberately has no opinion about: every
  * class, the off-canvas/card geometry, the mobile drawer, where the layout is
  * persisted, and the keyboard shortcut.

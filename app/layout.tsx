@@ -4,7 +4,7 @@ import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
 import { SiteShell } from "@/components/site-shell";
 import { source } from "@/lib/docs/source";
-import chatPackage from "@/packages/chat/package.json";
+import uiPackage from "@/packages/ui/package.json";
 import "streamdown/styles.css";
 import "./globals.css";
 const inter = Inter({
@@ -30,9 +30,9 @@ export const metadata: Metadata = {
   // Absolute base for Open Graph and canonical URLs. Without it Next cannot
   // resolve them, so link previews fall back to relative paths.
   metadataBase: new URL("https://ui.intentface.com"),
-  title: "@intentface/chat",
+  title: "@intentface/ui",
   description:
-    "Headless chat UI primitives for React — unstyled compound components, hooks, and wire formats for building AI chat interfaces.",
+    "Headless UI primitives for React — unstyled compound components, hooks, and wire formats for AI chat interfaces and the app shells around them.",
 };
 
 export default function RootLayout({
@@ -48,7 +48,7 @@ export default function RootLayout({
       >
         <Providers>
           {/* Read here on the server, so only the version reaches the client. */}
-          <SiteShell tree={source.pageTree} version={chatPackage.version}>
+          <SiteShell tree={source.pageTree} version={uiPackage.version}>
             {children}
           </SiteShell>
         </Providers>

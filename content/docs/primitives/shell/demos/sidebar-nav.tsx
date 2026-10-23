@@ -1,4 +1,4 @@
-import { Nav } from "@intentface/chat/nav";
+import { Nav } from "@intentface/ui/nav";
 import { ChevronDown, Home, Inbox, Package } from "@keyline-icons/react";
 
 export const SidebarNav = () => (

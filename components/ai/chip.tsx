@@ -1,6 +1,6 @@
 "use client";
 
-import { Chip as ChipPrimitive } from "@intentface/chat/chip";
+import { Chip as ChipPrimitive } from "@intentface/ui/chip";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import HoverCard from "@/components/ui/hover-card";

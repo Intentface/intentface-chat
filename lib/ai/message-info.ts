@@ -3,8 +3,8 @@
 // (bold `**Header**` reasoning sections, dedup-by-domain sources, the
 // chain-of-thought grouping) over the package's generic part contracts.
 
-import type { MessageSegment } from "@intentface/chat/message-utils";
-import { isSourceUrlPart, type ReasoningPart, type UnknownPart } from "@intentface/chat/types";
+import type { MessageSegment } from "@intentface/ui/message-utils";
+import { isSourceUrlPart, type ReasoningPart, type UnknownPart } from "@intentface/ui/types";
 
 // ---------------------------------------------------------------------------
 // Reasoning sections — split by standalone bold `**Header**` lines

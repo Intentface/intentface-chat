@@ -7,7 +7,7 @@ import {
   matchesAccept,
   revokeAttachmentUrl,
   toAttachmentItem,
-} from "@intentface/chat/attachments";
+} from "@intentface/ui/attachments";
 import { X } from "@keyline-icons/react";
 import { type DragEvent, useEffect, useRef, useState } from "react";
 

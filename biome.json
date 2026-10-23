@@ -15,7 +15,7 @@
       "!build",
       "!.source",
       "!packages/intentface/registry/registry.json",
-      "!packages/chat/src/internal/render"
+      "!packages/ui/src/internal/render"
     ]
   },
   "formatter": {

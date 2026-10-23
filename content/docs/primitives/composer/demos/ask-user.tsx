@@ -1,7 +1,7 @@
 "use client";
 
-import { AskUser } from "@intentface/chat/ask-user";
-import { useComposer } from "@intentface/chat/composer";
+import { AskUser } from "@intentface/ui/ask-user";
+import { useComposer } from "@intentface/ui/composer";
 
 // The parts are structural; the current question and selections come from the
 // composer's askUser slice.

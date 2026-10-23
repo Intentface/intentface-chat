@@ -27,7 +27,7 @@ const NAMESPACES = {
   chip: "Chip",
   attachments: "Attachments",
 };
-const SRC = "packages/chat/src";
+const SRC = "packages/ui/src";
 const DOCS = "content/docs/primitives";
 
 // ---------------------------------------------------------------------------
@@ -35,8 +35,8 @@ const DOCS = "content/docs/primitives";
 // ---------------------------------------------------------------------------
 
 const roots = Object.keys(NAMESPACES).map((ns) => path.resolve(SRC, ns, "index.parts.ts"));
-const config = ts.readConfigFile("packages/chat/tsconfig.json", ts.sys.readFile).config;
-const parsed = ts.parseJsonConfigFileContent(config, ts.sys, "packages/chat");
+const config = ts.readConfigFile("packages/ui/tsconfig.json", ts.sys.readFile).config;
+const parsed = ts.parseJsonConfigFileContent(config, ts.sys, "packages/ui");
 const program = ts.createProgram(roots, { ...parsed.options, noEmit: true });
 const checker = program.getTypeChecker();
 

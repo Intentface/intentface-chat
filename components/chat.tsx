@@ -7,8 +7,8 @@ import {
   getTextInfo,
   groupTurns,
   type MessageSegment,
-} from "@intentface/chat/message-utils";
-import type { ToolPart } from "@intentface/chat/types";
+} from "@intentface/ui/message-utils";
+import type { ToolPart } from "@intentface/ui/types";
 import {
   Brain,
   Check,
@@ -1063,7 +1063,7 @@ const ChatPlaceholder = () => {
             variants={variants}
             className="font-semibold text-[20px] text-ink-primary leading-7 tracking-[-0.01em]"
           >
-            Intentface Chat
+            Playground
           </m.span>
           <m.span variants={variants} className="text-ink-secondary text-md">
             Start a conversation

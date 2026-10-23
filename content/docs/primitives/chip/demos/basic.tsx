@@ -1,6 +1,6 @@
 "use client";
 
-import { Chip } from "@intentface/chat/chip";
+import { Chip } from "@intentface/ui/chip";
 import { Globe } from "@keyline-icons/react";
 import type { ReactElement, ReactNode } from "react";
 

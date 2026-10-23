@@ -1,6 +1,6 @@
 "use client";
 
-import { Nav, type NavStore, useNavStore } from "@intentface/chat/nav";
+import { Nav, type NavStore, useNavStore } from "@intentface/ui/nav";
 import { ChevronDown } from "@keyline-icons/react";
 import { useState } from "react";
 import "./external.css";

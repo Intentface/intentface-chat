@@ -1,7 +1,7 @@
 "use client";
 
-import { Message } from "@intentface/chat/message";
-import { Thread, useThread, useThreadVisibility } from "@intentface/chat/thread";
+import { Message } from "@intentface/ui/message";
+import { Thread, useThread, useThreadVisibility } from "@intentface/ui/thread";
 
 const EXCHANGES = [
   {

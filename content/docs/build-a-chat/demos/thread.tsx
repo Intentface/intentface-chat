@@ -1,6 +1,6 @@
 "use client";
 
-import { Thread } from "@intentface/chat/thread";
+import { Thread } from "@intentface/ui/thread";
 
 const LINES = [
   "Thread owns the scroll container and nothing else.",

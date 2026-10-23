@@ -67,7 +67,7 @@ Swap local state for `useChat`, which owns the message list and the request:
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
+import { Composer, type ComposerSubmitData } from "@intentface/ui/composer";
 
 export function Chat() {
   const { messages, sendMessage, status, stop } = useChat();

@@ -1,4 +1,4 @@
-import { defineCatalog, markdown } from "@intentface/chat/generative";
+import { defineCatalog, markdown } from "@intentface/ui/generative";
 import { z } from "zod";
 
 /*

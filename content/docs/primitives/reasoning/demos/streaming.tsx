@@ -1,6 +1,6 @@
 "use client";
 
-import { Reasoning, useReasoning } from "@intentface/chat/reasoning";
+import { Reasoning, useReasoning } from "@intentface/ui/reasoning";
 import { Brain, ChevronDown } from "@keyline-icons/react";
 import { useEffect, useRef, useState } from "react";
 import "./streaming.css";

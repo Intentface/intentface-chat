@@ -1,6 +1,6 @@
 "use client";
 
-import { Chip } from "@intentface/chat/chip";
+import { Chip } from "@intentface/ui/chip";
 import { type ReactElement, type ReactNode, useEffect, useRef, useState } from "react";
 
 /*

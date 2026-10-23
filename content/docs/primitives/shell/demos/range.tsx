@@ -1,6 +1,6 @@
 "use client";
 
-import { Shell, useShell } from "@intentface/chat/shell";
+import { Shell, useShell } from "@intentface/ui/shell";
 
 /*
  * The drag range, made obvious by making it small: 160px to 260px, so both

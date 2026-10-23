@@ -1,6 +1,6 @@
 "use client";
 
-import { Shell } from "@intentface/chat/shell";
+import { Shell } from "@intentface/ui/shell";
 import { ChevronDown, PanelLeft } from "@keyline-icons/react";
 import { Logo } from "./logo";
 import { SidebarNav } from "./sidebar-nav";
@@ -68,7 +68,7 @@ export const Basic = () => (
           <Logo />
         </span>
         <span className="min-w-0 flex-1 truncate font-semibold text-[13px] text-zinc-900 tracking-[-0.01em] dark:text-zinc-100">
-          @intentface/chat
+          @intentface/ui
         </span>
         <Shell.Trigger
           aria-label="Collapse sidebar"

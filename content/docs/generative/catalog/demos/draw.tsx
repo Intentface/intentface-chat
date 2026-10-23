@@ -1,5 +1,7 @@
+"use client";
+
 import type { TreeNode } from "@intentface/chat/generative";
-import type { ReactNode } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import type { catalog } from "./catalog";
 
 /*
@@ -12,7 +14,9 @@ import type { catalog } from "./catalog";
  * cross-fades to the content in place, so nothing shifts when it's ready.
  *
  * Motion is plain CSS. Under `data-live`, a node that arrives fades in from
- * `@starting-style`; set it while a call streams, and a stored call draws still.
+ * `@starting-style`, and a card's height follows its content's, so the card
+ * grows smoothly as nodes stream in. Set it while a call streams, and a stored
+ * call draws still.
  */
 export const DrawNode = ({ node }: { node: TreeNode<typeof catalog> }) => {
   switch (node.type) {
@@ -42,23 +46,35 @@ const PLACEHOLDER =
 const CONTENT =
   "opacity-0 blur-[2px] transition-[opacity,filter] duration-400 ease-in-out group-data-ready/slot:opacity-100 group-data-ready/slot:blur-[0px] motion-reduce:transition-none";
 
-const Card = ({ title, children }: { title: string | undefined; children: ReactNode }) => (
-  <section
-    className={`w-full rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] ${ARRIVE}`}
-  >
-    {title === undefined ? (
-      <div className="flex h-5 items-center">
-        <Bar className="h-2.5 w-24" />
+const Card = ({ title, children }: { title: string | undefined; children: ReactNode }) => {
+  const [content, { height }] = useMeasure();
+  return (
+    <section
+      // Clipped at its padding's edge: content still growing past the height shows there, not outside.
+      className={`w-full overflow-y-clip rounded-xl bg-white p-4 shadow-[0_0_0_1px_rgb(0_0_0/0.075),0_1px_2px_rgb(0_0_0/0.06),0_4px_8px_-2px_rgb(0_0_0/0.05)] dark:bg-zinc-900 dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.05),inset_0_0_0_1px_rgb(255_255_255/0.06),0_0_0_1px_rgb(0_0_0/0.16),0_1px_2px_rgb(0_0_0/0.1)] ${ARRIVE}`}
+    >
+      {/* Follows the content's height, so the card grows smoothly as nodes arrive. */}
+      <div
+        style={{ height }}
+        className="duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] in-data-live:transition-[height] motion-reduce:transition-none"
+      >
+        <div ref={content}>
+          {title === undefined ? (
+            <div className="flex h-5 items-center">
+              <Bar className="h-2.5 w-24" />
+            </div>
+          ) : (
+            <h3 className="font-semibold text-[14px] text-zinc-900 leading-5 dark:text-zinc-100">
+              {title}
+            </h3>
+          )}
+          {/* Metrics pair up two to a row; a table takes the full width. */}
+          <div className="mt-4 grid grid-cols-2 gap-3 empty:hidden">{children}</div>
+        </div>
       </div>
-    ) : (
-      <h3 className="font-semibold text-[14px] text-zinc-900 leading-5 dark:text-zinc-100">
-        {title}
-      </h3>
-    )}
-    {/* Metrics pair up two to a row; a table takes the full width. */}
-    <div className="mt-4 grid grid-cols-2 gap-3 empty:hidden">{children}</div>
-  </section>
-);
+    </section>
+  );
+};
 
 type MetricProps = { label: string; value: string; note?: string };
 
@@ -158,6 +174,23 @@ const Table = ({ props }: { props: TableProps | undefined }) => (
     </div>
   </div>
 );
+
+/**
+ * An element's height, kept current by a ResizeObserver as its content changes.
+ * Undefined until measured, so the box stays `auto` on its first frame.
+ */
+const useMeasure = () => {
+  const [height, setHeight] = useState<number>();
+  const ref = useCallback((element: HTMLDivElement | null) => {
+    if (!element) return;
+    const observer = new ResizeObserver((entries) => {
+      setHeight(entries[0]?.borderBoxSize[0]?.blockSize);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, { height }] as const;
+};
 
 // Placeholder bars pulse until their slot is ready.
 const Bar = ({ className }: { className: string }) => (

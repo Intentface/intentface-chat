@@ -24,11 +24,21 @@ export const GeneratedUi = ({ part }: { part: AppPart<"tool-renderUi"> }) => {
 
 const NO_SOURCES: Readonly<Record<string, RenderUiSource>> = {};
 
-/** What a renderUi part draws: the tool's finished tree once it has run, the streaming input before. */
+/** What a renderUi part draws: the streaming input while pending, the tool's finished tree once it has run. */
 const drawingOf = (part: AppPart<"tool-renderUi">) => {
-  if (part.state !== "output-available") return { input: part.input, sources: NO_SOURCES };
-  // A refused call draws nothing: the model's next call replaces it.
-  return part.output.issues ? undefined : { input: part.output.tree, sources: part.output.sources };
+  switch (part.state) {
+    case "input-streaming":
+    case "input-available":
+      return { input: part.input, sources: NO_SOURCES };
+    case "output-available":
+      // A refused call draws nothing: the model's next call replaces it.
+      return part.output.issues
+        ? undefined
+        : { input: part.output.tree, sources: part.output.sources };
+    default:
+      // A failed or denied call draws nothing either.
+      return undefined;
+  }
 };
 
 type DrawNodeProps = {

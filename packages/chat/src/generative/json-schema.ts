@@ -259,7 +259,8 @@ const strict = (schema: unknown): unknown => {
 };
 
 const nullable = (schema: unknown): unknown =>
-  isObject(schema) && typeof schema.type === "string" && !("enum" in schema)
+  // An enum or a const still pins the value, so only the anyOf form lets null through.
+  isObject(schema) && typeof schema.type === "string" && !("enum" in schema) && !("const" in schema)
     ? { ...schema, type: [schema.type, "null"] }
     : { anyOf: [schema, { type: "null" }] };
 

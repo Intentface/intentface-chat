@@ -178,6 +178,23 @@ describe("treeSchema", () => {
     expect(props.$schema).toBeUndefined();
   });
 
+  test("lets an optional enum or const be null through anyOf, which still pins the value", () => {
+    const pinned = defineCatalog({
+      components: {
+        Badge: { description: "A badge.", props: z.object({ kind: z.literal("new").optional() }) },
+      },
+    });
+    const badge: {
+      properties: {
+        elements: {
+          items: { anyOf: { properties: { props: { properties: { kind: unknown } } } }[] };
+        };
+      };
+    } = sent(treeSchema(pinned));
+    const kind = badge.properties.elements.items.anyOf[0]?.properties.props.properties.kind;
+    expect(kind).toEqual({ anyOf: [{ type: "string", const: "new" }, { type: "null" }] });
+  });
+
   test("lets a bound prop be its value or a binding", () => {
     const props = branch("Table").properties.props as {
       properties: { rows: { anyOf: { properties?: Record<string, unknown> }[] } };

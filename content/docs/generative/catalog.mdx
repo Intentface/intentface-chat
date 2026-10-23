@@ -232,7 +232,8 @@ A tree as Markdown, and the helpers that keep text the model wrote literal in it
 ```ts
 markdown.tree(tree: Tree, catalog: Catalog): string
 
-// One line of literal text, for a label, a cell or a heading.
+// One line of literal text, for a label, a cell or a heading. A marker that
+// would open a block is escaped, so it stays text on a line of its own too.
 markdown.text(text: string): string
 
 // Several lines of literal text, such as a paragraph. A line that would open

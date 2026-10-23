@@ -672,6 +672,12 @@ describe("Markdown is literal", () => {
     expect(performance.now() - start).toBeLessThan(100);
   });
 
+  test("one line of text can't open a block, even on a line of its own", () => {
+    expect(markdownText("# Report")).toBe("\\# Report");
+    expect(markdownText("1. Paid")).toBe("1\\. Paid");
+    expect(markdownText("  - item")).toBe("  \\- item");
+  });
+
   test("a pipe can't split a table column", () => {
     expect(markdownTable(["A"], [["x | y"]])).toBe("| A |\n| --- |\n| x \\| y |");
   });

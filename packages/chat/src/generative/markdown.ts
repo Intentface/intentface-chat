@@ -31,8 +31,17 @@ const LINE_BREAK = /[\r\n]/;
 // Each run of whitespace is matched once, whole, so this stays linear on long runs.
 const oneLine = (text: string) => text.replace(/\s+/g, (run) => (LINE_BREAK.test(run) ? " " : run));
 
-/** One line of literal text, for a label, a cell or a heading. */
-export const markdownText = (text: string): string => escapeCharacters(oneLine(text));
+// A marker that would open a block at a line's start: a heading, a list item,
+// a setext underline or a numbered item.
+const escapeBlockStart = (line: string) =>
+  line.replace(/^(\s*)([#+=-])/, "$1\\$2").replace(/^(\s*)(\d{1,9})([.)])/, "$1$2\\$3");
+
+/**
+ * One line of literal text, for a label, a cell or a heading. A marker that
+ * would open a block is escaped, so it stays text on a line of its own too.
+ */
+export const markdownText = (text: string): string =>
+  escapeBlockStart(escapeCharacters(oneLine(text)));
 
 /**
  * Literal text over several lines, such as a paragraph. A line that would open
@@ -41,11 +50,7 @@ export const markdownText = (text: string): string => escapeCharacters(oneLine(t
 export const markdownParagraph = (text: string): string =>
   text
     .split(/\r\n?|\n/)
-    .map((line) =>
-      escapeCharacters(line.trim())
-        .replace(/^([#+=-])/, "\\$1")
-        .replace(/^(\d{1,9})([.)])/, "$1\\$2"),
-    )
+    .map((line) => escapeBlockStart(escapeCharacters(line.trim())))
     .join("\n");
 
 /** A heading of literal text. A trailing `#` stays text. */

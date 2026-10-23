@@ -32,7 +32,7 @@ The bare nesting — every part is optional except `Composer` and `Container`:
 <Composer.Root onSubmit={handleSubmit}>
   <Composer.Panel>
     {(composer) =>
-      composer.commands.active && (
+      composer.commands.active ? (
         <Composer.Command prefix="@">
           <Composer.CommandLoading />
           <Composer.CommandEmpty />
@@ -44,7 +44,27 @@ The bare nesting — every part is optional except `Composer` and `Container`:
             )}
           </Composer.CommandList>
         </Composer.Command>
-      )
+      ) : composer.questions.active ? (
+        <Composer.Question>
+          <Composer.QuestionHeader>
+            <Composer.QuestionLabel />
+            <Composer.QuestionNavigation>
+              <Composer.QuestionPrevious />
+              <Composer.QuestionStepLabel />
+              <Composer.QuestionNext />
+            </Composer.QuestionNavigation>
+          </Composer.QuestionHeader>
+          <Composer.QuestionOptions>
+            <Composer.QuestionOption>
+              <Composer.QuestionOptionContent>
+                <Composer.QuestionOptionLabel />
+                <Composer.QuestionOptionDescription />
+              </Composer.QuestionOptionContent>
+            </Composer.QuestionOption>
+          </Composer.QuestionOptions>
+          <Composer.QuestionHints />
+        </Composer.Question>
+      ) : null
     }
   </Composer.Panel>
   <Composer.Container>
@@ -574,6 +594,120 @@ on `questions.active`.
 `Composer.QuestionContinue` is `type="submit"`, so the enclosing `Composer.Root` form
 drives it. Neither ships copy — supply the labels as children, and read
 `questions.isLastStep` to switch the continue wording.
+
+### Composer.QuestionHeader
+
+Row container for `Composer.QuestionLabel` and an optional
+`Composer.QuestionNavigation`. Renders `data-composer-question-header`. No
+part-specific props or state attributes.
+
+### Composer.QuestionLabel
+
+The question text. Renders `data-composer-question-label` and carries the id
+that `Composer.QuestionOptions` uses as its accessible name, so the group is
+labelled with no wiring. No part-specific props or state attributes.
+
+### Composer.QuestionNavigation
+
+Row container for `Composer.QuestionPrevious`, `Composer.QuestionStepLabel` and
+`Composer.QuestionNext`. A single question needs none of them. Renders
+`data-composer-question-navigation`. No part-specific props or state attributes.
+
+### Composer.QuestionPrevious
+
+Button that moves to the previous step. Wire `onClick` to `questions.goBack` and
+disable it on the first step. Its default accessible name is "Previous
+question"; override it with `aria-label`. Renders
+`data-composer-question-previous`. No part-specific props or state attributes.
+
+### Composer.QuestionStepLabel
+
+The step indicator. It reads the current step and the total from the composer,
+and you supply the text, because there is no default format. Renders
+`data-composer-question-step-label` and carries the id that
+`Composer.QuestionOptions` uses as its description.
+
+export const questionStepLabelProps = [
+  { name: "children", type: "ReactNode | ((state: { current: number; total: number }) => ReactNode)", description: "The step text, or a function of the step and the total. current counts from 1." },
+];
+
+<PropsTable rows={questionStepLabelProps} />
+
+### Composer.QuestionNext
+
+Button that moves to the next step. Wire `onClick` to `questions.goNext` and
+disable it on the last step. Its default accessible name is "Next question";
+override it with `aria-label`. Renders `data-composer-question-next`. No
+part-specific props or state attributes.
+
+### Composer.QuestionOptions
+
+Fieldset wrapper for `Composer.QuestionOption` items. It gives its options
+`multiSelect`, `groupName` and the highlight, and each option registers itself
+on mount. It renders as a `radiogroup`, or a `group` when `multiSelect` is set,
+labelled by `Composer.QuestionLabel` and described by
+`Composer.QuestionStepLabel`.
+
+export const questionOptionsProps = [
+  { name: "multiSelect", type: "boolean", default: "false", description: "Options act as checkboxes instead of radios." },
+  { name: "groupName", type: "string", default: "\"\"", description: "Shared name for every option in the group." },
+  { name: "ref", type: "RefObject<ComposerQuestionOptionsHandle | null>", description: "Keyboard-navigation handle. Pass questions.optionsRef so the composer's question keys reach the options." },
+];
+
+<PropsTable rows={questionOptionsProps} />
+
+export const questionOptionsAttrs = [
+  { attribute: "data-composer-question-options", description: "The fieldset element." },
+];
+
+<AttributesTable rows={questionOptionsAttrs} />
+
+### Composer.QuestionOption
+
+A selectable option. It registers itself with `Composer.QuestionOptions` on
+mount and takes its highlight from there. The option is the control itself: it
+carries the `radio` or `checkbox` role and `aria-checked`, and the highlighted
+option is the group's only tab stop.
+
+export const questionOptionProps = [
+  { name: "value", type: "string", default: "\"\"", description: "The option's identity within the group, used for the highlight." },
+  { name: "selected", type: "boolean", default: "false", description: "Whether the option is selected. Read it from the step's draft." },
+  { name: "onSelect", type: "() => void", description: "Called when the option is clicked. Wire it to questions.toggleOption(value)." },
+];
+
+<PropsTable rows={questionOptionProps} />
+
+export const questionOptionAttrs = [
+  { attribute: "data-composer-question-option", description: "The option element." },
+  { attribute: "data-highlighted", description: "Present while the option is highlighted by keyboard or hover." },
+  { attribute: "data-selected", description: "Present while the option is selected." },
+];
+
+<AttributesTable rows={questionOptionAttrs} />
+
+### Composer.QuestionOptionContent
+
+Column wrapper for `Composer.QuestionOptionLabel` and
+`Composer.QuestionOptionDescription`. Renders
+`data-composer-question-option-content`. No part-specific props or state
+attributes.
+
+### Composer.QuestionOptionLabel
+
+The option's title text. Renders `data-composer-question-option-label`. No
+part-specific props or state attributes.
+
+### Composer.QuestionOptionDescription
+
+The option's description text. Renders
+`data-composer-question-option-description`. No part-specific props or state
+attributes.
+
+### Composer.QuestionHints
+
+Keyboard shortcut hints shown below the options. It ships no copy, so supply
+the hints as children. Renders `data-composer-question-hints`. No part-specific
+props or state attributes.
 
 ### Hooks
 

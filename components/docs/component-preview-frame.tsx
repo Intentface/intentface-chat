@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 type ComponentPreviewFrameProps = {
   preview: ReactNode;
   code: ReactNode;
+  /** Show the corner Replay, which remounts the demo. */
+  replay?: boolean;
 };
 
 type View = "preview" | "code";
@@ -24,7 +26,11 @@ const HIDDEN = { opacity: 0, filter: "blur(4px)" };
 // source and renders the demo; this owns the tab state and the replay remount.
 // One card holds both views: they cross-dissolve inside it while the card eases
 // between their heights, and the demo stays mounted, keeping its state.
-export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFrameProps) => {
+export const ComponentPreviewFrame = ({
+  preview,
+  code,
+  replay = true,
+}: ComponentPreviewFrameProps) => {
   const [tab, setTab] = useState<View>("preview");
   const [run, setRun] = useState(0);
   // Both views are measured, so a switch knows its target height up front.
@@ -88,15 +94,17 @@ export const ComponentPreviewFrame = ({ preview, code }: ComponentPreviewFramePr
           )}
         >
           {/* Replay remounts the demo, so animations and seeded state start over. */}
-          <IconButton
-            variant="ghost"
-            size="sm"
-            aria-label="Replay demo"
-            onClick={() => setRun((current) => current + 1)}
-            className="absolute top-2 right-2"
-          >
-            <RotateCcw />
-          </IconButton>
+          {replay ? (
+            <IconButton
+              variant="ghost"
+              size="sm"
+              aria-label="Replay demo"
+              onClick={() => setRun((current) => current + 1)}
+              className="absolute top-2 right-2"
+            >
+              <RotateCcw />
+            </IconButton>
+          ) : null}
           <div key={run} className="flex w-full items-center justify-center">
             {preview}
           </div>

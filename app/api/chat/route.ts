@@ -9,13 +9,14 @@ import {
   streamText,
 } from "ai";
 import { z } from "zod";
-import type { AppUIMessage } from "@/lib/ai/types";
+import type { AppTools, AppUIMessage } from "@/lib/ai/types";
 import { readApiKey } from "@/lib/api-key";
 import { DEFAULT_MODEL, isValidModelId } from "@/lib/models";
 import { askUser } from "@/tools/ask-user";
 import { listDocsPages } from "@/tools/list-docs-pages";
 import { readDocsPage } from "@/tools/read-docs-page";
 import { readSourceFile } from "@/tools/read-source-file";
+import { renderUi } from "@/tools/render-ui";
 import { createWebSearch } from "@/tools/web-search";
 
 const SYSTEM_PROMPT = `You are the assistant in the Intentface Chat playground — a demo built with @intentface/chat, headless React chat primitives. You are knowledgeable, concise, and friendly.
@@ -36,6 +37,12 @@ When the user asks about @intentface/chat — its primitives (composer, thread, 
 - Answer strictly from the documentation and source — never invent props, exports, or APIs
 - Link to pages inline using their url from the tool output, e.g. [Composer](/primitives/composer)
 - If the documentation doesn't cover something, say so instead of guessing
+
+## Showing UI
+Call renderUi when a table or a few key numbers explain the answer better than prose, such as listing the documentation pages or comparing primitives.
+- When a table shows rows a data tool returned, always bind them to that result's ref; never copy them into the call: { "$data": "<ref>", "columns": ["title", "description"] }
+- If renderUi says nothing was shown, fix the listed issues and call it again
+- Don't repeat in your reply what the UI already shows
 
 ## Web Search & Citations
 The webSearch tool returns structured "findings" — each finding has a "claim" and "sources" (with url and title).
@@ -139,17 +146,22 @@ export async function POST(req: Request) {
       const isFirstTurn = !messages.some((message: AppUIMessage) => message.role === "assistant");
       const titlePromise = isFirstTurn ? generateThreadTitle(messages.at(-1), openai) : null;
 
+      const tools = {
+        askUser,
+        listDocsPages,
+        readDocsPage,
+        readSourceFile,
+        renderUi,
+        ...(webSearchEnabled && { webSearch: createWebSearch(openai) }),
+      } satisfies Partial<AppTools>;
+
       const result = streamText({
         model: openai(modelId),
         system: SYSTEM_PROMPT,
-        messages: await convertToModelMessages(messages),
-        tools: {
-          askUser,
-          listDocsPages,
-          readDocsPage,
-          readSourceFile,
-          ...(webSearchEnabled && { webSearch: createWebSearch(openai) }),
-        },
+        // With the tools, history goes back through each one's toModelOutput:
+        // an earlier renderUi result reaches the model as its text, not its tree.
+        messages: await convertToModelMessages(messages, { tools }),
+        tools,
         stopWhen: stepCountIs(15),
         ...(thinkingEnabled && {
           providerOptions: {

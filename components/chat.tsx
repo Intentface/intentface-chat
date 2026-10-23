@@ -8,7 +8,7 @@ import {
   groupTurns,
   type MessageSegment,
 } from "@intentface/chat/message-utils";
-import { isToolPart, type ToolPart, type UnknownPart } from "@intentface/chat/types";
+import type { ToolPart } from "@intentface/chat/types";
 import {
   Brain,
   Check,
@@ -43,6 +43,7 @@ import {
   type ComposerCommandsMap,
   type ComposerSubmitData,
 } from "@/components/ai/composer";
+import { GeneratedUi } from "@/components/ai/generated-ui";
 import { Message } from "@/components/ai/message";
 import { Reasoning } from "@/components/ai/reasoning";
 import { Steps } from "@/components/ai/steps";
@@ -63,7 +64,7 @@ import {
 } from "@/lib/ai/message-info";
 import { getAskUserInfo, getAskUserStepInfo, getToolCallInfo } from "@/lib/ai/steps-info";
 import { DEFAULT_TOOL_LABELS } from "@/lib/ai/tool-labels";
-import type { AppUIMessage, AskUserInput, AskUserQuestion, StepStatus } from "@/lib/ai/types";
+import type { AppPart, AppUIMessage, AskUserQuestion, StepStatus } from "@/lib/ai/types";
 import { applyStopToMessages } from "@/lib/chat-instance";
 import { fetchPlaygroundIssues, GroupedIssueCommands } from "@/lib/playground-demo";
 import { useChatStore } from "@/lib/store/chat";
@@ -497,6 +498,8 @@ const ChatMessageItem = memo(
                 }
                 return <Message.Markdown key={index}>{part.text}</Message.Markdown>;
               }
+              case "tool-renderUi":
+                return <GeneratedUi key={part.toolCallId} part={part} />;
               default:
                 return null;
             }
@@ -673,18 +676,16 @@ const useAskUserPanelState = (
     status === "ready" || status === "streaming"
       ? messages.findLast((message) => message.role === "assistant")
       : undefined;
-  // Widen to the package's structural part contract so the guard can narrow.
-  const parts: readonly UnknownPart[] = lastAssistant?.parts ?? [];
-  const part = parts.find(
-    (p): p is ToolPart =>
-      isToolPart(p) && p.type === "tool-askUser" && p.state === "input-available",
+  const part = lastAssistant?.parts.find(
+    (p): p is Extract<AppPart<"tool-askUser">, { state: "input-available" }> =>
+      p.type === "tool-askUser" && p.state === "input-available",
   );
 
   const next = part
     ? {
         type: "ask-user" as const,
         toolCallId: part.toolCallId,
-        questions: ((part.input as AskUserInput | undefined)?.questions ?? []) as AskUserQuestion[],
+        questions: part.input.questions,
       }
     : null;
 

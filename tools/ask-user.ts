@@ -1,6 +1,5 @@
 import { tool } from "ai";
 import { z } from "zod";
-import type * as aiTypes from "@/lib/ai/types";
 
 const questionSchema = z.object({
   question: z.string().describe("The question to ask the user"),
@@ -36,14 +35,6 @@ const askUserInputSchema = z.object({
     ),
 });
 
-export type AskUserQuestion = z.infer<typeof questionSchema>;
-export type AskUserInput = z.infer<typeof askUserInputSchema>;
-
-// The UI consumes the structural mirrors in lib/ai/types.ts; this assertion
-// fails typecheck if the zod schema drifts away from that contract.
-type Assert<T extends true> = T;
-export type AskUserContractCheck = Assert<AskUserInput extends aiTypes.AskUserInput ? true : false>;
-
 export const askUser = tool({
   description: `Ask the user one or more clarifying questions with predefined options. The user sees an interactive card and picks answers for all questions before submitting. Use this when:
 - The user's request is ambiguous and could go multiple directions
@@ -53,4 +44,6 @@ export const askUser = tool({
 
 Provide 1-4 questions, each with 2-5 concrete options with short labels and helpful descriptions. Users can also type a custom answer for any question.`,
   inputSchema: askUserInputSchema,
+  // The chat answers with addToolOutput: a JSON object of question → answer.
+  outputSchema: z.string(),
 });

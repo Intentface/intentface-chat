@@ -1,18 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { type RefCallback, useCallback, useState } from "react";
 
 export const useMeasure = <T extends HTMLElement = HTMLElement>(): [
-  (node: T | null) => void,
+  RefCallback<T>,
   { width: number; height: number },
 ] => {
-  const [element, setElement] = useState<T | null>(null);
   const [bounds, setBounds] = useState({ width: 0, height: 0 });
 
+  // Observes the element while it's attached: React runs the returned cleanup when it detaches.
   const ref = useCallback((node: T | null) => {
-    setElement(node);
-  }, []);
-
-  useEffect(() => {
-    if (!element) return;
+    if (!node) return;
 
     const observer = new ResizeObserver(([entry]) => {
       // Border box (includes padding + border), not contentRect — callers size a
@@ -25,9 +21,9 @@ export const useMeasure = <T extends HTMLElement = HTMLElement>(): [
       });
     });
 
-    observer.observe(element);
+    observer.observe(node);
     return () => observer.disconnect();
-  }, [element]);
+  }, []);
 
   return [ref, bounds];
 };

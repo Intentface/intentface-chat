@@ -1,5 +1,5 @@
 ---
-"@intentface/chat": patch
+"@intentface/ui": patch
 ---
 
 - [Composer] Fix arrowing through the command list scrolling the page in Safari and Firefox.

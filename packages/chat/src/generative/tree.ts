@@ -13,6 +13,8 @@ import {
   type JsonObject,
   type Limits,
   limitsOf,
+  type ResolvedTree,
+  type ResolvedTreeElement,
   type Tree,
   type TreeElement,
   type TreeNode,
@@ -48,9 +50,15 @@ export type TreeIssueCode =
 /** One problem with a call, in words the model can act on. */
 export type TreeIssue = { code: TreeIssueCode; message: string; path: (string | number)[] };
 
-export type TreeResult<C extends AnyCatalog> =
-  | { value: Tree<C>; issues?: undefined }
+type Result<Value> =
+  | { value: Value; issues?: undefined }
   | { value?: undefined; issues: TreeIssue[] };
+
+/** A checked call, or what's wrong with it. */
+export type TreeResult<C extends AnyCatalog> = Result<Tree<C>>;
+
+/** A tree with its data in place, or what couldn't be resolved. */
+export type ResolvedTreeResult<C extends AnyCatalog> = Result<ResolvedTree<C>>;
 
 const issue = (code: TreeIssueCode, message: string, path: (string | number)[]): TreeIssue => ({
   code,
@@ -145,9 +153,10 @@ export const resolveBindings = async <C extends AnyCatalog>(
   tree: Tree<C>,
   catalog: C,
   resolve: (binding: FoundBinding) => unknown | Promise<unknown>,
-): Promise<TreeResult<C>> => {
+): Promise<ResolvedTreeResult<C>> => {
   const issues: TreeIssue[] = [];
-  const elements: Record<string, TreeElement<C>> = { ...tree.elements };
+  // An unbound element already holds its data; each bound one is replaced below.
+  const elements = { ...tree.elements } as Record<string, ResolvedTreeElement<C>>;
   const bound = new Map<string, FoundBinding[]>();
   for (const binding of findBindings(tree)) {
     bound.set(binding.id, [...(bound.get(binding.id) ?? []), binding]);
@@ -177,8 +186,11 @@ export const resolveBindings = async <C extends AnyCatalog>(
       const message = `No data for "${binding.$data}".`;
       issues.push(issue("unresolved_binding", message, [...path, binding.prop]));
     }
-    if (entry.result.issues) issues.push(...propIssues(entry.result.issues, path));
-    else elements[id] = { ...entry.element, props: entry.result.value } as TreeElement<C>;
+    // A prop whose data wasn't found is reported above, not again as a schema failure.
+    const unresolved = new Set(entry.missing.map((binding) => binding.prop));
+    if (entry.result.issues) {
+      issues.push(...propIssues(issuesOutside(entry.result.issues, unresolved), path));
+    } else elements[id] = { ...entry.element, props: entry.result.value } as ResolvedTreeElement<C>;
   });
 
   return issues.length > 0 ? { issues } : { value: { root: tree.root, elements } };
@@ -335,6 +347,13 @@ const walkFromRoot = (read: ReadInput, root: string, limits: Limits) => {
   return { reached: [...reached], issues };
 };
 
+/** A validator's issues, less those under the given props. */
+const issuesOutside = (issues: ReadonlyArray<StandardIssue>, props: ReadonlySet<string>) =>
+  issues.filter((entry) => {
+    const first = entry.path?.[0];
+    return !props.has(String(isObject(first) ? first.key : first));
+  });
+
 const propIssues = (issues: ReadonlyArray<StandardIssue>, path: (string | number)[]): TreeIssue[] =>
   issues.map((entry) => ({
     code: "invalid_props" as const,
@@ -359,7 +378,7 @@ const readBound = (definition: AnyComponent, raw: JsonObject, id: string): Bound
   return { props, bindings };
 };
 
-/** Props validated, with bound props left in place for `resolveBindings`. */
+/** Props validated, with bound props left in place for `bindings.resolve`. */
 const checkProps = async (
   definition: AnyComponent,
   { props, bindings }: BoundProps,
@@ -370,17 +389,13 @@ const checkProps = async (
   if (!result.issues) return { props: result.value as JsonObject, issues };
   // A bound prop fails until resolved; only its binding's own shape counts now.
   const bound = new Set(bindings.map((binding) => binding.prop));
-  const real = result.issues.filter((entry) => {
-    const first = entry.path?.[0];
-    return !bound.has(String(isObject(first) ? first.key : first));
-  });
-  return { props, issues: [...issues, ...propIssues(real, path)] };
+  return { props, issues: [...issues, ...propIssues(issuesOutside(result.issues, bound), path)] };
 };
 
 /**
  * A whole call checked against the catalog: its shape read as meant, its
  * structure and limits checked, and each element's props validated. Issues
- * name the field, so `formatIssues` can send them straight back to the model.
+ * name the field, so `tree.formatIssues` can send them straight back to the model.
  */
 export const validateTree = async <C extends AnyCatalog>(
   input: unknown,

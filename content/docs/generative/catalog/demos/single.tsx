@@ -6,7 +6,7 @@ import { DrawNode } from "./draw";
 
 /*
  * One component on its own: the model wrote `{ type, props }`, because the
- * tool's schema came from `toJSONSchema(catalog, { single: true })`. There are
+ * tool's schema came from `tree.schema(catalog, { single: true })`. There are
  * no ids or children to get wrong, and `useTree` reads it as a one-node tree.
  */
 const CALL = {

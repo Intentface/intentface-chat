@@ -1,36 +1,93 @@
 // The tool's input schema: each component's own JSON Schema, made strict for
 // structured-output modes, and the nulls that strictness adds read back out.
 
-import type { StandardJSONSchema } from "../internal/standard-schema";
+import type { StandardJSONSchema, StandardSchema } from "../internal/standard-schema";
 import {
   type AnyCatalog,
   type AnyComponent,
+  type ComponentInput,
   type ComponentSchema,
   DEFAULT_REF_DESCRIPTION,
   isBinding,
   isObject,
   type JsonObject,
   limitsOf,
+  type TreeInput,
 } from "./catalog";
 
 // ---------------------------------------------------------------------------
 // Tool schema
 // ---------------------------------------------------------------------------
 
-export type ToJSONSchemaOptions = {
+export type TreeSchemaOptions = {
   /** The model writes one component as `{ type, props }` instead of a tree. */
   single?: boolean;
 };
 
+/** The JSON Schema of a tool's input: always an object. */
+type ObjectSchema = {
+  type: "object";
+  properties: JsonObject;
+  required: string[];
+  additionalProperties: false;
+};
+
 /**
- * The tool's input schema, built from each component's own. Strict, for
- * structured-output modes: every object closed, every property required, and
- * optional props nullable. `validateTree` reads the nulls back as absent.
+ * The tool's input schema: plain JSON Schema, which any model SDK takes as is,
+ * carrying a typed Standard Schema the AI SDK infers the tool's input from.
  */
-export const toJSONSchema = (
-  catalog: AnyCatalog,
-  options: ToJSONSchemaOptions = {},
-): JsonObject => {
+export type TreeSchema<Input> = ObjectSchema & {
+  readonly "~standard": StandardSchema<Input>["~standard"] & {
+    readonly jsonSchema: {
+      readonly input: (options: { readonly target: string }) => ObjectSchema;
+      readonly output: (options: { readonly target: string }) => ObjectSchema;
+    };
+  };
+};
+
+/** What the model writes under a schema built with these options. */
+type InputOf<C extends AnyCatalog, Options extends TreeSchemaOptions> = Options extends {
+  single: true;
+}
+  ? ComponentInput<C>
+  : TreeInput<C>;
+
+/**
+ * The tool's input schema, typed as what the model writes, so an AI SDK tool
+ * infers its input. It passes the call through as written: `tree.validate`
+ * checks it, so the issues reach the model as the tool's result. Pass it as is:
+ * a spread copy loses the Standard Schema.
+ */
+export const treeSchema = <
+  C extends AnyCatalog,
+  const Options extends TreeSchemaOptions = TreeSchemaOptions,
+>(
+  catalog: C,
+  options?: Options,
+): TreeSchema<InputOf<C, Options>> => {
+  type Input = InputOf<C, Options>;
+  // Built now, so a component schema that can't convert throws here.
+  const schema = toJSONSchema(catalog, options);
+  const jsonSchema = ({ target }: { readonly target: string }) => {
+    if (target !== "draft-07") throw new Error(`tree.schema converts to draft-07, not ${target}.`);
+    return schema;
+  };
+  const standard: TreeSchema<Input>["~standard"] = {
+    version: 1,
+    vendor: "intentface",
+    validate: (value) => ({ value: value as Input }),
+    jsonSchema: { input: jsonSchema, output: jsonSchema },
+  };
+  // Not enumerable, so an SDK that sends the schema as JSON leaves it out; the AI SDK still finds it.
+  return Object.defineProperty(schema, "~standard", { value: standard }) as TreeSchema<Input>;
+};
+
+/**
+ * The schema itself, built from each component's own. Strict, for
+ * structured-output modes: every object closed, every property required, and
+ * optional props nullable. `tree.validate` reads the nulls back as absent.
+ */
+const toJSONSchema = (catalog: AnyCatalog, options: TreeSchemaOptions = {}): ObjectSchema => {
   const limits = limitsOf(catalog);
   const refDescription = catalog.refDescription ?? DEFAULT_REF_DESCRIPTION;
   const components = Object.entries(catalog.components);

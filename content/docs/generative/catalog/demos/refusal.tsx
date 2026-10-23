@@ -11,7 +11,7 @@ import { Replay } from "./replay";
  *
  * While it streams, `useTree` skips the node it can't draw. Once the call is
  * whole, `tree.validate` names the problem; on a server that runs in the tool's
- * `execute`, and `tree.formatIssues` goes back to the model as the tool's result.
+ * `execute`, and `tree.formatIssues` words the issues for the model.
  * The model reads it and calls again, and the second call replaces the first.
  */
 const FIRST_CALL = {

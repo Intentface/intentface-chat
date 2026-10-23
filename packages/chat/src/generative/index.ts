@@ -2,6 +2,7 @@
 // be removed before 1.0. No directive, so the helpers stay importable on a
 // server; the hook arrives there as a client reference.
 
+import { treeSchema } from "./json-schema";
 import {
   markdownHeading,
   markdownParagraph,
@@ -23,13 +24,16 @@ export {
   type FoundBinding,
   isBinding,
   type Limits,
+  type ResolvedTree,
+  type ResolvedTreeElement,
   type Tree,
   type TreeElement,
   type TreeNode,
 } from "./catalog";
-export { type ToJSONSchemaOptions, toJSONSchema } from "./json-schema";
+export type { TreeSchemaOptions } from "./json-schema";
 export type {
   ReadTreeOptions,
+  ResolvedTreeResult,
   TreeIssue,
   TreeIssueCode,
   TreeRead,
@@ -37,15 +41,15 @@ export type {
 } from "./tree";
 export { type UseTreeOptions, useTree } from "./use-tree";
 
-/** What the model wrote: a whole call checked, a partial one read, and issues worded for the model. */
-export const tree = { validate: validateTree, read: readTree, formatIssues };
+/** What the model writes: its schema, a whole call checked, a partial one read, and issues worded for the model. */
+export const tree = { schema: treeSchema, validate: validateTree, read: readTree, formatIssues };
 
 /** Data by reference: the bindings in a tree, and the tree with their data in place. */
 export const bindings = { find: findBindings, resolve: resolveBindings };
 
 /** A tree as Markdown, and the helpers that keep text the model wrote literal in it. */
 export const markdown = {
-  fromTree: toMarkdown,
+  tree: toMarkdown,
   text: markdownText,
   paragraph: markdownParagraph,
   heading: markdownHeading,

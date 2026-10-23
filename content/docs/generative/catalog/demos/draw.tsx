@@ -121,9 +121,10 @@ const Table = ({ props }: { props: TableProps | undefined }) => (
         <table className="w-full text-[13px] leading-4">
           <thead>
             <tr className="border-zinc-100 border-b dark:border-white/6">
-              {props.columns.map((column) => (
+              {props.columns.map((column, index) => (
                 <th
-                  key={column}
+                  // By position: two columns may share a name, and columns don't reorder.
+                  key={index}
                   scope="col"
                   className="h-8 text-left font-medium text-xs text-zinc-500 last:text-right dark:text-zinc-400"
                 >
@@ -141,9 +142,9 @@ const Table = ({ props }: { props: TableProps | undefined }) => (
                 style={{ transitionDelay: `${index * 40}ms` }}
                 className="border-zinc-100 border-b transition-opacity duration-400 ease-in-out last:border-0 in-data-live:starting:opacity-0 motion-reduce:transition-none dark:border-white/6"
               >
-                {props.columns.map((column, cell) => (
+                {props.columns.map((_, cell) => (
                   <td
-                    key={column}
+                    key={cell}
                     className="h-9 text-zinc-600 first:text-zinc-900 last:text-right last:tabular-nums dark:text-zinc-300 dark:first:text-zinc-100"
                   >
                     {row[cell]}

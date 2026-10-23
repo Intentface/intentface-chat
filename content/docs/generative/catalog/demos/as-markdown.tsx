@@ -10,7 +10,7 @@ import { DrawNode } from "./draw";
  * history, a search index, a copy button. Each component writes its part
  * through its `markdown`, and a container writes its children's.
  *
- * `markdown.fromTree` takes a checked tree, so the call goes through `tree.validate`
+ * `markdown.tree` takes a checked tree, so the call goes through `tree.validate`
  * first. Text the model wrote is escaped, so it can't format or link itself.
  */
 const CALL = {
@@ -52,7 +52,7 @@ export const AsMarkdown = () => {
   const select = async (next: View) => {
     if (next === "markdown" && !text) {
       const result = await tree.validate(CALL, catalog);
-      if (result.value) setText(markdown.fromTree(result.value, catalog));
+      if (result.value) setText(markdown.tree(result.value, catalog));
     }
     setLive(true);
     setView(next);
@@ -61,7 +61,7 @@ export const AsMarkdown = () => {
   return (
     <div
       data-live={live || undefined}
-      className="flex w-full max-w-[520px] flex-col items-center gap-3"
+      className="flex w-full max-w-130 flex-col items-center gap-3"
     >
       <div className="min-h-82 w-full">
         {view === "markdown" ? (

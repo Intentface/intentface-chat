@@ -1,7 +1,12 @@
 // The catalog and the shapes the generative helpers read and return: what the
 // model may use, the tree it writes, and the small lookups over both.
 
-import type { InferOutput, StandardJSONSchema, StandardSchema } from "../internal/standard-schema";
+import type {
+  InferInput,
+  InferOutput,
+  StandardJSONSchema,
+  StandardSchema,
+} from "../internal/standard-schema";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -48,10 +53,24 @@ export type Catalog<
   refDescription?: string;
 };
 
-/** Types a catalog from each component's schema. The catalog stays plain data. */
-export const defineCatalog = <Schemas extends Record<string, ComponentSchema>>(
-  catalog: Catalog<Schemas>,
-): Catalog<Schemas> => catalog;
+// A key a component doesn't have is a typo: the catalog is typed exactly as
+// written, so nothing else would catch it.
+type NoOtherKeys<Components> = {
+  [Type in keyof Components]: {
+    [Key in Exclude<keyof Components[Type], keyof ComponentDefinition>]: never;
+  };
+};
+
+/**
+ * Types a catalog from each component's schema. The catalog stays plain data,
+ * typed exactly as written, so the props each component binds are known too.
+ */
+export const defineCatalog = <
+  Schemas extends Record<string, ComponentSchema>,
+  const Written extends { components: Record<string, unknown> },
+>(
+  catalog: Written & Catalog<Schemas> & { components: NoOtherKeys<Written["components"]> },
+): Written => catalog;
 
 /** Any catalog: the bound for the helpers' type parameters, so every typed catalog fits. */
 export type AnyCatalog = {
@@ -91,15 +110,105 @@ type PropsOf<C extends AnyCatalog, Type extends ComponentType<C>> = InferOutput<
   C["components"][Type]["props"]
 >;
 
-/** One element of a checked tree. A bound prop holds its `Binding` until resolved. */
+/** The props a component binds, from its `bind` as written. */
+type BoundKey<C extends AnyCatalog, Type extends ComponentType<C>> = C["components"][Type] extends {
+  bind?: infer Keys;
+}
+  ? Keys extends readonly (infer Key)[]
+    ? Key
+    : never
+  : never;
+
+/** A component's props in a checked tree: a prop it binds may still hold its binding. */
+type CheckedProps<C extends AnyCatalog, Type extends ComponentType<C>> = unknown extends PropsOf<
+  C,
+  Type
+>
+  ? unknown
+  : {
+      [Key in keyof PropsOf<C, Type>]: Key extends BoundKey<C, Type>
+        ? PropsOf<C, Type>[Key] | Binding
+        : PropsOf<C, Type>[Key];
+    };
+
+/** One element of a checked tree. A prop its component binds may still hold its `Binding`. */
 export type TreeElement<C extends AnyCatalog = AnyCatalog> = {
+  [Type in ComponentType<C>]: { type: Type; props: CheckedProps<C, Type>; children?: string[] };
+}[ComponentType<C>];
+
+/** One element of a resolved tree: every prop holds its data. */
+export type ResolvedTreeElement<C extends AnyCatalog = AnyCatalog> = {
   [Type in ComponentType<C>]: { type: Type; props: PropsOf<C, Type>; children?: string[] };
 }[ComponentType<C>];
 
-/** A checked call: the root's id and every element by id. Plain JSON, safe to store. */
-export type Tree<C extends AnyCatalog = AnyCatalog> = {
+// A tree's shape, generic in its element. An interface rather than an alias, so
+// TypeScript compares two trees by their elements, which widen, and not by
+// their catalogs, which don't: a tree from a specific catalog fits `Tree`.
+interface TreeOf<Element> {
   root: string;
-  elements: Record<string, TreeElement<C>>;
+  elements: Record<string, Element>;
+}
+
+/** A checked call: the root's id and every element by id. Plain JSON, safe to store. */
+export type Tree<C extends AnyCatalog = AnyCatalog> = TreeOf<TreeElement<C>>;
+
+/** A checked call with its bindings resolved, as `bindings.resolve` returns it. */
+export type ResolvedTree<C extends AnyCatalog = AnyCatalog> = TreeOf<ResolvedTreeElement<C>>;
+
+// ---------------------------------------------------------------------------
+// What the model writes
+// ---------------------------------------------------------------------------
+
+// A strict schema makes every property required, so the model writes null for
+// one it leaves out: an optional prop, or a binding's unused part.
+type BindingInput = { $data: string; columns?: string[] | null; column?: string | null };
+
+/** A component's props as its schema takes them in. */
+type InputPropsOf<C extends AnyCatalog, Type extends ComponentType<C>> = InferInput<
+  C["components"][Type]["props"]
+>;
+
+/** A component's props as the model writes them, per the tool's schema. */
+type InputProps<C extends AnyCatalog, Type extends ComponentType<C>> = unknown extends InputPropsOf<
+  C,
+  Type
+>
+  ? unknown
+  : {
+      [Key in keyof InputPropsOf<C, Type>]:
+        | InputPropsOf<C, Type>[Key]
+        | (Key extends BoundKey<C, Type> ? BindingInput : never)
+        | (undefined extends InputPropsOf<C, Type>[Key] ? null : never);
+    };
+
+/** Whether a component holds children, from its `container` as written. */
+type IsContainer<
+  C extends AnyCatalog,
+  Type extends ComponentType<C>,
+> = C["components"][Type] extends {
+  container: true;
+}
+  ? true
+  : false;
+
+/**
+ * One component on its own, as the model writes it when the tool's schema
+ * comes from `tree.schema(catalog, { single: true })`.
+ */
+export type ComponentInput<C extends AnyCatalog = AnyCatalog> = {
+  [Type in ComponentType<C>]: { type: Type; props: InputProps<C, Type> };
+}[ComponentType<C>];
+
+/** A call as the model writes it, per `tree.schema(catalog)`, which types a tool's input with it. */
+export type TreeInput<C extends AnyCatalog = AnyCatalog> = {
+  root: string;
+  elements: {
+    [Type in ComponentType<C>]: {
+      id: string;
+      type: Type;
+      props: InputProps<C, Type>;
+    } & (IsContainer<C, Type> extends true ? { children: string[] } : unknown);
+  }[ComponentType<C>][];
 };
 
 /** One node, ready to draw. Its props are typed once its status is `ready`. */

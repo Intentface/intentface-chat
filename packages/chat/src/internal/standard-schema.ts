@@ -34,3 +34,7 @@ export type StandardJSONSchema = {
 export type InferOutput<Schema extends StandardSchema> = NonNullable<
   Schema["~standard"]["types"]
 >["output"];
+
+export type InferInput<Schema extends StandardSchema> = NonNullable<
+  Schema["~standard"]["types"]
+>["input"];

@@ -61,7 +61,7 @@ const holdProps = <C extends AnyCatalog>(root: TreeNode<C>, held: ReadonlyMap<st
 };
 
 /**
- * `readTree` in a component: the call's input as nodes to draw. While
+ * `tree.read` in a component: the call's input as nodes to draw. While
  * `streaming`, a node that was ready keeps its last valid props until newer
  * ones validate, so a value caught mid-word doesn't blink back to pending.
  */

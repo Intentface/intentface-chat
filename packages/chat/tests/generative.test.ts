@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import * as generative from "../src/generative";
-import { defineCatalog, type TreeNode } from "../src/generative/catalog";
-import { toJSONSchema } from "../src/generative/json-schema";
+import {
+  type ComponentInput,
+  defineCatalog,
+  type Tree,
+  type TreeInput,
+  type TreeNode,
+} from "../src/generative/catalog";
+import { treeSchema } from "../src/generative/json-schema";
 import {
   markdownHeading,
   markdownParagraph,
@@ -18,6 +24,7 @@ import {
   type TreeIssue,
   validateTree,
 } from "../src/generative/tree";
+import type { InferOutput } from "../src/internal/standard-schema";
 
 const catalog = defineCatalog({
   components: {
@@ -106,14 +113,36 @@ describe("defineCatalog", () => {
       },
     });
   });
+
+  test("rejects a key a component doesn't have", () => {
+    defineCatalog({
+      components: {
+        // @ts-expect-error: `containr` isn't one of a component's keys
+        Note: { description: "A note.", props: z.object({ text: z.string() }), containr: true },
+      },
+    });
+  });
+
+  test("lets a tree from a specific catalog fit the wide types", async () => {
+    const checked = await validateTree(call, catalog);
+    if (!checked.value) throw new Error("expected a tree");
+    // Typed for this catalog, and still a plain `Tree`: a function can take any tree.
+    const anyTree: Tree = checked.value;
+    const anyNode: TreeNode | undefined = readTree(call, catalog).root;
+    expect(anyTree.root).toBe("card");
+    expect(anyNode?.id).toBe("card");
+  });
 });
 
-describe("toJSONSchema", () => {
-  const schema = toJSONSchema(catalog) as {
+describe("treeSchema", () => {
+  const built = treeSchema(catalog);
+  // The schema as a model SDK sends it: its JSON.
+  const sent = (schema: unknown) => JSON.parse(JSON.stringify(schema));
+  const schema: {
     required: string[];
     additionalProperties: boolean;
     properties: { elements: { maxItems: number; items: { anyOf: Record<string, unknown>[] } } };
-  };
+  } = sent(built);
   const branch = (type: string) =>
     schema.properties.elements.items.anyOf.find(
       (entry) =>
@@ -158,16 +187,51 @@ describe("toJSONSchema", () => {
   });
 
   test("offers the single-component shape", () => {
-    const single = toJSONSchema(catalog, { single: true }) as {
+    const single: {
       properties: { type: { enum: string[] }; props: { anyOf: unknown[] } };
-    };
+    } = sent(treeSchema(catalog, { single: true }));
     expect(single.properties.type.enum).toEqual(["Card", "Stack", "Metric", "Table"]);
     expect(single.properties.props.anyOf).toHaveLength(4);
   });
 
   test("takes its caps from the limits", () => {
-    const capped = toJSONSchema({ ...catalog, limits: { nodes: 10 } }) as typeof schema;
+    const capped: typeof schema = sent(treeSchema({ ...catalog, limits: { nodes: 10 } }));
     expect(capped.properties.elements.maxItems).toBe(10);
+  });
+
+  test("types what the model writes", async () => {
+    // As written to the strict schema: a container lists its children, an
+    // optional prop comes as null, and a bound prop as its binding.
+    const input: TreeInput<typeof catalog> = {
+      root: "card",
+      elements: [
+        { id: "card", type: "Card", props: { title: "Pipeline" }, children: ["total", "deals"] },
+        { id: "total", type: "Metric", props: { label: "Total", value: 196000, note: null } },
+        {
+          id: "deals",
+          type: "Table",
+          props: {
+            columns: ["Company"],
+            rows: { $data: "deals_1", columns: ["company"], column: null },
+          },
+        },
+      ],
+    };
+    expect((await validateTree(input, catalog)).issues).toBeUndefined();
+
+    const metric: TreeInput<typeof catalog> = {
+      root: "total",
+      elements: [
+        // @ts-expect-error: a Metric holds no children
+        { id: "total", type: "Metric", props: { label: "Total", value: 1 }, children: [] },
+      ],
+    };
+    const single: ComponentInput<typeof catalog> = {
+      type: "Metric",
+      props: { label: "Total", value: 1 },
+    };
+    expect(metric.root).toBe("total");
+    expect(single.type).toBe("Metric");
   });
 
   test("needs a schema that converts to JSON Schema", () => {
@@ -177,9 +241,40 @@ describe("toJSONSchema", () => {
       // @ts-expect-error: this schema can't convert to JSON Schema
       components: { Note: { description: "A note.", props: older } },
     });
-    expect(() => toJSONSchema(catalogOfOlder)).toThrow(
+    // A JavaScript caller gets past the types; the conversion still refuses it.
+    // Built at once, so it throws here, not on the model's first request.
+    // @ts-expect-error: the catalog keeps the schema that can't convert
+    expect(() => treeSchema(catalogOfOlder)).toThrow(
       '"Note" needs a schema that converts to JSON Schema',
     );
+  });
+
+  test("types a tool's input as what the model writes", () => {
+    type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+      ? true
+      : false;
+    const single = treeSchema(catalog, { single: true });
+    const whole: Equal<InferOutput<typeof built>, TreeInput<typeof catalog>> = true;
+    const one: Equal<InferOutput<typeof single>, ComponentInput<typeof catalog>> = true;
+    expect([whole, one]).toEqual([true, true]);
+  });
+
+  test("carries its Standard Schema, left out of its JSON", () => {
+    expect("~standard" in built).toBe(true);
+    expect(Object.keys(built)).not.toContain("~standard");
+    expect(JSON.stringify(built)).not.toContain("~standard");
+  });
+
+  test("converts to itself, for draft-07 only", () => {
+    expect(built["~standard"].jsonSchema.input({ target: "draft-07" })).toBe(built);
+    expect(() => built["~standard"].jsonSchema.input({ target: "openapi-3.0" })).toThrow(
+      "draft-07",
+    );
+  });
+
+  test("passes the call through for tree.validate to check", () => {
+    const written = { root: "missing", elements: [] };
+    expect(built["~standard"].validate(written)).toEqual({ value: written });
   });
 });
 
@@ -426,6 +521,27 @@ describe("bindings", () => {
     { company: "Kide Systems", stage: "Won", amount: 88000, owner: { name: "Joel" } },
   ];
 
+  test("type a bound prop as its binding until it's resolved", async () => {
+    const checked = await validateTree(call, catalog);
+    if (!checked.value) throw new Error("expected a tree");
+    const deals = checked.value.elements.deals;
+    if (deals?.type !== "Table") throw new Error("expected the table");
+    // @ts-expect-error: in a checked tree, a bound prop may still hold its binding
+    const bound: string[][] = deals.props.rows;
+    expect(bound as unknown).toEqual({ $data: "deals_1", columns: ["company"] });
+    // A prop the component doesn't bind is its value already.
+    const columns: string[] = deals.props.columns;
+    expect(columns).toEqual(["Company"]);
+
+    const resolved = await resolveBindings(checked.value, catalog, () => [
+      { company: "Aalto Labs" },
+    ]);
+    const table = resolved.value?.elements.deals;
+    if (table?.type !== "Table") throw new Error("expected the resolved table");
+    const rows: string[][] = table.props.rows;
+    expect(rows).toEqual([["Aalto Labs"]]);
+  });
+
   test("pick the binding's columns from the rows, in order, or one column's values", () => {
     const resolve = () => rows;
 
@@ -475,7 +591,8 @@ describe("bindings", () => {
     if (!checked.value) throw new Error("expected a tree");
 
     const missing = await resolveBindings(checked.value, catalog, () => undefined);
-    expect(codes(missing.issues)).toContain("unresolved_binding");
+    // Only the missing data, not the schema failing on the binding left in its place.
+    expect(codes(missing.issues)).toEqual(["unresolved_binding"]);
     expect(missing.issues?.[0]?.message).toBe('No data for "deals_1".');
 
     const wrong = await resolveBindings(checked.value, catalog, () => "not rows");
@@ -669,10 +786,15 @@ describe("readTree", () => {
 
 describe("the public groups", () => {
   test("name each helper by its group", () => {
-    expect(generative.tree).toEqual({ validate: validateTree, read: readTree, formatIssues });
+    expect(generative.tree).toEqual({
+      schema: treeSchema,
+      validate: validateTree,
+      read: readTree,
+      formatIssues,
+    });
     expect(generative.bindings).toEqual({ find: findBindings, resolve: resolveBindings });
     expect(generative.markdown).toEqual({
-      fromTree: toMarkdown,
+      tree: toMarkdown,
       text: markdownText,
       paragraph: markdownParagraph,
       heading: markdownHeading,

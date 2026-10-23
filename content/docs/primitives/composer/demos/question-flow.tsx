@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Composer,
-  type ComposerQuestion,
-  type ComposerSubmitData,
-} from "@intentface/ui/composer";
+import { Composer, type ComposerQuestion, type ComposerSubmitData } from "@intentface/ui/composer";
 import { ArrowUp } from "@keyline-icons/react";
 import { useState } from "react";
 import { Controls, Prompt } from "./question";

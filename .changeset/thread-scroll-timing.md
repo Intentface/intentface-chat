@@ -1,5 +1,5 @@
 ---
-"@intentface/chat": minor
+"@intentface/ui": minor
 ---
 
 - [Thread] Add `--thread-scroll` (with `-duration` / `-easing` longhands) to time every smooth scroll from CSS; any easing works, `linear()` included.

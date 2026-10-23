@@ -1,7 +1,7 @@
 # Changesets
 
 This folder is managed by [changesets](https://github.com/changesets/changesets). Each
-pull request that changes a published package (`@intentface/chat`) should add a changeset:
+pull request that changes a published package (`@intentface/ui`) should add a changeset:
 
 ```bash
 bunx changeset
@@ -24,7 +24,7 @@ merging that PR publishes to npm.
 
 ```md
 ---
-"@intentface/chat": minor
+"@intentface/ui": minor
 ---
 
 - [Composer] Fix an Escape in one composer stopping generation in another.
@@ -37,5 +37,5 @@ If a package change intentionally needs no release, add an empty changeset inste
 bunx changeset --empty
 ```
 
-The app (`intentface-chat`) is private, so changesets skips it — `@intentface/chat` is the
+The app (`intentface-ui`) is private, so changesets skips it — `@intentface/ui` is the
 only published package.

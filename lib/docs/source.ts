@@ -20,7 +20,7 @@ export type DocPageData = {
   description?: string;
   icon?: string;
   full?: boolean;
-  /** Component path under packages/chat/src (e.g. "composer", "thread.tsx"). */
+  /** Component path under packages/ui/src (e.g. "composer", "thread.tsx"). */
   source?: string;
   body: MDXContent;
   toc: TOCItemType[];

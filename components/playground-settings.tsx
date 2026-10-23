@@ -496,7 +496,7 @@ const KeyTab = () => {
         for the length of that request — never written to disk or logged. It is stored in your
         browser in a cookie that scripts cannot read.{" "}
         <a
-          href="https://github.com/Intentface/intentface-chat/blob/main/app/api/chat/route.ts"
+          href="https://github.com/Intentface/intentface-ui/blob/main/app/api/chat/route.ts"
           target="_blank"
           rel="noreferrer"
           className="underline underline-offset-2 hover:text-ink-secondary"

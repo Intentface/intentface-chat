@@ -1,7 +1,7 @@
 "use client";
 
-import { Chip } from "@intentface/chat/chip";
-import { Message, type MessageChipSegment } from "@intentface/chat/message";
+import { Chip } from "@intentface/ui/chip";
+import { Message, type MessageChipSegment } from "@intentface/ui/message";
 import { File, FileText, Wrench } from "@keyline-icons/react";
 
 /*

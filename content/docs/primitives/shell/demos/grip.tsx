@@ -1,6 +1,6 @@
 "use client";
 
-import { Shell } from "@intentface/chat/shell";
+import { Shell } from "@intentface/ui/shell";
 
 /*
  * Styling the grip: an iOS-style pill that fades in on hover and rides the

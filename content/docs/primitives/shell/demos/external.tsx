@@ -1,6 +1,6 @@
 "use client";
 
-import { Shell, type ShellStore, useShellStore } from "@intentface/chat/shell";
+import { Shell, type ShellStore, useShellStore } from "@intentface/ui/shell";
 import { useEffect, useState } from "react";
 
 /*

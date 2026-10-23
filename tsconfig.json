@@ -21,7 +21,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@intentface/chat/*": ["./packages/chat/src/*"]
+      "@intentface/ui/*": ["./packages/ui/src/*"]
     }
   },
   "include": [

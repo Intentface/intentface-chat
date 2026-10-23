@@ -1,6 +1,6 @@
 "use client";
 
-import { Nav } from "@intentface/chat/nav";
+import { Nav } from "@intentface/ui/nav";
 import { ChevronDown, Home, Inbox, MessageSquare, Package } from "@keyline-icons/react";
 import { type ComponentProps, useState } from "react";
 import "./rail.css";

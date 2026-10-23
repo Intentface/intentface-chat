@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, useTabs } from "@intentface/chat/tabs";
+import { Tabs, useTabs } from "@intentface/ui/tabs";
 import { File, Plus, X } from "@keyline-icons/react";
 import { useState } from "react";
 import { type Document, DocumentBody, LOREM, SEEDED } from "./document";

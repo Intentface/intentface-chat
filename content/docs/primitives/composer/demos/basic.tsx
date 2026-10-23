@@ -1,6 +1,6 @@
 "use client";
 
-import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
+import { Composer, type ComposerSubmitData } from "@intentface/ui/composer";
 import { ArrowUp } from "@keyline-icons/react";
 
 // Every <Composer.Root> owns an isolated store, so a bare composer needs no

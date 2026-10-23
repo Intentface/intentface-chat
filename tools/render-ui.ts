@@ -1,4 +1,4 @@
-import { bindings, type FoundBinding, tree } from "@intentface/chat/generative";
+import { bindings, type FoundBinding, tree } from "@intentface/ui/generative";
 import { type ModelMessage, tool } from "ai";
 import { catalog } from "@/lib/ai/generative-catalog";
 

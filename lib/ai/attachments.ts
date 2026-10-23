@@ -1,5 +1,5 @@
-import type { AttachmentItem } from "@intentface/chat/attachments";
-import type { FilePart } from "@intentface/chat/types";
+import type { AttachmentItem } from "@intentface/ui/attachments";
+import type { FilePart } from "@intentface/ui/types";
 
 // App-owned attachment policy + presentation + send strategy. The headless
 // package ships the generic item machine and platform-default blob ingestion;

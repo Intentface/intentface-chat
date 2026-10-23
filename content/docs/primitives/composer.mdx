@@ -19,7 +19,7 @@ import { Store } from './composer/demos/store';
 - **Chat input** — a hand-rolled contenteditable over a flat segment model: native typing and IME, inline chips, attachments.
 - **Prefix commands** — type `/`, `@`, or other prefixes to open command lists.
 - **Panel** — hosts command results, live steps, or an ask-user prompt above the field.
-- **Headless** — behavior lives in `@intentface/chat`; the demos below show one way to style it, and every class in them is yours to change.
+- **Headless** — behavior lives in `@intentface/ui`; the demos below show one way to style it, and every class in them is yours to change.
 - **Isolate it from your stream** — see [Why the composer needs isolating](#why-the-composer-needs-isolating). The editor is the most expensive thing on the page to re-render per token.
 - **Get started** — see [Quick start](/quick-start) to add the package.
 
@@ -86,7 +86,7 @@ or the other; the content is identical.
 
 Setting the `questions` prop — typically from an assistant's clarifying
 question — arms the ask-user flow and flips `askUser.active`; compose the
-`AskUser` parts from `@intentface/chat/ask-user` inside a `Panel` (or
+`AskUser` parts from `@intentface/ui/ask-user` inside a `Panel` (or
 `Popover`), reading the current step from `useComposer(c => c.askUser)`. The
 flow steps through each question (single- or multi-select), and answering or
 skipping the last one fires `onSubmit` with `{ kind: "answers" }`. Passing a
@@ -99,7 +99,7 @@ fresh `questions` array re-arms it from the first step.
 `Composer.Attachments` carries the accept/limit policy and the hidden file
 input — it renders no strip of its own. The visible list is yours: read
 `useComposer(c => c.attachments)` and lay the items out with the
-`@intentface/chat/attachments` parts. `Composer.AttachmentTrigger` opens the
+`@intentface/ui/attachments` parts. `Composer.AttachmentTrigger` opens the
 file dialog, and files can also be dropped onto the composer.
 
 <Demo component={<AttachmentsDemo />} file="primitives/composer/demos/attachments.tsx" />
@@ -245,7 +245,7 @@ options as `HTMLElement.focus()`: pass `{ preventScroll: true }` to focus a
 composer that's already on screen without scrolling the page around it.
 
 ```tsx
-import { Composer, useComposerStore } from "@intentface/chat/composer";
+import { Composer, useComposerStore } from "@intentface/ui/composer";
 
 // Created outside the tree, so anything can reach it: no context, no ref.
 const store = Composer.createStore();
@@ -557,7 +557,7 @@ still flows top-to-bottom — and calls the callback once per group with
 
 The composer owns the ask-user *state* — `questions`, the current step, the
 answers — but renders none of the question UI. Compose that from the `AskUser`
-namespace in `@intentface/chat/ask-user`, reading the step through
+namespace in `@intentface/ui/ask-user`, reading the step through
 `useComposer((c) => c.askUser)` and gating the enclosing `Panel` or `Popover` on
 `askUser.active`.
 

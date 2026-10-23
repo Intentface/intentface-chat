@@ -1,8 +1,8 @@
-# intentface-chat
+# intentface-ui
 
-Monorepo for **[@intentface/chat](https://www.npmjs.com/package/@intentface/chat)** — headless chat UI
-primitives for React — and the documentation site and playground at
-[ui.intentface.com](https://ui.intentface.com).
+Monorepo for **[@intentface/ui](https://www.npmjs.com/package/@intentface/ui)** — headless React UI
+primitives for AI chat interfaces and the app shells around them — and the documentation site and
+playground at [ui.intentface.com](https://ui.intentface.com).
 
 The package ships behavior, state, and wire formats with no styling of its own: a contenteditable
 composer with commands and chips, a thread with scroll auto-follow, message part segmentation, tool-call
@@ -13,7 +13,7 @@ collection. This is the Base UI model applied to chat — the package owns behav
 
 | Path | What it is |
 | --- | --- |
-| `packages/chat` | The published package. Namespace exports per primitive, built per-module by `tsc`. |
+| `packages/ui` | The published package. Namespace exports per primitive, built per-module by `tsc`. |
 | `content/docs` | Documentation pages (MDX, via fumadocs). |
 | `components/docs` | Docs-site chrome: previews, code blocks, tables. |
 | `components/ai`, `components/ui` | The playground's own styled layer. **App-private** — it uses design tokens, Motion, and local icons, and is not published or supported for copying. |
@@ -37,7 +37,7 @@ No environment variables are needed. The playground chat runs on your own OpenAI
 Package tests and build:
 
 ```bash
-cd packages/chat
+cd packages/ui
 bun test
 bun run build
 ```
@@ -45,7 +45,7 @@ bun run build
 ## Contributing
 
 Conventions, architecture, and patterns live in [AGENTS.md](./AGENTS.md) — read it before opening a PR.
-Changesets gate releases: run `bunx changeset` for any user-facing change to `packages/chat`.
+Changesets gate releases: run `bunx changeset` for any user-facing change to `packages/ui`.
 
 ## License
 

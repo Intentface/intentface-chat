@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs } from "@intentface/chat/tabs";
+import { Tabs } from "@intentface/ui/tabs";
 import { useState } from "react";
 import "./hover-motion.css";
 import { BubbleIcon, FileIcon } from "./icons";

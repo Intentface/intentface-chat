@@ -7,11 +7,11 @@ import Button from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { useCopy } from "@/hooks/use-copy";
 
-const REPO = "https://github.com/Intentface/intentface-chat";
+const REPO = "https://github.com/Intentface/intentface-ui";
 
 type PageActionsProps = {
   slug: string[];
-  // Component path under packages/chat/src (frontmatter `source`); omitted on
+  // Component path under packages/ui/src (frontmatter `source`); omitted on
   // pages that document no single component.
   source?: string;
 };
@@ -41,7 +41,7 @@ export const PageActions = ({ slug, source }: PageActionsProps) => {
         aria-label={source ? "Primitive source on GitHub" : "GitHub repository"}
         render={
           <a
-            href={source ? `${REPO}/tree/main/packages/chat/src/${source}` : REPO}
+            href={source ? `${REPO}/tree/main/packages/ui/src/${source}` : REPO}
             target="_blank"
             rel="noreferrer"
           >

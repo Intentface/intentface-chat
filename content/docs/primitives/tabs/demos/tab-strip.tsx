@@ -1,6 +1,6 @@
 "use client";
 
-import { useTabs } from "@intentface/chat/tabs";
+import { useTabs } from "@intentface/ui/tabs";
 import { type ReactNode, useEffect, useRef } from "react";
 import "./tab-strip.css";
 

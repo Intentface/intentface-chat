@@ -1,7 +1,7 @@
 import { languageOf, readDemoFiles } from "./demo-files";
 import { PACKAGE_MANAGERS } from "./package-managers";
 
-// <InstallationBlock packageName="@intentface/chat" />
+// <InstallationBlock packageName="@intentface/ui" />
 const INSTALL_TAG = /<InstallationBlock\b[\s\S]*?\spackageName="([^"]+)"[\s\S]*?\/>/g;
 
 // <Demo component={<Basic />} file="primitives/composer/demos/basic.tsx" />

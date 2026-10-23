@@ -1,8 +1,8 @@
 "use client";
 
-import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
-import { Message } from "@intentface/chat/message";
-import { Thread } from "@intentface/chat/thread";
+import { Composer, type ComposerSubmitData } from "@intentface/ui/composer";
+import { Message } from "@intentface/ui/message";
+import { Thread } from "@intentface/ui/thread";
 import { ArrowUp, Sparkles, Stop } from "@keyline-icons/react";
 import type { KeyboardEvent } from "react";
 

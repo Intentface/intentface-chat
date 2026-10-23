@@ -1,6 +1,6 @@
 "use client";
 
-import type { AttachmentErrorCode, AttachmentItem } from "@intentface/chat/attachments";
+import type { AttachmentErrorCode, AttachmentItem } from "@intentface/ui/attachments";
 import { File, Paperclip, X } from "@keyline-icons/react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
@@ -22,7 +22,7 @@ export {
   revokeAllAttachmentUrls,
   revokeAttachmentUrl,
   toAttachmentItem,
-} from "@intentface/chat/attachments";
+} from "@intentface/ui/attachments";
 export {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_MAX_FILE_SIZE,

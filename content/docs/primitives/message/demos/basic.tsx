@@ -1,6 +1,6 @@
 "use client";
 
-import { Message } from "@intentface/chat/message";
+import { Message } from "@intentface/ui/message";
 import { Check, Copy } from "@keyline-icons/react";
 import { useState } from "react";
 

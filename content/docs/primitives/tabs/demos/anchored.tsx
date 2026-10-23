@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, useTabs } from "@intentface/chat/tabs";
+import { Tabs, useTabs } from "@intentface/ui/tabs";
 import { MessageSquare, Minus, Sparkles, X } from "@keyline-icons/react";
 import { useRef, useState } from "react";
 import { ChatThread, NewChat, REPLIES, SEEDED, type Turn } from "./chat";

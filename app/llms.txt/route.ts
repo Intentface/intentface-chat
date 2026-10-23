@@ -7,8 +7,8 @@ const SITE = "https://ui.intentface.com";
 // that save a round trip: how to fetch a page, and which Tailwind version the
 // demos assume.
 const SUMMARY = [
-  "This is the documentation for the `@intentface/chat` package.",
-  "It provides headless, unstyled React primitives for building AI chat interfaces — a rich-text composer, thread scroll ownership, message segmentation, and streaming disclosure. Styling is entirely the consumer's.",
+  "This is the documentation for the `@intentface/ui` package.",
+  "It provides headless, unstyled React primitives for AI chat interfaces and the app shells around them — a rich-text composer, thread scroll ownership, message segmentation, streaming disclosure, and a sidebar, nav tree and tabs. Styling is entirely the consumer's.",
   "Every page below is markdown; append `.md` to any docs URL to fetch the same content. Demo source is inlined into those pages.",
   "The demos are written for Tailwind CSS v4. If `package.json` uses Tailwind CSS v3, convert unsupported utilities to v3-compatible equivalents.",
 ].join("\n");
@@ -65,7 +65,7 @@ export const GET = () => {
   const { loose, groups } = sectionsOf(source.pageTree.children as TreeNode[]);
 
   const body = [
-    "# @intentface/chat",
+    "# @intentface/ui",
     "",
     SUMMARY,
     "",

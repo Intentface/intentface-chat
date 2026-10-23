@@ -1,6 +1,6 @@
 "use client";
 
-import { Composer, type ComposerSubmitData } from "@intentface/chat/composer";
+import { Composer, type ComposerSubmitData } from "@intentface/ui/composer";
 import { ArrowUp } from "@keyline-icons/react";
 import { useState } from "react";
 

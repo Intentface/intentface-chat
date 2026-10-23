@@ -1,6 +1,6 @@
 "use client";
 
-import { Nav } from "@intentface/chat/nav";
+import { Nav } from "@intentface/ui/nav";
 import { ChevronDown } from "@keyline-icons/react";
 import "./collapse.css";
 

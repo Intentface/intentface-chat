@@ -111,10 +111,10 @@ export const SiteShell = ({
           <Link
             href="/"
             className="flex items-center gap-2.5 text-ink-primary"
-            aria-label="@intentface/chat"
+            aria-label="@intentface/ui"
           >
             <LogoTile />
-            <span className="font-semibold text-md tracking-[-0.01em]">intentface/chat</span>
+            <span className="font-semibold text-md tracking-[-0.01em]">intentface/ui</span>
           </Link>
           <div className="flex items-center gap-1">
             <DocsSearch suggestions={toSuggestions(groups)} />
@@ -171,12 +171,12 @@ export const SiteShell = ({
           </Link>
           <div className="flex items-center gap-0.5">
             <FooterLink
-              href="https://github.com/Intentface/intentface-chat"
+              href="https://github.com/Intentface/intentface-ui"
               label="GitHub"
               icon={<IconBrandGithub />}
             />
             <FooterLink
-              href="https://www.npmjs.com/package/@intentface/chat"
+              href="https://www.npmjs.com/package/@intentface/ui"
               label="npm"
               icon={<IconBrandNpm />}
             />

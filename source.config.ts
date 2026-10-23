@@ -5,7 +5,7 @@ import { remarkChangelogTags } from "./lib/docs/remark-changelog-tags";
 export const docs = defineDocs({
   dir: "content/docs",
   docs: {
-    // `source` is the component's path under packages/chat/src (a directory
+    // `source` is the component's path under packages/ui/src (a directory
     // like "composer" or a file like "thread.tsx"); the page header links
     // "View source" to it on GitHub.
     schema: frontmatterSchema.extend({

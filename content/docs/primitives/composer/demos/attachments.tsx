@@ -1,7 +1,7 @@
 "use client";
 
-import { Attachments } from "@intentface/chat/attachments";
-import { Composer, type ComposerSubmitData, useComposer } from "@intentface/chat/composer";
+import { Attachments } from "@intentface/ui/attachments";
+import { Composer, type ComposerSubmitData, useComposer } from "@intentface/ui/composer";
 import { ArrowUp, Paperclip, X } from "@keyline-icons/react";
 
 // Composer.Attachments carries the policy and the hidden file input; the strip

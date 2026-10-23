@@ -1,7 +1,7 @@
 "use client";
 
-import { Message } from "@intentface/chat/message";
-import { Thread } from "@intentface/chat/thread";
+import { Message } from "@intentface/ui/message";
+import { Thread } from "@intentface/ui/thread";
 
 const MESSAGES = [
   { id: "1", role: "user", text: "What does Message actually render?" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { Steps } from "@intentface/chat/steps";
+import { Steps } from "@intentface/ui/steps";
 import { Check, ChevronDown, LoaderCircle, X } from "@keyline-icons/react";
 import { useEffect, useRef, useState } from "react";
 

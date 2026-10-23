@@ -57,10 +57,10 @@ jobs:
 
       - name: Package tests
         run: bun test
-        working-directory: packages/chat
+        working-directory: packages/ui
 
       - name: Package build (publint gate)
-        working-directory: packages/chat
+        working-directory: packages/ui
         run: |
           bun run build
           bunx --no-install publint

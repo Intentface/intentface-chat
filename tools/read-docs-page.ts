@@ -7,7 +7,7 @@ import { getPage } from "@/lib/docs/source";
 
 export const readDocsPage = tool({
   description:
-    "Read one @intentface/chat documentation page as raw markdown. Use a slug returned by listDocsPages.",
+    "Read one @intentface/ui documentation page as raw markdown. Use a slug returned by listDocsPages.",
   inputSchema: z.object({
     slug: z.string().describe('Page slug from listDocsPages, e.g. "primitives/composer"'),
   }),

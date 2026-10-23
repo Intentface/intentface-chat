@@ -59,7 +59,7 @@ Rules for compound components:
 - **Accept `className`** on every sub-component for style overrides
 - **Convenience wrappers are fine** — a higher-level component can compose the primitives with default behavior (e.g. `Composer.Attachments` composes `Attachments`, `Attachments.Item`, `Attachments.Remove`)
 
-#### Package layer — `packages/chat/`
+#### Package layer — `packages/ui/`
 
 Published primitives use **namespace exports**, not `Object.assign`, and the root is explicit: `<Composer.Root>`, never `<Composer>`. Three modules per primitive:
 
@@ -98,15 +98,15 @@ The chat API follows Vercel AI SDK conventions
 2. Avoid `useEffect` for syncing/deriving state. Use it only for true side effects (subscriptions, DOM integrations).
 3. Use standard size naming: `xs`, `sm`, `md`, `lg`, `xl`.
 4. Organize CVA base classes with arrays/comments when classes are long.
-5. Every component must use the compound component pattern — via `Object.assign` in `components/ai/` and `components/ui/`, via namespace exports in `packages/chat/` (see Component Architecture above).
+5. Every component must use the compound component pattern — via `Object.assign` in `components/ai/` and `components/ui/`, via namespace exports in `packages/ui/` (see Component Architecture above).
 6. Use `cn()` from `lib/utils.ts` for className merging.
 7. Follow Biome rules and formatting.
-8. Use data attributes for styling and state selectors: app components (`components/ai`, `components/ui`) stamp `data-slot` / `data-role`; package primitives (`packages/chat`) emit bespoke part attributes instead (`data-composer-editor`, `data-command-badge`) — `data-slot` belongs to the consumer layer.
+8. Use data attributes for styling and state selectors: app components (`components/ai`, `components/ui`) stamp `data-slot` / `data-role`; package primitives (`packages/ui`) emit bespoke part attributes instead (`data-composer-editor`, `data-command-badge`) — `data-slot` belongs to the consumer layer.
 9. Leverage Motion for entrance/exit animations.
-10. Rich text editing goes through `Composer` from `@intentface/chat/composer` — no editor framework; don't add one.
+10. Rich text editing goes through `Composer` from `@intentface/ui/composer` — no editor framework; don't add one.
 11. Follow AI SDK patterns (`useChat()`, `streamText()`, `toUIMessageStreamResponse()`).
 12. No monolithic components — always decompose into composable sub-components. Consumers compose the pieces; components never hardcode their own layout.
-13. Do not use index/barrel files (`index.ts` that re-exports from other files). Import directly from the specific module instead. **Exception:** each `packages/chat/src/<primitive>/` has exactly two barrels — `index.parts.ts` and `index.ts` — which are required for server-component reach and must stay directive-free.
+13. Do not use index/barrel files (`index.ts` that re-exports from other files). Import directly from the specific module instead. **Exception:** each `packages/ui/src/<primitive>/` has exactly two barrels — `index.parts.ts` and `index.ts` — which are required for server-component reach and must stay directive-free.
 
 ## Environment Variables
 

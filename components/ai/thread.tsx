@@ -6,7 +6,7 @@ import {
   type ThreadVisibilityState,
   useThread,
   useThreadVisibility,
-} from "@intentface/chat/thread";
+} from "@intentface/ui/thread";
 import { ArrowDown } from "@keyline-icons/react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";

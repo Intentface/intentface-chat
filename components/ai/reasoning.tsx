@@ -1,6 +1,6 @@
 "use client";
 
-import { Reasoning as ReasoningPrimitive, useReasoning } from "@intentface/chat/reasoning";
+import { Reasoning as ReasoningPrimitive, useReasoning } from "@intentface/ui/reasoning";
 import { Brain, ChevronDown } from "@keyline-icons/react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";

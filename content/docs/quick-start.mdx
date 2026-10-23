@@ -5,24 +5,27 @@ description: Install the package, set it up, and assemble your first chat.
 
 import { Hero } from './quick-start/demos/hero';
 
-**@intentface/chat** ships the behavior of a chat interface and none of its
+**@intentface/ui** ships the behavior of a chat interface and none of its
 appearance. This page takes you from an empty React 19 app to a working chat.
 
 ## Install the library
 
-<InstallationBlock packageName="@intentface/chat" />
+<InstallationBlock packageName="@intentface/ui" />
 
 `react` and `react-dom` (v19+) are the only peer dependencies. Nothing else
 ships with it beyond one small runtime dep — `@floating-ui/dom` for anchored
 positioning. No styling, no editor framework, no animation library.
 
+Upgrading from `@intentface/chat`? The package was renamed in 0.7.0. Replace
+`@intentface/chat/` with `@intentface/ui/` in your imports; nothing else changed.
+
 Each primitive is a separate entry point:
 
 ```tsx
-import { Composer } from "@intentface/chat/composer";
-import { Message } from "@intentface/chat/message";
-import { Thread } from "@intentface/chat/thread";
-import { groupTurns } from "@intentface/chat/message-utils";
+import { Composer } from "@intentface/ui/composer";
+import { Message } from "@intentface/ui/message";
+import { Thread } from "@intentface/ui/thread";
+import { groupTurns } from "@intentface/ui/message-utils";
 ```
 
 ## Set up
@@ -71,7 +74,7 @@ the full part lists.
 
 ## Pre-styled components
 
-There is no pre-styled `@intentface/chat` package, and no CSS to install. The
+There is no pre-styled `@intentface/ui` package, and no CSS to install. The
 demos on each component page are the styled reference: they use stock Tailwind,
 depend on nothing but this package, and are meant to be copied and edited.
 

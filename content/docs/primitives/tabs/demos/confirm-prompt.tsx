@@ -1,6 +1,6 @@
 "use client";
 
-import { useTabs } from "@intentface/chat/tabs";
+import { useTabs } from "@intentface/ui/tabs";
 
 export type Asking = { value: string; left: number; top: number };
 

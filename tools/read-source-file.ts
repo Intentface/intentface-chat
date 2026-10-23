@@ -7,22 +7,22 @@ const SOURCE_ROOT = path.join(process.cwd(), "packages", "chat", "src");
 
 export const readSourceFile = tool({
   description:
-    'Read @intentface/chat source code from packages/chat/src. A file path returns its contents; a directory path returns its entries; "." lists the top level. Docs pages name their component via the source field from listDocsPages.',
+    'Read @intentface/ui source code from packages/ui/src. A file path returns its contents; a directory path returns its entries; "." lists the top level. Docs pages name their component via the source field from listDocsPages.',
   inputSchema: z.object({
     path: z
       .string()
-      .describe('Path relative to packages/chat/src, e.g. "thread/index.tsx" or "composer"'),
+      .describe('Path relative to packages/ui/src, e.g. "thread/index.tsx" or "composer"'),
   }),
   execute: async ({ path: requestedPath }) => {
     const resolvedPath = path.resolve(SOURCE_ROOT, requestedPath);
     if (resolvedPath !== SOURCE_ROOT && !resolvedPath.startsWith(SOURCE_ROOT + path.sep)) {
-      return { error: `"${requestedPath}" is outside packages/chat/src.` };
+      return { error: `"${requestedPath}" is outside packages/ui/src.` };
     }
 
     const stats = await stat(resolvedPath).catch(() => null);
     if (!stats) {
       return {
-        error: `No file or directory "${requestedPath}" in packages/chat/src. Use "." to list the top level.`,
+        error: `No file or directory "${requestedPath}" in packages/ui/src. Use "." to list the top level.`,
       };
     }
 

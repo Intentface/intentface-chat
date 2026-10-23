@@ -2,7 +2,7 @@
 // the renderUi tool. The tool checks calls against it on the server, and the chat
 // draws them with it on the client.
 
-import { defineCatalog, markdown } from "@intentface/chat/generative";
+import { defineCatalog, markdown } from "@intentface/ui/generative";
 import { z } from "zod";
 
 export const catalog = defineCatalog({

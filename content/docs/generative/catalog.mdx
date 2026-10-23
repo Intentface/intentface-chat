@@ -36,7 +36,7 @@ defineCatalog({
 A real catalog names each component, describes it for the model, and takes its props schema from any validator that converts to JSON Schema.
 
 ```ts
-import { defineCatalog, markdown } from "@intentface/chat/generative";
+import { defineCatalog, markdown } from "@intentface/ui/generative";
 import { z } from "zod";
 
 export const catalog = defineCatalog({
@@ -64,7 +64,7 @@ export const catalog = defineCatalog({
 The tool runs on your server, so this one is code only. `tree.schema` builds its input schema from the catalog, and types `input` from it. In `execute`, `tree.validate` checks the finished call, and `bindings.resolve` puts each bound prop's data in place. Following the AI SDK's convention, the result is what the chat draws: the finished tree, or the issues when the call is refused. `toModelOutput` turns that into one line for the model. Pass the same tools to `convertToModelMessages(messages, { tools })` when you rebuild the history; otherwise later turns send each whole result back to the model, bound rows included.
 
 ```ts
-import { bindings, tree } from "@intentface/chat/generative";
+import { bindings, tree } from "@intentface/ui/generative";
 import { tool } from "ai";
 import { catalog } from "./catalog";
 

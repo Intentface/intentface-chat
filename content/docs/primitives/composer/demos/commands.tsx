@@ -1,6 +1,6 @@
 "use client";
 
-import { type CommandItemData, Composer, type ComposerSubmitData } from "@intentface/chat/composer";
+import { type CommandItemData, Composer, type ComposerSubmitData } from "@intentface/ui/composer";
 import { ArrowUp } from "@keyline-icons/react";
 
 const MENTIONS: CommandItemData[] = [

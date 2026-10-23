@@ -1,12 +1,12 @@
 "use client";
 
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import type { ChipData } from "@intentface/chat/chip-markdown";
+import type { ChipData } from "@intentface/ui/chip-markdown";
 import {
   Message as MessagePrimitive,
   useMessageSelection,
   useMessageSelectionScope,
-} from "@intentface/chat/message";
+} from "@intentface/ui/message";
 import { Check, Copy, File, MessageSquare, Paperclip, Stop } from "@keyline-icons/react";
 import * as m from "motion/react-m";
 import Image from "next/image";

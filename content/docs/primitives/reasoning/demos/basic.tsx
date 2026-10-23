@@ -1,6 +1,6 @@
 "use client";
 
-import { Reasoning } from "@intentface/chat/reasoning";
+import { Reasoning } from "@intentface/ui/reasoning";
 import { Brain, ChevronDown } from "@keyline-icons/react";
 
 // A completed reasoning block. The parts ship no copy and no layout — the
